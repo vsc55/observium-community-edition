@@ -25,6 +25,10 @@ if (empty($version)) {
     if (empty($version)) {
         $version = snmp_get_oid($device, 'upsIdentAgentSoftwareVersion.0', 'UPS-MIB');
     }
+    if ($version) {
+        // V4.20 -> 4.20
+        $version = ltrim($version, 'vV');
+    }
 }
 
 // Better to use vendor from OS definition

@@ -15,13 +15,13 @@ if ($_SESSION['userlevel'] < 5) {
     return;
 }
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 // Page to display list of configured alert checks
 
 $alert_check = cache_alert_rules($vars);
 #$alert_assoc = cache_alert_assoc($vars);
-$where = ' WHERE 1' . generate_query_permitted(['alert']);
+$where = generate_where_clause("`entity_type` != ''", generate_query_permitted([ 'alert' ]));
 
 // Build header menu
 
@@ -34,33 +34,33 @@ foreach (dbFetchRows("SELECT * FROM `alert_assoc` WHERE 1") as $entry) {
 $navbar['class'] = "navbar-narrow";
 $navbar['brand'] = "Alert Checks";
 
-$types       = dbFetchRows("SELECT DISTINCT `entity_type` FROM `alert_table`" . $where);
-$types_count = count($types);
-
-$navbar['options']['all']['url']  = generate_url($vars, ['page' => 'alert_checks', 'entity_type' => NULL]);
-$navbar['options']['all']['text'] = escape_html(nicecase('all'));
+$navbar['options']['all']['url']  = generate_url([ 'page' => 'alert_checks', 'entity_type' => NULL ]);
+$navbar['options']['all']['text'] = nicecase('all');
 if (!isset($vars['entity_type'])) {
     $navbar['options']['all']['class'] = "active";
-    $navbar['options']['all']['url']   = generate_url($vars, ['page' => 'alert_checks', 'entity_type' => NULL]);
+    //$navbar['options']['all']['url']   = generate_url($vars, ['page' => 'alert_checks', 'entity_type' => NULL]);
 }
 
-foreach ($types as $thing) {
-    if ($vars['entity_type'] == $thing['entity_type']) {
-        $navbar['options'][$thing['entity_type']]['class'] = "active";
-        $navbar['options'][$thing['entity_type']]['url']   = generate_url($vars, ['page' => 'alert_checks', 'entity_type' => NULL]);
+$types       = dbFetchColumn("SELECT DISTINCT `entity_type` FROM `alert_table`" . $where);
+$types_count = safe_count($types);
+//r($types);
+foreach ($types as $entity_type) {
+    if ($vars['entity_type'] == $entity_type) {
+        $navbar['options'][$entity_type]['class'] = "active";
+        $navbar['options'][$entity_type]['url']   = generate_url([ 'page' => 'alert_checks', 'entity_type' => NULL ]);
     } else {
         if ($types_count > 6) {
-            $navbar['options'][$thing['entity_type']]['class'] = "icon";
+            $navbar['options'][$entity_type]['class'] = "icon";
         }
-        $navbar['options'][$thing['entity_type']]['url'] = generate_url($vars, ['page' => 'alert_checks', 'entity_type' => $thing['entity_type']]);
+        $navbar['options'][$entity_type]['url'] = generate_url([ 'page' => 'alert_checks', 'entity_type' => $entity_type ]);
     }
-    $navbar['options'][$thing['entity_type']]['icon'] = $config['entities'][$thing['entity_type']]['icon'];
-    $navbar['options'][$thing['entity_type']]['text'] = escape_html(nicecase($thing['entity_type']));
+    $navbar['options'][$entity_type]['icon'] = $config['entities'][$entity_type]['icon'];
+    $navbar['options'][$entity_type]['text'] = escape_html(nicecase($entity_type));
 }
 
 $navbar['options']['export']['text']      = 'Export';
 $navbar['options']['export']['icon']      = $config['icon']['export'];
-$navbar['options']['export']['url']       = generate_url($vars, ['page' => 'alert_checks', 'export' => 'yes']);
+$navbar['options']['export']['url']       = generate_url($vars, [ 'page' => 'alert_checks', 'export' => 'yes' ]);
 $navbar['options']['export']['right']     = TRUE;
 $navbar['options']['export']['userlevel'] = 7;
 
@@ -181,13 +181,16 @@ foreach ($alert_check as $check) {
     foreach ($check['conditions'] as $condition) {
         // Detect incorrect metric used
         if (!in_array($condition['metric'], $allowed_metrics, TRUE)) {
-            print_error("Unknown condition metric '" . escape_html($condition['metric']) . "' for Entity type '" . escape_html($check['entity_type']) . "'");
+            print_box("Unknown condition metric '" . escape_html($condition['metric']) . "' for Entity type '" . escape_html($check['entity_type']) . "'", 'error', 'no-shadow');
 
             foreach (array_keys($config['entities']) as $suggest_entity) {
                 if (isset($config['entities'][$suggest_entity]['metrics'][$condition['metric']])) {
-                    print_warning("Suggested Entity type: '$suggest_entity'. Change Entity in Edit Alert below.");
-                    $suggest_entity_types[$suggest_entity] = ['name' => $config['entities'][$suggest_entity]['name'],
-                                                              'icon' => $config['entities'][$suggest_entity]['icon']];
+                    print_box("Suggested Entity type: '$suggest_entity'. Change Entity in Edit Alert below.", 'warning', 'no-shadow');
+
+                    $suggest_entity_types[$suggest_entity] = [
+                        'name' => $config['entities'][$suggest_entity]['name'],
+                        'icon' => $config['entities'][$suggest_entity]['icon']
+                    ];
                 }
             }
         }
@@ -215,7 +218,7 @@ foreach ($alert_check as $check) {
         echo('<table class="table table-condensed-more table-striped" style="margin-bottom: 0px;">');
 
         // Loop the associations which link this alert to this device
-        foreach ($alert_assoc[$check['alert_test_id']] as $assoc_id => $assoc) {
+        foreach ($alert_assoc[$check['alert_test_id']] as $assoc) {
 
             echo('<tr>');
             echo('<td style="width: 50%">');

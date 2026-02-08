@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,198 +8,179 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
- * @author Georges.L (Geolim4)  <contact@geolim4.com>
+ * @author  Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
+ * @author  Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Core\Item;
+namespace Phpfastcache\Core\Item;
 
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\EventManager;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheLogicException;
+use DateTimeInterface;
+use JsonSerializable;
+use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
+use Phpfastcache\Event\EventManagerDispatcherInterface;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException, PhpfastcacheLogicException};
+use Phpfastcache\Util\ClassNamespaceResolverInterface;
 use Psr\Cache\CacheItemInterface;
 
 /**
  * Interface ExtendedCacheItemInterface
+ *
  * @package phpFastCache\Cache
  */
-interface ExtendedCacheItemInterface extends CacheItemInterface, \JsonSerializable
+interface ExtendedCacheItemInterface extends CacheItemInterface, EventManagerDispatcherInterface, ClassNamespaceResolverInterface, JsonSerializable, TaggableCacheItemInterface
 {
+
     /**
      * Returns the encoded key for the current cache item.
-     * Usually as a MD5 hash
+     * Is a MD5 (default),SHA1,SHA256 hash if "defaultKeyHashFunction" config option is configured
+     * Else return the plain cache item key "defaultKeyHashFunction" config option is emptied
      *
      * @return string
      *   The encoded key string for this cache item.
      */
-    public function getEncodedKey();
+    public function getEncodedKey(): string;
 
     /**
-     * @return mixed
+     * @return DateTimeInterface
      */
-    public function getUncommittedData();
-
-    /**
-     * @return \DateTimeInterface
-     */
-    public function getExpirationDate();
+    public function getExpirationDate(): DateTimeInterface;
 
     /**
      * Alias of expireAt() with forced $expiration param
      *
-     * @param \DateTimeInterface $expiration
+     * @param DateTimeInterface $expiration
      *   The point in time after which the item MUST be considered expired.
      *   If null is passed explicitly, a default value MAY be used. If none is set,
      *   the value should be stored permanently or for as long as the
      *   implementation allows.
      *
-     * @return static
+     * @return ExtendedCacheItemInterface
      *   The called object.
      */
-    public function setExpirationDate(\DateTimeInterface $expiration);
+    public function setExpirationDate(DateTimeInterface $expiration): ExtendedCacheItemInterface;
 
     /**
-     * @return \DateTimeInterface
-     * @throws phpFastCacheLogicException
+     * @return DateTimeInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function getCreationDate();
+    public function getCreationDate(): DateTimeInterface;
 
     /**
-     * @return \DateTimeInterface
-     * @throws phpFastCacheLogicException
+     * @return DateTimeInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function getModificationDate();
+    public function getModificationDate(): DateTimeInterface;
 
     /**
-     * @param $date \DateTimeInterface
-     * @return $this
-     * @throws phpFastCacheLogicException
+     * @param $date DateTimeInterface
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function setCreationDate(\DateTimeInterface $date);
+    public function setCreationDate(DateTimeInterface $date): ExtendedCacheItemInterface;
 
     /**
-     * @param $date \DateTimeInterface
-     * @return $this
-     * @throws phpFastCacheLogicException
+     * @param $date DateTimeInterface
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function setModificationDate(\DateTimeInterface $date);
+    public function setModificationDate(DateTimeInterface $date): ExtendedCacheItemInterface;
 
     /**
      * @return int
      */
-    public function getTtl();
+    public function getTtl(): int;
 
     /**
      * @return bool
      */
-    public function isExpired();
+    public function isExpired(): bool;
 
     /**
-     * @param \phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface $driver
+     * @return bool
+     */
+    public function isNull(): bool;
+
+    /**
+     * @return bool
+     */
+    public function isEmpty(): bool;
+
+    /**
+     * Return the data length:
+     * - Either the number of char if it's a string (binary mode)
+     * - or the number of element if it's an array
+     * - or the number returned by count() if it's an object implementing \Countable interface
+     * - or -1 for anything else
+     *
+     * @return int
+     */
+    public function getLength(): int;
+
+    /**
+     * @param ExtendedCacheItemPoolInterface $driver
+     *
      * @return mixed
      */
     public function setDriver(ExtendedCacheItemPoolInterface $driver);
 
     /**
      * @param bool $isHit
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function setHit($isHit);
+    public function setHit($isHit): ExtendedCacheItemInterface;
 
     /**
      * @param int $step
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function increment($step = 1);
+    public function increment($step = 1): ExtendedCacheItemInterface;
 
     /**
      * @param int $step
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function decrement($step = 1);
+    public function decrement($step = 1): ExtendedCacheItemInterface;
 
     /**
      * @param array|string $data
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function append($data);
+    public function append($data): ExtendedCacheItemInterface;
 
     /**
      * @param array|string $data
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     *
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function prepend($data);
-
-    /**
-     * @param string $tagName
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    public function addTag($tagName);
-
-    /**
-     * @param array $tagNames
-     * @return $this
-     */
-    public function addTags(array $tagNames);
-
-
-    /**
-     * @param array $tags
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    public function setTags(array $tags);
-
-    /**
-     * @return array
-     */
-    public function getTags();
-
-    /**
-     * @param string $separator
-     * @return mixed
-     */
-    public function getTagsAsString($separator = ', ');
-
-    /**
-     * @param array $tagName
-     * @return $this
-     */
-    public function removeTag($tagName);
-
-    /**
-     * @param array $tagNames
-     * @return $this
-     */
-    public function removeTags(array $tagNames);
-
-    /**
-     * @return array
-     */
-    public function getRemovedTags();
+    public function prepend($data): ExtendedCacheItemInterface;
 
     /**
      * Return the data as a well-formatted string.
      * Any scalar value will be casted to an array
-     * @param int $option json_encode() options
-     * @param int $depth json_encode() depth
+     *
+     * @param int $option \json_encode() options
+     * @param int $depth \json_encode() depth
+     *
      * @return string
      */
-    public function getDataAsJsonString($option = 0, $depth = 512);
+    public function getDataAsJsonString(int $option = 0, int $depth = 512): string;
 
     /**
-     * Set the EventManager instance
-     *
-     * @param EventManager $em
-     * @return static
+     * @param ExtendedCacheItemPoolInterface $driverPool
+     * @return bool
      */
-    public function setEventManager(EventManager $em);
+    public function doesItemBelongToThatDriverBackend(ExtendedCacheItemPoolInterface $driverPool): bool;
 }

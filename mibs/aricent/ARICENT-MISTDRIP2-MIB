@@ -1,16 +1,5 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmistdrip.mib,v 1.6 2016/06/18 11:46:29 siva Exp $
-
--- /*****************************************************************
---  *                                                               *
---  * fsmistdrip.mib                                                *
---  *                                                               *
---  * Rip components extracted from fsmistdrip.mib                  *
---  *                                                               *
---  *                                                               *
---  ****************************************************************/
- 
 ARICENT-MISTDRIP2-MIB  DEFINITIONS ::= BEGIN 
  
    IMPORTS 

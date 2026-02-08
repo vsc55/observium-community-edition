@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,81 +8,94 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Apcu;
+namespace Phpfastcache\Drivers\Apcu;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use DateTime;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
     use DriverBaseTrait;
 
     /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
+     * @return bool
      */
-    public function __construct(array $config = [])
+    public function driverCheck(): bool
     {
-        $this->setup($config);
+        return extension_loaded('apcu') && ini_get('apc.enabled');
+    }
 
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        }
+    /**
+     * @return DriverStatistic
+     */
+    public function getStats(): DriverStatistic
+    {
+        $stats = (array)apcu_cache_info();
+        $date = (new DateTime())->setTimestamp($stats['start_time']);
+
+        return (new DriverStatistic())
+            ->setData(implode(', ', array_keys($this->itemInstances)))
+            ->setInfo(
+                sprintf(
+                    "The APCU cache is up since %s, and have %d item(s) in cache.\n For more information see RawData.",
+                    $date->format(DATE_RFC2822),
+                    $stats['num_entries']
+                )
+            )
+            ->setRawData($stats)
+            ->setSize((int)$stats['mem_size']);
     }
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    protected function driverConnect(): bool
     {
-        if (extension_loaded('apcu') && ini_get('apc.enabled')) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverWrite(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
-            $ttl = $item->getExpirationDate()->getTimestamp() - time();
-
-            return apcu_store($item->getKey(), $this->driverPreWrap($item), ($ttl > 0 ? $ttl : 0));
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+            return (bool)apcu_store($item->getKey(), $this->driverPreWrap($item), $item->getTtl());
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return null|array
      */
     protected function driverRead(CacheItemInterface $item)
     {
         $data = apcu_fetch($item->getKey(), $success);
+
         if ($success === false) {
             return null;
         }
@@ -90,36 +104,20 @@ class Driver implements ExtendedCacheItemPoolInterface
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
-            return apcu_delete($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+            return (bool)apcu_delete($item->getKey());
         }
-    }
 
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        return @apcu_clear_cache() && @apcu_clear_cache();
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        return true;
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /********************
@@ -129,18 +127,10 @@ class Driver implements ExtendedCacheItemPoolInterface
      *******************/
 
     /**
-     * @return DriverStatistic
+     * @return bool
      */
-    public function getStats()
+    protected function driverClear(): bool
     {
-        $stats = (array)apcu_cache_info();
-        $date = (new \DateTime())->setTimestamp($stats[ 'start_time' ]);
-
-        return (new DriverStatistic())
-          ->setData(implode(', ', array_keys($this->itemInstances)))
-          ->setInfo(sprintf("The APCU cache is up since %s, and have %d item(s) in cache.\n For more information see RawData.", $date->format(DATE_RFC2822),
-            $stats[ 'num_entries' ]))
-          ->setRawData($stats)
-          ->setSize($stats[ 'mem_size' ]);
+        return @apcu_clear_cache();
     }
 }

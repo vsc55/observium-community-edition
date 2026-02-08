@@ -53,7 +53,7 @@ if (snmp_status()) {
             continue;
         }
 
-        foreach ($entry as $if => $ospf) {
+        foreach ($entry as $ospf) {
             if ($ospf['ospfNbmaNbrStatus'] !== 'active' || $ospf['ospfNbrRtrId'] === '0.0.0.0') {
                 continue;
             }

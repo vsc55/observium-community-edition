@@ -129,13 +129,182 @@ function generate_box_close($args = [])
     return $return;
 }
 
-// DOCME needs phpdoc block
-function print_graph_row_port($graph_array, $port) {
+function generate_box_state($state, $content, $args = [])
+{
+    // Supported states: success, info, warning, danger, default
+    $valid_states = ['success', 'info', 'warning', 'danger', 'default'];
+    $state = in_array($state, $valid_states) ? $state : 'default';
+
+    // Size presets
+    $size_presets = [
+        'large' => ['padding' => '60px 20px', 'font-size' => '16px', 'icon-size' => '24px'],
+        'medium' => ['padding' => '40px 20px', 'font-size' => '15px', 'icon-size' => '20px'], 
+        'small' => ['padding' => '25px 15px', 'font-size' => '14px', 'icon-size' => '18px']
+    ];
+
+    // Apply size preset if specified
+    $size = $args['size'] ?? 'large';
+    $size_defaults = $size_presets[$size] ?? $size_presets['large'];
+
+    // Default styling args
+    $defaults = array_merge([
+        'text-align' => 'center',
+        'icon-margin' => '8px'
+    ], $size_defaults);
+
+    $args = array_merge($defaults, $args);
+
+    // Generate styled content div with state background
+    $return = sprintf(
+        '<div class="box-state box-state-%s" style="padding: %s; text-align: %s; font-size: %s;">',
+        $state,
+        $args['padding'],
+        $args['text-align'],
+        $args['font-size']
+    );
+
+    // Add icon if provided
+    if (isset($args['icon'])) {
+        $return .= sprintf(
+            '<i class="%s" style="font-size: %s; margin-right: %s;"></i>',
+            escape_html($args['icon']),
+            $args['icon-size'],
+            $args['icon-margin']
+        );
+    }
+
+    $return .= $content;
+    $return .= '</div>';
+
+    return $return;
+}
+/**
+ * Render a row of time-period graphs sized to fit a Bootstrap column.
+ *
+ * Sizing model:
+ * - RRDtool's requested --width is the plot area only; final PNG is wider due to axes/labels/margins.
+ * - We compute desired total width per graph, then request a reduced plot width so PNG ≈ desired.
+ *
+ * Graph count rules:
+ * - Normal:  col-12 → 4 graphs, col-≥8 → 3, col-≥6 → 2, else 1
+ * - Big:     col-12 → 3 graphs, col-≥6 → 2, else 1
+ *
+ * Sizing formula:
+ * - container_px = floor(1239px * (cols / 12)) − pad
+ * - desired_total = floor((container_px − (graphs − 1) * gap) / graphs)
+ * - requested_plot_width = desired_total − overhead; overhead = 75px or 81px when >~360px
+ *
+ * Customisation via graph_array (preferred):
+ * - 'cols' int 1..12: Bootstrap column width (overrides $column_width).
+ * - 'pad'  int px   : extra left+right padding/margins to subtract from container (default 0).
+ *   Typical values:
+ *     - Outside tables: $config['graphs']['pad']['container'] (default 20)
+ *     - Inside tables:  $config['graphs']['pad']['table'] (default 0)
+ *     - Tables with state-marker: + $config['graphs']['pad']['table_marker'] (default 8)
+ *
+ * Backward compatibility:
+ * - $column_width still used when 'cols' not provided.
+ * - $state_marker kept; internally adds table_marker pad to 'pad'. Prefer passing 'pad' explicitly.
+ */
+function generate_graph_row($graph_array, $state_marker = FALSE)
+{
+    global $config;
+
+    // Always use measured lg baseline; widescreen does not change container width here
+    $base_col12_px = 1239;
+
+    // Resolve explicit cols/pad overrides from graph_array (preferred over legacy params)
+    $column_width = (isset($graph_array['cols']) && is_numeric($graph_array['cols'])) ? (int)$graph_array['cols'] : 12;
+    $pad = isset($graph_array['pad']) && is_numeric($graph_array['pad']) ? (int)$graph_array['pad'] : 0;
+    // Legacy state_marker adds table_marker pad for table rows with a state marker column
+    if ($state_marker) {
+        $pad += (int)($config['graphs']['pad']['table_marker'] ?? 8);
+    }
+
+    // Decide graphs per row from column width and mode
+    $is_big = (isset($config['graphs']['size']) && $config['graphs']['size'] === 'big');
+    if ($is_big) {
+        if     ($column_width >= 12) { $graph_count = 3; $gap = 4; }
+        elseif ($column_width >= 6)  { $graph_count = 2; $gap = 6; }
+        else                         { $graph_count = 1; $gap = 6; }
+    } else {
+        if     ($column_width >= 12) { $graph_count = 4; $gap = 7; }  // ~304px at col-12
+        elseif ($column_width >= 8)  { $graph_count = 3; $gap = 6; }  // ~270px at col-8
+        elseif ($column_width >= 6)  { $graph_count = 2; $gap = 8; }
+        else                         { $graph_count = 1; $gap = 8; }
+    }
+
+    // Height defaults
+    if (!$graph_array['height']) {
+        $graph_array['height'] = $is_big ? "110" : "100";
+    }
+
+    // Compute container width estimate and per-graph width
+    $col_fraction = max(1, (int)$column_width) / 12.0;
+    $container_px = (int) floor($base_col12_px * $col_fraction) - $pad;
+    $available = $container_px - ($graph_count - 1) * $gap;
+    $desired_total = (int) floor($available / $graph_count);
+    // Compensate for RRDtool total image overhead (axes/margins) so the final PNG width ≈ desired_total.
+    // Use a slightly larger overhead when the plot width triggers larger font selection (>~350px).
+    $overhead = ($desired_total > 360) ? 81 : 75;
+    if (!$graph_array['width']) {
+        $graph_array['width'] = (string) max(50, $desired_total - $overhead);
+    }
+
+    // Periods selection by mode; number of graphs determines how many periods we render
+    if ($is_big) {
+        $all_periods = ['day', 'week', 'month', 'year'];
+    } else {
+        $all_periods = ['day', 'week', 'month', 'year', 'twoyear'];
+    }
+    $periods = array_slice($all_periods, 0, $graph_count);
+
+    if ($graph_array['shrink']) {
+        $graph_array['width'] -= $graph_array['shrink'];
+    }
 
     $graph_array['to'] = get_time();
-    $graph_array['id'] = $port['port_id'];
 
-    print_graph_row($graph_array);
+    $graph_rows = [];
+    foreach ($periods as $period) {
+        $hide_lg = $period[0] === '!';
+        if ($hide_lg) {
+            $period = substr($period, 1);
+        }
+        $graph_array['from']        = get_time($period);
+        $graph_array_zoom           = $graph_array;
+        $graph_array_zoom['height'] = "175";
+        $graph_array_zoom['width']  = "600";
+        unset($graph_array_zoom['legend']);
+
+        // Remove helper-only keys so they don't leak to graph URLs
+        unset($graph_array['cols'], $graph_array['pad']);
+        unset($graph_array_zoom['cols'], $graph_array_zoom['pad']);
+
+        $link_array         = $graph_array;
+        $link_array['page'] = "graphs";
+        unset($link_array['height'], $link_array['width']);
+        $link = generate_url($link_array);
+
+        $graph_link = overlib_link($link, generate_graph_tag($graph_array), generate_graph_tag($graph_array_zoom), NULL);
+        if ($hide_lg) {
+            // Hide this graph on lg/xl screen since it not fit to single row (on xs always visible, since here multirow)
+            $graph_link = '<div class="visible-xs-inline visible-lg-inline visible-xl-inline">' . $graph_link . '</div>';
+        }
+        $graph_rows[] = $graph_link;
+    }
+
+    return implode(PHP_EOL, $graph_rows);
+}
+
+function print_graph_row($graph_array, $state_marker = FALSE)
+{
+    echo(generate_graph_row($graph_array, $state_marker));
+}
+
+function print_graph_summary_row($graph_array, $state_marker = FALSE)
+{
+    echo(generate_graph_summary_row($graph_array, $state_marker));
 }
 
 function generate_graph_summary_row($graph_summary_array, $state_marker = FALSE)
@@ -179,7 +348,7 @@ function generate_graph_summary_row($graph_summary_array, $state_marker = FALSE)
             }
             if (!$graph_array['width']) {
                 $graph_array['width'] = "228";
-            }
+           }
             $limit = 4;
         }
     }
@@ -240,100 +409,7 @@ function generate_graph_summary_row($graph_summary_array, $state_marker = FALSE)
 }
 
 
-// DOCME needs phpdoc block
-function generate_graph_row($graph_array, $state_marker = FALSE)
-{
-    global $config;
-
-    if ($_SESSION['widescreen']) {
-        if ($config['graphs']['size'] === 'big') {
-            if (!$graph_array['height']) {
-                $graph_array['height'] = "110";
-            }
-            if (!$graph_array['width']) {
-                $graph_array['width'] = "372";
-            }
-            $periods = ['day', 'week', 'month', 'year'];
-        } else {
-            if (!$graph_array['height']) {
-                $graph_array['height'] = "110";
-            }
-            if (!$graph_array['width']) {
-                $graph_array['width'] = "287";
-            }
-            $periods = ['day', 'week', 'month', 'year', 'twoyear'];
-        }
-    } else {
-        if ($config['graphs']['size'] === 'big') {
-            if (!$graph_array['height']) {
-                $graph_array['height'] = "100";
-            }
-            if (!$graph_array['width']) {
-                $graph_array['width'] = "330";
-            }
-            $periods = ['day', 'week', '!month'];
-        } else {
-            if (!$graph_array['height']) {
-                $graph_array['height'] = "100";
-            }
-            if (!$graph_array['width']) {
-                $graph_array['width'] = "228";
-            }
-            $periods = ['day', 'week', 'month', '!year'];
-        }
-    }
-
-    if ($graph_array['shrink']) {
-        $graph_array['width'] -= $graph_array['shrink'];
-    }
-
-    // If we're printing the row inside a table cell with "state-marker", we need to make the graphs a tiny bit smaller to fit
-    if ($state_marker) {
-        $graph_array['width'] -= 2;
-    }
-
-    $graph_array['to'] = get_time();
-
-    $graph_rows = [];
-    foreach ($periods as $period) {
-        $hide_lg = $period[0] === '!';
-        if ($hide_lg) {
-            $period = substr($period, 1);
-        }
-        $graph_array['from']        = get_time($period);
-        $graph_array_zoom           = $graph_array;
-        $graph_array_zoom['height'] = "175";
-        $graph_array_zoom['width']  = "600";
-        unset($graph_array_zoom['legend']);
-
-        $link_array         = $graph_array;
-        $link_array['page'] = "graphs";
-        unset($link_array['height'], $link_array['width']);
-        $link = generate_url($link_array);
-
-        $graph_link = overlib_link($link, generate_graph_tag($graph_array), generate_graph_tag($graph_array_zoom), NULL);
-        if ($hide_lg) {
-            // Hide this graph on lg/xl screen since it not fit to single row (on xs always visible, since here multirow)
-            $graph_link = '<div class="visible-xs-inline visible-lg-inline visible-xl-inline">' . $graph_link . '</div>';
-        }
-        $graph_rows[] = $graph_link;
-    }
-
-    return implode(PHP_EOL, $graph_rows);
-}
-
-function print_graph_row($graph_array, $state_marker = FALSE)
-{
-    echo(generate_graph_row($graph_array, $state_marker));
-}
-
-function print_graph_summary_row($graph_array, $state_marker = FALSE)
-{
-    echo(generate_graph_summary_row($graph_array, $state_marker));
-}
-
-function print_setting_row($varname, $variable)
-{
+function print_setting_row($varname, $variable) {
     global $config, $config_variable, $database_config, $defined_config, $default_config;
 
     // required arrays:
@@ -411,21 +487,25 @@ SCRIPT;
     echo('      </td>' . PHP_EOL);
     echo('      <td>' . PHP_EOL);
 
-    // Split enum|foo|bar into enum  foo|bar
-    [ $vartype, $varparams ] = explode('|', $variable['type'], 2);
-    $params = [];
-
-    // If a callback function is defined, use this to fill params.
+    $vartype = $variable['type'];
+    $params  = [];
     if ($variable['params_call'] && function_exists($variable['params_call'])) {
+        // If a callback function is defined, use this to fill params.
         $params = call_user_func($variable['params_call']);
-        // Else if the params are defined directly, use these.
     } elseif (is_array($variable['params'])) {
-        $params = $variable['params'];
-    } elseif (!safe_empty($varparams)) {
-        // Else use parameters specified in variable type (e.g. enum|1|2|5|10)
-        foreach (explode('|', $varparams) as $param) {
-            $params[$param] = ['name' => nicecase($param)];
+        // Else if the params are defined directly, use these.
+        if (is_array_flat($variable['params'])) {
+            // simple list convert to common params arrays
+            foreach ($variable['params'] as $param) {
+                $params[$param] = [ 'name' => $param ];
+            }
+        } else {
+            $params = $variable['params'];
         }
+    } elseif (str_contains($vartype, '|')) {
+        // CLEANME. Deperecated, use params definition
+        // Split enum|foo|bar into enum  foo|bar
+        $vartype = explode('|', $vartype, 2)[0];
     }
 
     if ($sqlset) {
@@ -449,13 +529,15 @@ SCRIPT;
         case 'bool':
         case 'boolean':
             echo('      <div>' . PHP_EOL);
-            $item = ['id'       => $htmlname,
-                     'size'     => 'small',
-                     //'on-text'  => 'True',
-                     //'off-text' => 'False',
-                     'readonly' => $readonly,
-                     'disabled' => (bool)$locked,
-                     'value'    => $content];
+            $item = [
+                'id'       => $htmlname,
+                'size'     => 'small',
+                //'on-text'  => 'True',
+                //'off-text' => 'False',
+                'readonly' => $readonly,
+                'disabled' => (bool)$locked,
+                'value'    => $content
+            ];
             //echo(generate_form_element($item, 'switch'));
             $item['view'] = 'toggle';
             $item['size'] = 'huge';
@@ -487,14 +569,16 @@ SCRIPT;
                 }
             }
             //r($params);
-            $item = ['id'       => $htmlname,
-                     'title'    => 'Any', // only for enum-array
-                     'width'    => '150px',
-                     'readonly' => $readonly,
-                     'disabled' => (bool)$locked,
-                     'onchange' => 'switchDesc(\'' . $htmlname . '\')',
-                     'values'   => $params,
-                     'value'    => $content];
+            $item = [
+                'id'       => $htmlname,
+                'title'    => 'Any', // only for enum-array
+                'width'    => '150px',
+                'readonly' => $readonly,
+                'disabled' => (bool)$locked,
+                'onchange' => 'switchDesc(\'' . $htmlname . '\')',
+                'values'   => $params,
+                'value'    => $content
+            ];
             echo(generate_form_element($item, ($vartype !== 'enum-array' ? 'select' : 'multiselect')));
             foreach ($params as $param => $entry) {
                 if (isset($entry['desc'])) {
@@ -547,15 +631,15 @@ SCRIPT;
                     echo(generate_form_element($item));
                 }
                 $item = [
-                  'id'          => "{$htmlname}[value][]",
-                  'name'        => 'Value',
-                  //'width'       => '100%',
-                  'class'       => 'input-xlarge',
-                  'type'        => 'text',
-                  'readonly'    => $readonly,
-                  'disabled'    => (bool)$locked,
-                  'placeholder' => TRUE,
-                  'value'       => $value
+                    'id'          => "{$htmlname}[value][]",
+                    'name'        => 'Value',
+                    //'width'       => '100%',
+                    'class'       => 'input-xlarge',
+                    'type'        => 'text',
+                    'readonly'    => $readonly,
+                    'disabled'    => (bool)$locked,
+                    'placeholder' => TRUE,
+                    'value'       => $value
                 ];
                 if (isset($params['value'])) {
                     $item = array_merge($item, (array)$params['value']);
@@ -563,13 +647,13 @@ SCRIPT;
                 echo(generate_form_element($item));
                 //echo('<button type="button" id="'.$htmlname.'_button" class="btn btn-primary"> Add</button>');
                 $item = [
-                  'id'       => $htmlname . '[add]',
-                  'name'     => 'Add',
-                  'type'     => 'button',
-                  'readonly' => $readonly,
-                  'disabled' => (bool)$locked,
-                  'class'    => 'btn-primary',
-                  'icon'     => ''
+                    'id'       => $htmlname . '[add]',
+                    'name'     => 'Add',
+                    'type'     => 'button',
+                    'readonly' => $readonly,
+                    'disabled' => (bool)$locked,
+                    'class'    => 'btn-primary',
+                    'icon'     => ''
                 ];
                 echo(generate_form_element($item));
                 echo('</div>' . PHP_EOL);
@@ -611,11 +695,11 @@ SCRIPT;
     var others = \$('[id={$clone_target}]').not(element);
     $.each(others, function () {
       \$(this).addClass(eclass);
-      
+
       // Add button icon
       //console.log(\$(this).find('#{$clone_button}'));
       \$(this).find('[id=\"{$clone_button}\"]').prepend(' ').prepend(\$('<i/>', { class: '{$icon_add}' }));
-      
+
       // Remove button
       \$(this).append(\$('<button/>', {
         id: '{$clone_remove}',
@@ -625,7 +709,7 @@ SCRIPT;
         text: ' {$remove_text}',
         'data-metal-ref': '.' + element.attr('class').match(regex)
       }));
-      
+
       // Remove button icon
       \$(this).find('.metal-btn-remove').prepend(\$('<i/>', { class: '{$icon_remove}' }));
     });
@@ -635,16 +719,18 @@ SCRIPT;
             break;
 
         case 'enum-freeinput':
-            $item = ['id'          => $htmlname,
-                     'type'        => 'tags',
-                     //'title'    => 'Any',
-                     'width'       => '150px',
-                     'readonly'    => $readonly,
-                     'disabled'    => (bool)$locked,
-                     'onchange'    => 'switchDesc(\'' . $htmlname . '\')',
-                     'placeholder' => $variable['example'] ? 'Example: ' . $variable['example'] : FALSE,
-                     'values'      => $params,
-                     'value'       => $content];
+            $item = [
+                'id'          => $htmlname,
+                'type'        => 'tags',
+                //'title'    => 'Any',
+                'width'       => '150px',
+                'readonly'    => $readonly,
+                'disabled'    => (bool)$locked,
+                'onchange'    => 'switchDesc(\'' . $htmlname . '\')',
+                'placeholder' => $variable['example'] ? 'Example: ' . $variable['example'] : FALSE,
+                'values'      => $params,
+                'value'       => $content
+            ];
             echo(generate_form_element($item));
 
             register_html_resource('script', $switchdescr);
@@ -652,14 +738,16 @@ SCRIPT;
         case 'password':
         case 'string':
         default:
-            $item = ['id'          => $htmlname,
-                     //'width'    => '500px',
-                     'class'       => 'input-xlarge',
-                     'type'        => 'text',
-                     'readonly'    => $readonly,
-                     'disabled'    => (bool)$locked,
-                     'placeholder' => TRUE,
-                     'value'       => $content];
+            $item = [
+                'id'          => $htmlname,
+                //'width'    => '500px',
+                'class'       => 'input-xlarge',
+                'type'        => 'text',
+                'readonly'    => $readonly,
+                'disabled'    => (bool)$locked,
+                'placeholder' => TRUE,
+                'value'       => $content
+            ];
             if ($vartype === 'password') {
                 $item['type']          = 'password';
                 $item['show_password'] = 1;
@@ -676,21 +764,23 @@ SCRIPT;
     echo('    </td>' . PHP_EOL);
     echo('    <td>' . PHP_EOL);
     echo('      <div class="pull-right">' . PHP_EOL);
-    $item = ['id'          => $htmlname . '_custom',
-             //'size'     => 'small',
-             //'width'    => 100,
-             //'on-color' => 'primary',
-             //'off-color' => $offtype,
-             //'on-text'  => 'Custom',
-             //'off-text' => $offtext,
-             'size'        => 'large',
-             'view'        => $locked ? 'lock' : 'square', // note this is data-tt-type, but 'type' key reserved for element type
-             'onchange'    => "toggleAttrib('readonly', obj.attr('data-onchange-id'));",
-             'onchange-id' => $target_id, // target id for onchange, set attrib: data-onchange-id
-             //'onchange' => "toggleAttrib('readonly', '" . $htmlname . "')",
-             //'onchange' => '$(\'#' . $htmlname . '_content_div\').toggle()',
-             'disabled'    => (bool)$locked,
-             'value'       => $sqlset && !$locked];
+    $item = [
+        'id'          => $htmlname . '_custom',
+        //'size'     => 'small',
+        //'width'    => 100,
+        //'on-color' => 'primary',
+        //'off-color' => $offtype,
+        //'on-text'  => 'Custom',
+        //'off-text' => $offtext,
+        'size'        => 'large',
+        'view'        => $locked ? 'lock' : 'square', // note this is data-tt-type, but 'type' key reserved for element type
+        'onchange'    => "toggleAttrib('readonly', obj.attr('data-onchange-id'));",
+        'onchange-id' => $target_id, // target id for onchange, set attrib: data-onchange-id
+        //'onchange' => "toggleAttrib('readonly', '" . $htmlname . "')",
+        //'onchange' => '$(\'#' . $htmlname . '_content_div\').toggle()',
+        'disabled'    => (bool)$locked,
+        'value'       => $sqlset && !$locked
+    ];
     echo(generate_form_element($item, 'toggle'));
 
     //$onchange = "toggleAttrib('readonly', '" . $htmlname . "')";
@@ -706,6 +796,113 @@ SCRIPT;
     //echo '    <td></td>' . PHP_EOL;
     echo '  </tr>' . PHP_EOL;
 
+}
+
+/**
+ * Generate state header with state marker, title, and badge groups
+ * Used for routing protocols (BGP, OSPF, IS-IS), services, and other entity instances
+ *
+ * @param array $options Options array with keys:
+ *   - 'title' (string|array): Main title text (e.g., "BGP AS65000", "Router ID 10.0.0.1")
+ *                             Can be array with 'html' key for pre-rendered HTML
+ *   - 'row_class' (string): CSS class for row (e.g., 'up', 'disabled') - default 'up'
+ *   - 'badges' (array): Array of badge groups, each containing:
+ *       - 'label' (string): Badge label text
+ *       - 'value' (string|int): Single badge value
+ *       - 'values' (array): Multiple values for same badge group (alternative to 'value')
+ *           Each value is array with 'value' and optional 'class'
+ *       - 'class' (string): Bootstrap button class (e.g., 'info', 'success', 'danger') - default 'default'
+ *       - 'show' (bool): Whether to show badge (default true) - useful for conditional badges
+ *
+ * @return string HTML with generate_box_open/close wrapper, table with state marker, title, and badge groups
+ *
+ * Example usage (BGP-style):
+ *   echo generate_state_header([
+ *       'title' => 'BGP AS65000',
+ *       'row_class' => 'up',
+ *       'badges' => [
+ *           ['label' => 'Total Sessions', 'value' => 10, 'class' => 'default'],
+ *           ['label' => 'Errored Sessions', 'value' => 2, 'class' => 'danger'],
+ *           ['label' => 'iBGP', 'value' => 5, 'class' => 'info'],
+ *           ['label' => 'eBGP', 'value' => 5, 'class' => 'primary']
+ *       ]
+ *   ]);
+ *
+ * Example usage (OSPF-style with conditional badges and multi-values):
+ *   echo generate_state_header([
+ *       'title' => ['html' => 'Router ID 10.0.0.1 <span class="label label-success">V2</span>'],
+ *       'row_class' => 'up',
+ *       'badges' => [
+ *           ['label' => 'Status', 'value' => 'enabled', 'class' => 'success'],
+ *           ['label' => 'ABR', 'value' => 'yes', 'class' => 'success', 'show' => $is_abr],
+ *           ['label' => 'ASBR', 'value' => 'yes', 'class' => 'success', 'show' => $is_asbr],
+ *           ['label' => 'Areas', 'value' => 3, 'class' => 'info'],
+ *           ['label' => 'Ports', 'values' => [
+ *               ['value' => 12, 'class' => 'info'],
+ *               ['value' => 8, 'class' => 'success']
+ *           ]],
+ *           ['label' => 'Neighbours', 'value' => 8, 'class' => 'info']
+ *       ]
+ *   ]);
+ */
+function generate_state_header($options) {
+    $row_class = $options['row_class'] ?? 'up';
+    $title = $options['title'] ?? '';
+    $badges = $options['badges'] ?? [];
+
+    // Handle title - can be string or array with 'html' key
+    if (is_array($title) && isset($title['html'])) {
+        $title_html = $title['html'];
+    } else {
+        $title_html = htmlentities((string)$title);
+    }
+
+    $html = generate_box_open();
+
+    $html .= '<table class="table table-hover table-striped vertical-align">' . PHP_EOL;
+    $html .= '  <tbody>' . PHP_EOL;
+    $html .= '    <tr class="' . htmlentities($row_class) . '">' . PHP_EOL;
+    $html .= '      <td class="state-marker"></td>' . PHP_EOL;
+    $html .= '      <td style="padding: 10px 14px;"><span style="font-size: 20px;">' . $title_html . '</span></td>' . PHP_EOL;
+    $html .= '      <td></td>' . PHP_EOL;
+    $html .= '      <td style="text-align: right;">' . PHP_EOL;
+
+    foreach ($badges as $badge) {
+        // Skip badges with show=false
+        if (isset($badge['show']) && !$badge['show']) {
+            continue;
+        }
+
+        $label = $badge['label'] ?? '';
+
+        $html .= '        <div class="btn-group" style="margin: 5px;">' . PHP_EOL;
+        $html .= '          <div class="btn btn-sm btn-default"><strong>' . htmlentities($label) . '</strong></div>' . PHP_EOL;
+
+        // Handle multiple values in same badge group
+        if (isset($badge['values']) && is_array($badge['values'])) {
+            foreach ($badge['values'] as $val_item) {
+                $value = $val_item['value'] ?? '';
+                $class = $val_item['class'] ?? 'default';
+                $html .= '          <div class="btn btn-sm btn-' . htmlentities($class) . '"> ' . htmlentities((string)$value) . '</div>' . PHP_EOL;
+            }
+        } else {
+            // Single value
+            $value = $badge['value'] ?? '';
+            $class = $badge['class'] ?? 'default';
+            $html .= '          <div class="btn btn-sm btn-' . htmlentities($class) . '"> ' . htmlentities((string)$value) . '</div>' . PHP_EOL;
+        }
+
+        $html .= '        </div>' . PHP_EOL;
+    }
+
+    $html .= '      </td>' . PHP_EOL;
+    $html .= '    </tr>' . PHP_EOL;
+    $html .= '  </tbody>' . PHP_EOL;
+    $html .= '</table>' . PHP_EOL;
+
+    $html .= generate_box_close();
+
+    return $html;
 }
 
 // EOF

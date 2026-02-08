@@ -1,14 +1,13 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpipv6.mib,v 1.20 2015/02/09 12:58:51 siva Exp $
-
 ARICENT-MIIPV6-MIB DEFINITIONS ::= BEGIN
     IMPORTS
         MODULE-IDENTITY, OBJECT-TYPE, 
         Integer32, Counter32, Unsigned32,
         TimeTicks, 
         enterprises FROM SNMPv2-SMI
-        DisplayString, RowStatus, TEXTUAL-CONVENTION, TruthValue FROM SNMPv2-TC
+        DisplayString, RowStatus, TEXTUAL-CONVENTION,
+        TruthValue FROM SNMPv2-TC
         InetZoneIndex,InetScopeType   FROM INET-ADDRESS-MIB 
         fsMIStdIpContextId, fsMIStdIpv6InterfaceEntry,
         fsMIStdIpv6InterfaceIfIndex, fsMIStdIpIfStatsIfIndex
@@ -16,11 +15,18 @@ ARICENT-MIIPV6-MIB DEFINITIONS ::= BEGIN
         InterfaceIndex  FROM IF-MIB;
       
     fsMIipv6MIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z" 
+    LAST-UPDATED "202201260000Z" 
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION
         " The MIB module for IPv6 "
+
+    REVISION "202201260000Z"
+    DESCRIPTION
+        "Updated fsMIIpv6PingOperStatus enumerations
+        to match implementation. Added limited 
+        continuous ping support for Web usage."
+
     REVISION "201209050000Z"
     DESCRIPTION
         " The MIB module for IPv6 "
@@ -2007,7 +2013,9 @@ fsMIIpv6RaRDNSSTable  OBJECT IDENTIFIER ::= { fsMIipv6MIB 4 }
         fsMIIpv6PingDestAddrType
             INTEGER,
         fsMIIpv6PingHostName
-            OCTET STRING
+            OCTET STRING,
+        fsMIIpv6PingContInterval
+            Integer32
         }
 
     fsMIIpv6PingIndex  OBJECT-TYPE
@@ -2149,8 +2157,9 @@ fsMIIpv6RaRDNSSTable  OBJECT IDENTIFIER ::= { fsMIipv6MIB 4 }
     
     fsMIIpv6PingOperStatus  OBJECT-TYPE
     SYNTAX     INTEGER { 
-                inprogress(1),
-                notinprogress(2)
+                   notInitiated(1),
+                   inProgress(2),
+                   completed(3)
                }
     MAX-ACCESS read-only
     STATUS     current
@@ -2232,6 +2241,21 @@ fsMIIpv6RaRDNSSTable  OBJECT IDENTIFIER ::= { fsMIipv6MIB 4 }
           used to send echo requests."
 
     ::= { fsMIIpv6PingEntry 21 }
+
+    fsMIIpv6PingContInterval  OBJECT-TYPE
+    SYNTAX     Integer32 (0..3600)
+    MAX-ACCESS read-create
+    STATUS     current
+    DESCRIPTION
+         "Specifies the interval for continuous ping operations.
+         A value of 0 indicates that continuous ping generation 
+         is not enabled. Other values indicate that continuous 
+         ping is enabled and that a new ping attempt (based on 
+         other entry settings) will be initiated periodically 
+         per the current interval value."
+
+    DEFVAL { 0 }
+    ::= { fsMIIpv6PingEntry 22 }
 
 
 -- scalar object 
@@ -3258,6 +3282,5 @@ fsMIIpv6RARouteRowStatus OBJECT-TYPE
                    "Life time to be configured for the connected router"
             ::= { fsMIIpv6IfRaRDNSSEntry 18}
 
--- RDNSS END
 END
 

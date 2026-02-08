@@ -61,7 +61,7 @@ foreach (dbFetchRows($sql, [ $device['device_id'] ]) as $processor) {
         $unit = $def['unit'] ?? NULL;
     }
 
-    $proc = snmp_fix_numeric($proc, $unit);
+    $proc = snmp_fix_numeric($proc, $unit, $processor['processor_mib']);
 
     if (is_numeric($proc)) {
         if (!$processor['processor_precision']) {

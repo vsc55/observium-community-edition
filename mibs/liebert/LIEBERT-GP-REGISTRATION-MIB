@@ -844,6 +844,42 @@ lgpEdgeUPS OBJECT-IDENTITY
    REFERENCE   "There are currently no objects registered under this branch."
     ::= { lgpUpsProducts 40 }
 
+lgpGXE3 OBJECT-IDENTITY
+   STATUS       current
+   DESCRIPTION "This branch is used to register Vertiv GXE3
+                UPS product information."
+   REFERENCE   "There are currently no objects registered under this branch."
+    ::= { lgpUpsProducts 42 }
+
+lgpMTP_10_40k OBJECT-IDENTITY
+   STATUS       current
+   DESCRIPTION "This branch is used to register Vertiv MTP (10-40k, 80k)
+                UPS product information."
+   REFERENCE   "There are currently no objects registered under this branch."
+    ::= { lgpUpsProducts 43 }
+
+lgpMTP_100_200k OBJECT-IDENTITY
+   STATUS       current
+   DESCRIPTION "This branch is used to register Vertiv MTP (100-200k, 60k)
+                UPS product information."
+   REFERENCE   "There are currently no objects registered under this branch."
+    ::= { lgpUpsProducts 44 }
+
+lgpGXE3_1_3k OBJECT-IDENTITY
+   STATUS       current
+   DESCRIPTION "This branch is used to register Vertiv GXE3 (1-3k)
+                UPS product information."
+   REFERENCE   "There are currently no objects registered under this branch."
+    ::= { lgpUpsProducts 45 }
+
+lgpAPM2 OBJECT-IDENTITY
+   STATUS       current
+   DESCRIPTION "This branch is used to register Vertiv APM2
+                UPS product information."
+   REFERENCE   "There are currently no objects registered under this branch."
+    ::= { lgpUpsProducts 46 }
+
+
 -- =============================================================================
 --  NXL Family - Liebert NXL UPS product Registrations
 -- =============================================================================
@@ -1010,6 +1046,12 @@ lgpCpcoPDX OBJECT-IDENTITY
                family."
     ::= { lgpAcProducts 32 }
 
+lgpCpcoAhu OBJECT-IDENTITY
+   STATUS      current
+   DESCRIPTION "This branch is used to register information for the 
+               AHU Environmental product
+               family."
+    ::= { lgpAcProducts 33 }
 
 -- =============================================================================
 --  iCOM PA Family - Liebert PA (Floor mount) Environmental Registrations
@@ -1548,4 +1590,10 @@ lgpCR OBJECT-IDENTITY
        DESCRIPTION "This branch is used to register information for CRVDX2535."
        REFERENCE   "There are currently no objects registered under this branch."
         ::= { lgpCR 10 }
+
+    lgpWallmate OBJECT-IDENTITY
+       STATUS      current
+       DESCRIPTION "This branch is used to register information for Wallmate."
+       REFERENCE   "There are currently no objects registered under this branch."
+        ::= { lgpCR 11 }
 END

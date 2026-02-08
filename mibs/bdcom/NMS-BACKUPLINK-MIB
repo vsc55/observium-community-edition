@@ -14,7 +14,7 @@ NMS-BACKUPLINK-MIB DEFINITIONS ::= BEGIN
 		nmsMgmt
 			FROM NMS-SMI;
     
-    BackupLinkState ::= TEXTUAL-CONVENTION
+    backupLinkState ::= TEXTUAL-CONVENTION
     STATUS  current  
     DESCRIPTION
         "The  backupLink port state."
@@ -54,249 +54,249 @@ NMS-BACKUPLINK-MIB DEFINITIONS ::= BEGIN
         nosetting(2)
     }
                 
-    NMSBackupLinkMIB MODULE-IDENTITY
+    nmsBackupLinkMIB MODULE-IDENTITY
         LAST-UPDATED "201104290000Z"
         ORGANIZATION ""
         CONTACT-INFO ""    
         DESCRIPTION  "MIB module for backuplink"
         ::= { nmsMgmt 254 }    
   
-    NMSBackupLinkGroupTable OBJECT-TYPE
-        SYNTAX      SEQUENCE OF NMSBackupLinkGroupEntry
+    nmsBackupLinkGroupTable OBJECT-TYPE
+        SYNTAX      SEQUENCE OF NmsBackupLinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current
-        ::= { NMSBackupLinkMIB 1 }
+        ::= { nmsBackupLinkMIB 1 }
             
-    NMSBackupLinkGroupEntry OBJECT-TYPE
-        SYNTAX      NMSBackupLinkGroupEntry
+    nmsBackupLinkGroupEntry OBJECT-TYPE
+        SYNTAX      NmsBackupLinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current  
-        INDEX { NMSBLGID } 
-        ::= { NMSBackupLinkGroupTable 1 } 
+        INDEX { nmsBLGID } 
+        ::= { nmsBackupLinkGroupTable 1 } 
 
-    NMSBackupLinkGroupEntry ::=
+    NmsBackupLinkGroupEntry ::=
     SEQUENCE {
-        NMSBLGID
+        nmsBLGID
             InterfaceIndex,
-        NMSBLGActivePortID
+        nmsBLGActivePortID
             InterfaceIndex, 
-        NMSBLGActivePortState
-            BackupLinkState,       
-        NMSBLGActiveFdbUpdate
+        nmsBLGActivePortState
+            backupLinkState,       
+        nmsBLGActiveFdbUpdate
             MMU,
-        NMSBLGBackupPortID
+        nmsBLGBackupPortID
             InterfaceIndex, 
-        NMSBLGBackupPortState
-            BackupLinkState,      
-        NMSBLGBackupShareLoadVlan
+        nmsBLGBackupPortState
+            backupLinkState,      
+        nmsBLGBackupShareLoadVlan
             OCTET STRING,      
-        NMSBLGBackupVlanState
-            BackupLinkState,      
-        NMSBLGBackupFdbUpdate
+        nmsBLGBackupVlanState
+            backupLinkState,      
+        nmsBLGBackupFdbUpdate
             MMU,
-        NMSBLGPreemptionMode
+        nmsBLGPreemptionMode
             PreemptionMode,
-        NMSBLGPreemptionDelay
+        nmsBLGPreemptionDelay
             INTEGER,
-        NMSBLGSwitchCount
+        nmsBLGSwitchCount
             INTEGER,
-        NMSBLGFdbUpdateTxCount
+        nmsBLGFdbUpdateTxCount
             INTEGER, 
-        NMSBLGRowStatus
+        nmsBLGRowStatus
         	RowStatus
     }
       
-    NMSBLGID OBJECT-TYPE
+    nmsBLGID OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   not-accessible
     	STATUS       current
         DESCRIPTION
             "The BackupLink group id."
-    ::= { NMSBackupLinkGroupEntry 1 }
+    ::= { nmsBackupLinkGroupEntry 1 }
     
-    NMSBLGActivePortID  OBJECT-TYPE
+    nmsBLGActivePortID  OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The port id of the BackupLink group active port."
-    ::= { NMSBackupLinkGroupEntry 2 } 
+    ::= { nmsBackupLinkGroupEntry 2 } 
    
-    NMSBLGActivePortState OBJECT-TYPE
-        SYNTAX       BackupLinkState
+    nmsBLGActivePortState OBJECT-TYPE
+        SYNTAX       backupLinkState
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The port state of the BackupLink group active port."
-    ::= { NMSBackupLinkGroupEntry 3 }
+    ::= { nmsBackupLinkGroupEntry 3 }
     
-    NMSBLGActiveFdbUpdate OBJECT-TYPE
+    nmsBLGActiveFdbUpdate OBJECT-TYPE
         SYNTAX       MMU
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The port mmuType of the BackupLink group active port."
-    ::= { NMSBackupLinkGroupEntry 4 }
+    ::= { nmsBackupLinkGroupEntry 4 }
     
-    NMSBLGBackupPortID  OBJECT-TYPE
+    nmsBLGBackupPortID  OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The port id of the BackupLink group backup port."
-    ::= { NMSBackupLinkGroupEntry 5 }   
+    ::= { nmsBackupLinkGroupEntry 5 }   
            
-    NMSBLGBackupPortState OBJECT-TYPE
-        SYNTAX       BackupLinkState
+    nmsBLGBackupPortState OBJECT-TYPE
+        SYNTAX       backupLinkState
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The port state of the BackupLink group backup port."
-    ::= { NMSBackupLinkGroupEntry 6 }
+    ::= { nmsBackupLinkGroupEntry 6 }
      
-    NMSBLGBackupFdbUpdate OBJECT-TYPE
+    nmsBLGBackupFdbUpdate OBJECT-TYPE
         SYNTAX       MMU
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The port mmuType of the BackupLink group backup port."
-    ::= { NMSBackupLinkGroupEntry 7 }
+    ::= { nmsBackupLinkGroupEntry 7 }
     
-    NMSBLGBackupShareLoadVlan OBJECT-TYPE
+    nmsBLGBackupShareLoadVlan OBJECT-TYPE
         SYNTAX       OCTET STRING
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The share load vlan  of the BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 8 } 
+    ::= { nmsBackupLinkGroupEntry 8 } 
                                                                        
-    NMSBLGBackupVlanState OBJECT-TYPE
-        SYNTAX       BackupLinkState
+    nmsBLGBackupVlanState OBJECT-TYPE
+        SYNTAX       backupLinkState
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The backup port state of the BackupLink group in the backup vlan."
-    ::= { NMSBackupLinkGroupEntry 9 }
+    ::= { nmsBackupLinkGroupEntry 9 }
     
-    NMSBLGPreemptionMode  OBJECT-TYPE
+    nmsBLGPreemptionMode  OBJECT-TYPE
         SYNTAX       PreemptionMode
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The preemption mode of the BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 10 } 
+    ::= { nmsBackupLinkGroupEntry 10 } 
     
-    NMSBLGPreemptionDelay    OBJECT-TYPE
+    nmsBLGPreemptionDelay    OBJECT-TYPE
         SYNTAX       INTEGER
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The preemption delay timer of the BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 11 }  
+    ::= { nmsBackupLinkGroupEntry 11 }  
     
-    NMSBLGSwitchCount OBJECT-TYPE
+    nmsBLGSwitchCount OBJECT-TYPE
         SYNTAX       INTEGER
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The switch counts of the BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 12 }  
+    ::= { nmsBackupLinkGroupEntry 12 }  
     
-    NMSBLGFdbUpdateTxCount OBJECT-TYPE
+    nmsBLGFdbUpdateTxCount OBJECT-TYPE
         SYNTAX       INTEGER
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The Tx counts of the BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 13 }
+    ::= { nmsBackupLinkGroupEntry 13 }
     
-    NMSBLGRowStatus OBJECT-TYPE
+    nmsBLGRowStatus OBJECT-TYPE
         SYNTAX       RowStatus
         MAX-ACCESS   read-create
         STATUS       current
         DESCRIPTION
             "Create a new BackupLink group."
-    ::= { NMSBackupLinkGroupEntry 14 }   
+    ::= { nmsBackupLinkGroupEntry 14 }   
     
-    NMSMonitorLinkUplinkGroupTable OBJECT-TYPE
+    nmsMonitorLinkUplinkGroupTable OBJECT-TYPE
         SYNTAX      SEQUENCE OF NMSMonitorLinkUplinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current
-        ::= { NMSBackupLinkMIB 2 }
+        ::= { nmsBackupLinkMIB 2 }
         
-    NMSMonitorLinkUplinkGroupEntry OBJECT-TYPE
+    nmsMonitorLinkUplinkGroupEntry OBJECT-TYPE
         SYNTAX      NMSMonitorLinkUplinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current  
-        INDEX { NMSMLGUplinkPortID } 
-        ::= { NMSMonitorLinkUplinkGroupTable 1 } 
+        INDEX { nmsMLGUplinkPortID } 
+        ::= { nmsMonitorLinkUplinkGroupTable 1 } 
         
     NMSMonitorLinkUplinkGroupEntry ::=
     SEQUENCE {  
-        NMSMLGID
+        nmsMLGID
             InterfaceIndex,
-        NMSMLGUplinkPortID
+        nmsMLGUplinkPortID
             InterfaceIndex,
-        NMSMLGUplinkPortState
+        nmsMLGUplinkPortState
             MonitorLinkState,       
-        NMSMLGUplinkRowStatus
+        nmsMLGUplinkRowStatus
         	RowStatus
     }
     
-    NMSMLGID OBJECT-TYPE
+    nmsMLGID OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   not-accessible
     	STATUS       current
         DESCRIPTION
             "The MonitorLink group id."
-    ::= { NMSMonitorLinkUplinkGroupEntry 1 }
+    ::= { nmsMonitorLinkUplinkGroupEntry 1 }
     
-    NMSMLGUplinkPortID  OBJECT-TYPE
+    nmsMLGUplinkPortID  OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   read-write
     	STATUS       current
         DESCRIPTION
             "The port id of the MonitorLink group uplink port."
-    ::= { NMSMonitorLinkUplinkGroupEntry 2 }
+    ::= { nmsMonitorLinkUplinkGroupEntry 2 }
     
-    NMSMLGUplinkPortState OBJECT-TYPE
+    nmsMLGUplinkPortState OBJECT-TYPE
         SYNTAX       MonitorLinkState
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The port state of the MonitorLink group uplink port."
-    ::= { NMSMonitorLinkUplinkGroupEntry 3 }
+    ::= { nmsMonitorLinkUplinkGroupEntry 3 }
     
-    NMSMLGUplinkRowStatus OBJECT-TYPE
+    nmsMLGUplinkRowStatus OBJECT-TYPE
         SYNTAX       RowStatus
         MAX-ACCESS   read-create
         STATUS       current
         DESCRIPTION
             "The port linkstate of the MonitorLink group uplink port."
-        ::= { NMSMonitorLinkUplinkGroupEntry 4 } 
+        ::= { nmsMonitorLinkUplinkGroupEntry 4 } 
         
-    NMSMonitorLinkDownlinkGroupTable OBJECT-TYPE
-        SYNTAX      SEQUENCE OF NMSMonitorLinkDownlinkGroupEntry
+    nmsMonitorLinkDownlinkGroupTable OBJECT-TYPE
+        SYNTAX      SEQUENCE OF NmsMonitorLinkDownlinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current
-        ::= { NMSBackupLinkMIB 3 }   
+        ::= { nmsBackupLinkMIB 3 }   
         
-    NMSMonitorLinkDownlinkGroupEntry OBJECT-TYPE
-        SYNTAX      NMSMonitorLinkDownlinkGroupEntry
+    nmsMonitorLinkDownlinkGroupEntry OBJECT-TYPE
+        SYNTAX      NmsMonitorLinkDownlinkGroupEntry
         MAX-ACCESS  not-accessible
         STATUS      current  
-        INDEX { nmsMLGID, NMSMLGDownlinkIndex } 
-        ::= { NMSMonitorLinkDownlinkGroupTable 1 }     
+        INDEX { nmsMLGID, nmsMLGDownlinkIndex } 
+        ::= { nmsMonitorLinkDownlinkGroupTable 1 }     
     
-    NMSMonitorLinkDownlinkGroupEntry ::=
+    NmsMonitorLinkDownlinkGroupEntry ::=
     SEQUENCE {  
         nmsMLGID
             InterfaceIndex,
-        NMSMLGDownlinkIndex 
+        nmsMLGDownlinkIndex 
             InterfaceIndex,     
-        NMSMLGDownlinkPortState  
+        nmsMLGDownlinkPortState  
             MonitorLinkState,
-        NMSMLGDownlinkRowStatus
+        nmsMLGDownlinkRowStatus
         	RowStatus
     }    
     
@@ -306,29 +306,29 @@ NMS-BACKUPLINK-MIB DEFINITIONS ::= BEGIN
     	STATUS       current
         DESCRIPTION
             "The MonitorLink group id."
-    ::= { NMSMonitorLinkDownlinkGroupEntry 1 } 
+    ::= { nmsMonitorLinkDownlinkGroupEntry 1 } 
     
-    NMSMLGDownlinkIndex OBJECT-TYPE
+    nmsMLGDownlinkIndex OBJECT-TYPE
         SYNTAX       InterfaceIndex
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The port id of the MonitorLink group downlink port."
-    ::= { NMSMonitorLinkDownlinkGroupEntry 2 }
+    ::= { nmsMonitorLinkDownlinkGroupEntry 2 }
     
-    NMSMLGDownlinkPortState OBJECT-TYPE
+    nmsMLGDownlinkPortState OBJECT-TYPE
         SYNTAX       MonitorLinkState
    		MAX-ACCESS   read-only
     	STATUS       current
         DESCRIPTION
             "The port state of the MonitorLink group downlink port."
-    ::= { NMSMonitorLinkDownlinkGroupEntry 3 }
+    ::= { nmsMonitorLinkDownlinkGroupEntry 3 }
         
-    NMSMLGDownlinkRowStatus OBJECT-TYPE
+    nmsMLGDownlinkRowStatus OBJECT-TYPE
         SYNTAX       RowStatus
         MAX-ACCESS   read-create
         STATUS       current
         DESCRIPTION
             "The port linkstate of the MonitorLink group downlink port."
-    ::= { NMSMonitorLinkDownlinkGroupEntry 4 }
+    ::= { nmsMonitorLinkDownlinkGroupEntry 4 }
     END

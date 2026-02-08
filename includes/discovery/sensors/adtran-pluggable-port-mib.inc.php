@@ -151,7 +151,7 @@ foreach ($oids as $index => $entry) {
         foreach ($oids_lane[$index] as $lane => $lentry) {
             $lname  = $name . ' Lane ' . $lane;
             $lindex = $index . '.' . $lane;
-            
+
             // TX Bias
             $descr    = $lname . ' TX Bias';
             if ($vendor_name) {

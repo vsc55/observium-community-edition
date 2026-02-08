@@ -108,7 +108,7 @@ if (is_array($entPhysical)) {
         }
     }
 
-    if ($entPhysical['entPhysicalClass'] === 'chassis' || in_array($entPhysical['entPhysicalContainedIn'], ['0', '1', '2'])) {
+    if ($entPhysical['entPhysicalClass'] === 'chassis' || in_array($entPhysical['entPhysicalContainedIn'], [ '0', '1', '2' ])) {
         if ((safe_empty($version) || $device['os'] === 'iosxe') && !empty($entPhysical['entPhysicalSoftwareRev'])) {
             $version = $entPhysical['entPhysicalSoftwareRev'];
         }
@@ -129,6 +129,10 @@ if (is_array($entPhysical)) {
             $serial = $entPhysical['entPhysicalSerialNum'];
         }
     }
+}
+if ($version && preg_match('/^[a-z]+ \d/i', $version)) {
+    // Remove codename from version, ie: Dublin 17.12.04
+    $version = explode(' ', $version)[1];
 }
 
 // NOTE. In CISCO-PRODUCTS-MIB uses weird hardware names (entPhysicalName uses human readable names)

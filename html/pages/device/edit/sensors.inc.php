@@ -14,7 +14,14 @@ $query = 'SELECT * FROM `sensors`
             WHERE `device_id` = ? AND `sensor_deleted` = 0
             ORDER BY `sensor_class`,`sensor_type`,`sensor_index`;';
 
-$sensors = dbFetchRows($query, [$device['device_id']]);
+$params = [ $device['device_id'] ];
+
+$box_navbar['class'] = 'box-tools';
+//$box_navbar['brand'] = 'Classes';
+
+$box_navbar['options_right']['all']['url']  = generate_url([ 'page' => 'device', 'device' => $device['device_id'], 'tab' => 'edit', 'section' => 'sensors' ]);
+$box_navbar['options_right']['all']['text'] = 'Show All';
+$box_navbar['options_right']['all']['icon'] = $config['icon']['user-log'];
 
 //foreach ($limits_reset_array as $class => $descr)
 //{
@@ -28,11 +35,9 @@ $sensors = dbFetchRows($query, [$device['device_id']]);
 
         <input type="hidden" name="action" value="sensors_update">
 
-        <div class="box box-solid">
-            <div class="box-header with-border">
-                <h3 class="box-title">Sensor Properties</h3>
-            </div>
-            <div class="box-body no-padding">
+        <?php
+        echo generate_box_open([ 'header-border' => TRUE, 'title' => 'Sensor Properties', 'header-navbar' => $box_navbar ]);
+        ?>
                 <table class="table table-striped table-condensed vertical-align">
 
                     <thead>
@@ -63,7 +68,7 @@ $sensors = dbFetchRows($query, [$device['device_id']]);
                         echo generate_form_element(['type' => 'hidden', 'id' => 'requesttoken', 'value' => $_SESSION['requesttoken']]) . PHP_EOL;
                     }
 
-                    foreach ($sensors as $sensor) {
+                    foreach (dbFetchRows($query, $params) as $sensor) {
                         humanize_sensor($sensor);
 
                         if ($sensor['sensor_state']) {
@@ -83,59 +88,63 @@ $sensors = dbFetchRows($query, [$device['device_id']]);
                         echo('<td><span class="label label-' . get_type_class($sensor['sensor_class']) . '">' . $sensor['sensor_class'] . '</span></td>');
                         echo('<td><span class="' . $sensor['state_class'] . '">' . $sensor_value . $sensor['sensor_symbol'] . '</span></td>');
                         $item = [
-                          'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_low]',
-                          'type'     => 'text',
-                          //'grid'          => 1,
-                          'class'    => 'input-mini',
-                          'size'     => '4',
-                          //'width'         => '58px',
-                          'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
-                          'readonly' => $readonly,
-                          //'disabled'      => TRUE,
-                          //'submit_by_key' => TRUE,
-                          'value'    => $sensor['sensor_limit_low']
+                            'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_low]',
+                            'type'     => 'text',
+                            //'grid'          => 1,
+                            'class'    => 'input-mini',
+                            'size'     => '4',
+                            //'width'         => '58px',
+                            //'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'oninput'  => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'readonly' => $readonly,
+                            //'disabled'      => TRUE,
+                            //'submit_by_key' => TRUE,
+                            'value'    => $sensor['sensor_limit_low']
                         ];
                         echo('<td>' . generate_form_element($item) . '</td>');
                         $item = [
-                          'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_low_warn]',
-                          'type'     => 'text',
-                          //'grid'          => 1,
-                          'class'    => 'input-mini',
-                          'size'     => '4',
-                          //'width'         => '58px',
-                          'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
-                          'readonly' => $readonly,
-                          //'disabled'      => TRUE,
-                          //'submit_by_key' => TRUE,
-                          'value'    => $sensor['sensor_limit_low_warn']
+                            'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_low_warn]',
+                            'type'     => 'text',
+                            //'grid'          => 1,
+                            'class'    => 'input-mini',
+                            'size'     => '4',
+                            //'width'         => '58px',
+                            //'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'oninput'  => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'readonly' => $readonly,
+                            //'disabled'      => TRUE,
+                            //'submit_by_key' => TRUE,
+                            'value'    => $sensor['sensor_limit_low_warn']
                         ];
                         echo('<td>' . generate_form_element($item) . '</td>');
                         $item = [
-                          'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_warn]',
-                          'type'     => 'text',
-                          //'grid'          => 1,
-                          'class'    => 'input-mini',
-                          'size'     => '4',
-                          //'width'         => '58px',
-                          'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
-                          'readonly' => $readonly,
-                          //'disabled'      => TRUE,
-                          //'submit_by_key' => TRUE,
-                          'value'    => $sensor['sensor_limit_warn']
+                            'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit_warn]',
+                            'type'     => 'text',
+                            //'grid'          => 1,
+                            'class'    => 'input-mini',
+                            'size'     => '4',
+                            //'width'         => '58px',
+                            //'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'oninput'  => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'readonly' => $readonly,
+                            //'disabled'      => TRUE,
+                            //'submit_by_key' => TRUE,
+                            'value'    => $sensor['sensor_limit_warn']
                         ];
                         echo('<td>' . generate_form_element($item) . '</td>');
                         $item = [
-                          'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit]',
-                          'type'     => 'text',
-                          //'grid'          => 1,
-                          'class'    => 'input-mini',
-                          'size'     => '4',
-                          //'width'         => '58px',
-                          'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
-                          'readonly' => $readonly,
-                          //'disabled'      => TRUE,
-                          //'submit_by_key' => TRUE,
-                          'value'    => $sensor['sensor_limit']
+                            'id'       => 'sensors[' . $sensor['sensor_id'] . '][sensor_limit]',
+                            'type'     => 'text',
+                            //'grid'          => 1,
+                            'class'    => 'input-mini',
+                            'size'     => '4',
+                            //'width'         => '58px',
+                            //'onchange' => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'oninput'  => "toggleOn('sensors[" . $sensor['sensor_id'] . "][sensor_custom_limit]');",
+                            'readonly' => $readonly,
+                            //'disabled'      => TRUE,
+                            //'submit_by_key' => TRUE,
+                            'value'    => $sensor['sensor_limit']
                         ];
                         echo('<td>' . generate_form_element($item) . '</td>');
                         //echo('<td><input type="text" class="'.$limit_class.'" name="sensors['.$sensor['sensor_id'].'][sensor_limit_low]" size="4" value="'.escape_html($sensor['sensor_limit_low']).'" /></td>');
@@ -215,22 +224,17 @@ $sensors = dbFetchRows($query, [$device['device_id']]);
 
                     </tbody>
                 </table>
-            </div>
-
-            <div class="box-footer">
-                <?php
-                $item = [
-                  'id'       => 'submit',
-                  'name'     => 'Save Changes',
-                  'class'    => 'btn-primary pull-right',
-                  'icon'     => 'icon-ok icon-white',
-                  'readonly' => $readonly,
-                  'value'    => 'update-sensors'
-                ];
-                echo(generate_form_element($item, 'submit'));
-                ?>
-            </div>
-        </div>
+        <?php
+        $item = [
+            'id'       => 'submit',
+            'name'     => 'Save Changes',
+            'class'    => 'btn-primary pull-right',
+            'icon'     => 'icon-ok icon-white',
+            'readonly' => $readonly,
+            'value'    => 'update-sensors'
+        ];
+        echo generate_box_close([ 'footer_content' => generate_form_element($item, 'submit') ]);
+        ?>
     </form>
 
 <?php

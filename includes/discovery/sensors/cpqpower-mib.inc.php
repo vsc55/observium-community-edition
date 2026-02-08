@@ -27,15 +27,20 @@ foreach (array_slice(array_keys($hpups_array), 1) as $phase) {
     # Input
     $index = $hpups_array[$phase]['upsInputPhase'];
     $descr = 'Input';
+    $input_options = ['rename_rrd' => "CPQPOWER-MIB-upsInputEntry.$index"];
     if ($hpups_array[0]['upsInputNumPhases'] > 1) {
         $descr .= " Phase $index";
+        $input_options['measured_entity_label'] = "Input Phase $index";
+        $input_options['measured_class'] = 'phase';
+    } else {
+        $input_options['measured_class'] = 'input';
     }
 
     ## Input voltage
     $oid   = ".1.3.6.1.4.1.232.165.3.3.4.1.2.$index";                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             # CPQPOWER-MIB:upsInputVoltage.$index
     $value = $hpups_array[$phase]['upsInputVoltage'];
 
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsInputEntry.$index"];
+    $options = $input_options;
     discover_sensor_ng($device, 'voltage', $mib, 'upsInputVoltage', $oid, $index, $descr, 1, $value, $options);
 
     ## Input current
@@ -43,59 +48,72 @@ foreach (array_slice(array_keys($hpups_array), 1) as $phase) {
     $value = $hpups_array[$phase]['upsInputCurrent'];
 
     if ($value < 10000) { # upsInputCurrent.1 = 136137420 ? really? You're nuts.
-        $options = ['rename_rrd' => "CPQPOWER-MIB-upsInputEntry.$index"];
+        $options = $input_options;
         discover_sensor_ng($device, 'current', $mib, 'upsInputCurrent', $oid, $index, $descr, 1, $value, $options);
     }
 
     ## Input power
     $oid     = ".1.3.6.1.4.1.232.165.3.3.4.1.4.$index";                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             # CPQPOWER-MIB:upsInputWatts.$index
     $value   = $hpups_array[$phase]['upsInputWatts'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsInputEntry.$index"];
+    $options = $input_options;
     discover_sensor_ng($device, 'power', $mib, 'upsInputWatts', $oid, $index, $descr, 1, $value, $options);
 
     # Output
     $index = $hpups_array[$phase]['upsOutputPhase'];
     $descr = 'Output';
+    $output_options = ['rename_rrd' => "CPQPOWER-MIB-upsOutputEntry.$index"];
     if ($hpups_array[0]['upsOutputNumPhases'] > 1) {
         $descr .= " Phase $index";
+        $output_options['measured_entity_label'] = "Output Phase $index";
+        $output_options['measured_class'] = 'phase';
+    } else {
+        $output_options['measured_class'] = 'output';
     }
 
     ## Output voltage
     $oid     = ".1.3.6.1.4.1.232.165.3.4.4.1.2.$index"; # CPQPOWER-MIB:upsOutputVoltage.$index
     $value   = $hpups_array[$phase]['upsOutputVoltage'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsOutputEntry.$index"];
+    $options = $output_options;
     discover_sensor_ng($device, 'voltage', $mib, 'upsOutputVoltage', $oid, $index, $descr, 1, $value, $options);
 
     ## Output current
     $oid     = ".1.3.6.1.4.1.232.165.3.4.4.1.3.$index"; # CPQPOWER-MIB:upsOutputCurrent.$index
     $value   = $hpups_array[$phase]['upsOutputCurrent'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsOutputEntry.$index"];
+    $options = $output_options;
     discover_sensor_ng($device, 'current', $mib, 'upsOutputCurrent', $oid, $index, $descr, 1, $value, $options);
 
     ## Output power
     $oid     = ".1.3.6.1.4.1.232.165.3.4.4.1.4.$index"; # CPQPOWER-MIB:upsOutputWatts.$index
     $value   = $hpups_array[$phase]['upsOutputWatts'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsOutputEntry.$index"];
+    $options = $output_options;
     discover_sensor_ng($device, 'power', $mib, 'upsOutputWatts', $oid, $index, $descr, 1, $value, $options);
 
     ## Output Load
     $oid     = '.1.3.6.1.4.1.232.165.3.4.1.0'; # CPQPOWER-MIB:upsOutputLoad.$index
     $descr   = 'Output Load';
     $value   = $hpups_array[$phase]['upsOutputLoad'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsOutputLoad.0"];
+    $options = [
+        'rename_rrd' => "CPQPOWER-MIB-upsOutputLoad.0",
+        'measured_class' => 'load'
+    ];
     discover_sensor_ng($device, 'capacity', $mib, 'upsOutputLoad', $oid, '0', $descr, 1, $value, $options);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // FIXME load?
 
     # Bypass
     $index = $hpups_array[$phase]['upsBypassPhase'];
     $descr = 'Bypass';
+    $bypass_options = ['rename_rrd' => "CPQPOWER-MIB-upsBypassEntry.$index"];
     if ($hpups_array[0]['upsBypassNumPhases'] > 1) {
         $descr .= " Phase $index";
+        $bypass_options['measured_entity_label'] = "Bypass Phase $index";
+        $bypass_options['measured_class'] = 'phase';
+    } else {
+        $bypass_options['measured_class'] = 'bypass';
     }
 
     ## Bypass voltage
     $oid     = ".1.3.6.1.4.1.232.165.3.5.3.1.2.$index";                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     # CPQPOWER-MIB:upsBypassVoltage.$index
     $value   = $hpups_array[$phase]['upsBypassVoltage'];
-    $options = ['rename_rrd' => "CPQPOWER-MIB-upsBypassEntry.$index"];
+    $options = $bypass_options;
     discover_sensor_ng($device, 'voltage', $mib, 'upsBypassVoltage', $oid, $index, $descr, 1, $value, $options);
 }
 
@@ -104,7 +122,10 @@ $scale = 0.1;
 ## Input frequency
 $oid     = '.1.3.6.1.4.1.232.165.3.3.1.0';                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               # CPQPOWER-MIB:upsInputFrequency.0
 $value = $hpups_array[0]['upsInputFrequency'];
-$options = ['rename_rrd' => "CPQPOWER-MIB-upsInputFrequency.0"];
+$options = [
+    'rename_rrd' => "CPQPOWER-MIB-upsInputFrequency.0",
+    'measured_class' => 'input'
+];
 discover_sensor_ng($device, 'frequency', $mib, 'upsInputFrequency', $oid, '0', 'Input', $scale, $value, $options);
 
 ## Output Frequency

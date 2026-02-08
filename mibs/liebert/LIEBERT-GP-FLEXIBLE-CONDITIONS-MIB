@@ -15,7 +15,7 @@ IMPORTS
 -- =============================================================================
 
 liebertGlobalProductsFlexibleConditionsModule MODULE-IDENTITY
-  LAST-UPDATED "202202010000Z"
+  LAST-UPDATED "202406070000Z"
   ORGANIZATION "Liebert Corporation"
   CONTACT-INFO
       "Contact:   Technical Support
@@ -43,9 +43,9 @@ liebertGlobalProductsFlexibleConditionsModule MODULE-IDENTITY
       makes no warranty, either express or implied, as to the use,
       operation, condition, or performance of the Specification."
 
-   REVISION "202202010000Z"
+   REVISION "202406070000Z"
    DESCRIPTION
-    "Compiled From GDD Version: 8471.1"
+    "Compiled From GDD Version: 8764.1"
 
 
    ::= { liebertFlexibleConditionsModuleReg 1 }
@@ -7446,5 +7446,755 @@ lgpCondId8469ATSFailure  OBJECT-IDENTITY
     DESCRIPTION
         "ATS Failure."
     ::= { lgpFlexConditionsWellKnown 8469 }
+
+lgpCondId8470SMSStopInverterInhibit  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "When active a single inverter stop cannot be initiated."
+    ::= { lgpFlexConditionsWellKnown 8470 }
+
+lgpCondId8471UnitInSpecialCapacityMode  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "When active in a MMS, the system will always be in capacity
+        condition, regardless of actual load."
+    ::= { lgpFlexConditionsWellKnown 8471 }
+
+lgpCondId8472RectifierOvercurrentWarning  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The rectifier stopped for overcurrent."
+    ::= { lgpFlexConditionsWellKnown 8472 }
+
+lgpCondId8474IncompatibleBatteryManagementSystemversion  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The Battery Management System software version is incompatible."
+    ::= { lgpFlexConditionsWellKnown 8474 }
+
+lgpCondId8475LithiumBatteryEOL  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Lithium battery is at the end of its life."
+    ::= { lgpFlexConditionsWellKnown 8475 }
+
+lgpCondId8476LithiumBatterySamplingCircuitFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Lithium battery has sampling circuit failure."
+    ::= { lgpFlexConditionsWellKnown 8476 }
+
+lgpCondId8477LithiumBatteryHardwareCircuitProtectionActive  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Lithium battery has activated hardware circuit protection."
+    ::= { lgpFlexConditionsWellKnown 8477 }
+
+lgpCondId8478LithiumBatteryCellCapacityLow  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Lithium battery cell capacity is very low."
+    ::= { lgpFlexConditionsWellKnown 8478 }
+
+lgpCondId8479LithiumBatteryCableConnectionIssue  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Check the Lithium Battery cable connections."
+    ::= { lgpFlexConditionsWellKnown 8479 }
+
+lgpCondId8480DischargeableBatteryCountLessThanConfiguredNumber  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The number of connected battery cabinets is less than the
+        configured number. Prevent Discharge."
+    ::= { lgpFlexConditionsWellKnown 8480 }
+
+lgpCondId8481Ambienttemperaturelowerthanrecommended  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The ambient temperature is lower than the lower limit of the
+        recommended temperature."
+    ::= { lgpFlexConditionsWellKnown 8481 }
+
+lgpCondId8482Ambienttemperaturehigherthanrecommended  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The ambient temperature is higher than the upper limit of the
+        recommended temperature."
+    ::= { lgpFlexConditionsWellKnown 8482 }
+
+lgpCondId8483Ambienttemperaturelowprealarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The ambient temperature is close to the lower limit of the
+        operating temperature."
+    ::= { lgpFlexConditionsWellKnown 8483 }
+
+lgpCondId8484Ambienttemperaturehighprealarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The ambient temperature is close to the upper limit of the
+        operating temperature."
+    ::= { lgpFlexConditionsWellKnown 8484 }
+
+lgpCondId8489SystemBypassPhaseRotationError  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The power conductors on the input line are not wired to the UPS in
+        the sequence preferred for the bypass (A-B-C)."
+    ::= { lgpFlexConditionsWellKnown 8489 }
+
+lgpCondId8494SystemControlCardNotReady  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "System control card is not ready."
+    ::= { lgpFlexConditionsWellKnown 8494 }
+
+lgpCondId8495SystemControlCardPowerSupplyFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "System control card power supply failure."
+    ::= { lgpFlexConditionsWellKnown 8495 }
+
+lgpCondId8496SystemControlCardCommunicationFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "System control card communication fail."
+    ::= { lgpFlexConditionsWellKnown 8496 }
+
+lgpCondId8501BypassModuleNotReady  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Bypass Module is not ready."
+    ::= { lgpFlexConditionsWellKnown 8501 }
+
+lgpCondId8502BypassModulePowerSupplyFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Bypass module power supply failure."
+    ::= { lgpFlexConditionsWellKnown 8502 }
+
+lgpCondId8503BypassModuleCommunicationFault  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The bypass module communication failure."
+    ::= { lgpFlexConditionsWellKnown 8503 }
+
+lgpCondId8504BypassModuleOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The Bypass Module has detected an over temperature condition."
+    ::= { lgpFlexConditionsWellKnown 8504 }
+
+lgpCondId8505BypassModuleFanFault  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The Bypass Module has detected a fan fault."
+    ::= { lgpFlexConditionsWellKnown 8505 }
+
+lgpCondId8510DischargerFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Discharger failure."
+    ::= { lgpFlexConditionsWellKnown 8510 }
+
+lgpCondId8512PowerModuleNotReady  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Power module not ready."
+    ::= { lgpFlexConditionsWellKnown 8512 }
+
+lgpCondId8517BatteryCircuitBreaker9Open  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 9 is open."
+    ::= { lgpFlexConditionsWellKnown 8517 }
+
+lgpCondId8518BatteryCircuitBreaker10Open  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 10 is open."
+    ::= { lgpFlexConditionsWellKnown 8518 }
+
+lgpCondId8519BatteryCircuitBreaker11Open  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 11 is open."
+    ::= { lgpFlexConditionsWellKnown 8519 }
+
+lgpCondId8520BatteryCircuitBreaker12Open  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 12 is open."
+    ::= { lgpFlexConditionsWellKnown 8520 }
+
+lgpCondId8521BatteryBreaker9OpenFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 9 failed to open."
+    ::= { lgpFlexConditionsWellKnown 8521 }
+
+lgpCondId8522BatteryBreaker10OpenFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 10 failed to open."
+    ::= { lgpFlexConditionsWellKnown 8522 }
+
+lgpCondId8523BatteryBreaker11OpenFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 11 failed to open."
+    ::= { lgpFlexConditionsWellKnown 8523 }
+
+lgpCondId8524BatteryBreaker12OpenFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery circuit breaker 12 failed to open."
+    ::= { lgpFlexConditionsWellKnown 8524 }
+
+lgpCondId8537BatteryCabinetHighOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high battery cabinet overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8537 }
+
+lgpCondId8538BatteryCabinetLowOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low battery cabinet overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8538 }
+
+lgpCondId8539BatteryCabinetHighCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8539 }
+
+lgpCondId8540BatteryCabinetLowCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8540 }
+
+lgpCondId8541BatteryCabinetOverOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet over overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8541 }
+
+lgpCondId8542BatteryCabinetUnderOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet under overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8542 }
+
+lgpCondId8543BatteryCabinetOverCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet over cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8543 }
+
+lgpCondId8544BatteryCabinetUnderCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet under cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8544 }
+
+lgpCondId8545BatteryCabinetChargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery Cabinet Charge over current."
+    ::= { lgpFlexConditionsWellKnown 8545 }
+
+lgpCondId8546BatteryCabinetDischargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery Cabinet Discharge over current."
+    ::= { lgpFlexConditionsWellKnown 8546 }
+
+lgpCondId8547BatteryCabinetOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet over temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8547 }
+
+lgpCondId8548BatteryCabinetUnderTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery cabinet under temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8548 }
+
+lgpCondId8558BatteryStringHighCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8558 }
+
+lgpCondId8559BatteryStringLowCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8559 }
+
+lgpCondId8560BatteryStringOverOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string over overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8560 }
+
+lgpCondId8561BatteryStringUnderOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string under overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8561 }
+
+lgpCondId8562BatteryStringOverCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string over cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8562 }
+
+lgpCondId8563BatteryStringUnderCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string under cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8563 }
+
+lgpCondId8564BatteryStringChargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery string Charge over current."
+    ::= { lgpFlexConditionsWellKnown 8564 }
+
+lgpCondId8565BatteryStringDischargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery string Discharge over current."
+    ::= { lgpFlexConditionsWellKnown 8565 }
+
+lgpCondId8566BatteryStringOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string over temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8566 }
+
+lgpCondId8567BatteryStringUnderTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery string under temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8567 }
+
+lgpCondId8579BatteryModuleHighOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high battery module overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8579 }
+
+lgpCondId8580BatteryModuleLowOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low battery module overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8580 }
+
+lgpCondId8581BatteryModuleHighCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8581 }
+
+lgpCondId8582BatteryModuleLowCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low cell voltage condition."
+    ::= { lgpFlexConditionsWellKnown 8582 }
+
+lgpCondId8583BatteryModuleOverOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module over overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8583 }
+
+lgpCondId8584BatteryModuleUnderOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module under overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8584 }
+
+lgpCondId8585BatteryModuleOverCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module over cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8585 }
+
+lgpCondId8586BatteryModuleUnderCellVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module under cell voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8586 }
+
+lgpCondId8587BatteryModuleDisconnected  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery Module is disconnected."
+    ::= { lgpFlexConditionsWellKnown 8587 }
+
+lgpCondId8588BatteryModuleChargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery Module Charge over current."
+    ::= { lgpFlexConditionsWellKnown 8588 }
+
+lgpCondId8589BatteryModuleDischargeOverCurrent  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery Module Discharge over current."
+    ::= { lgpFlexConditionsWellKnown 8589 }
+
+lgpCondId8590BatteryModuleOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module over temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8590 }
+
+lgpCondId8591BatteryModuleUnderTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a battery module under temperature
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8591 }
+
+lgpCondId8592BatteryModuleFault  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery module fault."
+    ::= { lgpFlexConditionsWellKnown 8592 }
+
+lgpCondId8605BatteryStringHighOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a high battery string overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8605 }
+
+lgpCondId8606BatteryStringLowOverallVoltage  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The system has detected a low battery string overall voltage
+        condition."
+    ::= { lgpFlexConditionsWellKnown 8606 }
+
+lgpCondId8608BypassSCROpen  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The bypass SCR is in an open circuit condition."
+    ::= { lgpFlexConditionsWellKnown 8608 }
+
+lgpCondId8609BypassSCRShort  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The bypass SCR is in short circuit condition."
+    ::= { lgpFlexConditionsWellKnown 8609 }
+
+lgpCondId8612RectifierOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Rectifier temperature is too high to keep rectifier running."
+    ::= { lgpFlexConditionsWellKnown 8612 }
+
+lgpCondId8613RectifierCommunicationsFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Communication between internal monitor and Rectifier has failed."
+    ::= { lgpFlexConditionsWellKnown 8613 }
+
+lgpCondId8615InverterOverTemperature  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Inverter temperature is too high to keep inverter running."
+    ::= { lgpFlexConditionsWellKnown 8615 }
+
+lgpCondId8616InverterCommunicationsFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Communication between internal monitor and Inverter has failed."
+    ::= { lgpFlexConditionsWellKnown 8616 }
+
+lgpCondId8617UPSisinServiceMode  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "UPS is in Service Mode."
+    ::= { lgpFlexConditionsWellKnown 8617 }
+
+lgpCondId8619AirEconHighMixedTemp  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Air Economizer High Mixed Temperature."
+    ::= { lgpFlexConditionsWellKnown 8619 }
+
+lgpCondId8620AirEconLowMixedTemp  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Air Economizer Low Mixed Temperature."
+    ::= { lgpFlexConditionsWellKnown 8620 }
+
+lgpCondId8621RetDampFdbackFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Return Damper Feedback Failure."
+    ::= { lgpFlexConditionsWellKnown 8621 }
+
+lgpCondId8622OutdoorDmpFdbackFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Outdoor Damper Feedback Failure."
+    ::= { lgpFlexConditionsWellKnown 8622 }
+
+lgpCondId8623ThermalRunaway  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Thermal Runaway."
+    ::= { lgpFlexConditionsWellKnown 8623 }
+
+lgpCondId8624XDMMixValvePositionError  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "XDM Mix Valve is reporting Out of Position."
+    ::= { lgpFlexConditionsWellKnown 8624 }
+
+lgpCondId8625XDMPumpNoFlow  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "XDM Pump Indicates No Flow."
+    ::= { lgpFlexConditionsWellKnown 8625 }
+
+lgpCondId8626XDMPumpPressureSensorFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "XDM Pump Pressure Sensor Has Failed."
+    ::= { lgpFlexConditionsWellKnown 8626 }
+
+lgpCondId8627XDMPumpNotAvail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "XDM Pump is Not Available."
+    ::= { lgpFlexConditionsWellKnown 8627 }
+
+lgpCondId8628XDMFlowandLoadCycling  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "XDM Flow is Cycling Between Flow and Load."
+    ::= { lgpFlexConditionsWellKnown 8628 }
+
+lgpCondId8629ShuntTripUnavailable  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Shunt trip power has failed. The voltage is insufficient to shunt
+        trip the input breaker."
+    ::= { lgpFlexConditionsWellKnown 8629 }
+
+lgpCondId8630PanelboardShuntTripUnavailable  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Shunt trip power has failed. The voltage is insufficient to shunt
+        trip the panelboard main breaker."
+    ::= { lgpFlexConditionsWellKnown 8630 }
+
+lgpCondId8718SystemControlCardsMissing  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "System control cards missing."
+    ::= { lgpFlexConditionsWellKnown 8718 }
+
+lgpCondId8719LossofControlRedundancy  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Loss of control redundancy."
+    ::= { lgpFlexConditionsWellKnown 8719 }
+
+lgpCondId8724BatteryModuleNotReady  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery module is not ready."
+    ::= { lgpFlexConditionsWellKnown 8724 }
+
+lgpCondId8725BatteryModuleBalancingAbnormal  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Battery module voltage is not balanced."
+    ::= { lgpFlexConditionsWellKnown 8725 }
+
+lgpCondId8726MainBatteryCircuitBreakerisOpen  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Main battery circuit is open."
+    ::= { lgpFlexConditionsWellKnown 8726 }
+
+lgpCondId8727MainBatteryBreakerOpenFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Main battery circuit breaker failed to open."
+    ::= { lgpFlexConditionsWellKnown 8727 }
+
+lgpCondId8734ExhaustDamperFeedbackFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Exhaust Damper Feedback Failure Alarm."
+    ::= { lgpFlexConditionsWellKnown 8734 }
+
+lgpCondId8735HighUnitDifferentialPressure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "High Unit Differential Pressure Alarm."
+    ::= { lgpFlexConditionsWellKnown 8735 }
+
+lgpCondId8736InputSurgeProtectionDeviceAlarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Input Surge Protection Device alarm."
+    ::= { lgpFlexConditionsWellKnown 8736 }
+
+lgpCondId8737BypassSurgeProtectionDeviceAlarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Bypass Surge Protection Device alarm."
+    ::= { lgpFlexConditionsWellKnown 8737 }
+
+lgpCondId8738ReturnTHSensorFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Return Temperature/Humidity Sensor Failure."
+    ::= { lgpFlexConditionsWellKnown 8738 }
+
+lgpCondId8742AggregateRemoteAirTempSensorFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Failure of Aggregated Remote Air Temperature Sensor. This event is
+        active when all configured Remote Sensor Issue events are active."
+    ::= { lgpFlexConditionsWellKnown 8742 }
+
+lgpCondId8743AggregateMixedAirTempSensorFail  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Failure of Aggregated Mixed Air Temperature Sensor. This event is
+        active when Remote Sensor Issue and External Air Sensor E Issue
+        are active."
+    ::= { lgpFlexConditionsWellKnown 8743 }
+
+lgpCondId8745FixedCompressorFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Fixed Compressor Failure."
+    ::= { lgpFlexConditionsWellKnown 8745 }
+
+lgpCondId8746FixedCompressorFailureLock  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Fixed Compressor Failure Lock."
+    ::= { lgpFlexConditionsWellKnown 8746 }
+
+lgpCondId8748SecondaryPowerSourceSupplyFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Secondary Power Source Supply Failure."
+    ::= { lgpFlexConditionsWellKnown 8748 }
+
+lgpCondId8751SprayCommunicationFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Spray Communication Failure."
+    ::= { lgpFlexConditionsWellKnown 8751 }
+
+lgpCondId8752SprayHighPressureFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Spray High Pressure Failure."
+    ::= { lgpFlexConditionsWellKnown 8752 }
+
+lgpCondId8753SprayHighPressureFailureLock  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Spray High Pressure Failure Lock."
+    ::= { lgpFlexConditionsWellKnown 8753 }
+
+lgpCondId8754SprayLowPressureFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Spray Low Pressure Failure."
+    ::= { lgpFlexConditionsWellKnown 8754 }
+
+lgpCondId8755SprayAntifreezeMaintenance  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Spray Antifreeze Maintenance."
+    ::= { lgpFlexConditionsWellKnown 8755 }
+
+lgpCondId8756PowerMeterCommunicationFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Power Meter Communication Failure."
+    ::= { lgpFlexConditionsWellKnown 8756 }
+
+lgpCondId8757WetFilmMaintenanceAlarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Wet Film Maintenance Alarm."
+    ::= { lgpFlexConditionsWellKnown 8757 }
+
+lgpCondId8758LowRefrigerant  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Low Refrigerant."
+    ::= { lgpFlexConditionsWellKnown 8758 }
+
+lgpCondId8759RefrigerantLeakDetected  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Refrigerant Leak Detected."
+    ::= { lgpFlexConditionsWellKnown 8759 }
+
+lgpCondId8760RefrigerantLeakDetectorCommunicationsFailure  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Refrigerant Leak Detector Communications Failure."
+    ::= { lgpFlexConditionsWellKnown 8760 }
+
+lgpCondId8761RefrigerantLeakDetectLock  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "Refrigerant Leak Detect Lock."
+    ::= { lgpFlexConditionsWellKnown 8761 }
+
+lgpCondId8762HighPressureSwitchAlarm  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "High Pressure Switch Alarm."
+    ::= { lgpFlexConditionsWellKnown 8762 }
+
+lgpCondId8763HighPressureSwitchAlarmLock  OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "High Pressure Switch Alarm Lock."
+    ::= { lgpFlexConditionsWellKnown 8763 }
 
 END

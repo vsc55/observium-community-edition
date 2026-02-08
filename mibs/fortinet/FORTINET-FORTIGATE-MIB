@@ -32,7 +32,7 @@ IMPORTS
         FROM SNMPv2-TC;
 
 fnFortiGateMib MODULE-IDENTITY
-    LAST-UPDATED "202307210000Z"
+    LAST-UPDATED "202412170000Z"
     ORGANIZATION
         "Fortinet Technologies, Inc."
     CONTACT-INFO
@@ -42,18 +42,21 @@ fnFortiGateMib MODULE-IDENTITY
          http://www.fortinet.com"
     DESCRIPTION
         "MIB module for Fortinet FortiGate devices."
-    REVISION    "202307210000Z"
+    REVISION    "202412170000Z"
     DESCRIPTION
-        "Add fgTrapFaz for FortiAnalyzer event."
+        "Added fgChassisSensors fnFortiGateMib.fgSystem."
+    REVISION    "202409110000Z"
+    DESCRIPTION
+        "Added OID fgDataSecurityLevel."
+    REVISION    "202405140000Z"
+    DESCRIPTION
+        "Added fgProcessorFnNP7LITE for soc5 platforms."
     REVISION    "202303160000Z"
     DESCRIPTION
         "Added OID fgServiceGroupWorkerBlades for 6K7K slbc platform."
     REVISION    "202303140000Z"
     DESCRIPTION
         "Added OID for fgChassisInfo and changed the OID of fgChassis from 98 to 25 for 6K7K slbc platform in (ECO-246262)."
-    REVISION    "202212190000Z"
-    DESCRIPTION
-        "Add fgIntfVlanID, fgIntfVlanName, fgIntfVlanPhyName in fgIntfVlanEntry."
     REVISION    "202210220000Z"
     DESCRIPTION
         "Added OIDs for fgTrapSlbc, fgDataCpuUsage and fgDataMemUsage in fgSystemInfo while merging 6K7K."
@@ -708,6 +711,8 @@ fgt140EP         OBJECT IDENTIFIER ::= { fgModel 1006 }
 fgt100E          OBJECT IDENTIFIER ::= { fgModel 1041 }
 fgt100EF         OBJECT IDENTIFIER ::= { fgModel 1042 }
 fgt101E          OBJECT IDENTIFIER ::= { fgModel 1043 }
+fgt120g          OBJECT IDENTIFIER ::= { fgModel 1201 }
+fgt121g          OBJECT IDENTIFIER ::= { fgModel 1202 }
 fgt140D          OBJECT IDENTIFIER ::= { fgModel 1401 }
 fgt140P          OBJECT IDENTIFIER ::= { fgModel 1402 }
 fgt140T          OBJECT IDENTIFIER ::= { fgModel 1403 }
@@ -724,7 +729,11 @@ fgt200E          OBJECT IDENTIFIER ::= { fgModel 2009 }
 fgt201E          OBJECT IDENTIFIER ::= { fgModel 2010 }
 fgt200F          OBJECT IDENTIFIER ::= { fgModel 2011 }
 fgt201F          OBJECT IDENTIFIER ::= { fgModel 2012 }
-fgt280D          OBJECT IDENTIFIER ::= { fgModel 2013 }
+-- fgt280D          OBJECT IDENTIFIER ::= { fgModel 2013 }
+fgt200G          OBJECT IDENTIFIER ::= { fgModel 2013 }
+fgt201G          OBJECT IDENTIFIER ::= { fgModel 2014 }
+fgt200GPOE       OBJECT IDENTIFIER ::= { fgModel 2015 }
+fgt201GPOE       OBJECT IDENTIFIER ::= { fgModel 2016 }
 fgt300           OBJECT IDENTIFIER ::= { fgModel 3000 }
 fgt300A          OBJECT IDENTIFIER ::= { fgModel 3001 }
 fgt310B          OBJECT IDENTIFIER ::= { fgModel 3002 }
@@ -768,18 +777,24 @@ fgt1000C         OBJECT IDENTIFIER ::= { fgModel 10004 }
 fgt1000D         OBJECT IDENTIFIER ::= { fgModel 10005 }
 fgt1100E         OBJECT IDENTIFIER ::= { fgModel 10006 }
 fgt1101E         OBJECT IDENTIFIER ::= { fgModel 10007 }
+fgt1000F         OBJECT IDENTIFIER ::= { fgModel 10008 }
+fgt1001F         OBJECT IDENTIFIER ::= { fgModel 10009 }
 fgt1200D         OBJECT IDENTIFIER ::= { fgModel 12000 }
 fgt1240B         OBJECT IDENTIFIER ::= { fgModel 12400 }
 fgt1500D         OBJECT IDENTIFIER ::= { fgModel 15000 }
 fgt1500DT        OBJECT IDENTIFIER ::= { fgModel 15001 }
 fgt1801F         OBJECT IDENTIFIER ::= { fgModel 15002 }
 fgt1800F         OBJECT IDENTIFIER ::= { fgModel 15003 }
+ffw1801F         OBJECT IDENTIFIER ::= { fgModel 15004 }
 fgt2200E         OBJECT IDENTIFIER ::= { fgModel 18000 }
 fgt2201E         OBJECT IDENTIFIER ::= { fgModel 18001 }
+fgt1800G         OBJECT IDENTIFIER ::= { fgModel 18002 }
+fgt1801G         OBJECT IDENTIFIER ::= { fgModel 18003 }
 fgt2000E         OBJECT IDENTIFIER ::= { fgModel 20000 }
 fgt2500E         OBJECT IDENTIFIER ::= { fgModel 25000 }
 fgt2600F         OBJECT IDENTIFIER ::= { fgModel 26000 }
 fgt2601F         OBJECT IDENTIFIER ::= { fgModel 26001 }
+ffw2600F         OBJECT IDENTIFIER ::= { fgModel 26002 }
 fgt3000D         OBJECT IDENTIFIER ::= { fgModel 30000 }
 fgt3300E         OBJECT IDENTIFIER ::= { fgModel 30001 }
 fgt3301E         OBJECT IDENTIFIER ::= { fgModel 30002 }
@@ -790,6 +805,8 @@ fgt3040B         OBJECT IDENTIFIER ::= { fgModel 30400 }
 fgt3140B         OBJECT IDENTIFIER ::= { fgModel 30401 }
 fgt3100D         OBJECT IDENTIFIER ::= { fgModel 31000 }
 fgt3200D         OBJECT IDENTIFIER ::= { fgModel 32000 }
+fgt3200F         OBJECT IDENTIFIER ::= { fgModel 32010 }
+fgt3201F         OBJECT IDENTIFIER ::= { fgModel 32011 }
 fgt3240C         OBJECT IDENTIFIER ::= { fgModel 32401 }
 fgt3400E         OBJECT IDENTIFIER ::= { fgModel 34001 }
 fgt3401E         OBJECT IDENTIFIER ::= { fgModel 34011 }
@@ -801,7 +818,8 @@ fgt3600A         OBJECT IDENTIFIER ::= { fgModel 36003 }
 fgt3600C         OBJECT IDENTIFIER ::= { fgModel 36004 }
 fgt3601E         OBJECT IDENTIFIER ::= { fgModel 36011 }
 fgt3700D         OBJECT IDENTIFIER ::= { fgModel 37000 }
-fgt3700DX        OBJECT IDENTIFIER ::= { fgModel 37001 }
+fgt3700F         OBJECT IDENTIFIER ::= { fgModel 37001 }
+fgt3701F         OBJECT IDENTIFIER ::= { fgModel 37011 }
 fgt3800D         OBJECT IDENTIFIER ::= { fgModel 38001 }
 fgt4200F         OBJECT IDENTIFIER ::= { fgModel 38002 }
 ffw4200F         OBJECT IDENTIFIER ::= { fgModel 38006 }
@@ -817,6 +835,8 @@ fgt3980E         OBJECT IDENTIFIER ::= { fgModel 39801 }
 ffw3980E         OBJECT IDENTIFIER ::= { fgModel 39804 }
 fgt4201F         OBJECT IDENTIFIER ::= { fgModel 42002 }
 fgt4401F         OBJECT IDENTIFIER ::= { fgModel 44001 }
+ffw4401F         OBJECT IDENTIFIER ::= { fgModel 44002 }
+ffw4801F         OBJECT IDENTIFIER ::= { fgModel 48003 }
 fgt5002FB2       OBJECT IDENTIFIER ::= { fgModel 50001 }
 fgt5001          OBJECT IDENTIFIER ::= { fgModel 50010 }
 fgt5001A         OBJECT IDENTIFIER ::= { fgModel 50011 }
@@ -1408,6 +1428,14 @@ fgDataMemUsage OBJECT-TYPE
         "Current Data Plane memory utilization (percentage)"
     ::= { fgSystemInfo 35 }
 
+fgDataSecurityLevel OBJECT-TYPE
+    SYNTAX      DisplayString (SIZE(0..16))
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "Current BIOS Security Level"
+    ::= { fgSystemInfo 36 }
+
 --
 -- fortinet.fnFortiGateMib.fgSystem.fgSoftware
 --
@@ -1742,6 +1770,12 @@ fgProcessorFnNP6XLITE OBJECT-IDENTITY
     DESCRIPTION
         "The processor type identifier used for Fortinet NP6XLITE security processor."
     ::= { fgProcessorTypes 11 }
+
+fgProcessorFnNP7LITE OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "The processor type identifier used for Fortinet NP7LITE security processor."
+    ::= { fgProcessorTypes 12 }
 
 --
 -- fortinet.fnFortiGateMib.fgSystem.fgProcessors.fgProcessorsTrapObjects
@@ -3159,6 +3193,76 @@ fgDpdkEngToCpu OBJECT-TYPE
         "Dpdk eng index to Cpu Mapping"
     ::= { fgDpdkEngEntry 7 }
 
+--
+-- fortinet.fnFortiGateMib.fgSystem.fgChassisSensors
+--
+
+fgChassisSensors OBJECT IDENTIFIER
+    ::= { fgSystem 14 }
+
+fgChassisSensorCount OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The number of entries in fgChassisSensorTable"
+    ::= { fgChassisSensors 1 }
+
+fgChassisSensorTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF FgChassisSensorEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "A list of device specific chassis smc sensors and values. Because different devices have different hardware sensor capabilities, this table may or may not contain any values."
+    ::= { fgChassisSensors 2 }
+
+fgChassisSensorEntry OBJECT-TYPE
+    SYNTAX      FgChassisSensorEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "An entry containing the name, value, and alarm status of a given chassis sensor"
+    INDEX       { fgChassisSensorEntIndex }
+    ::= { fgChassisSensorTable 1 }
+
+FgChassisSensorEntry ::= SEQUENCE {
+    fgChassisSensorEntIndex          FnIndex,
+    fgChassisSensorEntName           DisplayString,
+    fgChassisSensorEntValue          DisplayString,
+    fgChassisSensorEntAlarmStatus    INTEGER
+}
+
+fgChassisSensorEntIndex OBJECT-TYPE
+    SYNTAX      FnIndex
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "A unique identifier within the fgChassisSensorTable"
+    ::= { fgChassisSensorEntry 1 }
+
+fgChassisSensorEntName OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "A string identifying the sensor by name"
+    ::= { fgChassisSensorEntry 2 }
+
+fgChassisSensorEntValue OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "A string representation of the value of the sensor. Because sensors can present data in different formats, string representation is most general format. Interpretation of the value (units of measure, for example) is dependent on the individual sensor."
+    ::= { fgChassisSensorEntry 3 }
+
+fgChassisSensorEntAlarmStatus OBJECT-TYPE
+    SYNTAX      INTEGER { false(0), true(1) }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "If the sensor has an alarm threshold and has exceeded it, this will indicate its status. Not all sensors have alarms."
+    ::= { fgChassisSensorEntry 4 }
 
 --
 -- fortinet.fnFortiGateMib.fgFirewall
@@ -3188,7 +3292,7 @@ fgFwPolStatsTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF FgFwPolStatsEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "Firewall policy statistics table.  This table has a dependent expansion relationship with fgVdTable.
          Only virtual domains with enabled policies are present in this table."
     ::= { fgFwPolTables 1 }
@@ -3197,7 +3301,7 @@ fgFwPolStatsEntry OBJECT-TYPE
     SYNTAX      FgFwPolStatsEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "Firewall policy statistics on a virtual domain"
     INDEX       { fgVdEntIndex, fgFwPolID }
     ::= { fgFwPolStatsTable 1 }
@@ -3215,7 +3319,7 @@ fgFwPolID OBJECT-TYPE
     SYNTAX      FnIndex
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "Firewall policy ID. Only enabled policies are present in this table. Policy IDs are only unique within a virtual domain."
     ::= { fgFwPolStatsEntry 1 }
 
@@ -3223,7 +3327,7 @@ fgFwPolPktCount OBJECT-TYPE
     SYNTAX      Counter32
     MAX-ACCESS  read-only
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "Number of packets matched to policy (passed or blocked, depending on policy action). Count is from the time the policy became active."
     ::= { fgFwPolStatsEntry 2 }
 
@@ -3231,7 +3335,7 @@ fgFwPolByteCount OBJECT-TYPE
     SYNTAX      Counter32
     MAX-ACCESS  read-only
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "Number of bytes in packets matching the policy. See fgFwPolPktCount."
     ::= { fgFwPolStatsEntry 3 }
 
@@ -4569,19 +4673,6 @@ fgManIfIp6 OBJECT-TYPE
     DESCRIPTION 
         "IPv6 address of the interface listed in the trap"
     ::= { fgMgmtTrapObjects 3 }
-
-fgFazTrapType OBJECT-TYPE
-    SYNTAX      INTEGER {
-                  mainFailover(1),
-                  altFailover(2)
-                }
-    MAX-ACCESS  accessible-for-notify
-    STATUS      current
-    DESCRIPTION
-        "Fortianalyzer trap type, there are 2 different values as below:
-           mainFailover(1)    - Fortianalyzer main server failover and alternate server take over.
-           altFailover(2)     - Fortianalyzer alternate server failover and main server take over."
-    ::= { fgMgmtTrapObjects 4 }
 
 --
 -- fortinet.fnFortiGateMib.fgIntf
@@ -13146,13 +13237,6 @@ fgTrapFazDisconnect NOTIFICATION-TYPE
         "The device has been disconnected from the FortiAnalyzer."
     ::= { fgTrapPrefix 701 }
     
-fgTrapFaz NOTIFICATION-TYPE
-    OBJECTS     { fnSysSerial, sysName, fgFazTrapType }
-    STATUS      current
-    DESCRIPTION
-        "A trap for Fortianalyzer event."
-    ::= { fgTrapPrefix 702}
-
 fgTrapWcApUp NOTIFICATION-TYPE
     OBJECTS     { fnSysSerial, sysName, fgWcApVdom, fgWcApSerial, fgWcApName }
     STATUS      current
@@ -13264,7 +13348,7 @@ fgFmTrapGroup NOTIFICATION-GROUP
     ::= { fgMibConformance 1 }
 
 fgFmTrapObjectGroup OBJECT-GROUP
-    OBJECTS     { fgManIfIp, fgManIfMask,fgManIfIp6, fgFazTrapType }
+    OBJECTS     { fgManIfIp, fgManIfMask,fgManIfIp6 }
     STATUS      current
     DESCRIPTION 
         "These objects support the traps in the fgFmTrapGroup."
@@ -13296,7 +13380,7 @@ fgSystemObjectGroup OBJECT-GROUP
                   fgSysNpuSes6Rate30, fgSysNpuSes6Rate60,
                   fgSysNeedLogPartitionScan, fgSysUpTimeDetail,
                   fgSysRebootReason,
-                  fgDataCpuUsage, fgDataMemUsage
+                  fgDataCpuUsage, fgDataMemUsage, fgDataSecurityLevel
                 }
     STATUS      current
     DESCRIPTION
@@ -13572,7 +13656,7 @@ fgNotificationGroup NOTIFICATION-GROUP
                   fgTrapAvPattern, fgTrapAvFragmented, 
                   fgTrapAvEnterConserve, fgTrapAvBypass, 
                   fgTrapAvOversizePass, fgTrapAvOversizeBlock, 
-                  fgTrapFazDisconnect, fgTrapFaz, fgTrapWcApUp, fgTrapWcApDown, fgTrapDeviceNew, 
+                  fgTrapFazDisconnect, fgTrapWcApUp, fgTrapWcApDown, fgTrapDeviceNew, 
                   fgTrapPerCpuHigh, fgTrapDhcp, fgTrapPoolUsage,
                   fgTrapFcSwUp, fgTrapFcSwDown, fgTrapServerLoadBalanceRealServerDown,
                   fgTrapSlbc }
@@ -13960,6 +14044,14 @@ fgServiceGroupWorkerBladesGroup OBJECT-GROUP
         "Objects pertaining to Service Group Worker Blades group."
     ::= {fgMibConformance 51 }
 
+fgChassisSensorsObjectGroup OBJECT-GROUP
+    OBJECTS     { fgChassisSensorCount, fgChassisSensorEntName,
+                  fgChassisSensorEntValue, fgChassisSensorEntAlarmStatus }
+    STATUS      current
+    DESCRIPTION
+        "Object pertaining to hardware sensors on the device."
+    ::= { fgMibConformance 55 }
+
 fgMIBCompliance MODULE-COMPLIANCE
     STATUS      current
     DESCRIPTION 
@@ -14145,6 +14237,10 @@ fgMIBCompliance MODULE-COMPLIANCE
               "Model and feature specific."
 
         GROUP   fgDpdkEngsObjectGroup
+        DESCRIPTION
+              "Model and feature specific."
+
+        GROUP   fgChassisSensorsObjectGroup
         DESCRIPTION
               "Model and feature specific."
 

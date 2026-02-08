@@ -1,16 +1,12 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsvcm.mib,v 1.14 2012/09/07 09:52:06 siva Exp $
-
--- VCM Proprietary MIB Definition
-
    VCM-MIB DEFINITIONS ::= BEGIN
       
    IMPORTS
-      MODULE-IDENTITY, OBJECT-TYPE,
+      MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
       enterprises,
-      Integer32                                   FROM SNMPv2-SMI
-      RowStatus, MacAddress, DisplayString  FROM SNMPv2-TC
+      Integer32, Counter32                                   FROM SNMPv2-SMI
+      RowStatus, TEXTUAL-CONVENTION, MacAddress, TruthValue, DisplayString  FROM SNMPv2-TC
       InterfaceIndexOrZero, 
       InterfaceIndex                   FROM IF-MIB; 
 
@@ -24,6 +20,12 @@
          DESCRIPTION
             "The MIB module for the virtual context manager."
       ::=  { enterprises futuresoftware (2076) 93 } 
+
+EnabledStatus ::= TEXTUAL-CONVENTION
+    STATUS      current
+    DESCRIPTION
+        "A simple status value for the object."
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
 
 fsVcmConfig    OBJECT IDENTIFIER   ::= { fsVcmMib 1 } 
 
@@ -75,7 +77,7 @@ fsVcmConfigTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "Table containing the virtual context information in the system."
+      "This object specifies the Table containing the virtual context information in the system."
    ::= { fsVcmConfig 2 } 
  
 fsVcmConfigEntry OBJECT-TYPE 
@@ -83,7 +85,7 @@ fsVcmConfigEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "Entry about a particular virtual context."
+      "This object specifies the Entry about a particular virtual context."
    INDEX { fsVCId } 
    ::= { fsVcmConfigTable 1 } 
     
@@ -100,10 +102,10 @@ FsVcmConfigEntry ::=
  
 fsVCId  OBJECT-TYPE 
    SYNTAX      Integer32 (0..65535)
-   MAX-ACCESS  not-accessible 
+   MAX-ACCESS  read-only 
    STATUS      current 
    DESCRIPTION 
-      "The Virtual context identifier of a particular virtual context." 
+      "This object specifies the Virtual context identifier of a particular virtual context." 
    ::= { fsVcmConfigEntry 1 } 
 
 fsVCNextFreeHlPortId  OBJECT-TYPE 
@@ -111,7 +113,7 @@ fsVCNextFreeHlPortId  OBJECT-TYPE
    MAX-ACCESS  read-only 
    STATUS      current 
    DESCRIPTION 
-      "The next free HLPortIndex for this virtual context. This free 
+      "This object specifies the next free HLPortIndex for this virtual context. This free 
       HLPortIndex will be assigned to the next IfIndex that is mapped to 
       this virtual context. In case of Single instance this object will 
       always return 1." 
@@ -122,7 +124,7 @@ fsVCMacAddress  OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "The MAC address used by this virtual-context which can be 
+      "This object specifies the MAC address used by this virtual-context which can be 
       referred to in a unique fashion within a bridge." 
    ::= { fsVcmConfigEntry 3 } 
 
@@ -131,7 +133,7 @@ fsVcAlias  OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "The Alias name for the Virtual-Context. By default alias name will be
+      "This object specifies the Alias name for the Virtual-Context. By default alias name will be
        'switchcontextId'. Eg: 'switch1' for virtual context 1." 
    ::= { fsVcmConfigEntry 4 } 
 
@@ -156,7 +158,7 @@ fsVCStatus  OBJECT-TYPE
    MAX-ACCESS  read-create 
    STATUS      current 
    DESCRIPTION 
-      "Row status of the entry. Virtual context will be created when the 
+      "This object specifies the Row status of the entry. Virtual context will be created when the 
       row is made 'active'." 
    ::= { fsVcmConfigEntry 6 } 
 
@@ -165,7 +167,7 @@ fsVRMacAddress  OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "The MAC address used by the virtual router when the
+      "This object specifies the MAC address used by the virtual router when the
       context entry type (fsVcCxtType) is l3context or both.
       When the context entry type is l2context, the MAC address 
       value is zero.
@@ -182,7 +184,7 @@ fsVcmIfMappingTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "Table containing the mapping of interfaces to the virtual
+      "This object specifies the Table containing the mapping of interfaces to the virtual
       context in the system."
    ::= { fsVcmConfig 3 } 
  
@@ -191,7 +193,7 @@ fsVcmIfMappingEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "Entry about the association of a particular interface to VS"
+      "This object specifies the Entry about the association of a particular interface to VS."
    INDEX { fsVcmIfIndex } 
    ::= { fsVcmIfMappingTable 1 } 
     
@@ -209,7 +211,7 @@ fsVcmIfIndex  OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "The interface index which has to be mapped." 
+      "This object specifies the interface index which has to be mapped." 
    ::= { fsVcmIfMappingEntry 1 } 
 
 fsVcId  OBJECT-TYPE 
@@ -217,8 +219,8 @@ fsVcId  OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current 
    DESCRIPTION 
-      "The Virtual context to which this interface is mapped. Upon creation
-       of the row, this object has a default value of -1 indicating that the
+      "This object specifies the Virtual context to which this interface is mapped. 
+	   Upon creation of the row, this object has a default value of -1 indicating that the
        interface is not yet mapped to any valid virtual context."
    ::= { fsVcmIfMappingEntry 2 } 
 
@@ -227,7 +229,7 @@ fsVcHlPortId   OBJECT-TYPE
    MAX-ACCESS  read-only 
    STATUS      current 
    DESCRIPTION 
-      "The port index generated internally for this interface. This number 
+      "This object specifies the port index generated internally for this interface. This number 
        is unique for each port mapped to the same virtual context."
    ::= { fsVcmIfMappingEntry 3 } 
 
@@ -236,7 +238,7 @@ fsVcL2ContextId  OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current 
    DESCRIPTION 
-      "The L2 Virtual context to which IVR interface gets internally mapped.
+      "This object specifies the L2 Virtual context to which IVR interface gets internally mapped.
        This objects is used only for IVR interface to identify l2 context to 
        which the l2 vlan belongs."
    ::= { fsVcmIfMappingEntry 4 } 
@@ -246,7 +248,7 @@ fsVcIfRowStatus OBJECT-TYPE
    MAX-ACCESS  read-create
    STATUS      current
    DESCRIPTION
-      "Row status of the corresponding entry.
+      "This object specifies the Row status of the corresponding entry.
        A row cannot be made ACTIVE unless the interface is mapped to a valid
        virtual context. 
        The modification of fsVcId for an existing row, by setting the
@@ -264,7 +266,7 @@ fsVcmL2CxtAndVlanToIPIfaceMapTable OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-      "Table dislays the IP interfaces and its associated l2 vlan and 
+      "This object specifies the Table dislays the IP interfaces and its associated l2 vlan and 
       l2 context in the system."
    ::= { fsVcmConfig 4 }
  
@@ -273,8 +275,8 @@ fsVcmL2CxtAndVlanToIPIfaceMapEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-      "Entry about the association of a particular interface to l2context
-      and its vlan identifier,"
+      "This object specifies the Entry about the association of a particular interface to l2context
+      and its vlan identifier."
    INDEX { fsVcmL2VcId, fsVcmVlanId } 
    ::= { fsVcmL2CxtAndVlanToIPIfaceMapTable 1 } 
     
@@ -291,7 +293,7 @@ fsVcmL2VcId  OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-      "The L2 context identifier to which the IP interface is accociated."
+      "This object specifies the L2 context identifier to which the IP interface is accociated."
    ::= { fsVcmL2CxtAndVlanToIPIfaceMapEntry 1 } 
 
 fsVcmVlanId  OBJECT-TYPE 
@@ -299,7 +301,7 @@ fsVcmVlanId  OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current
    DESCRIPTION
-      "The L2 vlan identifier to which the IP interface is mapped." 
+      "This object specifies the L2 vlan identifier to which the IP interface is mapped." 
    ::= { fsVcmL2CxtAndVlanToIPIfaceMapEntry 2 } 
 
 fsVcmL2VcName  OBJECT-TYPE
@@ -307,7 +309,7 @@ fsVcmL2VcName  OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "The Alias name of the l2 context." 
+      "This object specifies the Alias name of the l2 context." 
    ::= { fsVcmL2CxtAndVlanToIPIfaceMapEntry 3 } 
 
 fsVcmIPIfIndex  OBJECT-TYPE
@@ -315,7 +317,7 @@ fsVcmIPIfIndex  OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "The interface index which is mapped to the l2 context and the vlan."
+      "This object specifies the interface index which is mapped to the l2 context and the vlan."
    ::= { fsVcmL2CxtAndVlanToIPIfaceMapEntry 4 }
 
 -- ----------------------------------------------------------------------------
@@ -327,7 +329,7 @@ fsVcConfigExtTable OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-      "Table containing the additional management parameters for each
+      "This object specifies the Table containing the additional management parameters for each
        Virtual Context in the system."
    ::= {fsVcmConfig 5}
                             
@@ -336,7 +338,7 @@ fsVcConfigExtEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-      "Entry about the owner per Virtual Context information."
+      "This object specifies the Entry about the owner per Virtual Context information."
    AUGMENTS { fsVcmConfigEntry }
    ::= { fsVcConfigExtTable 1 }
                         
@@ -350,7 +352,7 @@ fsVcOwner OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "Owner of each Virtual Context in the system."
+      "This object specifies the Owner of each Virtual Context in the system."
    ::= { fsVcConfigExtEntry 1 }
 
 ------------------------------------------------------------------------------
@@ -361,7 +363,7 @@ fsVcmFreeVcIdTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-       "Table containing the  free Virtual Context identifier in the system."
+       "This object specifies the Table containing the  free Virtual Context identifier in the system."
     ::= {fsVcmConfig 6}
 
 fsVcmFreeVcIdEntry OBJECT-TYPE
@@ -369,7 +371,7 @@ fsVcmFreeVcIdEntry OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-       "Entry about the free Virtual context identifier."
+       "This object specifies the Entry about the free Virtual context identifier."
     INDEX { fsVcmFreeVcId }
     ::= { fsVcmFreeVcIdTable 1 }
     
@@ -383,7 +385,7 @@ fsVcmFreeVcId OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-       "The  free Virtual Context identifier in the system."
+       "This object specifies the free Virtual Context identifier in the system."
     ::= { fsVcmFreeVcIdEntry 1 }
 -- VCM Trap & Notifications
 
@@ -393,7 +395,7 @@ fsVcmContextCreatedTrap NOTIFICATION-TYPE
                 }
         STATUS             current
         DESCRIPTION
-         "Generated when new virtual context is created"
+         "This object is generated when new virtual context is created."
    ::= { fsVcmTraps 1 }
 
 fsVcmContextDeletedTrap NOTIFICATION-TYPE
@@ -402,7 +404,102 @@ fsVcmContextDeletedTrap NOTIFICATION-TYPE
                 }
         STATUS             current
         DESCRIPTION
-         "Generated when virtual context is deleted"
+         "This object is generated when virtual context is deleted."
    ::= { fsVcmTraps 2 }
+
+
+------------------------------------------------------------------------------
+-- VRF Statistics  Table
+---------------------------------------------------------------------------i
+
+
+fsVcmCounterTable OBJECT-TYPE
+   SYNTAX      SEQUENCE OF FsVcmCounterEntry
+   MAX-ACCESS  not-accessible
+   STATUS      current
+   DESCRIPTION
+      "This object specifies the table that contains the statistics on a
+       per Virtual context basis.It contains number of unicast, multicast,
+       broadcast packets received per virtual context."
+   ::= { fsVcmConfig 7 }
+
+fsVcmCounterEntry OBJECT-TYPE
+   SYNTAX      FsVcmCounterEntry
+   MAX-ACCESS  not-accessible
+   STATUS      current
+   DESCRIPTION
+      "This object specifies the entry of a particular virtual context."
+   INDEX { fsVCCounterId }
+   ::= { fsVcmCounterTable 1 }
+
+FsVcmCounterEntry ::=
+   SEQUENCE {
+      fsVCCounterId                 Integer32,
+      fsVcCounterRxUnicast   Counter32,
+      fsVcCounterRxMulticast Counter32,
+      fsVcCounterRxBroadcast Counter32,
+      fsVcCounterStatus      EnabledStatus,
+      fsVcClearCounter       TruthValue
+   }
+
+
+fsVCCounterId  OBJECT-TYPE 
+   SYNTAX      Integer32 (0..65535)
+   MAX-ACCESS  not-accessible 
+   STATUS      current 
+   DESCRIPTION 
+      "This object specifies the Virtual context identifier of a particular virtual context." 
+   ::= { fsVcmCounterEntry 1 } 
+
+fsVcCounterRxUnicast OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+            "This object specifies the Number of unicast packets received for
+            each entry."
+   ::= { fsVcmCounterEntry 2 }
+
+fsVcCounterRxMulticast OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+            "This object specifies the Number of Multicast packets received for
+            each entry."
+   ::= { fsVcmCounterEntry 3 }
+
+fsVcCounterRxBroadcast OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+            "This object specifies the Number of Broadcast packets received for
+            each entry."
+   ::= { fsVcmCounterEntry 4 }
+
+fsVcCounterStatus  OBJECT-TYPE
+   SYNTAX      EnabledStatus
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "This object specifies a Truth value indicating the statistics collection
+       which can be enabled/disabled for this VRF entry.
+       When statistics collection is set to disabled, it stops collecting
+       statistics on a specific entry in this table.
+       When statistics collection is set to enabled, it starts collecting
+       statistics on a specific entry in this table. "
+   DEFVAL   { disabled }
+   ::= {fsVcmCounterEntry 5 }
+
+fsVcClearCounter OBJECT-TYPE
+   SYNTAX      TruthValue
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+            "This object is used to reset all the counter variables to initialization
+            value (zero)."
+   DEFVAL   {false}
+   ::= { fsVcmCounterEntry 6 }
 
 END

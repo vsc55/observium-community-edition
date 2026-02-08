@@ -1,6 +1,5 @@
 -- Copyright (C) 2016 Aricent. All Rights Reserved.
 
---$Id: fsmprst.mib,v 1.28 2016/03/18 13:08:57 siva Exp $
 Aricent-MIRSTP-MIB DEFINITIONS ::= BEGIN
 
 -- -------------------------------------------------
@@ -10,7 +9,7 @@ Aricent-MIRSTP-MIB DEFINITIONS ::= BEGIN
 IMPORTS
 
    OBJECT-TYPE, MODULE-IDENTITY, Integer32,Counter32, Unsigned32,
-    enterprises, NOTIFICATION-TYPE    FROM SNMPv2-SMI
+    enterprises,TimeTicks, NOTIFICATION-TYPE    FROM SNMPv2-SMI
     TEXTUAL-CONVENTION, TruthValue, DisplayString, RowStatus FROM SNMPv2-TC
     fsDot1dStpVersion FROM ARICENT-MIStdRSTP-MIB
     fsDot1dBaseBridgeAddress, fsDot1dStpDesignatedRoot, fsDot1dStpPortState, 
@@ -18,14 +17,20 @@ IMPORTS
 
 
 futureMIRstMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202409170000Z" -- September 17, 2024
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION "MIB for Multiple Instance Rapid Spanning Tree 
                 Algorithm & Protocol" 
+
+    REVISION "202409170000Z" -- September 17, 2024
+    DESCRIPTION "Defined objects for control over individual
+                STP-related SNMP traps." 
+
     REVISION "201209050000Z"
     DESCRIPTION "MIB for Multiple Instance Rapid Spanning Tree 
                 Algorithm & Protocol" 
+
 ::= { enterprises futuresoftware(2076) 119 }
 
 
@@ -35,13 +40,6 @@ EnabledStatus ::= TEXTUAL-CONVENTION
         "This object specifies a simple status value for the object." 
     SYNTAX      INTEGER { enabled(1), disabled(2) } 
 
-Timeout ::= TEXTUAL-CONVENTION
-    DISPLAY-HINT "d4"
-    STATUS       current
-    DESCRIPTION
-                " Time out value in 4 byte"
-    SYNTAX       Integer32
-    
 fsMIDot1wFutureRst     OBJECT IDENTIFIER   ::= { futureMIRstMIB 1 }
 fsMIDot1wFsRstTrapsControl OBJECT IDENTIFIER ::= { futureMIRstMIB 2 }
 fsMIDot1wFutureRstTraps OBJECT IDENTIFIER ::= { futureMIRstMIB 3 }
@@ -137,6 +135,8 @@ FsMIDot1wFutureRstEntry ::=
                 fsMIRstBpduGuard
                     Integer32,
                 fsMIRstStpPerfStatus
+		    INTEGER,
+		fsMIRstPathCostType
                     INTEGER
          }
 
@@ -559,6 +559,22 @@ fsMIRstStpPerfStatus OBJECT-TYPE
     DEFVAL { 2 }
    ::= { fsMIDot1wFutureRstEntry 26 }
 
+fsMIRstPathCostType OBJECT-TYPE
+   SYNTAX      INTEGER {
+                  stp8021d1998(1),
+                  stp8021t2001(2)
+	       }
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+         "The version of the Spanning Tree default Path Costs that
+         are to be used by this Bridge.  A value of 8021d1998(1)
+         uses the 16-bit default Path Costs from IEEE Std. 802.1D-1998.
+         A value of stp8021t2001(2) uses the 32-bit default Path
+         Costs from IEEE Std. 802.1t."
+
+    DEFVAL { 2 }
+   ::= { fsMIDot1wFutureRstEntry 27 }
 -- -------------------------------------
 -- RSTP Port Extention Group 
 -- -------------------------------------
@@ -667,7 +683,41 @@ FsMIRstPortExtEntry ::=
       fsMIRstPortBpduInconsistentState
       TruthValue,
       fsMIRstPortBpduGuardAction
-      Integer32
+      	  Integer32,
+      fsMIRstPortTCDetectedCount
+      	  Counter32,
+      fsMIRstPortTCReceivedCount
+          Counter32,
+      fsMIRstPortTCDetectedTimeStamp
+          TimeTicks,
+      fsMIRstPortTCReceivedTimeStamp
+          TimeTicks,
+      fsMIRstPortRcvInfoWhileExpCount
+          Counter32,
+      fsMIRstPortRcvInfoWhileExpTimeStamp
+          TimeTicks,
+      fsMIRstPortProposalPktsSent
+          Counter32,
+      fsMIRstPortProposalPktsRcvd
+          Counter32,
+      fsMIRstPortProposalPktSentTimeStamp
+          TimeTicks,
+      fsMIRstPortProposalPktRcvdTimeStamp
+          TimeTicks,
+      fsMIRstPortAgreementPktSent
+          Counter32,
+      fsMIRstPortAgreementPktRcvd
+          Counter32,
+      fsMIRstPortAgreementPktSentTimeStamp
+          TimeTicks,
+      fsMIRstPortAgreementPktRcvdTimeStamp
+          TimeTicks,
+      fsMIRstPortImpStateOccurCount
+          Counter32,
+      fsMIRstPortImpStateOccurTimeStamp
+          TimeTicks,
+      fsMIRstPortOldPortState
+          INTEGER
       }
 
 fsMIRstPort OBJECT-TYPE
@@ -1246,8 +1296,8 @@ fsMIRstPortBpduInconsistentState OBJECT-TYPE
 
 fsMIRstPortBpduGuardAction OBJECT-TYPE
    SYNTAX     INTEGER    {
-            disable-discarding (1),
-            admin-down (2)
+            disableDiscarding (1),
+            adminDown (2)
     }
     MAX-ACCESS  read-write
     STATUS      current
@@ -1274,6 +1324,162 @@ fsMIRstPortBpduGuardAction OBJECT-TYPE
 
     DEFVAL { 1 }
     ::= { fsMIRstPortExtEntry 42 }
+
+fsMIRstPortTCDetectedCount  OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of topology changes detected on this port."
+   ::= { fsMIRstPortExtEntry 43 }
+
+fsMIRstPortTCReceivedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of topology change messages received on this port."
+   ::= { fsMIRstPortExtEntry 44 }
+
+fsMIRstPortTCDetectedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the topology
+	 change was detected on this port last time."
+   ::= { fsMIRstPortExtEntry 45 }
+
+fsMIRstPortTCReceivedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which the topology 
+	change message received on this port last time."
+   ::= { fsMIRstPortExtEntry 46 }
+
+fsMIRstPortRcvInfoWhileExpCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of times the info was received while timer is expired on this port."
+   ::= { fsMIRstPortExtEntry 47 }
+
+fsMIRstPortRcvInfoWhileExpTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the info was 
+	 received while timer is expired on this port last time."
+   ::= { fsMIRstPortExtEntry 48 }
+
+fsMIRstPortProposalPktsSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of proposal packets sent by this port."
+   ::= { fsMIRstPortExtEntry 49 }
+
+fsMIRstPortProposalPktsRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the number of proposal packets received on this port."
+   ::= { fsMIRstPortExtEntry 50 }
+
+fsMIRstPortProposalPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which 
+	 proposal packet sent by this port last time."
+   ::= { fsMIRstPortExtEntry 51 }
+
+fsMIRstPortProposalPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which  proposal packet received on this port last time."
+   ::= { fsMIRstPortExtEntry 52 }
+
+fsMIRstPortAgreementPktSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of agreement packets sent by this port."
+   ::= { fsMIRstPortExtEntry 53 }
+
+fsMIRstPortAgreementPktRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of agreement packets received on this port."
+   ::= { fsMIRstPortExtEntry 54 }
+
+fsMIRstPortAgreementPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which 
+	agreement packet was sent by this port last time."
+   ::= { fsMIRstPortExtEntry 55 }
+
+fsMIRstPortAgreementPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which 
+	 agreement packet received on this port last time."
+   ::= { fsMIRstPortExtEntry 56 }
+
+fsMIRstPortImpStateOccurCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifiesthe number of times the impossible state that has occurred on this port."
+   ::= { fsMIRstPortExtEntry 57 }
+
+fsMIRstPortImpStateOccurTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which impossible state has 
+	 occurred on this port last time."
+   ::= { fsMIRstPortExtEntry 58 }
+
+fsMIRstPortOldPortState OBJECT-TYPE
+   SYNTAX      INTEGER {
+                    disabled(1),
+                    blocking(2),
+                    learning(4),
+                    forwarding(5)
+               }
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the previous state of the port."
+   ::= { fsMIRstPortExtEntry 59 }
 
 -- END OF TABLE
 
@@ -1472,6 +1678,36 @@ FsMIRstPortTrapNotificationEntry ::=
            "Particular Role which is existing for the Port."
    ::= { fsMIRstPortTrapNotificationEntry 6 }
 
+ fsMIRstTrapNewRootStatus  OBJECT-TYPE
+       SYNTAX      INTEGER {
+                       enable(1),
+                       disable(2)
+                   }
+       MAX-ACCESS  read-write
+       STATUS      current
+       DESCRIPTION
+          "Controls generation of STP New Root notifications.
+          When trap conditions are met, the notification is only 
+          generated when this attribute is set to 'enable(1)'."
+
+       DEFVAL  { enable }
+       ::= { fsMIDot1wFsRstTrapsControl 5 }
+
+ fsMIRstTrapTopologyChgStatus  OBJECT-TYPE
+       SYNTAX      INTEGER {
+                       enable(1),
+                       disable(2)
+                   }
+       MAX-ACCESS  read-write
+       STATUS      current
+       DESCRIPTION
+          "Controls generation of STP Topology Change notifications.
+           When trap conditions are met, the notification is only 
+           generated when this attribute is set to 'enable(1)'."
+
+       DEFVAL  { enable }
+       ::= { fsMIDot1wFsRstTrapsControl 6 }
+
  fsMIRstTraps OBJECT IDENTIFIER ::= { fsMIDot1wFutureRstTraps 0 }
 
  fsMIRstGlobalErrTrap NOTIFICATION-TYPE
@@ -1566,6 +1802,47 @@ fsMIRstHwFailureTrap NOTIFICATION-TYPE
          "Generated whenever an NPAPI call, that is invoked from the protocol
           to program the hardware port state, fails."
 ::= { fsMIRstTraps 8 }
+
+fsMIRstLoopIncStateChange NOTIFICATION-TYPE
+         OBJECTS {
+                    fsDot1dBaseBridgeAddress,
+                    fsMIRstLoopInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+	"This object generates trap when the port has been moved to the loop inconsistent state."
+::= { fsMIRstTraps 9 }
+
+fsMIRstBpduIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsDot1dBaseBridgeAddress,
+                    fsMIRstPortBpduInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         " This object generates trap when the port state goes to BPDU inconsistent state."
+::= { fsMIRstTraps 10 }
+
+fsMIRstRootIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsDot1dBaseBridgeAddress,
+                    fsMIRstRootInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "This object generates trap when the port state goes to root inconsistent state. "
+::= { fsMIRstTraps 11 }
+
+fsMIRstPortStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsDot1dBaseBridgeAddress,
+                    fsDot1dStpPortState,
+                    fsMIRstPortOldPortState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "This object generates trap when the current state of the port has been changed."
+::= { fsMIRstTraps 12 }
 
 -- TRAP MIB END
 

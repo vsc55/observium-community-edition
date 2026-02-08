@@ -85,8 +85,13 @@
                          jnxJsNatPortOverloadingIndex and jnxJsNatOverloadedPatPoolUtil.
                          Changed jnxJsNatOverloadedPoolTable to jnxJsNatPortOverloadUtilTable."
 
+        REVISION        "202306230000Z" -- May 03, 2024
+        DESCRIPTION     "added new SNMP Trap jnxJsSrcNatSubThresholdStatus
+                         carrying varbinds jnxJsNatSubscriberIp, jnxJsNatTrapPoolName,
+                         jnxJsSrcNatPoolType and jnxJsNatSubsPoolUtil."
 
-    ::= { jnxJsNAT 1 }   
+
+    ::= { jnxJsNAT 1 }
 
 
     jnxJsNatNotifications OBJECT IDENTIFIER ::= { jnxJsNatMIB 0 }
@@ -450,9 +455,8 @@
         STATUS        current
         DESCRIPTION
         	"The number of sessions are in use based on this NAT address 
-			 entry.
+			 entry."
 
-			 This attribute is only applicable to NAT translation without PAT."
 		::= { jnxJsSrcNatStatsEntry 6 }
 
         jnxJsNatSrcNumPortAvail OBJECT-TYPE
@@ -460,7 +464,9 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The number of ports available with this pool."
+            "The maximum number of ports available with this pool.
+
+            This attribute is only applicable on MX platform to NAT translations with PAT."
         ::= { jnxJsSrcNatStatsEntry 7 }
 
         jnxJsNatSrcNumAddressAvail OBJECT-TYPE
@@ -468,7 +474,9 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The total number of addresses available in this pool."
+            "The maximum number of addresses available in this pool.
+
+            This attribute is only applicable on MX platform."
         ::= { jnxJsSrcNatStatsEntry 8 }
 
         jnxJsNatSrcNumAddressInuse OBJECT-TYPE
@@ -477,8 +485,7 @@
         STATUS        current
         DESCRIPTION
             "The number of addresses in use from this pool.
-            This attribute is only applicable to pools used with
-            source dynamic translations."
+            This attribute is only applicable on MX platform to NAT translations without PAT."
         ::= { jnxJsSrcNatStatsEntry 9 }
 
         jnxJsNatSrcNumAddressMapped OBJECT-TYPE
@@ -486,7 +493,8 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The number of public addresses mapped"
+            "The number of public addresses mapped.
+            This attribute is only applicable on MX platform for NAT translations with PAT."
         ::= { jnxJsSrcNatStatsEntry 10 }
 
     -- ***************************************************************
@@ -964,9 +972,33 @@
             "pat pool utilization per port overload index in percentage."
         ::= { jnxJsNatTrapVars 9 }
 
+    jnxJsNatSubscriberIp OBJECT-TYPE
+        SYNTAX        DisplayString (SIZE(1..40))
+        MAX-ACCESS    accessible-for-notify
+        STATUS        current
+        DESCRIPTION
+            "Subscriber IP address."
+        ::= { jnxJsNatTrapVars 10 }
+
+    jnxJsSrcNatPoolType OBJECT-TYPE
+        SYNTAX      DisplayString (SIZE(1..8))
+        MAX-ACCESS  accessible-for-notify
+        STATUS      current
+        DESCRIPTION
+            "NAT Pool Type."
+        ::= { jnxJsNatTrapVars 11 }
+
+    jnxJsNatSubsPoolUtil OBJECT-TYPE
+        SYNTAX      Integer32 (0..100)
+        MAX-ACCESS  accessible-for-notify
+        STATUS      current
+        DESCRIPTION
+            "Subscriber utilization of pool in percentage."
+        ::= { jnxJsNatTrapVars 12 }
+
     --
-	-- Trap notifications 
-	--
+    -- Trap notifications 
+    --
 
     --
     -- NAT Address Pool Utilization Threshold Status 
@@ -1049,8 +1081,30 @@
               of the pat pool for the given NAT IP and port overload index."
         ::= { jnxJsNatNotifications 4 }
 
+
+    -- NAT Source pool subscriber utilization of port-blocks/ports from a pool
+    --
+    jnxJsSrcNatSubThresholdStatus NOTIFICATION-TYPE
+        OBJECTS         { jnxJsNatSubscriberIp,
+                          jnxJsNatTrapPoolName,
+                          jnxJsSrcNatPoolType,
+                          jnxJsNatSubsPoolUtil }
+        STATUS         current
+        DESCRIPTION
+             "The SRC NAT subscriber threshold status
+              trap signifies that the utilization of port-bloks/ports
+              usage for a pool is either exceeds certain percentage,
+              or clear of that percentage.
+
+              jnxJsNatSubscriberIp is the subscriber IP address
+              jnxJsNatTrapPoolName is name of the source pool
+              jnxJsSrcNatPoolType  indicates the type of the pool
+              jnxJsNatSubsPoolUtil is the percentage of subscriber
+              utilization of port-blocks/ports from the pool."
+        ::= { jnxJsNatNotifications 5 }
+
     -- ***************************************************************
-    --  END of File 
+    --  END of File
     -- ***************************************************************
 
-END 
+END

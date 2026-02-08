@@ -24,8 +24,8 @@ if ($vars['editing']) {
                 if (preg_match(OBS_PATTERN_LATLON, $vars['coordinates'], $matches) ||
                     preg_match(OBS_PATTERN_LATLON_ALT, $vars['coordinates'], $matches)) {
                     //r($matches);
-                    if ($matches['lat'] >= -90 && $matches['lat'] <= 90 &&
-                        $matches['lon'] >= -180 && $matches['lon'] <= 180) {
+                    if (is_valid_param($matches['lat'], 'lat') &&
+                        is_valid_param($matches['lon'], 'lon')) {
                         $update_geo['location_lat']     = $matches['lat'];
                         $update_geo['location_lon']     = $matches['lon'];
                         $update_geo['location_country'] = '';

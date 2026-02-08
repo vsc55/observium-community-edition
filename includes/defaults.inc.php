@@ -136,20 +136,20 @@ $config['rrd']['step'] = 300;
 
 // http://eccentric.slavery.cx/misc/rrdcalc.html
 // 185kB per DS                           7 days of 5 min          62 days of 30 min       120 days of 2 hour       4 years of 1 day
-$config['rrd']['rra_300']['default'] = "RRA:AVERAGE:0.5:1:2016   RRA:AVERAGE:0.5:6:2976  RRA:AVERAGE:0.5:24:1440  RRA:AVERAGE:0.5:288:1440 ";
-$config['rrd']['rra_300']['default'] .= "                         RRA:MIN:0.5:6:1440      RRA:MIN:0.5:96:360       RRA:MIN:0.5:288:1440 ";
-$config['rrd']['rra_300']['default'] .= "                         RRA:MAX:0.5:6:1440      RRA:MAX:0.5:96:360       RRA:MAX:0.5:288:1440 ";
+$config['rrd']['rra_300']['default']  = "RRA:AVERAGE:0.5:1:2016  RRA:AVERAGE:0.5:6:2976  RRA:AVERAGE:0.5:24:1440  RRA:AVERAGE:0.5:288:1440 ";
+$config['rrd']['rra_300']['default'] .= "                        RRA:MIN:0.5:6:1440      RRA:MIN:0.5:96:360       RRA:MIN:0.5:288:1440 ";
+$config['rrd']['rra_300']['default'] .= "                        RRA:MAX:0.5:6:1440      RRA:MAX:0.5:96:360       RRA:MAX:0.5:288:1440 ";
 // 925kB per DS                           93 days of 5 min         187.5 days of 30 min    366 days of 2 hour       4 years of 1 day
-$config['rrd']['rra_300']['accurate'] = "RRA:AVERAGE:0.5:1:26784  RRA:AVERAGE:0.5:6:9000  RRA:AVERAGE:0.5:24:4392  RRA:AVERAGE:0.5:288:1460 ";
+$config['rrd']['rra_300']['accurate']  = "RRA:AVERAGE:0.5:1:26784  RRA:AVERAGE:0.5:6:9000  RRA:AVERAGE:0.5:24:4392  RRA:AVERAGE:0.5:288:1460 ";
 $config['rrd']['rra_300']['accurate'] .= "                         RRA:MIN:0.5:6:9000      RRA:MIN:0.5:24:4392      RRA:MIN:0.5:288:1460 ";
 $config['rrd']['rra_300']['accurate'] .= "                         RRA:MAX:0.5:6:9000      RRA:MAX:0.5:24:4392      RRA:MAX:0.5:288:1460 ";
 
 // 468kB per DS                           7 days of 1 min        14 days of 5 min         62 days of 30 min        120 days of 2 hour       4 years of 1 day
-$config['rrd']['rra_60']['default'] = "RRA:AVERAGE:0.5:1:10080 RRA:AVERAGE:0.5:5:4032   RRA:AVERAGE:0.5:30:2976  RRA:AVERAGE:0.5:120:1440  RRA:AVERAGE:0.5:1440:1440 ";
+$config['rrd']['rra_60']['default']  = "RRA:AVERAGE:0.5:1:10080 RRA:AVERAGE:0.5:5:4032   RRA:AVERAGE:0.5:30:2976  RRA:AVERAGE:0.5:120:1440  RRA:AVERAGE:0.5:1440:1440 ";
 $config['rrd']['rra_60']['default'] .= "                                                 RRA:MIN:0.5:30:1440      RRA:MIN:0.5:120:360       RRA:MIN:0.5:1440:1440 ";
 $config['rrd']['rra_60']['default'] .= "                                                 RRA:MAX:0.5:30:1440      RRA:MAX:0.5:120:360       RRA:MAX:0.5:1440:1440 ";
 // 1212kB per DS                         7 days of 1 min         93 days of 5 min         187.5 days of 30 min     366 days of 2 hour        4 years of 1 day
-$config['rrd']['rra_60']['accurate'] = "RRA:AVERAGE:0.5:1:10080 RRA:AVERAGE:0.5:5:26784  RRA:AVERAGE:0.5:30:9000  RRA:AVERAGE:0.5:120:4392  RRA:AVERAGE:0.5:1440:1460 ";
+$config['rrd']['rra_60']['accurate']  = "RRA:AVERAGE:0.5:1:10080 RRA:AVERAGE:0.5:5:26784  RRA:AVERAGE:0.5:30:9000  RRA:AVERAGE:0.5:120:4392  RRA:AVERAGE:0.5:1440:1460 ";
 $config['rrd']['rra_60']['accurate'] .= "                        RRA:MIN:0.5:5:26784      RRA:MIN:0.5:30:9000      RRA:MIN:0.5:120:4392      RRA:MIN:0.5:1440:1460 ";
 $config['rrd']['rra_60']['accurate'] .= "                        RRA:MAX:0.5:5:26784      RRA:MAX:0.5:30:9000      RRA:MAX:0.5:120:4392      RRA:MAX:0.5:1440:1460 ";
 
@@ -218,9 +218,10 @@ $config['web_show_disabled']    = TRUE;    // Show or not disabled entities on m
 $config['web_show_tech']        = FALSE;   // Enable display of 'show tech' menu option. Currently only for device entries.
 $config['web_show_notes']       = TRUE;    // Enable display and edit Notes. Currently only for device entries.
 $config['web_show_bgp_asdot']   = FALSE;   // Display BGP 32bit ASNs in asdot format (ie 5.20 instead 327700)
+$config['navbar_port_groups_status'] = TRUE;    // Show up/down status counts in navbar port group dropdown menus.
 
-$config['web_show_overview']      = TRUE;     // FIXME. Not sure, still required?
-$config['overview_show_sysDescr'] = TRUE;     // FIXME. Not sure, still required?
+$config['web_show_overview']      = TRUE;  // FIXME. Not sure, still required?
+$config['web_show_overview_extra'] = TRUE; // Show or not extra information on device overview (old overview_show_sysDescr)
 
 $config['web_show_notifications'] = TRUE;  // Show or not notifications on top of Web UI
 $config['web_show_locations']     = TRUE;  // Enable Locations on menu
@@ -272,13 +273,14 @@ $config['autodiscovery']['ospf']             = TRUE; // Autodiscover hosts via O
 $config['autodiscovery']['bgp']              = TRUE; // Autodiscover hosts via iBGP
 $config['autodiscovery']['bgp_as_private']   = FALSE; // Autodiscovery hosts via eBGP a Private AS (64512 - 65535)
 $config['autodiscovery']['bgp_as_whitelist'] = []; // Array of ASNs we will try to auto-discover hosts for. (eg for confederations).
-$config['autodiscovery']['snmp_scan']        = TRUE; // Autodiscover hosts via SNMP scanning - currently not implemented. (FIXME)
+//$config['autodiscovery']['snmp_scan']        = TRUE; // Autodiscover hosts via SNMP scanning - currently not implemented. (FIXME)
 $config['autodiscovery']['libvirt']          = TRUE; // Autodiscover hosts found via libvirt
 $config['autodiscovery']['vmware']           = TRUE; // Autodiscover hosts found via vmware
 $config['autodiscovery']['proxmox']          = FALSE; // Autodiscover hosts found via Proxmox VE agent app (beware timeouts during poller!)
 $config['autodiscovery']['docker']           = FALSE; // Autodiscover hosts found via Docker
 $config['autodiscovery']['ip_nets']          = [ "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12" ]; // Networks to permit autodiscovery
 $config['autodiscovery']['ping_skip']        = FALSE; // Skip icmp echo checks during autodiscovery (beware timeouts during discovery!)
+$config['autodiscovery']['snmpable']         = FALSE; // Check extra SNMPable Oids (beware timeouts during discovery!)
 $config['autodiscovery']['recheck_interval'] = 86400; // If host is found, but it is not discovered by any reason, the interval, when you can try another check (default 24 hours)
 $config['autodiscovery']['require_hostname'] = TRUE; // If TRUE, devices must have valid resolvable hostname (in DNS or /etc/hosts)
 //$config['autodiscovery']['hostname_regex']['//'] = "";
@@ -298,7 +300,9 @@ $config['email']['sendmail_path'] = '/usr/sbin/sendmail'; // The location of the
 $config['email']['smtp_host']     = 'localhost'; // Outgoing SMTP server name.
 $config['email']['smtp_port']     = 25; // The port to connect.
 $config['email']['smtp_timeout']  = 10; // SMTP connection timeout in seconds.
-$config['email']['smtp_secure']   = NULL; // Enable encryption. Use 'tls' or 'ssl'
+$config['email']['smtp_secure']   = NULL; // Enable encryption. Use 'tls', 'ssl' or 'no' for disable detect StartTLS
+$config['email']['smtp_secure_verify'] = FALSE; // Require verification of snmp hostname.
+$config['email']['smtp_secure_self']   = FALSE; // Allow self-signed certificates.
 $config['email']['smtp_auth']     = FALSE; // Whether or not to use SMTP authentication.
 $config['email']['smtp_username'] = NULL; // SMTP username.
 $config['email']['smtp_password'] = NULL; // Password for SMTP authentication.
@@ -321,7 +325,8 @@ $config['alerts']['critical']['interval'] = 86400; // Default is 1 day.
 $config['alerts']['warning']['interval']  = 86400; // Default is 1 day.
 
 $config['alerts']['suppress']       = FALSE; // Suppress all notifications.
-$config['alerts']['disable']['all'] = FALSE; // Disable all notifications.
+$config['alerts']['disable']['all'] = FALSE; // Disable all notifications (also do not show any warning banners in Web UI).
+#$config['alerts']['disable']['transport'] = TRUE; // Disable specific alert notification transport.
 
 // Notification related
 // $config['alerts']['severity'] = []; // Note. In definitions, do not edit!
@@ -355,12 +360,12 @@ $config['uptime_warning'] = "86400";     // Time in seconds to display a "Device
 
 // HTTP/HTTPS options
 #$config['http_ip_version']                 = '4';       // In dual stack environment, preferred IPv6 requests, for force specify IP version (4/6)
-$config['http_ssl_verify'] = FALSE;      // Verify SSL certificate/peer (default ignore errors)
-// FIXME - make sure this doens't break if it's set to FALSE, and set it to false, rather than commenting it.
-#$config['http_proxy'] = "yourproxy:80"; // Proxy for HTTP/HTTPS requests (e.g. for geocoding)
-#$config['proxy_user'] = ''; // Proxy username (basic auth)
-#$config['proxy_password'] = ''; // Proxy password
-#$config['proxy_fulluri'] = TRUE; // Proxy Full URI. Default TRUE, because mostly required by Squid.
+$config['http_ssl_verify']                 = FALSE;      // Verify SSL certificate/peer (default ignore errors)
+#$config['http_timeout']                    = 15;         // Default request timeout (in seconds 1-300)
+#$config['http_proxy']                     = "yourproxy:80"; // Proxy for HTTP/HTTPS requests (notifications, geocoding, http api)
+#$config['proxy_user']                     = ''; // Proxy username (basic auth)
+#$config['proxy_password']                 = ''; // Proxy password
+#$config['proxy_fulluri']                  = TRUE; // Proxy Full URI. Default TRUE, because mostly required by Squid.
 
 // Carbon/Ceres/StatsD configuration
 
@@ -394,9 +399,9 @@ $config['amqp']['modules']['mempools']  = TRUE;
 // Geocoding Configuration
 
 $config['geocoding']['enable'] = TRUE; // Enable Geocoding
-$config['geocoding']['api'] = 'geocodefarm'; // Which GEO API can use:  google, yandex, geocodefarm, bing, arcgis, openstreetmap, mapquest, opencage, locationiq
-$config['geocoding']['dns'] = FALSE; // Use DNS LOC records for geolocation
-//$config['geocoding']['ip']  = FALSE; // WiP. Detect location by IP (as fallback, when by location not found)
+$config['geocoding']['api']    = 'arcgis'; // Which GEO API can use:  google, yandex, geoapify, geocodefarm, bing, arcgis, openstreetmap, mapquest, opencage, locationiq
+$config['geocoding']['dns']    = FALSE; // Use DNS LOC records for geolocation
+//$config['geocoding']['ip']     = FALSE; // WiP. Detect location by IP (as fallback, when by location not found)
 $config['geocoding']['default']['lat'] = "37.7463058"; // Default latitude
 $config['geocoding']['default']['lon'] = "-25.6668573"; // Default longitude
 
@@ -405,11 +410,17 @@ $config['geocoding']['default']['lon'] = "-25.6668573"; // Default longitude
 //$config['geo_api']['geocodefarm']['enable']    = TRUE;
 //$config['geo_api']['geocodefarm']['key']       = '';
 
+//$config['geo_api']['geoapify']['enable']       = TRUE;
+//$config['geo_api']['geoapify']['key']          = '';
+
 //$config['geo_api']['google']['enable']         = TRUE;
 //$config['geo_api']['google']['key']            = '';
 
 //$config['geo_api']['bing']['enable']           = TRUE;
 //$config['geo_api']['bing']['key']              = '';
+
+//$config['geo_api']['azure']['enable']           = TRUE;
+//$config['geo_api']['azure']['key']              = '';
 
 //$config['geo_api']['yandex']['enable']         = TRUE;
 //$config['geo_api']['yandex']['key']            = '';
@@ -425,9 +436,9 @@ $config['geocoding']['default']['lon'] = "-25.6668573"; // Default longitude
 
 // Location
 $config['location']['menu']['type']              = 'geocoded'; // geocoded, nested, plain
-$config['location']['menu']['nested_reversed'] = FALSE; // set to TRUE if your locations are most-to-least significant
-$config['location']['menu']['nested_split_char'] = ','; // splitting character for nested location hierarchy
-$config['location']['menu']['nested_max_depth']  = 4; // maximum levels in nested location hierarchy
+$config['location']['menu']['nested_reversed']   = FALSE;      // set to TRUE if your locations are most-to-least significant
+$config['location']['menu']['nested_split_char'] = ',';        // splitting character for nested location hierarchy
+$config['location']['menu']['nested_max_depth']  = 4;          // maximum levels in nested location hierarchy
 
 // Location rewrites (rewrite part of location string
 //$config['location']['rewrite_regexp']['/C\$/'] = "ä"; // PC$rnu -> Pärnu
@@ -485,6 +496,8 @@ $config['graph_colours']['default']  = $config['graph_colours']['blues'];
 
 $config['graph_colours']['juniperive'] = ['F7C729', '52A6EF'];
 $config['graph_colours']['percents']   = ['55FF00', '00FFD5', '00D5FF', '00AAFF', '0080FF', '0055FF', '0000FF', '8000FF', 'D400FF', 'FF00D4', 'FF0080', 'FF0000'];
+// for availability graphs, split to 10:      0-10%,   11-20%,   21-30%,   31-40%,   41-50%,   51-60%,   61-70%,   71-80%,   81-90%,  91-100%
+$config['graph_colours']['percents10'] = [ 'd94c20', 'de6822', 'eaa322', 'f4bd1b', 'fee610', 'e4e11e', 'b8d029', '90c22f', '75b731', '5ca53f' ];
 
 // Uniform "data" graph colours
 
@@ -583,10 +596,26 @@ $config['enable_rip']         = 1; // Enable RIP session collection and display
 $config['enable_ospf']        = 1; // Enable OSPF session collection and display
 $config['enable_isis']        = 1; // Enable ISIS session collection and display
 $config['enable_eigrp']       = 1; // Enable EIGRP session collection and display
+// EIGRP recent-down window (seconds) for peers_down_recent metric (default 1 hour)
+$config['eigrp_recent_down_window'] = 3600;
 $config['enable_syslog']      = 0; // Enable Syslog
+$config['enable_traps']       = 0; // Enable SNMP Trap Processing
 $config['enable_vrfs']        = 1; // Enable VRFs
 $config['enable_sla']         = 1; // Enable SLA/RPM collection and display
 $config['enable_pseudowires'] = 1; // Enable Pseudowires
+$config['enable_bfd']         = 1; // Enable BFD
+
+// BFD debounce defaults (adapted for 300s pollers)
+// Detect sustained instability: 3 transitions within 15 minutes triggers a single flapping event,
+// then suppress repeated flap events for 30 minutes.
+$config['bfd']['debounce']['window']    = 900;   // seconds (15 min)
+$config['bfd']['debounce']['threshold'] = 3;     // transitions within window to count as flapping
+$config['bfd']['debounce']['cooldown']  = 1800;  // seconds (30 min) flap-event cooldown per session
+
+// Housekeeping: BFD session reaping
+// Remove sessions not seen within this age (kept as tombstones until reaped)
+$config['housekeeping']['bfd']['age']          = '14d';
+$config['housekeeping']['bfd_session']['age']  = '14d';
 
 // Billing System Configuration
 
@@ -604,10 +633,6 @@ $config['billing']['base']             = 1000; // Set the base to divider bytes 
 #$config['rancid_suffix']                = 'yourdomain.com'; // Domain suffix for non-FQDN device names
 $config['rancid_ignorecomments'] = 0; // Ignore lines starting with #
 $config['rancid_revisions']      = 10; // Show such last count revisions in device page
-
-// Oxidized
-$config['oxidized']['url']       = ''; // For WEB API access
-$config['oxidized']['configs'][] = '/home/oxidized/oxidized/git'; // For local git access
 
 // Collectd
 #$config['collectd_dir']                 = '/var/lib/collectd/rrd';
@@ -668,7 +693,68 @@ $config['sensors']['port']['ignore_shutdown'] = TRUE;  // Set ignore sensor stat
 $config['sensors']['limits_events']           = FALSE; // Store sensors limit changes in eventlog
 $config['sensors']['web_measured_compact']    = FALSE; // Show sensors for measured entities in compact view style
 
+// Auto-calibration for sensor thresholds
+$config['sensors']['auto_calibration']['enabled']       = TRUE;  // Enable automatic threshold calibration
+$config['sensors']['auto_calibration']['learning_days'] = 7;     // Days to collect data before calibration
+$config['sensors']['auto_calibration']['skip_classes']  = ['state']; // Sensor classes to skip
+
+// Adaptive threshold calculation settings:
+// - margin: % of operating range for normal cases
+// - adaptive_min_percent: minimum margin as % of sensor value (scales automatically) 
+// - max_margin_ratio: cap margin at X times sensor value (prevents excessive thresholds)
+// - fallback_min: absolute minimum for edge cases (optional)
+// - min_high/min_low: fixed absolute minimums (legacy, overrides adaptive for some sensors)
+$config['sensors']['auto_calibration']['thresholds'] = [
+  // SI-formatted sensors with huge ranges (µA to kA, mV to kV, etc.) - adaptive scaling essential
+  'current'     => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 3.0],
+  'voltage'     => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0], 
+  'power'       => ['margin' => 0.25, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 3.0],
+  'apower'      => ['margin' => 0.25, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 3.0],
+  'rpower'      => ['margin' => 0.25, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 3.0],
+  'frequency'   => ['margin' => 0.10, 'adaptive_min_percent' => 2.0, 'max_margin_ratio' => 1.5],
+  'capacitance' => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'volume'      => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'pressure'    => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'velocity'    => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'distance'    => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+
+  // Percentage-based sensors - adaptive but smaller margins
+  'humidity'    => ['margin' => 0.15, 'adaptive_min_percent' => 3.0, 'max_margin_ratio' => 1.0],
+  'load'        => ['margin' => 0.20, 'adaptive_min_percent' => 3.0, 'max_margin_ratio' => 1.0],
+  'capacity'    => ['margin' => 0.15, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 1.0],
+
+  // Mixed scaling - adaptive with fallback minimums for edge cases
+  'temperature' => ['margin' => 0.50, 'adaptive_min_percent' => 5.0, 'fallback_min' => 1.0],
+  'fanspeed'    => ['margin' => 0.30, 'adaptive_min_percent' => 3.0, 'fallback_min' => 100],
+
+  // Logarithmic scales - keep fixed margins (5% of -30dBm is meaningless)
+  'dbm'         => ['margin' => 0.20, 'min_high' => 3.0, 'min_low' => 3.0],
+  'snr'         => ['margin' => 0.20, 'min_high' => 2.0, 'min_low' => 2.0],
+  'attenuation' => ['margin' => 0.20, 'min_high' => 2.0, 'min_low' => 2.0],
+  'sound'       => ['margin' => 0.20, 'min_high' => 5.0, 'min_low' => 5.0],
+
+  // Unitless ratios - keep fixed margins  
+  'powerfactor' => ['margin' => 0.15, 'min_high' => 0.1, 'min_low' => 0.1],
+  'crestfactor' => ['margin' => 0.15, 'min_high' => 0.1, 'min_low' => 0.1],
+
+  // Stable wavelengths - small adaptive margins
+  'wavelength'  => ['margin' => 0.10, 'adaptive_min_percent' => 1.0, 'max_margin_ratio' => 0.1],
+
+  // Special cases - small adaptive margins or fixed
+  'illuminance' => ['margin' => 0.20, 'adaptive_min_percent' => 10.0, 'max_margin_ratio' => 1.0],
+  'concentration' => ['margin' => 0.25, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'dust'        => ['margin' => 0.25, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'waterflow'   => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+  'airflow'     => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0],
+
+  // Default for unknown sensor types
+  'default'     => ['margin' => 0.20, 'adaptive_min_percent' => 5.0, 'max_margin_ratio' => 2.0]
+];
+
 $config['fdb']['deleted_age'] = '30d'; // How long keep deleted fdb entries in db. Note, too big value grow up memory usage in poller!
+
+// Source port guess feature - maximum number of FDB entries to calculate source for (prevents performance issues on large result sets)
+$config['fdb']['guess_source_max_results'] = 200;
 
 // Ignores & Allows
 // Has to be lowercase
@@ -732,10 +818,16 @@ $config['bad_ifalias_regexp'] = [];
 
 $config['ports']['ignore_errors_iftype'] = [ 'ieee80211' ];
 
+// Use parsed speed from port description (port_descr_speed) to override ifSpeed in poller
+// This allows manual speed settings like [7Gbps] in ifAlias to control usage percentage calculations
+// Priority: ifSpeed_custom > port_descr_speed > ifHighSpeed > ifSpeed
+$config['ports']['descr_speed_override'] = FALSE;
+
 // Port Description Parsing types and options
 
 $config['port_descr_parser']                = "includes/port-descr-parser.inc.php"; // Parse port descriptions into fields, custom function. WARNING! use descr_regexp instead
-$config['ports']['descr_regexp'][]          = "/^(?<type>\w+):\s*(?<descr>\w[^\[\(\{]*)(\s*\[(?<speed>.+)\])?(\s*\((?<notes>.+)\))?(\s*\{(?<circuit>.+)\})?/";
+// FIXME. Need improve example regex with unittest
+//$config['ports']['descr_regexp'][]          = "/^(?<type>\w\S+)\s*:\s*(?<descr>\w[^\[\(\{]*)(\s*\[(?<speed>.+)\])?(\s*\((?<notes>.+)\))?(\s*\{(?<circuit>.+)\})?/";
 
 // Enable/disable only for Web UI display, parsing always
 $config['ports']['descr_groups']['cust']    = [ 'name' => 'Customers', 'enable' => TRUE,  'icon' => 'port-customer', 'graphs' => TRUE ];
@@ -762,6 +854,10 @@ $config['xdp']['ignore_platform'][] = "Cisco IP Phone"; // by platform (not case
 $config['xdp']['ignore_platform_regex'][] = "/^Not received$/";     // by platform  regex
 $config['xdp']['ignore_platform_regex'][] = "/^SIP\-CP\d+/";
 
+// Ignore some types of discovered graphs. Currently tested only with JUNIPER-FIREWALL-MIB
+// $config['graphs']['ignore_fw_regexp'][] = "/__flowspec/";
+// $config['graphs']['ignore_fw_regexp'][] = "/customer-ifl-arp-policer-/";
+// $config['graphs']['ignore_fw_regexp'][] = "/policer-[0-9]+[kKmMgG]-ae/";
 
 // Filesystems ignore
 // FIXME. Rename to $config['storages']['ignore_removable']
@@ -968,7 +1064,7 @@ $config['auth_ad_validatecert']           = TRUE; // Validate server's SSL certi
 // Accepts either full DNs or just group names as they are named in AD.
 // If auth_ad_group is not specified, group level groups from auth_ad_groups below will be used. If no level groups, every valid user has access.
 
-$config['auth_ad_binddn']        = 'observium@ad.yourcorp'; // Initial LDAP bind dn and password, required (can be DN or user@domain.tld)
+$config['auth_ad_binddn']        = 'observium@ad.yourcorp'; // Initial AD bind dn and password, required (can be DN or user@domain.tld)
 $config['auth_ad_bindpw']        = '';
 
 // Assign user levels to certain LDAP groups
@@ -1008,7 +1104,7 @@ $config['syslog']['unknown_hosts'] = FALSE;       // Allow collect syslog messag
 $config['syslog']['use_ip']        = FALSE;       // Allow associate syslog hosts by cached IP (from dns)
 $config['syslog']['timestamp']     = 'system';    // Use timestamp from Observium system or from syslog server.
 // You can set this param to number of seconds,
-// when diff timestams of system and syslog greater this use syslog (instead system)
+// when diff timestams of a system and syslog greater this uses syslog (instead of a system)
 
 // Mapping (unknown) syslog hosts to device (id or hostname)
 //$config['syslog']['host_map']['localhost'] = 'my.device.name'; // device hostname/sysname
@@ -1096,6 +1192,10 @@ $config['wmi']['service_permit']         = [];
 $config['astext'][65332] = "Cymru FullBogon Feed";
 $config['astext'][65333] = "Cymru Bogon Feed";
 
+// Hardcoded ASN nets
+//$config['asnet'][65332] = [ '10.0.0.0/12' ];
+//$config['asnet'][65333] = [ '192.168.0.0/16' ];
+
 /* WIP. Base template for convert modules config
 $config['modules']['system']['description']               = 'Device system information (ie location, contact, hardware, version, others)';
 $config['modules']['system']['poller']                    = 1;
@@ -1127,6 +1227,7 @@ $config['poller_modules']['ucd-mib']                       = 1;
 $config['poller_modules']['ipSystemStats']                 = 1;
 $config['poller_modules']['ports']                         = 1;
 $config['poller_modules']['bgp-peers']                     = 1;
+$config['poller_modules']['vrf']                           = 1;
 $config['poller_modules']['junose-atm-vp']                 = 1;
 $config['poller_modules']['printersupplies']               = 1;
 $config['poller_modules']['ucd-diskio']                    = 1;
@@ -1139,6 +1240,7 @@ $config['poller_modules']['cisco-cef']                     = 1;
 $config['poller_modules']['sla']                           = 1;
 $config['poller_modules']['lsp']                           = 0;
 $config['poller_modules']['pseudowires']                   = 1;
+$config['poller_modules']['bfd']                           = 1;
 $config['poller_modules']['mac-accounting']                = 1;
 $config['poller_modules']['arista-software-ip-forwarding'] = 1;
 $config['poller_modules']['cipsec-tunnels']                = 1;
@@ -1155,11 +1257,20 @@ $config['poller_modules']['cisco-vpdn']                    = 0;
 $config['poller_modules']['processes']                     = 1;
 $config['poller_modules']['probes']                        = 1;
 $config['poller_modules']['syslog']                        = 0;
+$config['poller_modules']['stp']                           = 0; // Spanning Tree Protocol poller, disabled for testing
 
 // List of discovery modules. Need to be in this array to be
 // considered for execution.
 
+// Graph layout tuning
+// Padding presets used by generate_graph_row() to adjust for container/tables
+if (!isset($config['graphs']['pad'])) { $config['graphs']['pad'] = []; }
+$config['graphs']['pad']['container']    = 20; // Typical outer padding when graphs are outside tables
+$config['graphs']['pad']['table']        = 0;  // Tables usually constrain width already
+$config['graphs']['pad']['table_marker'] = 8;  // Extra width lost to the state-marker column in tables
+
 $config['discovery_modules']['os']              = 1;
+$config['discovery_modules']['device-classification'] = 1; // Must be after os but before other modules
 $config['discovery_modules']['mibs']            = 1; // Discovery supported additional MIBs by sysORID or definition checks
 $config['discovery_modules']['vrf']             = 1; // Must be before all other modules (ie ports, ip-addresses)
 $config['discovery_modules']['ports']           = 1;
@@ -1174,8 +1285,8 @@ $config['discovery_modules']['printersupplies'] = 1; // Printer Supplies should 
 //$config['discovery_modules']['outlets']                   = 1; // Outlets should be before sensors
 $config['discovery_modules']['sensors']        = 1;
 $config['discovery_modules']['storage']        = 1;
-$config['discovery_modules']['neighbours']     = 1;
-$config['discovery_modules']['arp-table']      = 1;
+$config['discovery_modules']['neighbours']        = 1;
+$config['discovery_modules']['arp-table']         = 1;
 $config['discovery_modules']['junose-atm-vp']  = 1;
 $config['discovery_modules']['bgp-peers']      = 1; // Must be after ip-addresses
 $config['discovery_modules']['mac-accounting'] = 1;
@@ -1189,6 +1300,7 @@ $config['discovery_modules']['ucd-diskio']       = 1;
 $config['discovery_modules']['wifi']             = 1;
 $config['discovery_modules']['p2p-radios']       = 1;
 $config['discovery_modules']['graphs']           = 1;
+$config['discovery_modules']['stp']             = 1;
 $config['discovery_modules']['raid']             = 0;
 
 // Ports extension modules
@@ -1205,8 +1317,13 @@ $config['enable_ports_sros_ingress_qstat'] = 1; // Enable graphing of ingress qu
 $config['enable_ports_64bit']              = 1; // Prefer 64bit counters.
 $config['enable_ports_separate_walk']      = 0; // Walk separate IF-MIB tables instead global ifEntry, ifXEntry
 
-// Observium WIP API Settings
+// API Settings
 $config['api']['enable'] = FALSE; // Enable or disable the API
+$config['api']['auth']['session']       = TRUE; // Enable/disable session-based auth (web UI or HTTP Basic Auth)
+$config['api']['auth']['api_token']     = TRUE; // Enable/disable API token auth (e.g., Bearer, X-API-Token)
+$config['api']['auth']['allow_x_api_token'] = FALSE;
+$config['api']['auth']['allow_query_token'] = FALSE; // Disabled by default for security
+
 
 // Enable or disable specific API endpoint
 $config['api']['endpoints']['alerts']          = 1;
@@ -1234,6 +1351,22 @@ $config['influxdb']['debug']   = FALSE; // If true, just write updates to /tmp
 $config['influxdb']['server']  = 'localhost:8086'; // Where is InfluxDB listening?
 $config['influxdb']['db']      = 'observium';      // Which InfluxDB database?
 
+// PVST-specific defaults: ignore Cisco legacy FDDI/TokenRing VLANs in PVST processing
+// Keep this list conservative; operators can override in config.php
+if (!isset($config['pvst']['ignore_vlans'])) {
+  $config['pvst']['ignore_vlans'] = [1002, 1003, 1004, 1005];
+}
+
+// STP defaults
+$config['stp']['health'] = array(
+  // If >= this % of STP ports flapped in the last 5m, WARN/CRIT
+  'warn_5m_pct' => 2.0,
+  'crit_5m_pct' => 5.0,
+  // If the noisiest port had >= this many transitions in the last hour, WARN/CRIT
+  'warn_60m'    => 3,
+  'crit_60m'    => 6,
+);
+
 // Unsupported settings
 
 $config['short_hostname']['length']   = 12; // Alter short_hostname() target length, changing this is not officially supported!
@@ -1242,5 +1375,18 @@ $config['experimental']               = FALSE;  // Set to TRUE to enable experim
 // Max port speed in RRD; default 100Gbit. Only used upon RRD creation!
 //$config['max_port_speed'] = 12500000000; // 12,500,000,000 * 8 = 100,000,000,000 bit/s (but this is less than 100Gbit/s
 $config['max_port_speed'] = 13500000000;   // 13,421,772,800 * 8 = 107,374,182,400 bit/s = 100 * 1024 * 1024 * 1024
+
+// Ports: when to prefer 'separate_walk'
+$config['ports']['separate_walk_min_ports'] = 96;
+
+// Bounded partial-walk repair (ports)
+$config['snmp_repair'] = [
+  'enabled'            => true,  // feature flag
+  'coverage_threshold' => 0.95,  // each required column must be ≥95% filled after repair
+  'max_missing_pct'    => 0.20,  // skip repair if >20% missing for a column
+  'max_missing_abs'    => 256,   // or >256 rows missing (whichever smaller)
+  'max_oids_total'     => 1000,  // total OIDs budget per poll
+  'get_chunk'          => 64     // GET batch size
+];
 
 // End includes/defaults.inc.php

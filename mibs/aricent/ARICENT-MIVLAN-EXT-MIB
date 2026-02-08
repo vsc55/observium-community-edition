@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved
 
--- $Id: fsmvlext.mib,v 1.19 2016/02/18 09:47:31 siva Exp $
-
 ARICENT-MIVLAN-EXT-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS 

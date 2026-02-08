@@ -1,6 +1,6 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fserps.mib,v 1.34 2016/01/11 13:05:21 siva Exp $
+-- $Id: fserps.mib,v 1.1.1.1 2018/02/08 06:06:34 siva Exp $
 
 --    ERPS Proprietary MIB Definition
 
@@ -92,10 +92,10 @@ RingMonitorMechanismType ::= TEXTUAL-CONVENTION
                        and pseudo-wire identifier of the monitoring PW of fsErpsRingPort1 
                        of the interconnecting nodes needs to be provisioned in the same 
                        fsErpsRingMplsTable.
-         ifm(3)        Using just a port operstatus
+
          reserved(x)   Reserved for other monitoring mechanisms for future use" 
 
-    SYNTAX      INTEGER { cfm(1),mplsOam(2),ifm(3) }
+    SYNTAX      INTEGER { cfm(1),mplsOam(2) }
 
 RingIdOrNone ::= TEXTUAL-CONVENTION
     DISPLAY-HINT "d"

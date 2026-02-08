@@ -11,10 +11,13 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
            			FROM RFC1155-SMI
 			OBJECT-TYPE
 				FROM RFC-1212
-			ifIndex
+			ifIndex,ifType,ifDescr,ifOperStatus,ifAdminStatus
 				FROM RFC1213-MIB
+			ifAlias
+				FROM IF-MIB
 			nmsMgmt
 				FROM NMS-SMI
+			
             MacAddress,TruthValue,DisplayString
 				FROM SNMPv2-TC;
  nmsIfExtMIB  MODULE-IDENTITY
@@ -32,7 +35,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
 
 
           ifExtTable OBJECT-TYPE
-              SYNTAX  SEQUENCE OF ifExtEntry
+              SYNTAX  SEQUENCE OF IfExtEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -41,7 +44,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               ::= { nmsIfExtObjects 1 }
 
           ifExtEntry OBJECT-TYPE
-              SYNTAX  ifExtEntry
+              SYNTAX  IfExtEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -49,7 +52,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               INDEX   { ifExtIndex }
               ::= { ifExtTable 1 }
 
-          ifExtEntry ::=
+          IfExtEntry ::=
               SEQUENCE {
                   ifExtIndex    INTEGER,
                   ifExtCRCCount    Counter,
@@ -98,7 +101,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
 	  	nmsIfExtStates   OBJECT IDENTIFIER ::= { nmsIfExtMIB 2 }
 
           ifExtStatesTable OBJECT-TYPE
-              SYNTAX  SEQUENCE OF ifExtStatesEntry
+              SYNTAX  SEQUENCE OF IfExtStatesEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -107,7 +110,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               ::= { nmsIfExtStates 1 }
 
           ifExtStatesEntry OBJECT-TYPE
-              SYNTAX  ifExtStatesEntry
+              SYNTAX  IfExtStatesEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -115,7 +118,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               INDEX   { ifExtStatIndex }
               ::= { ifExtStatesTable 1 }
 
-          ifExtStatesEntry ::=
+          IfExtStatesEntry ::=
               SEQUENCE {
                   ifExtStatIndex	INTEGER,
                   ifExtSpeed	INTEGER,
@@ -171,7 +174,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
 	  	nmsIfExtFdb   OBJECT IDENTIFIER ::= { nmsIfExtMIB 3 }
 
           ifExtFdbTable OBJECT-TYPE
-              SYNTAX  SEQUENCE OF ifExtFdbEntry
+              SYNTAX  SEQUENCE OF IfExtFdbEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -179,7 +182,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               ::= { nmsIfExtFdb 1 }
 
           ifExtFdbEntry OBJECT-TYPE
-              SYNTAX  ifExtFdbEntry
+              SYNTAX  IfExtFdbEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -187,7 +190,7 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               INDEX   { ifExtFdbIndex }
               ::= { ifExtFdbTable 1 }
 
-          ifExtFdbEntry ::=
+          IfExtFdbEntry ::=
               SEQUENCE {
                   ifExtFdbIndex	INTEGER,
                   ifExtVid		INTEGER,
@@ -309,7 +312,11 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
                   ifMiscIpv4InPkts						Counter64,
                   ifMiscIpv4OutPkts						Counter64,
                   ifMiscIpv6InPkts						Counter64,
-                  ifMiscIpv6OutPkts						Counter64
+                  ifMiscIpv6OutPkts						Counter64,
+		  ifInRealTimeBitRate       					Counter64,
+                  ifInRealTimePktRate       					Counter64,
+                  ifOutRealTimeBitRate       					Counter64,
+                  ifOutRealTimePktRate       					Counter64
               }
           ifExtStatisticsIndex OBJECT-TYPE
               SYNTAX  INTEGER
@@ -872,7 +879,63 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               DESCRIPTION
                       "Ipv6 packets sent."
               ::= { ifExtStatisticsEntry 64 }
+           ifInRealTimeBitRate OBJECT-TYPE
+              SYNTAX  Counter64
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "Real time input rate(bits/sec)."
+              ::= { ifExtStatisticsEntry 65 }
+			  
+           ifInRealTimePktRate OBJECT-TYPE
+              SYNTAX  Counter64
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "Real time input rate(packets/sec)."
+              ::= { ifExtStatisticsEntry 66 }
 
+           ifOutRealTimeBitRate OBJECT-TYPE
+              SYNTAX  Counter64
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "Real time output rate(bits/sec)."
+              ::= { ifExtStatisticsEntry 67 }
+
+           ifOutRealTimePktRate OBJECT-TYPE
+              SYNTAX  Counter64
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "Real time output rate(packets/sec)."
+              ::= { ifExtStatisticsEntry 68 }
+             
+        --  trafficexceeds（网口流量超阈值）1.3.6.1.4.1.3320.9.64.4.5
+        trafficExceeds          OBJECT IDENTIFIER ::= { nmsIfExtStatistics 5 }
+
+       	trafficExceedsGroup     OBJECT IDENTIFIER ::= { trafficExceeds 1 }
+
+        trafficExceedsInfo OBJECT-TYPE
+            SYNTAX  DisplayString
+            ACCESS  accessible-for-notify
+            STATUS  mandatory
+
+            DESCRIPTION
+                    "bind infomation:port,threshold"
+            ::= { trafficExceedsGroup 1 }
+
+        trafficExceedsNotifications    OBJECT IDENTIFIER ::= { trafficExceeds 2 }
+        
+        trafficExceedsNotification NOTIFICATION-TYPE
+            OBJECTS {
+                trafficExceedsInfo
+            }
+            STATUS  mandatory
+            DESCRIPTION
+                    "The agent generates this notification when traffic exceeds threshold."
+            ::= { trafficExceedsNotifications 1 }
+		  
 	   nmsIfException   OBJECT IDENTIFIER ::= { nmsIfExtStatistics 2 }
 
           ifDisableCause OBJECT-TYPE
@@ -941,6 +1004,206 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               DESCRIPTION
                       "A global value for setting port link trap sending operation. 0: disable sending link up/down trap, 1: enable sending link up/down trap."
               ::= { nmsIfExtStatistics 3 }
+              
+
+-- interface speed 1s, 5min, 1h, 24h
+
+               nmsIfSpeedTable OBJECT-TYPE
+                   SYNTAX  SEQUENCE OF NmsIfSpeedEntry
+                   ACCESS  not-accessible
+                   STATUS  mandatory
+                   DESCRIPTION
+                            "A list of interface entries."
+                   ::= { nmsIfExtStatistics 4 }
+
+               nmsIfSpeedEntry OBJECT-TYPE
+                   SYNTAX NmsIfSpeedEntry
+                   ACCESS  not-accessible
+                   STATUS  mandatory
+                   DESCRIPTION
+                            "A collection of additional objects in the
+                            NMS interface."
+                   INDEX { ifSpeedIndex }
+               ::= { nmsIfSpeedTable 1 }
+
+
+               NmsIfSpeedEntry ::=
+                   SEQUENCE {
+                       ifSpeedIndex
+                           INTEGER,
+                       ifSpeedInPkts1sec
+                           INTEGER,
+                       ifSpeedInBytes1sec
+                           INTEGER,
+                       ifSpeedOutPkts1sec
+                           INTEGER,
+                       ifSpeedOutBytes1sec
+                           INTEGER,
+                       ifSpeedInPkts5min
+                           INTEGER,
+                       ifSpeedInBytes5min
+                           INTEGER,
+                       ifSpeedOutPkts5min
+                           INTEGER,
+                       ifSpeedOutBytes5min
+                           INTEGER,
+                       ifSpeedInPkts1hr
+                           INTEGER,
+                       ifSpeedInBytes1hr
+                           INTEGER,
+                       ifSpeedOutPkts1hr
+                           INTEGER,
+                       ifSpeedOutBytes1hr
+                           INTEGER,
+                       ifSpeedInPkts24hr
+                           INTEGER,
+                       ifSpeedInBytes24hr
+                           INTEGER,
+                       ifSpeedOutPkts24hr
+                           INTEGER,
+                       ifSpeedOutBytes24hr
+                           INTEGER
+                   }
+
+
+
+               ifSpeedIndex OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface index of this card corresponding
+                           to its ifIndex"
+                   ::= { nmsIfSpeedEntry 1 }
+
+               ifSpeedInPkts1sec OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving packets in 1 second."
+                   ::= { nmsIfSpeedEntry 2 }
+
+               ifSpeedInBytes1sec OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving bytes in 1 second."
+                   ::= { nmsIfSpeedEntry 3 }
+
+               ifSpeedOutPkts1sec OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending packets in 1 second."
+                   ::= { nmsIfSpeedEntry 4 }
+
+               ifSpeedOutBytes1sec OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending bytes in 1 second."
+                   ::= { nmsIfSpeedEntry 5 }
+
+               ifSpeedInPkts5min OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving packets in 5 minutes."
+                   ::= { nmsIfSpeedEntry 6 }
+
+               ifSpeedInBytes5min OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving bytes in 5 minutes."
+                   ::= { nmsIfSpeedEntry 7 }
+
+               ifSpeedOutPkts5min OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending packets in 5 minutes."
+                   ::= { nmsIfSpeedEntry 8 }
+
+               ifSpeedOutBytes5min OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending bytes in 5 minutes."
+                   ::= { nmsIfSpeedEntry 9 }
+
+               ifSpeedInPkts1hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving packets in 1 hour."
+                   ::= { nmsIfSpeedEntry 10 }
+
+               ifSpeedInBytes1hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving bytes in 1 hour."
+                   ::= { nmsIfSpeedEntry 11 }
+
+               ifSpeedOutPkts1hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending packets in 1 hour."
+                   ::= { nmsIfSpeedEntry 12 }
+
+               ifSpeedOutBytes1hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending bytes in 1 hour."
+                   ::= { nmsIfSpeedEntry 13 }
+
+               ifSpeedInPkts24hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving packets in 24 hour."
+                   ::= { nmsIfSpeedEntry 14 }
+
+               ifSpeedInBytes24hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of receiving bytes in 24 hour."
+                   ::= { nmsIfSpeedEntry 15 }
+
+               ifSpeedOutPkts24hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending packets in 24 hour."
+                   ::= { nmsIfSpeedEntry 16 }
+
+               ifSpeedOutBytes24hr OBJECT-TYPE
+                   SYNTAX  INTEGER 
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Interface speed of sending bytes in 24 hour."
+                   ::= { nmsIfSpeedEntry 17 }
+
 
 	  	nmsIfExtProtect   OBJECT IDENTIFIER ::= { nmsIfExtMIB 5 }
 
@@ -1087,6 +1350,30 @@ NMS-INTERFACE-EXT DEFINITIONS ::= BEGIN
               DESCRIPTION
                       "Sequence"
 	   		::= { nmsIfCreateInterface 3 }
+
+
+	 nmsIfExtTrap   OBJECT IDENTIFIER ::= { nmsIfExtMIB 8 }
+
+	nmsIfUpDownExtNotifications OBJECT IDENTIFIER
+                                ::= { nmsIfExtTrap 1 }
+
+
+	nmsIfUpDownExtNotification NOTIFICATION-TYPE
+    		OBJECTS {
+                       ifIndex,
+                       ifType,
+                       ifDescr,
+                       ifAdminStatus,
+                       ifOperStatus,
+                       ifAlias
+    		}
+    		STATUS      current
+    		DESCRIPTION
+        	"The agent generates this notification when interface status changes."
+    		::= { nmsIfUpDownExtNotifications 1 }
+
+
+
 
 
 END

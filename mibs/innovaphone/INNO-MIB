@@ -1,7 +1,7 @@
 INNO-MIB   DEFINITIONS ::= BEGIN
 
     -- Innovaphone AG
-    -- Boeblinger Straﬂe 76
+    -- Boeblinger Stra√üe 76
     -- D-71065 Sindelfingen
     -- info@innovaphone.com
 
@@ -497,10 +497,20 @@ INNO-MIB   DEFINITIONS ::= BEGIN
              a trap."
         ::= { trapDummyGroup 2   }
 
+    trapGaugeParm OBJECT-TYPE
+        SYNTAX      Gauge
+        ACCESS      read-only
+        STATUS      mandatory
+        DESCRIPTION 
+            "This variable doesn't exist. Its purpose is to
+             be syntactically referenced as a variable within 
+             a trap."
+        ::= { trapDummyGroup 3   }
+
     innoColdStart TRAP-TYPE
         ENTERPRISE innovaphone
         DESCRIPTION
-        "A power cycle took place."
+        "An unexpected restart happened."
         ::= 0
     
     innoWarmStart TRAP-TYPE
@@ -537,9 +547,30 @@ INNO-MIB   DEFINITIONS ::= BEGIN
               trapIntegerParm         -- interface is down(0) or up(1)
         }
         DESCRIPTION
-        "This trap indicates the up/down status of an isdn
-         interface. The trap is sent only for interfaces
-         configured to Point-To-Point ."
+        "Obsoleted: This SNMP trap is no longer necessary. Meanwhile it is covered more consistently by innoDiagAlarm and innoDiagAlarmClear.
+         Removed from on v9hf16."
         ::= 5
 
+    innoDiagAlarm TRAP-TYPE
+        ENTERPRISE  innovaphone
+        VARIABLES   { 
+              trapGaugeParm,          -- Alarm Code
+              trapDisplayStringParm,  -- Alarm Source
+              trapGaugeParm,          -- Severity: indeterminate(0),major(1),critical(2)
+              trapDisplayStringParm   -- Alarm Text
+        }
+        DESCRIPTION
+        "This trap corresponds to an alarm under Administration/Diagnostics/Alarms"
+        ::= 6
+
+    innoDiagAlarmClear TRAP-TYPE
+        ENTERPRISE  innovaphone
+        VARIABLES   { 
+              trapGaugeParm,          -- Alarm Code
+              trapDisplayStringParm   -- Alarm Source
+        }
+        DESCRIPTION
+        "This trap corresponds to an alarm clearing under Administration/Diagnostics/Alarms"
+        ::= 7
+        
 END -- Module

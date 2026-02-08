@@ -9,7 +9,7 @@ IMPORTS
     aristaMibs                        FROM ARISTA-SMI-MIB;
 
 aristaHardwareUtilizationMIB  MODULE-IDENTITY
-    LAST-UPDATED "201605240000Z"
+    LAST-UPDATED "202404010000Z"
     ORGANIZATION "Arista Networks, Inc."
     CONTACT-INFO
         "Arista Networks, Inc.
@@ -67,6 +67,9 @@ aristaHardwareUtilizationMIB  MODULE-IDENTITY
             This MIB module provides the hardware capacity and
             utilization information for various resources in a generic
             manner, that's applicable to all Arista devices."
+    REVISION     "202404010000Z"
+    DESCRIPTION
+           "Added the support for aristaHardwareUtilizationSharedFeatures."
     REVISION     "201605240000Z"
     DESCRIPTION
            "Initial revision of the MIB module."
@@ -128,7 +131,8 @@ AristaHardwareUtilizationEntry     ::= SEQUENCE {
     aristaHardwareUtilizationCommittedEntries    Counter32,
     aristaHardwareUtilizationMaxEntries          Counter32,
     aristaHardwareUtilizationHighWatermark       Counter32,
-    aristaHardwareUtilizationHighWatermarkTime   TimeStamp
+    aristaHardwareUtilizationHighWatermarkTime   TimeStamp,
+    aristaHardwareUtilizationSharedFeatures      OCTET STRING
 }
 
 aristaHardwareUtilizationResource         OBJECT-TYPE
@@ -245,6 +249,18 @@ aristaHardwareUtilizationHighWatermarkTime  OBJECT-TYPE
         hardware resource)."
     ::= { aristaHardwareUtilizationEntry 9 }
 
+aristaHardwareUtilizationSharedFeatures  OBJECT-TYPE
+    SYNTAX                               OCTET STRING (SIZE(0..2048))
+    MAX-ACCESS                           read-only
+    STATUS                               current
+    DESCRIPTION
+        "When multiple features share the specific hardware resource
+        represented by this conceptual row, this MIB object provides
+        a colon-separated list of the names of the features that share
+        the hardware resource."
+    ::= { aristaHardwareUtilizationEntry 10 }
+
+
 -- Notifications 
 
 aristaHardwareUtilizationAlert NOTIFICATION-TYPE
@@ -285,7 +301,8 @@ aristaHardwareUtilizationTableGroup  OBJECT-GROUP
         aristaHardwareUtilizationCommittedEntries,
         aristaHardwareUtilizationMaxEntries,
         aristaHardwareUtilizationHighWatermark,
-        aristaHardwareUtilizationHighWatermarkTime
+        aristaHardwareUtilizationHighWatermarkTime,
+        aristaHardwareUtilizationSharedFeatures
     }
     STATUS  current
     DESCRIPTION

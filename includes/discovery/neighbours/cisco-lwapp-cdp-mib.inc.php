@@ -39,9 +39,9 @@ if (safe_empty($cdp_array)) {
     return;
 }
 
-foreach ($cdp_array as $local_mac => $neighbours) {
+foreach ($cdp_array as $neighbours) {
 
-    foreach ($neighbours as $cdpCacheDeviceIndex => $cdp_entry) {
+    foreach ($neighbours as $cdp_entry) {
         // Local port
         $port = get_port_by_index_cache($device, $cdp_entry['clcCdpApCacheLocalInterface']);
 

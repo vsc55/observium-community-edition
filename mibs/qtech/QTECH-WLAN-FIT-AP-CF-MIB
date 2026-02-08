@@ -7038,8 +7038,7 @@ apQOSBgSvcLoss    OBJECT-TYPE
     DESCRIPTION
         "AP QOS Background  rob loss ratio.s"
     ::= { apQOSBackgroundStatisticsTableEntry 5 }            
--------------------------------------------------
--------------------------------------------------
+
 apQOSBestEffortStatisticsTable OBJECT-TYPE
     SYNTAX SEQUENCE OF ApQOSBestEffortStatisticsTableEntry
     MAX-ACCESS not-accessible
@@ -7105,8 +7104,7 @@ apQOSBeSvcLoss    OBJECT-TYPE
     DESCRIPTION
         "AP QOS BestEffort  rob loss ratio."
     ::= { apQOSBestEffortStatisticsTableEntry 5 }            
--------------------------------------------------
--------------------------------------------------         
+
 apQOSVoiceStatisticsTable OBJECT-TYPE
     SYNTAX SEQUENCE OF ApQOSVoiceStatisticsTableEntry
     MAX-ACCESS not-accessible
@@ -7336,6 +7334,5 @@ SYNTAX INTEGER
     DESCRIPTION
         " Rogue Ap RSSI"
     ::= { apWIDSRogueApInfoTableEntry 2 }
-------------------------------------------------- 
--------------------------------------------------                                           
+                                
 END

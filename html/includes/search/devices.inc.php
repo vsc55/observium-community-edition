@@ -18,8 +18,13 @@
  */
 
 /// SEARCH DEVICES
-$where  = '(`hostname` LIKE ? OR `sysName` LIKE ? OR `ip` LIKE ? OR `location` LIKE ? OR `sysDescr` LIKE ? OR `os` LIKE ? OR `vendor` LIKE ? OR `purpose` LIKE ? OR `asset_tag` LIKE ?)';
-$params = [ $query_param, $query_param, $query_param, $query_param, $query_param, $query_param, $query_param, $query_param, $query_param ];
+$where = [];
+$params = [];
+foreach ([ 'hostname', 'sysName', 'ip', 'location', 'sysDescr', 'os', 'vendor', 'hardware', 'purpose', 'asset_tag' ] as $param) {
+    $where[] = "`$param` LIKE ?";
+    $params[] = $query_param;
+}
+$where = '(' . implode(' OR ', $where) . ')';
 
 $sql = "SELECT * FROM `devices`" .
        generate_where_clause($where, $GLOBALS['cache']['where']['devices_permitted']) .
@@ -58,15 +63,16 @@ foreach ($results as $result) {
     }
 
     $device_search_results[] = [
-      'url'            => generate_device_url($result),
-      'name'           => $name,
-      'colour'         => $result['html_tab_colour'], // FIXME. this colour removed from humanize_device in r6280
-      'row_class'      => $result['row_class'],
-      'html_row_class' => $result['html_row_class'],
-      'icon'           => get_device_icon($result),
-      'data'           => [
-        escape_html($result['hardware'] . ' | ' . $config['os'][$result['os']]['text'] . ' ' . $result['version']),
-        html_highlight(escape_html($descr), $queryString) . $num_ports . ' ports'],
+        'url'            => generate_device_url($result),
+        'name'           => $name,
+        'colour'         => $result['html_tab_colour'], // FIXME. this colour removed from humanize_device in r6280
+        'row_class'      => $result['row_class'],
+        'html_row_class' => $result['html_row_class'],
+        'icon'           => get_device_icon($result),
+        'data'           => [
+            $result['hardware'] . ' | ' . $config['os'][$result['os']]['text'] . ' ' . $result['version'],
+            $descr . $num_ports . ' ports'
+        ],
     ];
 }
 

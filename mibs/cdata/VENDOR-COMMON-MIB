@@ -29,11 +29,161 @@
 --
 -- Textual conventions
 --
+
+		NscrtvPonExtDeviceIndex ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"olt/onu Device Index 
+				Four byte,include:         
+				         Olt device-8bit OLT Card-8bit Pon port-8bit OnuNUM-8bit
+				         Note: 
+				   ----        
+				   1. OLT device must not be 0.        
+				   2. Card here shall confirm the last byte definition of NscrtvPonExtCardIndex
+				      to indicate the main-slot and sub-slot index.         
+				   3. Pon port must not be 0.
+				   4. The useful ONU logical ID MUST never be set to 0, where NUM of 0 has
+				      another meaning, to indicate that the ONU logical ID is meaningless,
+				      or said to not applied.
+				           
+				   Usage guide:
+				   -----------        
+				   This TC could be used for OLT SNI, OLT PON port, OLT ONU ID
+				   OLT device, trunk.         
+				   If the refered MIB object does not have clear definition,
+				   refer to the following:
+				   Applied Obj  - Descriptions of Index
+				   ------------------------------------------------------------------
+				   OLT Pon Port - OnuNum shall be set to 0,
+				   OLT SNI    - Same as OLT Pon Port         
+				   OLT onu ID   - Set OnuNUM to corresponding ONU logical ID         
+				   OLT device   - Set card, pon port and OnuNUM to 0
+				   Trunk    - Card to 0x3F, pon port to trunk ID, OnuNUM to 0
+				            Olt device to corresponding ONU device       
+				        "
+			SYNTAX Unsigned32
+
+		NscrtvPonExtCardIndex ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Card Index
+				For easy presenting the chassis view by NMS, bCardIndex shall be formatted
+				in a following manner:                        
+				Four bytes of INTEGER, from the most significant byte to the least significant bytes
+				-----------------------------------------------------------------------------
+				Reserved byte Reserved byte   Reserved byte Sub-slot 2-bit Main-slot 6-bit        
+				Notes:
+				-----         
+				1. Reserved bytes shall be set to 0.        
+				2. The main-slot shall be started from 1, and shall be in a consecutive manner,
+				   for all slots, including service slots, control slots, switch slots, power
+				   slots,FAN slots, etc.For example, 1, 2, 3          
+				3. The sub-slot shall be started from 1, and shall be in a consecutive manner.
+				   For example, 1, 2. If no sub-slot concept of a main-slot, set to 0.        
+				4. For fixed device, if no slot concept, NE shall set both main-slot and sub-slot
+				   to 0, to indicate this is meaningless. For modulized device, they MUST not be
+				   set to 0.This definition shall applied to both OLT and ONU.        
+				5. For trunk, since there is no slot concept, set main-slot to all-1 and sub-slot
+				   to 0. This definition shall applied to both OLT and ONU.
+				
+				For example, 
+				0x00 00 00 0A, represents main-slot 10, no sub-slot
+				0x00 00 00 42, represents main-slot 2, sub-slot 1
+				0x00 00 00 3F, represents a trunk
+				"
+			SYNTAX Unsigned32
+
+		NscrtvPonPortIndex ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Port Index        
+				The device port number shall start from 1. Nunber 0 had specific meaning, stands
+				for portIndex is meaningless, for the situation defined.
+				"
+			SYNTAX Unsigned32 (0..255)
+
+		NscrtvPonExtEtherType ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				ipv4(1),
+				ipv6(2),
+				pppoe(3)
+				}
+
+		NscrtvPonExtAdminStatus ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				disable(0),
+				enable(1)
+				}
+
+		NscrtvPonExtOnuOnlineState ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				offline(0),
+				online(1)
+				}
+
+		NscrtvPonExtVlanTagAction ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				default(0),
+				translate(1),
+				translate-and-add(2),
+				add-double(3),
+				transparent(4)
+				}
+
+		NscrtvPonExtPerfStat ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				disable(0),
+				enable(1)
+				}
+
+		NscrtvPonExtAutoMode ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				auto(0),
+				manual(1)
+				}
+
+		NscrtvPonExtCurPerfStatClear ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				"Description."
+			SYNTAX INTEGER
+				{
+				no-clear(0),
+				clear(1)
+				}
 	
---  Textual conventions
--- 
--- Textual conventions
--- 
+	
+				EponDeviceIndex ::= TEXTUAL-CONVENTION
+			STATUS current
+			DESCRIPTION 
+				""
+			SYNTAX Unsigned32
+
+
 		OperSwitch ::= TEXTUAL-CONVENTION
 			STATUS current
 			DESCRIPTION 

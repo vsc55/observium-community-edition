@@ -328,6 +328,70 @@ nimbleDsdSpaceCrit NOTIFICATION-TYPE
        "Critically low space"
 ::= { traps 78 }
 
+nimbleDsdSnapshotReachingInfoLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Writable snapshot count approaching limit"
+::= { traps 79 }
+
+nimbleDsdSnapshotReachingWarningLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Writable snapshot count over warning limit"
+::= { traps 80 }
+
+nimbleDsdSnapshotCriticalLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Writable snapshot count over critical limit"
+::= { traps 81 }
+
+nimbleDsdSnapshotBelowCriticalLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Writable snapshot count is back below critical limit"
+::= { traps 82 }
+
 nimbleCtrlrException NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -1032,6 +1096,54 @@ nimbleServiceTerminateTunnel NOTIFICATION-TYPE
        "Tunnel to {support} has been terminated"
 ::= { traps 2112 }
 
+nimbleDnsResolutionFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Unable to resolve known support hosts due to DNS lookup failure."
+::= { traps 2113 }
+
+nimbleServiceMemLimitViolation NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Service violated memory limit"
+::= { traps 2114 }
+
+nimbleDnsResolutionPass NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Known support hosts resolved after successful DNS lookup."
+::= { traps 2115 }
+
 nimbleTestDbg NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -1608,6 +1720,22 @@ nimbleUpdatePkgMalformed NOTIFICATION-TYPE
        "Software update package header malformed"
 ::= { traps 6028 }
 
+nimbleUpdateMultipleBootdev NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Software update precheck failed. Multiple boot devices detected"
+::= { traps 6029 }
+
 nimbleDownloadDnsFail NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -1799,6 +1927,22 @@ nimbleArrayReachable NOTIFICATION-TYPE
     DESCRIPTION
        "A member array is reachable"
 ::= { traps 10013 }
+
+nimbleArrayPciSpeedsNotOptimal NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array PCIe bus speeds are not optimal"
+::= { traps 10014 }
 
 nimbleUserClearedSysCacheDeprecated NOTIFICATION-TYPE
     OBJECTS{
@@ -3352,7 +3496,7 @@ nimbleGmFolderUsedSpaceUtilizationOk NOTIFICATION-TYPE
        "Folder space utilization OK"
 ::= { traps 10600 }
 
-nimbleGmFolderUsedSpaceReplicationStoppedUpstream NOTIFICATION-TYPE
+nimbleGmFolderUsedSpaceReplicationStoppedUpstreamDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -3363,7 +3507,7 @@ nimbleGmFolderUsedSpaceReplicationStoppedUpstream NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Downstream folder usage over usage limit and replication has stopped"
 ::= { traps 10601 }
@@ -3383,6 +3527,22 @@ nimbleGmFolderUsedSpaceReplicationOk NOTIFICATION-TYPE
     DESCRIPTION
        "Folder space utilization below usage limit and replication has resumed"
 ::= { traps 10602 }
+
+nimbleGmFolderUsedSpaceReplicationStoppedUpstream NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Downstream folder usage over usage limit and replication has stopped"
+::= { traps 10603 }
 
 nimbleSchedSnapSucceededDeprecated NOTIFICATION-TYPE
     OBJECTS{
@@ -4616,6 +4776,86 @@ nimbleVssVolcollConfigWarn NOTIFICATION-TYPE
        "Volume collection configuration warning."
 ::= { traps 10388 }
 
+nimbleRestoreVolcollSucceed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collection restore succeeded."
+::= { traps 10389 }
+
+nimbleRestoreVolcollFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collection restore failed."
+::= { traps 10390 }
+
+nimbleDhciUpdateFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "dHCI update failed."
+::= { traps 10393 }
+
+nimbleDhciUpdateResumed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "dHCI update resumed back."
+::= { traps 10394 }
+
+nimbleDhciUpdateSuccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "dHCI update completed successfully."
+::= { traps 10395 }
+
 nimbleApplicationServerLoginFailed NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -5528,6 +5768,22 @@ nimbleLimitWarnUnderWithContext NOTIFICATION-TYPE
        "Object count under warning threshold."
 ::= { traps 10517 }
 
+nimbleGroupTimeSkew NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "A time skew occurred between the array and NTP server"
+::= { traps 10518 }
+
 nimbleReplSnapcollSucceeded NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -5560,7 +5816,7 @@ nimbleReplSnapcollDelayedInfo NOTIFICATION-TYPE
        "Excessive replication delay"
 ::= { traps 11001 }
 
-nimbleReplSnapcollDelayedWarn NOTIFICATION-TYPE
+nimbleReplSnapcollDelayedWarnDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -5571,7 +5827,7 @@ nimbleReplSnapcollDelayedWarn NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Excessive replication delay"
 ::= { traps 11002 }
@@ -6664,7 +6920,7 @@ nimbleReplSrepVolumeAclsRemoved NOTIFICATION-TYPE
        "Synchronous replication configuration of downstream volume resumed after all ACLs were removed."
 ::= { traps 11072 }
 
-nimbleReplPartnerOosync NOTIFICATION-TYPE
+nimbleReplPartnerOosyncDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -6675,12 +6931,12 @@ nimbleReplPartnerOosync NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "The partner is out of sync with the downstream replica"
 ::= { traps 11073 }
 
-nimbleReplPartnerInsync NOTIFICATION-TYPE
+nimbleReplPartnerInsyncDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -6691,7 +6947,7 @@ nimbleReplPartnerInsync NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "The partner is in sync with the downstream replica"
 ::= { traps 11074 }
@@ -6743,6 +6999,22 @@ nimbleReplSrepAsoSwitchoverSuccessful NOTIFICATION-TYPE
     DESCRIPTION
        "Volume collections completed handover because the upstream partner was not available"
 ::= { traps 11077 }
+
+nimbleReplSrepAsoSwitchoverConnectionLoss NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collections initiated handover because the upstream partner array lost connection"
+::= { traps 11078 }
 
 nimbleReplSrepProtpolRecmFreqSchedMissing NOTIFICATION-TYPE
     OBJECTS{
@@ -6839,6 +7111,150 @@ nimbleReplSnapshotCorrectedFromBranchInconsistencyNoErr NOTIFICATION-TYPE
     DESCRIPTION
        "Replicated snapshot resynchronized"
 ::= { traps 11085 }
+
+nimbleReplSrepProtpolMgmtUnableToFindOosyncVolcolls NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Manual takeover of Group Leader detected"
+::= { traps 11086 }
+
+nimbleReplAtleastOneVolcollOosync NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The partner is out of sync with the downstream replica"
+::= { traps 11087 }
+
+nimbleReplAllVolcollsInsync NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The partner is in sync with the downstream replica"
+::= { traps 11088 }
+
+nimbleReplSnapcollDelayedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Excessive replication delay"
+::= { traps 11089 }
+
+nimbleReplStopped NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Replication of a volume collection has stopped"
+::= { traps 11090 }
+
+nimblePartnerPaused NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Replication has paused"
+::= { traps 11091 }
+
+nimbleReplSrepProtpolSchedRetSpanAtLeastADayMissing NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collection of type synchronous replication does not meet the recommended schedule of at least a day of retention on both upstream and downstream."
+::= { traps 11092 }
+
+nimbleReplSrepProtpolSchedRetSpanAtLeastADayImplemented NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collection of type synchronous replication has schedules that meet the retention recommendations."
+::= { traps 11093 }
+
+nimbleReplSrepProtpolSchedRetNoReplVols NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume collection of type synchronous replication does not have any replicating volumes."
+::= { traps 11094 }
 
 nimbleReplHandoverCompleted NOTIFICATION-TYPE
     OBJECTS{
@@ -7864,7 +8280,7 @@ nimbleAfturboDegradeToAfa NOTIFICATION-TYPE
        "Failed Storage Class Memory (SCM) acceleration"
 ::= { traps 12152 }
 
-nimbleScmHighTemperatureV3 NOTIFICATION-TYPE
+nimbleScmHighTemperatureV3Deprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -7875,12 +8291,12 @@ nimbleScmHighTemperatureV3 NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Storage Class Memory (SCM) temperature is too high"
 ::= { traps 12153 }
 
-nimbleScmCrithighTemperatureV3 NOTIFICATION-TYPE
+nimbleScmCrithighTemperatureV3Deprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -7891,12 +8307,12 @@ nimbleScmCrithighTemperatureV3 NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Storage Class Memory (SCM) temperature is above the safe operating temperature"
 ::= { traps 12154 }
 
-nimbleScmTemperatureCritOk NOTIFICATION-TYPE
+nimbleScmTemperatureCritOkDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -7907,12 +8323,28 @@ nimbleScmTemperatureCritOk NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Storage Class Memory (SCM) temperature below critical limit"
 ::= { traps 12155 }
 
-nimbleScmTemperatureOk NOTIFICATION-TYPE
+nimbleScmTemperatureOkDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Storage Class Memory (SCM) temperature is ok"
+::= { traps 12156 }
+
+nimbleDiskSlowEarly NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -7925,8 +8357,72 @@ nimbleScmTemperatureOk NOTIFICATION-TYPE
     }
     STATUS current
     DESCRIPTION
-       "Storage Class Memory (SCM) temperature is ok"
-::= { traps 12156 }
+       "Early stage slow drive detected"
+::= { traps 12157 }
+
+nimbleDiskSlowFatal NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Slow drive detected"
+::= { traps 12158 }
+
+nimbleScratchMountedReadonly NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Scratch drive mounted R/O"
+::= { traps 12159 }
+
+nimbleScratchMountedReadwrite NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Scratch drive mounted R/W"
+::= { traps 12160 }
+
+nimbleRootFilesystemCorruption NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Checksum mismatch for files on root filesystem"
+::= { traps 12161 }
 
 nimbleIpIfDown NOTIFICATION-TYPE
     OBJECTS{
@@ -8120,7 +8616,7 @@ nimbleIpIfFailoverDeprecated NOTIFICATION-TYPE
        "Standby controller has better network connectivity. Failing services over to standby controller"
 ::= { traps 12211 }
 
-nimbleIpDupFound NOTIFICATION-TYPE
+nimbleIpDupFoundDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -8131,7 +8627,7 @@ nimbleIpDupFound NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Duplicate IP Address Detected"
 ::= { traps 12212 }
@@ -8360,6 +8856,198 @@ nimbleNicPortDown NOTIFICATION-TYPE
        "NIC port is down"
 ::= { traps 12226 }
 
+nimbleIpDupFound NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Duplicate IP Address Detected"
+::= { traps 12227 }
+
+nimbleSubnetNicNegotiateIssue NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The data subnet NIC speed was not negotiated to its maximum possible speed"
+::= { traps 12228 }
+
+nimbleSubnetNicNegotiateNoIssue NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "All NICs in the subnet were negotiated correctly."
+::= { traps 12229 }
+
+nimbleSubnetNicMixSpeeds NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The data subnet has NICs with mixed speeds"
+::= { traps 12230 }
+
+nimbleSubnetNicSameSpeeds NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "All NICs within the subnet have the same speed."
+::= { traps 12231 }
+
+nimbleCtrlrNicAsymmetric NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The NIC count"
+::= { traps 12232 }
+
+nimbleCtrlrNicSymmetric NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The array Controllers are symmetrical"
+::= { traps 12233 }
+
+nimbleMtuMismatchFoundDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "MTU mismatch found"
+::= { traps 12234 }
+
+nimbleMtuMismatchResolvedDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "MTU mismatch resolved"
+::= { traps 12235 }
+
+nimbleMtuMismatchDetectedInitiators NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "MTU mismatch detected on initiators"
+::= { traps 12236 }
+
+nimbleMtuMismatchResolvedInitiators NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "MTU mismatch resolved on initiators"
+::= { traps 12237 }
+
+nimbleInitiatorsClearAlarm NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Alarm cleared"
+::= { traps 12238 }
+
 nimbleSensorLinearWarn NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -8440,7 +9128,7 @@ nimbleSensorDoesNotExist NOTIFICATION-TYPE
        "Sensor: is missing?:"
 ::= { traps 12305 }
 
-nimbleNvramBattDisabled NOTIFICATION-TYPE
+nimbleNvramBattDisabledDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -8451,12 +9139,12 @@ nimbleNvramBattDisabled NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "NVRAM battery is disabled"
 ::= { traps 12306 }
 
-nimbleNvramBattDisabledCrit NOTIFICATION-TYPE
+nimbleNvramBattDisabledCritDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -8467,12 +9155,12 @@ nimbleNvramBattDisabledCrit NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "NVRAM batteries are disabled"
 ::= { traps 12307 }
 
-nimbleNvramBattOk NOTIFICATION-TYPE
+nimbleNvramBattOkDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -8483,7 +9171,7 @@ nimbleNvramBattOk NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "NVRAM battery is OK"
 ::= { traps 12308 }
@@ -9240,6 +9928,54 @@ nimbleTempSensorOperational NOTIFICATION-TYPE
        "Temperature sensor is OK"
 ::= { traps 12356 }
 
+nimbleNvramBattDisabled NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "NVRAM battery is disabled"
+::= { traps 12357 }
+
+nimbleNvramBattDisabledCrit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "NVRAM batteries are disabled"
+::= { traps 12358 }
+
+nimbleNvramBattOk NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "NVRAM battery is OK"
+::= { traps 12359 }
+
 nimbleRaidDegraded NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -9544,6 +10280,22 @@ nimbleRaidRedundancy NOTIFICATION-TYPE
        "RAID array redundancy"
 ::= { traps 12418 }
 
+nimbleRaidDegradedForFwUpdate NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "RAID array degraded for firmware update"
+::= { traps 12419 }
+
 nimbleIscsiMultiInitiatorDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -9800,7 +10552,7 @@ nimbleNvramSbe NOTIFICATION-TYPE
        "NVRAM card correctable single-bit error (SBE) detected"
 ::= { traps 12607 }
 
-nimbleNvdimmReservedBlocksWarn NOTIFICATION-TYPE
+nimbleNvdimmReservedBlocksWarnDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -9811,12 +10563,12 @@ nimbleNvdimmReservedBlocksWarn NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "NVDIMM reserved flash blocks reached the upper threshold"
 ::= { traps 12608 }
 
-nimbleNvdimmReservedBlocksCrit NOTIFICATION-TYPE
+nimbleNvdimmReservedBlocksCritDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -9827,7 +10579,7 @@ nimbleNvdimmReservedBlocksCrit NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "NVDIMM reserved flash blocks reached the lower threshold"
 ::= { traps 12609 }
@@ -9928,6 +10680,118 @@ nimbleEncryptionKeysMissing NOTIFICATION-TYPE
        "Access to encrypted volumes denied"
 ::= { traps 12615 }
 
+nimbleNvramBackupFailure NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Nvram backup failed"
+::= { traps 12620 }
+
+nimbleNvramRestoreFailure NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Nvram restore failed"
+::= { traps 12621 }
+
+nimbleNvramEraseFailure NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Nvram erase failed"
+::= { traps 12622 }
+
+nimbleNvramArmFailure NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Nvram arm failed"
+::= { traps 12623 }
+
+nimbleNvdimmUltracapDischargedDeprecated3 NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "NVDIMM ultracap capacitance discharged"
+::= { traps 12616 }
+
+nimbleNvdimmReservedBlocksWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "NVDIMM reserved flash blocks reached the upper threshold"
+::= { traps 12617 }
+
+nimbleNvdimmReservedBlocksCrit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "NVDIMM reserved flash blocks reached the lower threshold"
+::= { traps 12618 }
+
 nimbleNvdimmUltracapDischarged NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -9942,7 +10806,7 @@ nimbleNvdimmUltracapDischarged NOTIFICATION-TYPE
     STATUS current
     DESCRIPTION
        "NVDIMM ultracap capacitance discharged"
-::= { traps 12616 }
+::= { traps 12619 }
 
 nimbleShelfCtrlrSide NOTIFICATION-TYPE
     OBJECTS{
@@ -10712,6 +11576,134 @@ nimbleShelfEvacuationFailDataMove NOTIFICATION-TYPE
        "Shelf evacuation failed while moving data"
 ::= { traps 12756 }
 
+nimbleShelfCtrlrLoopNvmeof NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf loop detected"
+::= { traps 12757 }
+
+nimbleShelfMissingNvmeof NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf appear only on one side of host controllers"
+::= { traps 12758 }
+
+nimbleShelfReconnectNvmeof NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Connection to shelf is restored"
+::= { traps 12759 }
+
+nimbleShelfPciLinkSpeedLow NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf internal link speeds are lower than expected"
+::= { traps 12760 }
+
+nimbleShelfPciLinkSpeedNormal NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf internal link speeds have returned to normal"
+::= { traps 12761 }
+
+nimbleShelfCompFwIncompat NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf component has incompatible firmware rev"
+::= { traps 12762 }
+
+nimbleShelfCompFwUpdate NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Shelf component needs a firmware update"
+::= { traps 12763 }
+
+nimblePhysMemMismatchDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Physical memory detected is less than installed"
+::= { traps 12901 }
+
 nimblePhysMemMismatch NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -10726,7 +11718,7 @@ nimblePhysMemMismatch NOTIFICATION-TYPE
     STATUS current
     DESCRIPTION
        "Physical memory detected is less than installed"
-::= { traps 12901 }
+::= { traps 12902 }
 
 nimbleVolSysLimitWarnEnter NOTIFICATION-TYPE
     OBJECTS{
@@ -12136,6 +13128,22 @@ nimbleFcTdzNotEnabled NOTIFICATION-TYPE
        "Fibre Channel switch port does not have Target Driven Zoning enabled."
 ::= { traps 14412 }
 
+nimbleFcPoorConnectivity NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Active controller has lost all Fibre Channel connectivity."
+::= { traps 14413 }
+
 nimbleEventPurgingDeprecated NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -12536,6 +13544,134 @@ nimbleBglLoginFail NOTIFICATION-TYPE
        "Login to group Management Service backup array failed"
 ::= { traps 14816 }
 
+nimbleTotpLoginSuccessful NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Successful support password time mode login. Recommend changing time mode secret."
+::= { traps 14817 }
+
+nimbleTotpSecretResetSuccessful NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Support password Time mode secret updated."
+::= { traps 14818 }
+
+nimbleVolDissocFromLockingProtectionSchedule NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Volume removed from volume collection with a lock period defined in its protection schedules"
+::= { traps 14819 }
+
+nimbleSchedWithLockPeriodDeleted NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Protection schedule with lock period was removed"
+::= { traps 14820 }
+
+nimbleSchedWithLockPeriodDeletedOnHandover NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Locking"
+::= { traps 14821 }
+
+nimbleSchedWithLockPeriodHaltedOnHandover NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Schedule replication to other partners halted as part of volume collection handover"
+::= { traps 14822 }
+
+nimbleLockPeriodRemovedFromProtsched NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Lock period on protection schedule removed"
+::= { traps 14823 }
+
+nimbleLockPeriodReducedOnProtsched NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Lock period on protection schedule reduced"
+::= { traps 14824 }
+
 nimbleDsdPinCacheDone NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
@@ -12680,7 +13816,7 @@ nimbleArrayDedupeUtilizationCrit NOTIFICATION-TYPE
        "Internal resource pressure is now impacting data deduplication efficiency"
 ::= { traps 14858 }
 
-nimbleAdTrustFail NOTIFICATION-TYPE
+nimbleAdTrustFailDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -12691,7 +13827,7 @@ nimbleAdTrustFail NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Could not authenticate with Active Directory Domain Controller."
 ::= { traps 14859 }
@@ -13080,7 +14216,7 @@ nimbleSchedSrepSnapSucceeded NOTIFICATION-TYPE
        "Scheduled snapshot succeeded"
 ::= { traps 14883 }
 
-nimbleSchedSrepSnapSucceededUpstreamFailedDownstream NOTIFICATION-TYPE
+nimbleSchedSrepSnapSucceededUpstreamFailedDownstreamDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -13091,12 +14227,12 @@ nimbleSchedSrepSnapSucceededUpstreamFailedDownstream NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Scheduled snapshot succeeded but failed to synchronously replicate"
 ::= { traps 14884 }
 
-nimbleSchedSrepSnapFailedUnknownReason NOTIFICATION-TYPE
+nimbleSchedSrepSnapFailedUnknownReasonDeprecated2 NOTIFICATION-TYPE
     OBJECTS{
         trapMsg,
         trapSeverity,
@@ -13107,7 +14243,7 @@ nimbleSchedSrepSnapFailedUnknownReason NOTIFICATION-TYPE
         trapTarget,
         trapTargetType
     }
-    STATUS current
+    STATUS obsolete
     DESCRIPTION
        "Scheduled snapshot failed"
 ::= { traps 14885 }
@@ -13143,6 +14279,438 @@ nimbleReplResumedReplThrottledBandwidthNonZero NOTIFICATION-TYPE
     DESCRIPTION
        "Replication resumed"
 ::= { traps 14887 }
+
+nimbleExtKeyManagerOnline NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Successfully communicated with external key manager."
+::= { traps 14888 }
+
+nimbleExtKeyManagerOffline NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "External key manager is not reachable."
+::= { traps 14889 }
+
+nimbleAllowOldIqn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Allowing login to volume"
+::= { traps 14890 }
+
+nimbleExtKeyManagerInsufficientAccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Insufficient access to key manager to perform the operation."
+::= { traps 14891 }
+
+nimbleExtKeyManagerDown NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Encryption deactivated."
+::= { traps 14892 }
+
+nimbleApproachingMaxIscsiSessionLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Approaching maximum supported session count."
+::= { traps 14893 }
+
+nimbleExhaustedMaxIscsiSessionLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Reached maximum support session count."
+::= { traps 14894 }
+
+nimbleReplenishedMaxIscsiSessionLimit NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Below the maximum supported session count."
+::= { traps 14895 }
+
+nimbleAdTrustFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Could not authenticate with Active Directory Domain Controller."
+::= { traps 14896 }
+
+nimbleInvalidRoleLdapLogin NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Login attempt by LDAP service user failed"
+::= { traps 14897 }
+
+nimbleLdapDnsFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Could not resolve the address for any LDAP servers"
+::= { traps 14898 }
+
+nimbleLdapConnectFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Could not connect to any LDAP servers for domain"
+::= { traps 14899 }
+
+nimbleLdapTlsExpired NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "SSL/TLS certificate for the LDAP server has expired"
+::= { traps 14900 }
+
+nimbleLdapTlsNotTrusted NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "SSL/TLS certificate for the LDAP server is not trusted"
+::= { traps 14901 }
+
+nimbleLdapTlsRevoked NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "SSL/TLS certificate for the LDAP server has been revoked"
+::= { traps 14902 }
+
+nimbleLdapTlsHostnameMismatch NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The hostname of the LDAP server does not match its SSL/TLS certificate"
+::= { traps 14903 }
+
+nimbleLdapTlsGeneralFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Unable to establish an SSL/TLS connection to the LDAP server"
+::= { traps 14904 }
+
+nimbleLdapBindFail NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Bind credentials were rejected by the LDAP server"
+::= { traps 14905 }
+
+nimbleLdapDomainOffline NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "An LDAP authentication error has occured"
+::= { traps 14906 }
+
+nimbleLdapTlsNotSupported NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "LDAP server does not support START TLS"
+::= { traps 14907 }
+
+nimbleLdapPermissionDenied NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The LDAP bind user has insufficient permissions"
+::= { traps 14908 }
+
+nimbleLdapAnonymousBindNotAllowed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "LDAP domain does not allow anonymous bind"
+::= { traps 14909 }
+
+nimbleSchedSrepSnapSucceededUpstreamFailedDownstream NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Scheduled snapshot succeeded but failed to synchronously replicate"
+::= { traps 14910 }
+
+nimbleSchedSrepSnapFailedUpstream NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Scheduled snapshot failed"
+::= { traps 14911 }
+
+nimbleReplAbortedReplCollectionToPartner NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Replication Aborted"
+::= { traps 14912 }
+
+nimbleMfaFailureForProtectedObject NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Failed to delete or change protected object"
+::= { traps 14913 }
+
+nimbleMfaProtectionRemovedFromObject NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Protection has been removed from object"
+::= { traps 14914 }
 
 nimbleArrayUpgradePrecheckFail NOTIFICATION-TYPE
     OBJECTS{
@@ -13287,5 +14855,677 @@ nimbleArrayUpgradeAborted NOTIFICATION-TYPE
     DESCRIPTION
        "Array upgrade aborted"
 ::= { traps 15008 }
+
+nimbleCloudConsoleActivationFailedDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array activation from the activation portal failed."
+::= { traps 16000 }
+
+nimbleCloudConsoleActivationSuccessDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array successfully activated from the activation portal."
+::= { traps 16001 }
+
+nimbleCloudConsoleTunnnelConnectFailedDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16002 }
+
+nimbleCloudConsoleTunnnelConnectSuccessDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array connected successfully to the cloud console"
+::= { traps 16003 }
+
+nimbleCloudConsoleSubscriptionCheckFailedDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array subscription validation failed."
+::= { traps 16004 }
+
+nimbleCloudConsoleSubscriptionCheckSuccessDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array subscription valid."
+::= { traps 16005 }
+
+nimbleCloudConsoleDeviceRegistrationFailedDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array device registration/system session creation failed."
+::= { traps 16006 }
+
+nimbleCloudConsoleDeviceRegistrationSuccessDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array device registration and system session creation succeeded."
+::= { traps 16007 }
+
+nimbleCloudConsoleTunnnelConnectFailedInfoDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16008 }
+
+nimbleCloudConsoleActivationFailedWarnDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array activation from the activation portal failed."
+::= { traps 16009 }
+
+nimbleCloudConsoleTunnnelConnectFailedWarnDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16010 }
+
+nimbleCloudConsoleSubscriptionCheckFailedWarnDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array subscription validation failed."
+::= { traps 16011 }
+
+nimbleCloudConsoleDeviceRegistrationFailedWarnDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array device registration/system session creation failed."
+::= { traps 16012 }
+
+nimbleCloudConsoleUsingExistingCloudInstanceDeprecated NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS obsolete
+    DESCRIPTION
+       "Array activation from the activation portal failed. Hence"
+::= { traps 16013 }
+
+nimbleCloudActivationFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array activation from the activation portal failed."
+::= { traps 16014 }
+
+nimbleCloudActivationSuccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array successfully activated from the activation portal."
+::= { traps 16015 }
+
+nimbleCloudTunnelConnectFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16016 }
+
+nimbleCloudTunnelConnectSuccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array connected successfully to the cloud console"
+::= { traps 16017 }
+
+nimbleCloudSubscriptionCheckFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array subscription validation failed."
+::= { traps 16018 }
+
+nimbleCloudSubscriptionCheckSuccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array subscription valid."
+::= { traps 16019 }
+
+nimbleCloudDeviceRegistrationFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array device registration/system session creation failed."
+::= { traps 16020 }
+
+nimbleCloudDeviceRegistrationSuccess NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array device registration and system session creation succeeded."
+::= { traps 16021 }
+
+nimbleCloudTunnelConnectFailedInfo NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16022 }
+
+nimbleCloudActivationFailedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array activation from the activation portal failed."
+::= { traps 16023 }
+
+nimbleCloudTunnelConnectFailedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array connection to the cloud console failed."
+::= { traps 16024 }
+
+nimbleCloudSubscriptionCheckFailedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array subscription validation failed."
+::= { traps 16025 }
+
+nimbleCloudDeviceRegistrationFailedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array device registration/system session creation failed."
+::= { traps 16026 }
+
+nimbleCloudUsingExistingCloudInstance NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Array activation from the activation portal failed. Hence"
+::= { traps 16027 }
+
+nimbleCloudConsolePatchFailed NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The group could not send patch to the cloud console."
+::= { traps 16028 }
+
+nimbleCloudConsolePatchQueueFull NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The group is unable to send all patches to the cloud console."
+::= { traps 16029 }
+
+nimbleCloudSupportEnabled NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Data Services Cloud Console support is enabled."
+::= { traps 16030 }
+
+nimbleCloudSupportDisabled NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Data Services Cloud Console support is disabled."
+::= { traps 16031 }
+
+nimbleCloudSupportEnabledInReadOnlyMode NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "Data Services Cloud Console support is enabled in a read_only mode."
+::= { traps 16032 }
+
+nimbleSrepNoWitnessConfig NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "For synchronous replication a witness should be connected to the Group Leader."
+::= { traps 16033 }
+
+nimbleCloudConsoleSmDataSyncFailedWarn NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "The group is unable to sync configuration to the data services cloud console."
+::= { traps 16034 }
+
+nimbleOtpTimeSkew NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "OTP confirmation failed due to time skew."
+::= { traps 16101 }
+
+nimbleTestNoArgs NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 150 }
+
+nimbleTestOneArg NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 151 }
+
+nimbleTestTwoArgs NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 152 }
+
+nimbleTestThreeArgs NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 153 }
+
+nimbleTestFourArgs NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 154 }
+
+nimbleTestSevenArgs NOTIFICATION-TYPE
+    OBJECTS{
+        trapMsg,
+        trapSeverity,
+        trapOriginatorName,
+        trapOriginatorSerialNumber,
+        trapOriginatorGroupName,
+        trapOriginatorGroupID,
+        trapTarget,
+        trapTargetType
+    }
+    STATUS current
+    DESCRIPTION
+       "test"
+::= { traps 155 }
 
 END

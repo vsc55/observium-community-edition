@@ -401,7 +401,7 @@ class WeatherMap extends WeatherMapBase
         $linecount = 1;
 
         $lines         = explode("\n", $string);
-        $linecount     = sizeof($lines);
+        $linecount     = count($lines);
         $maxlinelength = 0;
         foreach ($lines as $line) {
             $l = strlen($line);
@@ -689,7 +689,7 @@ class WeatherMap extends WeatherMapBase
                         // if the remaining targetstring starts with a number and a *-, then this is a scale factor
                         if (preg_match("/^(\d+\.?\d*)\*(.*)/", $targetstring, $matches)) {
                             $targetstring = $matches[2];
-                            $multiply     = $multiply * floatval($matches[1]);
+                            $multiply *= floatval($matches[1]);
                         }
 
                         $matched    = FALSE;
@@ -819,8 +819,8 @@ class WeatherMap extends WeatherMapBase
                                     wm_debug("Post-multiply: $in $out\n");
                                 }
 
-                                $total_in  = $total_in + $in;
-                                $total_out = $total_out + $out;
+                                $total_in += $in;
+                                $total_out += $out;
                                 wm_debug("Aggregate so far: $total_in $total_out\n");
                                 # keep a track of the range of dates for data sources (mainly for MRTG/textfile based DS)
                                 if ($datatime > 0) {
@@ -1156,7 +1156,7 @@ class WeatherMap extends WeatherMapBase
         if (isset($this -> colours[$scalename])) {
             $colours = $this -> colours[$scalename];
 
-            foreach ($colours as $key => $colour) {
+            foreach ($colours as $colour) {
                 if (!$colour['special']) {
                     $min = min($colour['bottom'], $min);
                     $max = max($colour['top'], $max);
@@ -1359,7 +1359,7 @@ class WeatherMap extends WeatherMapBase
         $y = $this -> keyy[$scalename];
 
         [$tilewidth, $tileheight] = $this -> myimagestringsize($font, "MMMM");
-        $tileheight  = $tileheight * 1.1;
+        $tileheight *= 1.1;
         $tilespacing = $tileheight + 2;
 
         if (($this -> keyx[$scalename] >= 0) && ($this -> keyy[$scalename] >= 0)) {
@@ -2380,7 +2380,7 @@ class WeatherMap extends WeatherMapBase
             wm_debug(sprintf("   Setting bandwidth on " . $item -> my_type() . " $item->name (%s -> %d bps, %s -> %d bps, KILO = %d)\n", $item -> max_bandwidth_in_cfg, $item -> max_bandwidth_in, $item -> max_bandwidth_out_cfg, $item -> max_bandwidth_out, $this -> kilo));
         }
 
-        wm_debug("Found " . sizeof($this -> seen_zlayers) . " z-layers including builtins (0,100).\n");
+        wm_debug("Found " . count($this -> seen_zlayers) . " z-layers including builtins (0,100).\n");
 
         // calculate any relative positions here - that way, nothing else
         // really needs to know about them
@@ -2495,13 +2495,13 @@ class WeatherMap extends WeatherMapBase
             # $output = '';
             if ($fd) {
                 foreach ($this -> nodes as $node) {
-                    if (!preg_match('/^::\s/', $node -> name) && sizeof($node -> targets) > 0) {
-                        fputs($fd, sprintf("N_%s\t%f\t%f\r\n", $node -> name, $node -> bandwidth_in, $node -> bandwidth_out));
+                    if (!preg_match('/^::\s/', $node -> name) && count($node -> targets) > 0) {
+                        fwrite($fd, sprintf("N_%s\t%f\t%f\r\n", $node -> name, $node -> bandwidth_in, $node -> bandwidth_out));
                     }
                 }
                 foreach ($this -> links as $link) {
-                    if (!preg_match('/^::\s/', $link -> name) && sizeof($link -> targets) > 0) {
-                        fputs($fd, sprintf("L_%s\t%f\t%f\r\n", $link -> name, $link -> bandwidth_in, $link -> bandwidth_out));
+                    if (!preg_match('/^::\s/', $link -> name) && count($link -> targets) > 0) {
+                        fwrite($fd, sprintf("L_%s\t%f\t%f\r\n", $link -> name, $link -> bandwidth_in, $link -> bandwidth_out));
                     }
                 }
 
@@ -3073,7 +3073,7 @@ class WeatherMap extends WeatherMapBase
             $change = "";
             foreach ($dirs as $d => $parts) {
                 //print "$d - ".join(" ",$parts)."\n";
-                $change .= join('', $myobj -> overliburl[$d]);
+                $change .= implode('', $myobj -> overliburl[$d]);
                 $change .= $myobj -> notestext[$d];
             }
 
@@ -3133,7 +3133,7 @@ class WeatherMap extends WeatherMapBase
                         $overlibhtml = "onmouseover=\"return overlib('";
 
                         $n = 0;
-                        if (sizeof($myobj -> overliburl[$dir]) > 0) {
+                        if (count($myobj -> overliburl[$dir]) > 0) {
                             // print "ARRAY:".is_array($link->overliburl[$dir])."\n";
                             foreach ($myobj -> overliburl[$dir] as $url) {
                                 if ($n > 0) {
@@ -3412,7 +3412,7 @@ class WeatherMap extends WeatherMapBase
                 $json .= ",\n";
             }
             $json = rtrim($json, ", \n");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $json = "";
@@ -3458,7 +3458,7 @@ class WeatherMap extends WeatherMapBase
             $json                  = rtrim($json, ", \n");
             $json                  .= "]} ]}\n";
 
-            fputs($fd, "[" . $json . "]");
+            fwrite($fd, "[" . $json . "]");
             fclose($fd);
 
             $fd   = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_nodes.json", "w");
@@ -3468,7 +3468,7 @@ class WeatherMap extends WeatherMapBase
                 $json .= $node -> asJSON(TRUE);
             }
             $json = rtrim($json, ", \n");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $fd   = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_nodes_lite.json", "w");
@@ -3478,7 +3478,7 @@ class WeatherMap extends WeatherMapBase
                 $json .= $node -> asJSON(FALSE);
             }
             $json = rtrim($json, ", \n");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $fd   = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_links.json", "w");
@@ -3488,7 +3488,7 @@ class WeatherMap extends WeatherMapBase
                 $json .= $link -> asJSON(TRUE);
             }
             $json = rtrim($json, ", \n");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $fd   = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_links_lite.json", "w");
@@ -3498,12 +3498,12 @@ class WeatherMap extends WeatherMapBase
                 $json .= $link -> asJSON(FALSE);
             }
             $json = rtrim($json, ", \n");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $fd   = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_imaphtml.json", "w");
             $json = $this -> imap -> subHTML("LINK:");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
             $fd       = fopen($cachefolder . DIRECTORY_SEPARATOR . $cacheprefix . "_imap.json", "w");
@@ -3515,7 +3515,7 @@ class WeatherMap extends WeatherMapBase
                 $json .= ",\n";
             }
             $json .= $this -> imap -> subJSON("LINK:");
-            fputs($fd, $json);
+            fwrite($fd, $json);
             fclose($fd);
 
         } else {
@@ -3597,7 +3597,7 @@ class WeatherMap extends WeatherMapBase
         $i  = 0;
         $fd = fopen($file, "w+");
         foreach ($this -> coverage as $key => $val) {
-            fputs($fd, "$val\t$key\n");
+            fwrite($fd, "$val\t$key\n");
             if ($val > 0) {
                 $i++;
             }

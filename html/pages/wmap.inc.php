@@ -4,7 +4,7 @@
     <div class="navbar-inner">
       <div class="container">
         <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target="#nav-0uGMD3QMVHudRAti">
-          <span class="oicon-bar"></span>
+          <span class="icon-bar"></span>
         </button>
         <a class="brand ">Weathermap</a><div class="nav-collapse" id="nav-0uGMD3QMVHudRAti">
           <ul class="nav">
@@ -121,16 +121,8 @@ if ($_SESSION['userlevel'] < 5) {
     if (isset($vars['mapname'])) {
 
         if ($editing === TRUE) {
-
-
-//r($vars);
-
-
             include($config['install_dir'] . "/includes/weathermap/editor.php");
         } else {
-            //echo '<div class="box box-solid" align="center">';
-            //echo '<img src="/weathermap.php?mapname=' . htmlentities($vars['mapname']) . '&action=draw&unique=' . time() . '">';
-            //echo '</div>';
 
             require_once 'Console/Getopt.php';
             require_once "../includes/weathermap/lib/Weathermap.class.php";
@@ -139,6 +131,7 @@ if ($_SESSION['userlevel'] < 5) {
             $mapfile        = $vars['mapname'];
             $map->context   = 'cli';
             $map->ReadConfig($mapfile);
+
             $map->ReadData();
             //$map->htmlstyle = "qtip";
             ob_start();

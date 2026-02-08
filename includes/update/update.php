@@ -37,6 +37,9 @@ if ($GLOBALS['cache']['versions']['mysql_old']) {
 |                                                         |
 +---------------------------------------------------------+
 ", 'color');
+
+    print_error("Updating the database schema is not possible! Please update your database server first.\n");
+    exit(2);
 }
 
 /**
@@ -194,22 +197,84 @@ foreach ($filelist as $file) {
                 }
                 fclose($fd);
 
+                // Execute SQL statements as full statements (terminated by ';'),
+                // correctly handling single-line and block comments and preserving
+                // the existing ERROR_IGNORE/NOTE semantics.
+                $statement         = '';
+                $in_block_comment  = FALSE;
+                $line_number       = 0;
+
                 foreach (explode("\n", $data) as $line) {
-                    if (trim($line)) {
-                        // Skip comments
-                        if (str_starts($line, ['#', '-', '/'])) {
-                            if (str_contains_array($line, ['ERROR_IGNORE', 'IGNORE_ERROR'])) {
-                                $error_ignore = TRUE;
-                            } elseif (str_contains($line, 'NOTE')) {
-                                [, $note] = explode('NOTE', $line, 2);
-                                echo('(' . trim($note) . ')');
-                            }
-                            continue;
+                    $line_number++;
+                    $raw = $line; // keep for logging on failure
+                    $trim = trim($line);
+
+                    if (safe_empty($trim)) {
+                        // Skip empty lines
+                        continue;
+                    }
+
+                    // Handle block comments /* ... */ possibly spanning lines
+                    if ($in_block_comment) {
+                        if (str_contains($line, 'ERROR_IGNORE') || str_contains($line, 'IGNORE_ERROR')) {
+                            // Set error ignore
+                            $error_ignore = TRUE;
+                        } elseif (str_contains($line, 'NOTE')) {
+                            // Show NOTE
+                            $note = explode('NOTE', $line, 2)[1];
+                            echo('(' . trim(str_replace('*/', '', $note)) . ')');
                         }
 
-                        print_debug($line);
+                        if (str_contains($line, '*/')) {
+                            // End of multiline comment
+                            $in_block_comment = FALSE;
+                        }
+                        continue;
+                    }
 
-                        $update = dbQuery($line);
+                    // Start of block comment
+                    if (str_starts_with($trim, '/*')) {
+                        if (str_contains($line, 'ERROR_IGNORE') || str_contains($line, 'IGNORE_ERROR')) {
+                            // Set error ignore
+                            $error_ignore = TRUE;
+                        } elseif (str_contains($line, 'NOTE')) {
+                            // Show NOTE
+                            $note = explode('NOTE', $line, 2)[1];
+                            echo('(' . trim(str_replace('*/', '', $note)) . ')');
+                        }
+
+                        if (!str_contains($line, '*/')) {
+                            // Start of multiline comment (when not single line comment)
+                            $in_block_comment = TRUE;
+                        }
+                        continue;
+                    }
+
+                    // Single-line comments: -- ... or # ...
+                    if (str_starts_with($trim, '--') || str_starts_with($trim, '#')) {
+                        if (str_contains($line, 'ERROR_IGNORE') || str_contains($line, 'IGNORE_ERROR')) {
+                            // Set error ignore
+                            $error_ignore = TRUE;
+                        } elseif (str_contains($line, 'NOTE')) {
+                            // Show NOTE
+                            $note = explode('NOTE', $line, 2)[1];
+                            echo('(' . trim($note) . ')');
+                        }
+                        continue;
+                    }
+
+                    // Accumulate statement text until ';'
+                    $statement .= $line . "\n";
+
+                    if (str_ends_with(rtrim($line), ';')) {
+                        $sql = trim($statement);
+                        $statement = '';
+
+                        if ($sql === ';' || $sql === '') { continue; }
+
+                        print_debug($sql);
+
+                        $update = dbQuery($sql);
                         if (!$update) {
                             $error_no  = dbErrorNo();
                             $error_msg = "($error_no) " . dbError();
@@ -219,7 +284,7 @@ foreach ($filelist as $file) {
                                 echo(" stopped. Critical error: " . $error_msg . PHP_EOL);
                                 // http://dev.mysql.com/doc/refman/5.6/en/error-messages-client.html
                                 logfile('update-errors.log', "====== Schema update " . sprintf("%03d", $db_rev) . " -> " . sprintf("%03d", $filename) . " ==============");
-                                logfile('update-errors.log', "Query: " . $line);
+                                logfile('update-errors.log', "Query: " . $sql);
                                 logfile('update-errors.log', "Error: " . $error_msg);
                                 del_process_info(-1); // Remove process info
                                 exit(1);
@@ -231,12 +296,37 @@ foreach ($filelist as $file) {
                                 echo('F');
                             }
                             $err++;
-                            $errors[] = ['query' => $line, 'error' => $error_msg];
+                            $errors[] = ['query' => $sql, 'error' => $error_msg];
                             print_debug($error_msg);
                         } else {
                             echo('.');
                         }
+                    }
+                }
 
+                // Execute any trailing statement without ';' (defensive)
+                if (trim($statement) !== '') {
+                    $sql = trim($statement);
+                    print_debug($sql);
+                    $update = dbQuery($sql);
+                    if (!$update) {
+                        $error_no  = dbErrorNo();
+                        $error_msg = "($error_no) " . dbError();
+                        if ($error_no >= 2000 || in_array($error_no, [ 3, 1114 ])) {
+                            log_event("Observium schema not updated: " . $log_msg . ".", NULL, NULL, NULL, 3);
+                            echo(" stopped. Critical error: " . $error_msg . PHP_EOL);
+                            logfile('update-errors.log', "====== Schema update " . sprintf("%03d", $db_rev) . " -> " . sprintf("%03d", $filename) . " ==============");
+                            logfile('update-errors.log', "Query: " . $sql);
+                            logfile('update-errors.log', "Error: " . $error_msg);
+                            del_process_info(-1);
+                            exit(1);
+                        }
+                        if ($error_ignore) { echo('.'); } else { echo('F'); }
+                        $err++;
+                        $errors[] = ['query' => $sql, 'error' => $error_msg];
+                        print_debug($error_msg);
+                    } else {
+                        echo('.');
                     }
                 }
 

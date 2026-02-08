@@ -22,6 +22,27 @@ include("includes/discovery/functions.inc.php");
 
 $cli = TRUE;
 
+// Check if running as root and automatically switch to observium user -- disabled for now
+if (FALSE && function_exists('posix_getuid') && posix_getuid() === 0) {
+    // Check if observium user exists
+    $observium_user = posix_getpwnam('observium');
+    if ($observium_user !== false) {
+        // Re-execute as observium user
+        $script_path = realpath($argv[0]);
+        $args = array_slice($argv, 1);
+        $command = 'sudo -u observium ' . escapeshellarg($script_path);
+        foreach ($args as $arg) {
+            $command .= ' ' . escapeshellarg($arg);
+        }
+
+        print_warning("Poller running as root, switching to observium user...");
+        passthru($command, $exit_code);
+        exit($exit_code);
+    } else {
+        //print_warning("Running as root but observium user not found. RRD files may have incorrect ownership.");
+    }
+}
+
 $poller_start = utime();
 
 // get_versions();
@@ -74,9 +95,6 @@ if (!isset($options['q']) && !is_cron()) {
     }
 }
 
-$where = '';
-$doing_single = FALSE; // Poll single device? mostly from poller wrapper
-
 if ($options['h'] === "pollers") {
     // Distributed pollers only
     if (OBS_DISTRIBUTED) {
@@ -88,47 +106,67 @@ if ($options['h'] === "pollers") {
     }
     exit(); // Silent exit
 }
-if ($options['h'] === "odd") {
-    $options['n'] = "1";
-    $options['i'] = "2";
-} elseif ($options['h'] === "even") {
-    $options['n'] = "0";
-    $options['i'] = "2";
-} elseif ($options['h'] === "all") {
-    $where = " ";
-    $doing = "all";
-} elseif ($options['h']) {
-    $params = [];
-    if (is_numeric($options['h'])) {
-        $where        = "AND `device_id` = ?";
-        $doing        = $options['h'];
-        $params[]     = $options['h'];
-        $doing_single = TRUE; // Poll single device! (from wrapper)
-    } else {
-        $where    = "AND `hostname` LIKE ?";
-        $doing    = $options['h'];
-        $params[] = str_replace('*', '%', $options['h']);
+
+$where_array = [];
+$doing_single = FALSE; // Poll single device? mostly from poller wrapper
+
+if (isset($options['h'])) {
+    switch ($options['h']) {
+        case 'odd':
+            $options['n'] = 1;
+            $options['i'] = 2;
+            break;
+
+        case 'even':
+            $options['n'] = 0;
+            $options['i'] = 2;
+            break;
+
+        case 'all':
+            $where_array[] = ''; // only for skip help message
+            $doing = 'all';
+            break;
+
+        case 'new':
+        case 'none':
+            // placeholder for hostname as in discovery
+            break;
+
+        default:
+            if (is_numeric($options['h'])) {
+                $doing_single = TRUE; // Poll a single device! (from wrapper)
+
+                $where_array[] = generate_query_values($options['h'], 'device_id');
+                $doing    = $options['h'];
+            } elseif (is_valid_hostname($options['h']) || get_ip_version($options['h'])) {
+                // Poll a single device as hostname
+                $doing_single = TRUE;
+
+                $where_array[] = generate_query_values($options['h'], 'hostname');
+                $doing    = $options['h'];
+            } else {
+                $where_array[] = generate_query_values($options['h'], 'hostname', 'LIKE');
+                $doing    = $options['h'];
+            }
     }
 }
 
-if (isset($options['i'], $options['n']) && $options['i']) {
-    $where = TRUE; // FIXME
+if (isset($options['i'], $options['n']) && is_intnum($options['i']) && is_intnum($options['n'])) {
+    $where_array[] = ''; // only for skip help message
 
     $query    = 'SELECT `device_id` FROM (SELECT @rownum :=0) r,
               (
                 SELECT @rownum := @rownum +1 AS rownum, `device_id`
                 FROM `devices`
-                WHERE `disabled` = 0 AND `poller_id` = ' . $config['poller_id'] . '
+                WHERE `disabled` = 0 AND ' . generate_query_values($config['poller_id'], 'poller_id') . '
                 ORDER BY `device_id` ASC
               ) temp
-            WHERE MOD(temp.rownum, ' . $options['i'] . ') = ?;';
+            WHERE MOD(temp.rownum, ' . $options['i'] . ') = ' . $options['n'];
     $doing    = $options['n'] . "/" . $options['i'];
-    $params[] = $options['n'];
     //print_vars($query);
-    //print_vars($params);
 }
 
-if (!$where) {
+if (empty($where_array)) {
     print_message("%n
 USAGE:
 $scriptname [-drqV] [-i instances] [-n number] [-m module] [-h device]
@@ -174,17 +212,26 @@ if (isset($options['r'])) {
 
 $cache['maint'] = cache_alert_maintenance();
 
-rrdtool_pipe_open($rrd_process, $rrd_pipes);
-
 print_cli_heading("%WStarting polling run at " . date("Y-m-d H:i:s"), 0);
 $polled_devices = 0;
 
-if (!isset($query)) {
-    $query    = "SELECT `device_id` FROM `devices` WHERE `disabled` = 0 $where AND `poller_id` = ? ORDER BY `device_id` ASC";
-    $params[] = $config['poller_id'];
+if ($config['norrd']) {
+    print_debug("RRD Disabled - PIPEs not created.");
+} elseif (!rrdtool_pipe_open($rrd_process, $rrd_pipes)) {
+    // Pipe not opened by unknown reason
+    print_error("RRD pipes were not created for an unknown reason. Please verify the RRDTool command and its path.\n\n");
 }
 
-foreach (dbFetchColumn($query, $params) as $device_id) {
+if (!isset($query)) {
+    // Always skip disabled devices
+    $where_add = [ '`disabled` = 0' ];
+    // Poller ID
+    $where_add[] = generate_query_values($config['poller_id'], 'poller_id');
+
+    $query = "SELECT `device_id` FROM `devices` " . generate_where_clause($where_array, $where_add) . " ORDER BY `device_id` ASC";
+}
+
+foreach (dbFetchColumn($query) as $device_id) {
     $device = dbFetchRow("SELECT * FROM `devices` WHERE `device_id` = ?", [ $device_id ]);
     poll_device($device, $options);
     $polled_devices++;
@@ -192,12 +239,29 @@ foreach (dbFetchColumn($query, $params) as $device_id) {
 
 $poller_time = elapsed_time($poller_start, 4);
 
-if ($polled_devices) {
-    if (is_numeric($doing)) {
-        $doing = $device['hostname'];
-    } // Single device ID convert to hostname for log
-} else {
-    print_warning("WARNING: 0 devices polled. Did you specify a device that does not exist?");
+if ($doing_single && isset($device['hostname'])) {
+    $doing = $device['hostname']; // Single device ID convert to hostname for log
+}
+if (!$polled_devices && !isset($options['q'])) {
+    if ($doing_single) {
+        $target = is_numeric($doing) ? "id %W$doing%n" : "hostname '%W$doing%n'";
+
+        if ($target_db = dbFetchRow("SELECT `device_id`, `disabled`, `status`, `poller_id` FROM `devices`" . generate_where_clause($where_array))) {
+            // Add extra error info, when device exist on different poller or disabled
+            if ($target_db['poller_id'] != $config['poller_id']) {
+                print_cli("%rERROR:%n Device with $target is assigned to Remote Poller ID {$target_db['poller_id']}. You must poll it using that poller.\n\n");
+            } elseif ($target_db['disabled']) {
+                print_cli("%rERROR:%n Device with $target is disabled, polling skipped.\n\n");
+            }
+            // elseif (!$target_db['status']) {
+            //     print_cli("%rERROR:%n Device with $target is down, polling skipped.\n\n");
+            // }
+        } else {
+            print_cli("%rERROR:%n Device with $target does not exist in observium db.\n\n");
+        }
+    } else {
+        print_cli("%yWARNING:%n 0 devices polled. Did you specify a device(s) that does not exist?\n\n");
+    }
 }
 
 $string = OBS_SCRIPT_NAME . ": $doing - $polled_devices devices polled in $poller_time secs";
@@ -288,7 +352,10 @@ if (!isset($options['q'])) {
 }
 
 logfile($string);
-rrdtool_pipe_close($rrd_process, $rrd_pipes);
+if (!$config['norrd']) {
+    // RRD Disabled - PIPEs not created.
+    rrdtool_pipe_close($rrd_process, $rrd_pipes);
+}
 unset($config); // Remove this for testing
 
 #print_vars(get_defined_vars());

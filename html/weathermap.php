@@ -30,11 +30,21 @@ if (($_SERVER['REMOTE_ADDR'] != $_SERVER['SERVER_ADDR']) && !$_SESSION['authenti
 
 $vars = get_vars('GET');
 
-if ($_SESSION['userlevel'] > 7) {
-    include($config['install_dir'] . "/includes/weathermap/editor.php");
-} else {
+// Read-only actions allowed for level 5+ users
+$readonly_actions = ['draw', 'font_samples', 'show_config', 'fetch_config'];
+$action = $vars['action'] ?? '';
+
+if ($_SESSION['userlevel'] < 5) {
     echo("Unauthorised Access Prohibited.");
     exit;
 }
+
+// Editing actions require level 7+
+if (!in_array($action, $readonly_actions) && $_SESSION['userlevel'] <= 7) {
+    echo("Unauthorised Access Prohibited. Editing requires administrator privileges.");
+    exit;
+}
+
+include($config['install_dir'] . "/includes/weathermap/editor.php");
 
 // EOF

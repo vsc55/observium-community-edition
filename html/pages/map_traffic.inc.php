@@ -57,6 +57,23 @@ foreach (generate_form_values('device') as $device_id => $device) {
     }
 }
 
+// 'VLANS' navbar menu
+$navbar['options']['vlans']['text']  = 'VLANs';
+$navbar['options']['vlans']['class'] = 'dropdown-scrollable';
+$navbar['options']['vlans']['icon']  = $config['icon']['vlan'];
+$vlans = dbFetchRows("SELECT `vlan_vlan`, `vlan_name` FROM `vlans` GROUP BY `vlan_vlan`, `vlan_name` ORDER BY `vlan_name`");
+foreach ($vlans as $vlan) {
+    $vlan_id = $vlan['vlan_vlan'];
+    $navbar['options']['vlans']['suboptions'][$vlan_id]['text'] = $vlan['vlan_name'] . ' ('. $vlan_id . ')';
+    $navbar['options']['vlans']['suboptions'][$vlan_id]['url']  = generate_url($vars, ['vlan_id' => $vlan_id, 'group_id' => NULL, 'device_id' => NULL]);
+    if ($vars['vlan_id'] == $vlan_id) {
+        $navbar['options']['vlans']['text']                            .= ' (' . $vlan['vlan_name'] . ')';
+        $navbar['options']['vlans']['suboptions'][$vlan_id]['class'] = 'active';
+    }
+}
+
+// 'Groups' navbar menu
+
 // 'Groups' navbar menu
 $navbar['options']['groups']['text']  = 'Groups';
 $navbar['options']['groups']['class'] = 'dropdown-scrollable';
@@ -81,12 +98,12 @@ print_navbar($navbar);
 unset($navbar);
 
 // FIXME. Move to html/includes/print/neighbours.inc.php
-function get_neighbour_map($vars)
-{
+function get_neighbour_map($vars) {
     global $cache;
 
     $where_array   = [ '`active` = 1' ];
-    $where_array[] = generate_query_permitted_ng('device');
+    $params = [];
+    //$where_array[] = generate_query_permitted_ng('device', [ 'device_table' => 'n' ]);
 
     if (isset($vars['group_id'])) {
 
@@ -99,156 +116,100 @@ function get_neighbour_map($vars)
         if ($group['entity_type'] == "port") {
             $port_id_list = get_group_entities($vars['group_id'], 'port');
             if (count($port_id_list) > 0) {
-                $where_array[] = '(' . generate_query_values($port_id_list, 'port_id') . ' OR ' . generate_query_values($port_id_list, 'remote_port_id') . ')';
+                $where_array[] = '(' . generate_query_values($port_id_list, 'n.port_id') . ' OR ' . generate_query_values($port_id_list, 'remote_port_id') . ')';
             } else {
                 print_error("Group contains no entities.");
             }
         } elseif ($group['entity_type'] == "device") {
             $device_id_list = get_group_entities($vars['group_id'], 'device');
             if (count($device_id_list) > 0) {
-                $where_array[] = '(' . generate_query_values($device_id_list, 'device_id') . ' OR ' . generate_query_values($device_id_list, 'remote_device_id') . ')';
+                $where_array[] = '(' . generate_query_values($device_id_list, 'n.device_id') . ' OR ' . generate_query_values($device_id_list, 'remote_device_id') . ')';
             } else {
                 print_error("Group contains no entities.");
             }
         }
     } elseif (isset($vars['device_id']) && $vars['device_id']) {
         //$where_array[] = "(`device_id` = '".dbEscape($vars['device_id'])."' OR `remote_device_id` = '".dbEscape($vars['device_id'])."')";
-        $where_array[] = '(' . generate_query_values($vars['device_id'], 'device_id') . ' OR ' . generate_query_values($vars['device_id'], 'remote_device_id') . ')';
+        $where_array[] = '(' . generate_query_values($vars['device_id'], 'n.device_id') . ' OR ' . generate_query_values($vars['device_id'], 'remote_device_id') . ')';
     }
 
-    //bdump($where_array);
-    
-    $query = "SELECT * FROM `neighbours`" . generate_where_clause($where_array);
+    $sql = "SELECT n.port_id, n.remote_port_id, n.neighbour_id,
+       p1.device_id as local_device_id, p1.port_id as local_port_id,
+       p2.device_id as remote_device_id, p2.port_id as remote_port_id,
+       d1.hostname as local_hostname, d2.hostname as remote_hostname,
+       p1.port_label_short as local_port, p2.port_label_short as remote_port,
+       p1.ifOperStatus, p1.ifSpeed, p1.ifInOctets_rate, p1.ifOutOctets_rate,
+       ph1.port_label_short as local_parent_port, ph2.port_label_short as remote_parent_port
+FROM neighbours AS n
+LEFT JOIN ports AS p1 ON (n.port_id = p1.port_id)
+LEFT JOIN ports AS p2 ON (n.remote_port_id = p2.port_id)
+LEFT JOIN devices AS d1 ON (p1.device_id = d1.device_id)
+LEFT JOIN devices AS d2 ON (p2.device_id = d2.device_id)
+LEFT JOIN ports_stack AS ps1 ON (p1.port_id = ps1.port_id_low AND ps1.ifStackStatus = 'active')
+LEFT JOIN ports AS ph1 ON (ps1.port_id_high = ph1.port_id)
+LEFT JOIN ports_stack AS ps2 ON (p2.port_id = ps2.port_id_low AND ps2.ifStackStatus = 'active')
+LEFT JOIN ports AS ph2 ON (ps2.port_id_high = ph2.port_id)";
 
-    //r($query);
+    if (isset($vars['vlan_id'])) {
+        $sql .= " LEFT JOIN `ports_vlans` AS pv1 ON (p1.device_id = pv1.device_id AND p1.port_id = pv1.port_id AND pv1.vlan = ?)
+                  LEFT JOIN `ports_vlans` AS pv2 ON (p2.device_id = pv2.device_id AND p2.port_id = pv2.port_id AND pv2.vlan = ?)";
+        $where_array[] = '(pv1.vlan IS NOT NULL OR pv2.vlan IS NOT NULL)';
+        $params[] = $vars['vlan_id'];
+        $params[] = $vars['vlan_id'];
+    }
 
-    $neighbours = dbFetchRows($query);
-    //bdump($neighbours);
+    $where_array[] = '(p2.device_id IS NULL OR p1.device_id < p2.device_id)';
+    $sql .= generate_where_clause($where_array, generate_query_permitted_ng('device', [ 'device_table' => 'n' ]));
+    $sql .= " GROUP BY n.port_id, n.remote_port_id ORDER BY d1.hostname, p1.ifIndex";
 
-    $device_list = [];
-    $port_list   = [];
+    # DEBUG?
+    #error_log("SQL Query: " . $sql);
+    #error_log("SQL Params: " . print_r($params, true));
+
+    $links = dbFetchRows($sql, $params);
+
     $nodes = [];
     $edges = [];
+    $link_exists = [];
 
-    // Build device_id and port_id lists for cache
-    foreach ($neighbours as $neighbour) {
-        $device_list[$neighbour['device_id']] = $neighbour['device_id'];
-        if (is_numeric($neighbour['remote_device_id'])) {
-            $device_list[$neighbour['remote_device_id']] = $neighbour['remote_device_id'];
-        }
-        $port_list[$neighbour['port_id']] = $neighbour['port_id'];
-        if (is_numeric($neighbour['remote_port_id'])) {
-            $port_list[$neighbour['remote_port_id']] = $neighbour['remote_port_id'];
-        }
-    }
-    // Pre-populate cache with device and port info
-    cache_entities_by_id('device', $device_list);
-    cache_entities_by_id('port', $port_list);
-
-    //r(count($cache['device']));
-    //r(count($cache['port']));
-    foreach ($neighbours as $neighbour) {
-
-        // Is this a link to a known device? Do we have it already?
-        if (is_numeric($neighbour['remote_port_id']) && $neighbour['remote_port_id']) {
-
-            $remote_port = get_port_by_id_cache($neighbour['remote_port_id']);
-
-            // Do we have this source device already?
-            if (!isset($devices[$neighbour['device_id']])) {
-                $devices[$neighbour['device_id']] = device_by_id_cache($neighbour['device_id']);
-            }
-
-            // Suppress links to unknown devices
-            //$neighbour['remote_device_id'] = get_device_id_by_port_id($neighbour['remote_port_id']);
-            if (!is_numeric($neighbour['remote_device_id'])) {
-                continue;
-            }
-
-            // Suppress links to self
-            if ($neighbour['remote_device_id'] == $neighbour['device_id']) {
-                continue;
-            }
-
-            // Suppress duplicate links from other protocols and from other end of link
+    foreach ($links as $neighbour) {
+        if (is_numeric($neighbour['remote_device_id']) && $neighbour['remote_device_id']) {
             if (isset($link_exists[$neighbour['remote_port_id'] . '-' . $neighbour['port_id']]) ||
                 isset($link_exists[$neighbour['port_id'] . '-' . $neighbour['remote_port_id']])) {
                 continue;
             }
 
-            if (!isset($devices[$neighbour['remote_device_id']])) {
-                $devices[$neighbour['remote_device_id']] = device_by_id_cache($neighbour['remote_device_id']);
+            $local_device = device_by_id_cache($neighbour['local_device_id']);
+            $remote_device = device_by_id_cache($neighbour['remote_device_id']);
+
+            if (!isset($nodes['d' . $local_device['device_id']])) {
+                $nodes['d' . $local_device['device_id']] = [
+                    'id'       => 'd' . $local_device['device_id'],
+                    'label'    => device_name($local_device, TRUE),
+                    'popupurl' => 'ajax/entity_popup.php?entity_type=device&entity_id=' . $local_device['device_id'],
+                ];
             }
 
-            $port = get_port_by_id_cache($neighbour['port_id']);
+            if (!isset($nodes['d' . $remote_device['device_id']])) {
+                $nodes['d' . $remote_device['device_id']] = [
+                    'id'       => 'd' . $remote_device['device_id'],
+                    'label'    => device_name($remote_device, TRUE),
+                    'popupurl' => 'ajax/entity_popup.php?entity_type=device&entity_id=' . $remote_device['device_id'],
+                ];
+            }
 
-            $port['percent'] = max($port['ifInOctets_perc'], $port['ifOutOctets_perc']);
-
-            $in_colour  = percent_colour($port['ifInOctets_perc'], 160);
-            $out_colour = percent_colour($port['ifOutOctets_perc'], 160);
-
-            // Out is from perspective of local node
-            $gradient = $out_colour . ' ' . $out_colour . ' ' . $in_colour . ' ' . $in_colour;
-
-            $edges[$neighbour['neighbour_id']] = [
-                'source'     => 'd' . $neighbour['device_id'],
+            $edges[] = [
+                'source'     => 'd' . $neighbour['local_device_id'],
                 'target'     => 'd' . $neighbour['remote_device_id'],
-                'percent'    => $port['percent'],
-                'percentin'  => $port['ifInOctets_perc'],
-                'percentout' => $port['ifOutOctets_perc'],
-                'gradient'   => $gradient,
-                'colourin'   => $in_colour,
-                'colourout'  => $out_colour,
-                'popupurl'   => 'ajax/entity_popup.php?entity_type=port&entity_id=' . $port['port_id'],
-                //'label' => $port['percent'].'%'
             ];
 
-            if (isset($vars['port_labels'])) {
-                // Labels as in/out traffic
-                //$in_label  = format_number($port['ifInOctets_rate'] * 8);
-                //$out_label = format_number($port['ifOutOctets_rate'] * 8);
-
-                // labels as port_label_short
-                $out_label = $port['port_label_short'];
-                $in_label  = $remote_port['port_label_short'];
-
-                $edges[$neighbour['neighbour_id']]['labelin']  = $in_label;
-                $edges[$neighbour['neighbour_id']]['labelout'] = $out_label;
-            }
-
-            if (is_numeric($neighbour['remote_port_id'])) {
-                $link_exists[$port['port_id'] . '-' . $neighbour['remote_port_id']] = TRUE;
-            }
-
-        } else {
-            $external_id             = string_to_id($neighbour['remote_hostname']);
-            $externals[$external_id] = ['id'    => $external_id,
-                                        'label' => $neighbour['remote_hostname']];
+            $link_exists[$neighbour['port_id'] . '-' . $neighbour['remote_port_id']] = TRUE;
         }
     }
 
-    foreach ($devices as $device) {
-        $id         = 'd' . $device['device_id'];
-        $parent_id  = 'l' . string_to_id($device['location']);
-        $nodes[$id] = [
-            'id'       => $id,
-            'label'    => device_name($device, TRUE),
-            'popupurl' => 'ajax/entity_popup.php?entity_type=device&entity_id=' . $device['device_id'],
-            'parent'   => $parent_id
-        ];
-
-        // Add parent nodes
-        if (!isset($parents[$parent_id])) {
-            $nodes[$parent_id] = [
-                'id'    => $parent_id,
-                'label' => $device['location']
-            ];
-        }
-    }
-
-    return [ 'nodes' => $nodes, 'edges' => $edges, 'external_nodes' => $externals ];
-
+    return [ 'nodes' => array_values($nodes), 'edges' => $edges, 'external_nodes' => [] ];
 }
+
 
 $map = get_neighbour_map($vars);
 
@@ -413,9 +374,9 @@ $map = get_neighbour_map($vars);
                 {
                     selector: 'edge',
                     style: {
-                        'line-fill': 'linear-gradient',
-                        'line-gradient-stop-colors': 'data(gradient)',
-                        'line-gradient-stop-positions': '0% 40% 50% 100%',
+                        //'line-fill': 'linear-gradient',
+                        //'line-gradient-stop-colors': 'data(gradient)',
+                        //'line-gradient-stop-positions': '0% 40% 50% 100%',
                         //'text-background-opacity': '0.5',
                         //'text-background-color': '#555555',
                         'curve-style': 'bezier',
@@ -453,7 +414,18 @@ $map = get_neighbour_map($vars);
             let ref = ele.popperRef();
 
             // FIXME - need some delay, otherwise it floods requests when moving mouse over large network
-            if (ele.data('popupurl')) {
+            if (ele.data('tooltip')) {
+                ele.tippy = tippy(document.createElement('div'), {
+                    // popperInstance will be available onCreate
+                    //theme: 'translucent',
+                    allowHTML: true,
+                    followCursor: 'true',
+                    hideOnClick: false,
+                    maxWidth: 'none',
+                    //trigger: 'click',
+                    content: ele.data('tooltip')
+                });
+            } else if (ele.data('popupurl')) {
                 ele.tippy = tippy(document.createElement('div'), {
                     // popperInstance will be available onCreate
                     //theme: 'translucent',

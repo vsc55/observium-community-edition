@@ -17,10 +17,21 @@ EXTREME-POE-MIB DEFINITIONS ::= BEGIN
 
 
         extremePoE MODULE-IDENTITY
-                      LAST-UPDATED "0007240000Z"
+                      LAST-UPDATED "202208021900Z" -- August 2 19:00 UTC 2022
                       ORGANIZATION "Extreme Networks, Inc."
                       CONTACT-INFO "www.extremenetworks.com"
                 DESCRIPTION "Extreme Power over Ethernet MIB objects"
+
+                REVISION    "202208021900Z" -- August 2 19:00 UTC 2022
+                DESCRIPTION " Added extremePethPortIfIndex to extremePethPsePortEntry"
+
+                REVISION    "202204200720Z" -- April 20 07:20 UTC 2022
+                DESCRIPTION " Added extremePethPortDetectionType, extremePethPortMeasuredVoltage, extremePethPortMeasuredCurrent,
+                            extremePethPortFastPoeEnable to extremePethPsePortEntry, added extremePethSlotPerpetualPoe, extremePethSlotFastPoe to
+                            extremePethPseSlotEntry."
+
+                REVISION    "0007240000Z"
+                DESCRIPTION "Added Extreme Power over Ethernet MIB "
         ::= { extremeAgent 27 }
 
         extremePethMain   OBJECT IDENTIFIER ::= {extremePoE 1}
@@ -129,16 +140,18 @@ ExtremePethPseSlotEntry ::= SEQUENCE {
         extremePethSlotAdminEnable              INTEGER,
         extremePethSlotPoeStatus                INTEGER,
         extremePethSlotPoeResetSystem           INTEGER,
-	extremePethSlotMaxAvailPower            Gauge32,
+        extremePethSlotMaxAvailPower            Gauge32,
         extremePethSlotMaxCapacity              Gauge32,
         extremePethSlotBackupPSU                INTEGER,
         extremePethSlotPSUActive                INTEGER,
-	extremePethSlotMeasuredPower            Gauge32,
-	extremePethSlotMainPseIndex		Integer32
+        extremePethSlotMeasuredPower            Gauge32,
+        extremePethSlotMainPseIndex             Integer32,
+        extremePethSlotPerpetualPoe             TruthValue,
+        extremePethSlotFastPoe                  TruthValue
 }
 
 extremePethSlotNumber  OBJECT-TYPE
-          SYNTAX                Integer32
+          SYNTAX                Integer32 (1..162)
           MAX-ACCESS            not-accessible
           STATUS                current
           DESCRIPTION
@@ -327,7 +340,29 @@ extremePethSlotMainPseIndex   OBJECT-TYPE
                   "The index into the PethMainPseTable. Provides the
 	           mapping of the slot identifier to pethMainPseGroupIndex."
           ::= { extremePethPseSlotEntry 15 }
-	
+
+extremePethSlotPerpetualPoe OBJECT-TYPE
+          SYNTAX            TruthValue
+          MAX-ACCESS        read-write
+          STATUS            current
+          DESCRIPTION
+                "true (1) Enable the Perpetual PoE
+                function in the slot.
+                false(2) Disable the Perpetual PoE
+                function in the slot."
+          ::= { extremePethPseSlotEntry 16 }
+
+extremePethSlotFastPoe OBJECT-TYPE
+          SYNTAX            TruthValue
+          MAX-ACCESS        read-write
+          STATUS            current
+          DESCRIPTION
+                "true (1)  Enable the Fast PoE
+                function in the slot.
+                false(2)  Disable the Fast PoE
+                function in the slot."
+          ::= { extremePethPseSlotEntry 17 }
+
 extremePethPsePortTable OBJECT-TYPE
           SYNTAX      SEQUENCE OF ExtremePethPsePortEntry
           MAX-ACCESS  not-accessible
@@ -347,16 +382,21 @@ extremePethPsePortEntry OBJECT-TYPE
           ::= { extremePethPsePortTable 1 }
 
 ExtremePethPsePortEntry ::= SEQUENCE {
-	extremePethPortOperatorLimit        Integer32,
+        extremePethPortOperatorLimit        Integer32,
         extremePethPortReservedBudget       Integer32,
         extremePethPortViolationPrecedence  INTEGER,
         extremePethPortClearFault           INTEGER,
         extremePethPortResetPower           INTEGER,
-	extremePethPortMeasuredPower	    Gauge32
+        extremePethPortMeasuredPower        Gauge32,
+        extremePethPortDetectionType        INTEGER,
+        extremePethPortMeasuredVoltage      Gauge32,
+        extremePethPortMeasuredCurrent      Gauge32,
+        extremePethPortFastPoeEnable        TruthValue,
+        extremePethPortIfIndex              Integer32
 }
 
 extremePethPortOperatorLimit  OBJECT-TYPE
-          SYNTAX Integer32 (3000..60000)  
+          SYNTAX Integer32 (3000..90000)
           UNITS			"Milliwatts"
           MAX-ACCESS		read-write
           STATUS		current
@@ -366,13 +406,13 @@ extremePethPortOperatorLimit  OBJECT-TYPE
           ::= { extremePethPsePortEntry 1 }
 
 extremePethPortReservedBudget  OBJECT-TYPE
-          SYNTAX Integer32 (0..60000)  
+          SYNTAX Integer32 (0..90000)
           UNITS			"Milliwatts"
           MAX-ACCESS		read-write
           STATUS		current
           DESCRIPTION
              "Controls individual port maximum power level. Value is 0 or 
-              in the range of 3000..60000"
+              in the range of 3000..90000"
           DEFVAL 		{ 0 }
           ::= { extremePethPsePortEntry  2 }
 
@@ -423,5 +463,63 @@ extremePethPortMeasuredPower  OBJECT-TYPE
           DESCRIPTION
                   "The amount of power consumed on the port expressed in Milliwatts."
           ::= { extremePethPsePortEntry 6 }
+
+extremePethPortDetectionType  OBJECT-TYPE
+          SYNTAX                INTEGER { detect8023afOnly(0),
+                                          detect4ptLegacyand8023af(1),
+                                          bypass(2),
+                                          unknown(3),
+                                          detect2ptLegacyand8023af(4)
+                                        }
+          MAX-ACCESS            read-write
+          STATUS                current
+          DESCRIPTION
+                "This object is used to specify the mechanism used
+                 to detect powered ethernet devices attached to a
+                 powered ethernet port.  This object should only
+                 be instantiated for ports that
+                 that support powered ethernet."
+          ::= { extremePethPsePortEntry 7 }
+
+extremePethPortMeasuredVoltage OBJECT-TYPE
+          SYNTAX                Gauge32
+          UNITS                 "decivolts"
+          MAX-ACCESS            read-only
+          STATUS                current
+          DESCRIPTION
+                "Measured Port Voltage.  When the port is not supplying
+                 power, the value will be 0."
+          ::= { extremePethPsePortEntry 8 }
+
+extremePethPortMeasuredCurrent OBJECT-TYPE
+          SYNTAX                Gauge32
+          UNITS                 "milliamps"
+          MAX-ACCESS            read-only
+          STATUS                current
+          DESCRIPTION
+                "Measured Port Current. When the port is not supplying
+                 power, the value will be 0."
+          ::= { extremePethPsePortEntry 9 }
+
+extremePethPortFastPoeEnable OBJECT-TYPE
+          SYNTAX             TruthValue
+          MAX-ACCESS         read-write
+          STATUS             current
+          DESCRIPTION
+                "true (1) Enable Fast PoE
+                function on this port.
+                false(2) Disable Fast PoE
+                function on this port."
+          ::= { extremePethPsePortEntry 10 }
+
+extremePethPortIfIndex OBJECT-TYPE
+          SYNTAX             Integer32
+          MAX-ACCESS         read-only
+          STATUS             current
+          DESCRIPTION
+                 "The value of the instance of the ifIndex object,
+                  defined in MIB-II, for the interface corresponding
+                  to this port."
+          ::= { extremePethPsePortEntry 11 }
 
 END

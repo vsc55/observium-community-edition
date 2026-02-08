@@ -58,7 +58,7 @@ foreach (get_type_groups('port') as $entry) {
     $form_items['group'][$entry['group_id']] = $entry['group_name'];
 }
 
-foreach (['ifType', 'ifSpeed', 'port_descr_type'] as $entry) {
+foreach (['ifType', 'ifSpeed', 'ifDuplex', 'port_descr_type'] as $entry) {
     $query = "SELECT `$entry` FROM `ports`";
     $query .= " LEFT JOIN `devices` USING (`device_id`)";
 
@@ -80,7 +80,7 @@ foreach (['ifType', 'ifSpeed', 'port_descr_type'] as $entry) {
     $form_items[$entry] = [];
     foreach (dbFetchRows($query) as $data) {
         if ($entry === "ifType") {
-            $form_items[$entry][$data['ifType']] = rewrite_iftype($data['ifType']) . ' (' . $data['ifType'] . ')';
+            $form_items[$entry][$data['ifType']] = [ 'name' => rewrite_iftype($data['ifType']), 'subtext' => $data['ifType'] ];
         } elseif ($entry === "ifSpeed") {
             $form_items[$entry][$data[$entry]] = format_bps($data[$entry]);
         } else {
@@ -96,40 +96,40 @@ if (isset($form_items['ifType'])) {
 $form_items['devices'] = generate_form_values('device'); // Always all devices
 
 $form_items['sort'] = [
-  'device'           => 'Device',
-  'port'             => 'Port',
-  'speed'            => 'Speed',
-  'traffic'          => 'Traffic In+Out',
-  'traffic_in'       => 'Traffic In',
-  'traffic_out'      => 'Traffic Out',
-  'traffic_perc'     => 'Traffic Percentage In+Out',
-  'traffic_perc_in'  => 'Traffic Percentage In',
-  'traffic_perc_out' => 'Traffic Percentage Out',
-  'packets'          => 'Packets In+Out',
-  'packets_in'       => 'Packets In',
-  'packets_out'      => 'Packets Out',
-  'errors'           => 'Errors',
-  'mac'              => 'MAC Address',
-  'media'            => 'Media',
-  'descr'            => 'Description'
+    'device'           => 'Device',
+    'port'             => 'Port',
+    'speed'            => 'Speed',
+    'traffic'          => 'Traffic In+Out',
+    'traffic_in'       => 'Traffic In',
+    'traffic_out'      => 'Traffic Out',
+    'traffic_perc'     => 'Traffic Percentage In+Out',
+    'traffic_perc_in'  => 'Traffic Percentage In',
+    'traffic_perc_out' => 'Traffic Percentage Out',
+    'packets'          => 'Packets In+Out',
+    'packets_in'       => 'Packets In',
+    'packets_out'      => 'Packets Out',
+    'errors'           => 'Errors',
+    'mac'              => 'MAC Address',
+    'media'            => 'Media',
+    'descr'            => 'Description'
 ];
 
 $form = [
-  'type'          => 'rows',
-  'space'         => '10px',
-  //'brand' => NULL,
-  //'class' => 'well',
-  'submit_by_key' => TRUE,
-  'url'           => generate_url($vars)
+    'type'          => 'rows',
+    'space'         => '10px',
+    //'brand' => NULL,
+    //'class' => 'well',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
 ];
 
 // First row
 $form['row'][0]['device_id'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Device',
-  'value'  => $vars['device_id'],
-  'width'  => '100%', //'180px',
-  'values' => $form_items['devices']
+    'type'   => 'multiselect',
+    'name'   => 'Device',
+    'value'  => $vars['device_id'],
+    'width'  => '100%', //'180px',
+    'values' => $form_items['devices']
 ];
 
 foreach (get_locations() as $entry) {
@@ -140,113 +140,123 @@ foreach (get_locations() as $entry) {
 }
 
 $form['row'][0]['location'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Device Location',
-  'width'  => '100%', //'180px',
-  //'encode'      => TRUE,
-  'value'  => $vars['location'],
-  'values' => $form_items['location']
+    'type'   => 'multiselect',
+    'name'   => 'Device Location',
+    'width'  => '100%', //'180px',
+    //'encode'      => TRUE,
+    'value'  => $vars['location'],
+    'values' => $form_items['location']
 ];
 
 $form['row'][0]['mac'] = [
-  'type'        => 'text',
-  'name'        => 'Port Mac Address',
-  'value'       => $vars['mac'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE
+    'type'        => 'text',
+    'name'        => 'Port Mac Address',
+    'value'       => $vars['mac'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
 ];
 
 $form['row'][0]['state'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Port State',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['state'],
-  'values' => [ 'up' => 'Up', 'down' => ' Down', 'admindown' => 'Shutdown']
+    'type'   => 'multiselect',
+    'name'   => 'Port State',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['state'],
+    'values' => [ 'up' => 'Up', 'down' => ' Down', 'admindown' => 'Shutdown' ]
 ];
 
 $form['row'][0]['ifType'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Port Media',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['ifType'],
-  'values' => $form_items['ifType']
+    'grid'   => 1,
+    'type'   => 'multiselect',
+    'name'   => 'Port Media',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['ifType'],
+    'values' => $form_items['ifType']
+];
+
+$form['row'][0]['ifDuplex'] = [
+    'grid'   => 1,
+    'type'   => 'multiselect',
+    'name'   => 'Duplex',
+    'width'  => '100%',
+    'value'  => $vars['ifDuplex'],
+    'values' => $form_items['ifDuplex']
 ];
 
 $form['row'][0]['group'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Groups',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['group'],
-  'values' => $form_items['group']
+    'type'   => 'multiselect',
+    'name'   => 'Select Groups',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['group'],
+    'values' => $form_items['group']
 ];
 
 $form['row'][1]['hostname'] = [
-  'type'        => 'text',
-  'name'        => 'Device Hostname',
-  'value'       => $vars['hostname'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE
+    'type'        => 'text',
+    'name'        => 'Device Hostname',
+    'value'       => $vars['hostname'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
 ];
 
 $form['row'][1]['label'] = [
-  'type'        => 'text',
-  'name'        => 'Port Name',
-  'value'       => $vars['label'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE
+    'type'        => 'text',
+    'name'        => 'Port Name',
+    'value'       => $vars['label'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
 ];
 
 $form['row'][1]['ifAlias'] = [
-  'type'        => 'text',
-  'name'        => 'Port Description (ifAlias)',
-  'value'       => $vars['ifAlias'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE
+    'type'        => 'text',
+    'name'        => 'Port Description (ifAlias)',
+    'value'       => $vars['ifAlias'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
 ];
 
 $form['row'][1]['ifSpeed'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Port Speed',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['ifSpeed'],
-  'values' => $form_items['ifSpeed']
+    'type'   => 'multiselect',
+    'name'   => 'Port Speed',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['ifSpeed'],
+    'values' => $form_items['ifSpeed']
 ];
 
 $form['row'][1]['port_descr_type'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Port Parsed Type',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['port_descr_type'],
-  'values' => $form_items['port_descr_type']
+    'type'   => 'multiselect',
+    'name'   => 'Port Parsed Type',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['port_descr_type'],
+    'values' => $form_items['port_descr_type']
 ];
 
 // Select sort pull-right
 $form['row'][1]['sort'] = [
-  'type'   => 'select',
-  'icon'   => $config['icon']['sort'],
-  'grid'   => 1,
-  //'right'       => TRUE,
-  'width'  => '100%', //'150px',
-  'value'  => $vars['sort'],
-  'values' => $form_items['sort']
+    'type'   => 'select',
+    'icon'   => $config['icon']['sort'],
+    'grid'   => 1,
+    //'right'       => TRUE,
+    'width'  => '100%', //'150px',
+    'value'  => $vars['sort'],
+    'values' => $form_items['sort']
 ];
 
 $form['row'][1]['search'] = [
-  'type'  => 'submit',
-  'grid'  => 1,
-  //'name'        => 'Search',
-  //'icon'        => 'icon-search',
-  'right' => TRUE,
+    'type'  => 'submit',
+    'grid'  => 1,
+    //'name'        => 'Search',
+    //'icon'        => 'icon-search',
+    'right' => TRUE,
 ];
 
 $panel_form = [
-  'type'          => 'rows',
-  'title'         => 'Search Ports',
-  'space'         => '10px',
-  //'brand' => NULL,
-  //'class' => '',
-  'submit_by_key' => TRUE,
-  'url'           => generate_url($vars)
+    'type'          => 'rows',
+    'title'         => 'Search Ports',
+    'space'         => '10px',
+    //'brand' => NULL,
+    //'class' => '',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
 ];
 
 $panel_form['row'][0]['device_id'] = $form['row'][0]['device_id'];
@@ -258,10 +268,13 @@ $panel_form['row'][1]['ifAlias'] = $form['row'][1]['ifAlias'];
 $panel_form['row'][1]['mac']     = $form['row'][0]['mac'];
 
 $panel_form['row'][2]['state']   = $form['row'][0]['state'];
+$panel_form['row'][2]['ifDuplex'] = $form['row'][0]['ifDuplex'];
 $panel_form['row'][2]['ifSpeed'] = $form['row'][1]['ifSpeed'];
+unset($panel_form['row'][2]['ifDuplex']['grid']);
 
 $panel_form['row'][3]['ifType']          = $form['row'][0]['ifType'];
 $panel_form['row'][3]['port_descr_type'] = $form['row'][1]['port_descr_type'];
+unset($panel_form['row'][3]['ifType']['grid']);
 
 $panel_form['row'][4]['group']            = $form['row'][0]['group'];
 $panel_form['row'][4]['group']['grid']    = 4;
@@ -367,13 +380,13 @@ $sql .= generate_where_clause($where_array, $cache['where']['ports_permitted']);
 
 $ports_ids = dbFetchColumn($sql, $param);
 $ports_count = safe_count($ports_ids);
-//r($port_ids);
+//r($ports_ids);
 if ($vars['agg_graph']) {
 
     $graph_vars = [
-      'type'   => 'multi-port_' . $vars['agg_graph'],
-      'legend' => 'no',
-      'id'     => implode(',', $ports_ids)
+        'type'   => 'multi-port_' . $vars['agg_graph'],
+        'legend' => 'no',
+        'id'     => implode(',', $ports_ids)
     ];
 
     if ($ports_count < 350) {

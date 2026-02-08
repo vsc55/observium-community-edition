@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-RADIUS-AUTH-CLIENT-MIB DEFINITIONS ::= BEGIN
 
 --  enterasys-radius-auth-client-mib.txt
@@ -12,23 +14,23 @@ ENTERASYS-RADIUS-AUTH-CLIENT-MIB DEFINITIONS ::= BEGIN
 --
 --  This module will be extended, as needed.
 
---  Extreme Networks reserves the right to make changes in this
+--  Enterasys Networks reserves the right to make changes in this
 --  specification and other information contained in this document
---  without prior notice.  The reader should consult Extreme Networks
+--  without prior notice.  The reader should consult Enterasys Networks
 --  to determine whether any such changes have been made.
 --
---  In no event shall Extreme Networks be liable for any incidental,
+--  In no event shall Enterasys Networks be liable for any incidental,
 --  indirect, special, or consequential damages whatsoever (including
 --  but not limited to lost profits) arising out of or related to this
---  document or the information contained in it, even if Extreme
+--  document or the information contained in it, even if Enterasys
 --  Networks has been advised of, known, or should have known, the
 --  possibility of such damages.
 --
---  Extreme Networks grants vendors, end-users, and other interested
+--  Enterasys Networks grants vendors, end-users, and other interested
 --  parties a non-exclusive license to use this Specification in
---  connection with the management of Extreme Networks products.
+--  connection with the management of Enterasys Networks products.
 
---  Copyright February, 2000-2015 Extreme Networks, Inc.
+--  Copyright August, 2000-2009 Enterasys Networks, Inc.
 
 
 IMPORTS
@@ -40,45 +42,38 @@ IMPORTS
         FROM SNMPv2-TC
     InetAddressType, InetAddress
         FROM INET-ADDRESS-MIB
-    SnmpAdminString
-        FROM SNMP-FRAMEWORK-MIB
     etsysModules
         FROM ENTERASYS-MIB-NAMES;
 
 etsysRadiusAuthClientMIB MODULE-IDENTITY
-    LAST-UPDATED "201502121510Z"  -- Thu Feb 12 15:10 UTC 2015
-    ORGANIZATION "Extreme Networks, Inc."
+    LAST-UPDATED "201404221656Z"  -- Tue Apr  22 16:56 GMT 2014
+    ORGANIZATION "Extreme Networks, Inc"
     CONTACT-INFO
-        "Postal:  Extreme Networks, Inc.
-                  145 Rio Robles
-                  San Jose, CA 95134 USA
+        "Postal:  Extreme Networks
+                  9 Northeastern Blvd.
+                  Salem, NH 03079 USA
 
-         Phone:   +1 408 579-2800
+         Phone:   +1 603 952 5000
          E-mail:  support@extremenetworks.com
          WWW:     http://www.extremenetworks.com"
 
     DESCRIPTION
-        "This MIB module defines a portion of the SNMP enterprise
-         MIBs under Enterasys Networks' enterprise OID pertaining to 
-         the implementation of the client side of the Remote Access Dialin
+        "The Enterasys Networks Proprietary MIB module for entities
+         implementing the client side of the Remote Access Dialin
          User Service (RADIUS) authentication protocol (RFC2865).
-       
+
          This MIB provides read-write access to configuration objects
-         not provided in the standard RADIUS Authentication Client 
+         not provided in the standard RADIUS Authentication Client
          MIB (RFC2618)."
 
-    REVISION    "201502121510Z"  -- Thu Feb 12 15:10 UTC 2015
-    DESCRIPTION "Modified upper range limits and default values of several 
-                 objects for better alignment with newer implementations."
-    
-    REVISION    "201405071940Z"  -- Wed May  7 19:40 UTC 2014
-    DESCRIPTION "Addition of per realm retries, per realm status 
-                 change, server client IP addresses and server 
-                 virtual router configuration."            
+    REVISION    "201404221656Z"  -- Tue Apr  22 16:56 GMT 2014
+    DESCRIPTION "Addition of per realm retries, per realm status
+                 change, server client IP addresses and server
+                 virtual router configuration"
 
-    REVISION    "201308081535Z"  -- Thu Aug  8 15:35 UTC 2013
+    REVISION    "201302121656Z"  -- Tue Feb  12 16:56 GMT 2013
     DESCRIPTION "Addition of retransmission algorithm and per server
-                 sticky user counters and configuration."       
+                 sticky user counters and configuration."
 
     REVISION    "201103101838Z"  -- Thu Mar  10 19:18 UTC 2011
     DESCRIPTION "Addition of etsysRadiusAuthClientAttrMgmtPassword."
@@ -90,11 +85,11 @@ etsysRadiusAuthClientMIB MODULE-IDENTITY
                  clause for etsysRadiusAuthClientServerRealmType."
 
     REVISION    "200507291348Z"  -- Fri Jul 29 13:48 UTC 2005
-    DESCRIPTION "Changed the syntax type of the 
+    DESCRIPTION "Changed the syntax type of the
                  etsysRadiusAuthClientServerRealmType leaf in the SEQUENCE
                  statement to INTEGER to match the actual OBJECT-TYPE
                  definition."
-    
+
     REVISION    "200407271953Z"  -- Tue Jul 27 19:53 GMT 2004
     DESCRIPTION "Added the etsysRadiusAuthClientServerRealmType leaf
                  to the etsysRadiusAuthServerTable to allow the
@@ -121,7 +116,7 @@ etsysRadiusAuthClientMIB MODULE-IDENTITY
 -- Branches of the Enterasys RADIUS Auth Client MIB
 -- -------------------------------------------------------------
 
-etsysRadiusAuthClientMIBObjects     OBJECT IDENTIFIER 
+etsysRadiusAuthClientMIBObjects     OBJECT IDENTIFIER
        ::= { etsysRadiusAuthClientMIB 1 }
 
 -- -------------------------------------------------------------
@@ -170,14 +165,14 @@ etsysRadiusAuthClientAuthType OBJECT-TYPE
     MAX-ACCESS     read-write
     STATUS         deprecated
     DESCRIPTION
-        "This indicates which method is being used for 
+        "This indicates which method is being used for
          authentication.
 
          mac(1)   - indicates MAC address authentication
          eapol(2) - indicates EAPOL authentication
 
          This list of enumeration constants is subject to
-         change. This parameter value is maintained across 
+         change. This parameter value is maintained across
          system reboots."
    ::= { etsysRadiusAuthClientMIBObjects 4 }
 
@@ -218,7 +213,7 @@ EtsysRadiusAuthServerEntry ::= SEQUENCE {
     etsysRadiusAuthClientServerStickyCurSessions       Unsigned32,
     etsysRadiusAuthClientServerClientAddressType       InetAddressType,
     etsysRadiusAuthClientServerClientAddress           InetAddress,
-    etsysRadiusAuthClientServerClientVirtualRouterName SnmpAdminString
+    etsysRadiusAuthClientServerClientVirtualRouterName OCTET STRING
 }
 
 etsysRadiusAuthServerIndex OBJECT-TYPE
@@ -230,12 +225,12 @@ etsysRadiusAuthServerIndex OBJECT-TYPE
          etsysRadiusAuthServerTable.
 
          etsysRadiusAuthServerIndices with range between 2147483642 and
-         2147483647 indicate the highest priority servers stored for 
-         backwards compatibility.  After consideration of these special 
+         2147483647 indicate the highest priority servers stored for
+         backwards compatibility.  After consideration of these special
          indice values this value indicates the relative priority of the
          servers.
 
-         Relative priority of the servers is used when using the standard 
+         Relative priority of the servers is used when using the standard
          authentication retransmission algorithm.
 
          Maintaining the value of etsysRadiusAuthServerIndex for all
@@ -270,7 +265,7 @@ etsysRadiusAuthClientServerPortNumber  OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-        "The UDP port number (1-65535) the client will use
+        "The UDP port number (0-65535) the client will use
          to send RADIUS requests to this server."
     DEFVAL { 1812 }
     ::= { etsysRadiusAuthServerEntry 4 }
@@ -280,7 +275,7 @@ etsysRadiusAuthClientServerSecret  OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-        "This object is the secret shared between the RADIUS 
+        "This object is the secret shared between the RADIUS
          authentication server and the RADIUS client.
 
          On a read operation this object MUST return a zero length
@@ -307,9 +302,9 @@ etsysRadiusAuthClientServerClearTime OBJECT-TYPE
     UNITS          "seconds"
     MAX-ACCESS     read-create
     STATUS         deprecated
-    DESCRIPTION   
+    DESCRIPTION
         "The number of seconds elapsed since the counters were last
-         cleared.  
+         cleared.
 
          Writing the value zero will cause the servers counters to be
          cleared and the clear time will be set to zero.  Writing any
@@ -320,7 +315,7 @@ etsysRadiusAuthClientServerStatus OBJECT-TYPE
     SYNTAX         RowStatus
     MAX-ACCESS     read-create
     STATUS         current
-    DESCRIPTION   
+    DESCRIPTION
         "The row status of this conceptual row in the table.
 
          active
@@ -387,21 +382,20 @@ etsysRadiusAuthClientServerRealmType OBJECT-TYPE
                              to gain access to the network via 802.1X,
                              Port Web Authentication, MAC Authentication,
                              etc.
-
          nms(4)            - the server will only be available for
                              authenticating users that are attempting
-                             to gain access to the network via network 
+                             to gain access to the network via network
                              virtualization or virtual machine tracking
                              using a network management system.  This realm
                              type is only allowed for backwards compatibility
                              and is not included when any is specified.
-        
+
          Non-default values for this object should be used when there is
          a desire to have one set of servers used for authenticating
          management access requests and a different set used for
          authenticating network access requests.  When this object has
          the value of any(1) then the associated server will be in each
-         of the mgmtAccess and networkAccess sets.  The precedence order 
+         of the mgmtAccess and networkAccess sets.  The precedence order
          defined by the relative value of the etsysRadiusAuthServerIndex
          will be maintained within each set of servers."
     DEFVAL { any }
@@ -413,9 +407,9 @@ etsysRadiusAuthClientServerTimeout OBJECT-TYPE
     STATUS current
     DESCRIPTION
         "The number of seconds to wait for a RADIUS Server to respond to
-         a request.  A value of -1 indicates that the server timeout 
-         specified by etsysRadiusAuthClientRetryTimeout should be used 
-         for this server.  Maintaining the value of this object across 
+         a request.  A value of -1 indicates that the server timeout
+         specified by etsysRadiusAuthClientRetryTimeout should be used
+         for this server.  Maintaining the value of this object across
          agent reboots is REQUIRED."
     DEFVAL { -1 }
     ::= { etsysRadiusAuthServerEntry 10 }
@@ -426,10 +420,10 @@ etsysRadiusAuthClientServerRetries OBJECT-TYPE
     STATUS current
     DESCRIPTION
         "The number of times to resend an authentication packet if a
-         RADIUS Server does not respond to a request.  A value of -1 
-         indicates that the server retries specified by 
-         etsysRadiusAuthClientRetries should be used for this server.  
-         Maintaining the value of this object across agent reboots is 
+         RADIUS Server does not respond to a request.  A value of -1
+         indicates that the server retries specified by
+         etsysRadiusAuthClientRetries should be used for this server.
+         Maintaining the value of this object across agent reboots is
          REQUIRED."
     DEFVAL { -1 }
     ::= { etsysRadiusAuthServerEntry 11 }
@@ -439,15 +433,15 @@ etsysRadiusAuthClientServerStickyMaxSessions OBJECT-TYPE
     MAX-ACCESS read-create
     STATUS current
     DESCRIPTION
-        "The maximum number of sessions associated with this server when 
-         using the sticky round robin authentication retransmission 
-         algorithm.  This value is not used when other retransmission 
+        "The maximum number of sessions associated with this server when
+         using the sticky round robin authentication retransmission
+         algorithm.  This value is not used when other retransmission
          algorithms are being utilized.
 
          Sessions that are successfully authenticated with this server
          are considered associated.
 
-         Maintaining the value of this object across agent reboots is 
+         Maintaining the value of this object across agent reboots is
          REQUIRED."
     ::= { etsysRadiusAuthServerEntry 12 }
 
@@ -456,9 +450,9 @@ etsysRadiusAuthClientServerStickyCurSessions OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS current
     DESCRIPTION
-        "The current number of sessions associated with this server when 
-         using the sticky round robin authentication retransmission 
-         algorithm.  This value is not used when other retransmission 
+        "The current number of sessions associated with this server when
+         using the sticky round robin authentication retransmission
+         algorithm.  This value is not used when other retransmission
          algorithms are being utilized.
 
          Sessions that are successfully authenticated with this server
@@ -481,16 +475,16 @@ etsysRadiusAuthClientServerClientAddress OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-        "The encoded unicast IP address of a local system interface.  
+        "The encoded unicast IP address of a local system interface.
          RADIUS requests will be sent from this address."
     ::= { etsysRadiusAuthServerEntry 15 }
 
 etsysRadiusAuthClientServerClientVirtualRouterName OBJECT-TYPE
-    SYNTAX         SnmpAdminString (SIZE(0..32))
+    SYNTAX         OCTET STRING (SIZE(0..32))
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-        "The name of the local system virtual router that traffic 
+        "The name of the local system virtual router that traffic
          sent to this RADIUS server should be associated with.
 
          Writing this object with a zero length string clears the
@@ -509,12 +503,12 @@ etsysRadiusAuthClientAttrMgmtPassword OBJECT-TYPE
       MAX-ACCESS     read-write
       STATUS         current
       DESCRIPTION
-                "This value indicates which method is being used to send 
-                 management access passwords to the RADIUS server.  
+                "This value indicates which method is being used to send
+                 management access passwords to the RADIUS server.
 
                  standard(1) - Use the User-Password attribute at defined in
                                RFC2865
-                 mschapv2(2) - Use the MS-CHAP2-Response attribute as defined 
+                 mschapv2(2) - Use the MS-CHAP2-Response attribute as defined
                                in RFC2548
 
                  This parameter value is maintained across system reboots."
@@ -529,34 +523,34 @@ etsysRadiusAuthClientRetransmissionAlgorithm OBJECT-TYPE
     MAX-ACCESS     read-write
     STATUS         current
     DESCRIPTION
-        "This indicates which method is being used for the 
+        "This indicates which method is being used for the
          authentication retransmission algorithm.
 
          standard(1) - this is the legacy Enterasys authentication
           retransmission algorithm.  It is a combination of back off
           where the highest priority server is always used first for
-          every authentication transaction and round robin where 
+          every authentication transaction and round robin where
           if the highest priority server is unable to respond within
           the configured timeout period the software immediately moves
           to the next highest priority server in the list.
 
-         roundRobin(2) - Each new authentication transaction uses the 
+         roundRobin(2) - Each new authentication transaction uses the
           next highest priority server from the server that was initially
           used for the transaction prior. After the lowest priority server
-          in the list is used the next transaction will use the highest 
+          in the list is used the next transaction will use the highest
           priority server.
 
-         stickyRoundRobin(3) - Each new authentication transaction uses the 
-          next highest priority server as in roundRobin except when that 
+         stickyRoundRobin(3) - Each new authentication transaction uses the
+          next highest priority server as in roundRobin except when that
           session is either currently associated with a server already or
-          has been associated with a server in the past.  
-          etsysRadiusAuthClientServerStickyMaxSessions and 
-          etsysRadiusAuthClientServerStickyCurSessions values are used 
-          to determine when previously associated sessions need to be 
+          has been associated with a server in the past.
+          etsysRadiusAuthClientServerStickyMaxSessions and
+          etsysRadiusAuthClientServerStickyCurSessions values are used
+          to determine when previously associated sessions need to be
           associated with less used servers.
 
          This list of enumeration constants is subject to
-         change. This parameter value is maintained across 
+         change. This parameter value is maintained across
          system reboots."
    ::= { etsysRadiusAuthClientMIBObjects 7 }
 
@@ -567,9 +561,9 @@ etsysRadiusAuthClientMgmtRetryTimeout OBJECT-TYPE
     STATUS         current
     DESCRIPTION
         "The number of seconds to wait for a RADIUS Server to respond to
-         a request when processing management sessions.  Maintaining the 
-         value of this object across agent reboots is REQUIRED.  
-         A value of -1 indicates that the value in 
+         a request when processing management sessions.  Maintaining the
+         value of this object across agent reboots is REQUIRED.
+         A value of -1 indicates that the value in
          etsysRadiusAuthClientRetryTimeout should be used."
     DEFVAL { -1 }
     ::= { etsysRadiusAuthClientMIBObjects 8 }
@@ -581,9 +575,9 @@ etsysRadiusAuthClientNetworkRetryTimeout OBJECT-TYPE
     STATUS         current
     DESCRIPTION
         "The number of seconds to wait for a RADIUS Server to respond to
-         a request when procesing network sessions.  Maintaining the 
-         value of this object across agent reboots is REQUIRED.  
-         A value of -1 indicates that the value in 
+         a request when procesing network sessions.  Maintaining the
+         value of this object across agent reboots is REQUIRED.
+         A value of -1 indicates that the value in
          etsysRadiusAuthClientRetryTimeout should be used."
     DEFVAL { -1 }
     ::= { etsysRadiusAuthClientMIBObjects 9 }
@@ -595,11 +589,11 @@ etsysRadiusAuthClientNmsRetryTimeout OBJECT-TYPE
     STATUS         current
     DESCRIPTION
         "The number of seconds to wait for a RADIUS Server to respond to
-         a request when procesing NMS sessions.  Maintaining the 
-         value of this object across agent reboots is REQUIRED.  
-         A value of -1 indicates that the value in 
+         a request when procesing NMS sessions.  Maintaining the
+         value of this object across agent reboots is REQUIRED.
+         A value of -1 indicates that the value in
          etsysRadiusAuthClientRetryTimeout should be used."
-    DEFVAL { -1 }     
+    DEFVAL { -1 }
     ::= { etsysRadiusAuthClientMIBObjects 10 }
 
 etsysRadiusAuthClientMgmtEnable OBJECT-TYPE
@@ -613,10 +607,10 @@ etsysRadiusAuthClientMgmtEnable OBJECT-TYPE
     DESCRIPTION
         "Controls and indicates the operational state of the RADIUS
          client functionality for management sessions.  Maintaining
-         the value of this object across agent reboots is REQUIRED. 
-         The unset value (0) indicates that the value in 
+         the value of this object across agent reboots is REQUIRED.
+         The unset value (0) indicates that the value in
          etsysRadiusAuthClientEnable should be used."
-    DEFVAL { unset }     
+    DEFVAL { unset }
     ::= { etsysRadiusAuthClientMIBObjects 11 }
 
 etsysRadiusAuthClientNetworkEnable OBJECT-TYPE
@@ -630,8 +624,8 @@ etsysRadiusAuthClientNetworkEnable OBJECT-TYPE
     DESCRIPTION
         "Controls and indicates the operational state of the RADIUS
          client functionality for network sessions.  Maintaining
-         the value of this object across agent reboots is REQUIRED. 
-         The unset value (0) indicates that the value in 
+         the value of this object across agent reboots is REQUIRED.
+         The unset value (0) indicates that the value in
          etsysRadiusAuthClientEnable should be used."
     DEFVAL { unset }
     ::= { etsysRadiusAuthClientMIBObjects 12 }
@@ -671,10 +665,10 @@ etsysRadiusAuthClientMIBGroup OBJECT-GROUP
     STATUS  deprecated
     DESCRIPTION
         "The basic collection of objects providing a proprietary
-         extension to the standard RADIUS Client MIB. 
+         extension to the standard RADIUS Client MIB.
 
          This MIB provides read-write access to configuration objects
-         not provided in the standard RADIUS Authentication Client 
+         not provided in the standard RADIUS Authentication Client
          MIB (RFC2618)."
      ::= { etsysRadiusAuthClientMIBGroups 1 }
 
@@ -694,10 +688,10 @@ etsysRadiusAuthClientMIBGroupV2 OBJECT-GROUP
     STATUS  deprecated
     DESCRIPTION
         "The basic collection of objects providing a proprietary
-         extension to the standard RADIUS Client MIB. 
+         extension to the standard RADIUS Client MIB.
 
          This MIB provides read-write access to configuration objects
-         not provided in the standard RADIUS Authentication Client 
+         not provided in the standard RADIUS Authentication Client
          MIB (RFC2618)."
      ::= { etsysRadiusAuthClientMIBGroups 2 }
 

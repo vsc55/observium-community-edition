@@ -13,6 +13,7 @@
 // Observium Includes
 
 require_once($config['install_dir'] . "/includes/common.inc.php"); // already included in observium.inc.php before definitions
+include_once($config['install_dir'] . "/includes/cache.inc.php");
 include_once($config['install_dir'] . "/includes/http.inc.php");
 include_once($config['install_dir'] . "/includes/encrypt.inc.php");
 include_once($config['install_dir'] . "/includes/rrdtool.inc.php");
@@ -24,6 +25,7 @@ include_once($config['install_dir'] . "/includes/snmp.inc.php");
 include_once($config['install_dir'] . "/includes/entities.inc.php");
 include_once($config['install_dir'] . "/includes/geolocation.inc.php");
 include_once($config['install_dir'] . "/includes/alerts.inc.php");
+include_once($config['install_dir'] . "/includes/notifications.inc.php");
 
 $fincludes = [
     'groups', 'billing', // Not exist in a community edition
@@ -94,6 +96,12 @@ function messagebus_send($message)
  *   'action' => 'entity_name' Call rewrite_entity_name()
  *   'action' => 'urlencode'  Call rawurlencode()
  *   'action' => 'urldecode'  Call rawurldecode()
+ *   'action' => 'base64_encode' Call base64_encode()
+ *   'action' => 'base64_decode' Call base64_decode()
+ *   'action' => 'json_decode' Call safe_json_decode()
+ *   'action' => 'hash'       Hash string with algorithm 'algo' (md5, sha1, etc)
+ *   'action' => 'substring'/'substr' Substring from 'start' with 'length'
+ *   'action' => 'sprintf'    Format string with 'format'
  *   'action' => 'escape'     Call escape_html()
  *
  * @return string|array|null Transformed string
@@ -182,14 +190,68 @@ function string_transform($string, $transformations)
             case 'regex_match':
             case 'preg_match':
                 if (preg_match($transformation['from'], $string, $matches)) {
-                    $string = array_tag_replace($matches, $transformation['to']);
+                    // Replace by tags, unknown tags must be cleaned
+                    $string = array_tag_replace_clean($matches, $transformation['to']);
                 }
                 break;
 
             case 'map':
                 // Map string by key -> value
-                if (is_array($transformation['map']) && isset($transformation['map'][$string])) {
-                    $string = $transformation['map'][$string];
+                if (is_array($transformation['map'])) {
+                    if (isset($transformation['map'][$string])) {
+                        $string = $transformation['map'][$string];
+                    } elseif (isset($transformation['map']['default'])) {
+                        $string = $transformation['map']['default'];
+                    }
+                }
+                break;
+
+            case 'conditional_map':
+                // Map based on complex conditions (supports message_tags context)
+                if (is_array($transformation['conditions'])) {
+                    $message_tags = $transformation['message_tags'] ?? [];
+
+                    foreach ($transformation['conditions'] as $condition => $value) {
+                        if ($condition === 'default') {
+                            continue; // Handle default last
+                        }
+
+                        if (is_array($value)) {
+                            // Nested conditions
+                            if (evaluate_string_condition($condition, $message_tags, $string)) {
+                                // Recursively evaluate nested conditions
+                                $nested_transform = [
+                                    'action' => 'conditional_map',
+                                    'conditions' => $value,
+                                    'message_tags' => $message_tags
+                                ];
+                                $string = string_transform($string, $nested_transform);
+                                break;
+                            }
+                        } else {
+                            // Simple condition
+                            if (evaluate_string_condition($condition, $message_tags, $string)) {
+                                $string = $value;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Apply default if no conditions matched and we haven't changed the string
+                    if (isset($transformation['conditions']['default'])) {
+                        // Only apply default if no condition was matched (string unchanged from original)
+                        // This is tricky - we'd need to track if string changed, but let's assume it didn't if we got here
+                        $original_matched = false;
+                        foreach ($transformation['conditions'] as $condition => $value) {
+                            if ($condition !== 'default' && evaluate_string_condition($condition, $message_tags, $string)) {
+                                $original_matched = true;
+                                break;
+                            }
+                        }
+                        if (!$original_matched) {
+                            $string = $transformation['conditions']['default'];
+                        }
+                    }
                 }
                 break;
 
@@ -241,6 +303,13 @@ function string_transform($string, $transformations)
                 $string = format_mac($string);
                 break;
 
+            case 'speed':
+            case 'port_speed':
+                // Mostly the same as 'units', but forces 1000 base
+                $string = unit_string_to_numeric($string, 1000);
+                break;
+
+            case 'unit':
             case 'units':
                 // 200kbps -> 200000, 50M -> 52428800
                 $string = unit_string_to_numeric($string);
@@ -258,7 +327,7 @@ function string_transform($string, $transformations)
                 } else {
                     $delimiter = ' ';
                 }
-                $array = explode($delimiter, $string);
+                $array = safe_explode($delimiter, $string);
                 // Get array index (default is first)
                 if (!isset($transformation['index'])) {
                     $transformation['index'] = 'first';
@@ -271,20 +340,19 @@ function string_transform($string, $transformations)
                         break;
                     case 'first':
                     case 'begin':
-                        $string = array_shift($array);
+                        $string = array_first($array);
                         break;
                     case 'second':
                     case 'secondary':
                     case 'two':
-                        array_shift($array);
-                        $string = array_shift($array);
+                        $string = $array[1] ?? NULL;
                         break;
                     case 'last':
                     case 'end':
-                        $string = array_pop($array);
+                        $string = array_last($array);
                         break;
                     default:
-                        if (!safe_empty($array[$transformation['index']])) {
+                        if (isset($array[$transformation['index']])) {
                             $string = $array[$transformation['index']];
                         }
                 }
@@ -298,6 +366,38 @@ function string_transform($string, $transformations)
             case 'urldecode':
             case 'rawurldecode':
                 $string = rawurldecode($string);
+                break;
+
+            case 'base64_encode':
+                $string = safe_base64_encode($string);
+                break;
+
+            case 'base64_decode':
+                $string = safe_base64_decode($string);
+                break;
+
+            case 'json_decode':
+                // Note, this transformation return an array!
+                $string = safe_json_decode($string);
+                break;
+
+            case 'hash':
+                if (isset($transformation['algo']) && in_array($transformation['algo'], hash_algos())) {
+                    $string = hash($transformation['algo'], $string);
+                }
+                break;
+
+            case 'substring':
+            case 'substr':
+                if (isset($transformation['start'])) {
+                    $string = substr($string, $transformation['start'], $transformation['length']);
+                }
+                break;
+
+            case 'sprintf':
+                if (isset($transformation['format'])) {
+                    $string = sprintf($transformation['format'], $string);
+                }
                 break;
 
             case 'escape':
@@ -315,39 +415,92 @@ function string_transform($string, $transformations)
 }
 
 /**
- * Sorts an $array by a passed field.
- *
- * @param array      $array
- * @param string|int $on
- * @param string     $order
- *
- * @return array
+ * Evaluate a condition for string_transform conditional_map
+ * 
+ * @param string $condition Condition string (e.g., "ALERT_STATUS == 0")
+ * @param array $message_tags Message tags for variable lookup
+ * @param string $current_value Current string value being transformed
+ * @return bool Whether condition is true
  */
-function array_sort($array, $on, $order = 'SORT_ASC')
-{
+function evaluate_string_condition($condition, $message_tags = [], $current_value = '') {
+    // Handle str_contains function
+    if (preg_match('/str_contains\s*\(\s*([A-Z_]+)\s*,\s*["\']([^"\']+)["\']\s*\)/', $condition, $matches)) {
+        $field = $matches[1];
+        $needle = $matches[2];
+        return isset($message_tags[$field]) && str_contains($message_tags[$field], $needle);
+    }
+
+    // Handle equality conditions with quotes
+    if (preg_match('/([A-Z_]+)\s*==\s*["\']([^"\']+)["\']/', $condition, $matches)) {
+        $field = $matches[1];
+        $value = $matches[2];
+        return isset($message_tags[$field]) && $message_tags[$field] == $value;
+    }
+
+    // Handle numeric equality conditions
+    if (preg_match('/([A-Z_]+)\s*==\s*(\d+)/', $condition, $matches)) {
+        $field = $matches[1];
+        $value = $matches[2];
+        return isset($message_tags[$field]) && $message_tags[$field] == $value;
+    }
+
+    // Handle numeric conditions with OR (e.g., "ALERT_STATUS == 0 || ALERT_STATUS == 9")
+    if (preg_match('/([A-Z_]+)\s*==\s*(\d+)\s*\|\|\s*([A-Z_]+)\s*==\s*(\d+)/', $condition, $matches)) {
+        $field1 = $matches[1];
+        $value1 = $matches[2];
+        $field2 = $matches[3];
+        $value2 = $matches[4];
+        return (isset($message_tags[$field1]) && $message_tags[$field1] == $value1) ||
+               (isset($message_tags[$field2]) && $message_tags[$field2] == $value2);
+    }
+
+    return false;
+}
+
+/**
+ * Sort an array by a single field while preserving keys.
+ *
+ * Behaviour:
+ *   - If the value is an array and contains the key $on, it is used as sort value.
+ *   - If the value is not an array, the value itself is used as sort value.
+ *   - Array elements that do not contain $on are excluded from the result.
+ *   - Keys of the original array are preserved.
+ *
+ * @param array      $array Input array.
+ * @param string|int $on    Field name or index to sort by.
+ * @param string|int $order Sort order: 'SORT_ASC', 'SORT_DESC', SORT_ASC or SORT_DESC.
+ *
+ * @return array Sorted array with preserved keys.
+ */
+function array_sort($array, $on, $order = 'SORT_ASC') {
     $new_array      = [];
     $sortable_array = [];
 
     if (safe_count($array) > 0) {
         foreach ($array as $k => $v) {
             if (is_array($v)) {
-                foreach ($v as $k2 => $v2) {
-                    if ($k2 == $on) {
-                        $sortable_array[$k] = $v2;
-                    }
+                if (array_key_exists($on, $v)) {
+                    $sortable_array[$k] = $v[$on];
                 }
+                // If $on does not exist, this element is skipped.
             } else {
+                // Non-array value: sort by the value itself.
                 $sortable_array[$k] = $v;
             }
         }
 
         switch ($order) {
+            case SORT_ASC:
             case 'SORT_ASC':
                 asort($sortable_array);
                 break;
+            case SORT_DESC:
             case 'SORT_DESC':
                 arsort($sortable_array);
                 break;
+            default:
+                // Fallback: default ascending.
+                asort($sortable_array);
         }
 
         foreach ($sortable_array as $k => $v) {
@@ -359,40 +512,206 @@ function array_sort($array, $on, $order = 'SORT_ASC')
 }
 
 /**
- * Another sort array function.
- * http://php.net/manual/en/function.array-multisort.php#100534
+ * Sort a multidimensional array by one or more fields using array_multisort().
  *
- * @return array
+ * Usage examples:
+ *   // Sort by 'name' ascending
+ *   $sorted = array_sort_by($data, 'name');
+ *
+ *   // Sort by 'name' ascending (natural), then by 'age' descending (numeric)
+ *   $sorted = array_sort_by(
+ *       $data,
+ *       'name', SORT_ASC, SORT_NATURAL,
+ *       'age',  SORT_DESC, SORT_NUMERIC
+ *   );
+ *
+ * Behaviour:
+ *   - String arguments are treated as field names and automatically converted
+ *     into column arrays for array_multisort().
+ *   - Non-string arguments are passed directly to array_multisort()
+ *     (e.g. SORT_ASC, SORT_DESC, SORT_NATURAL, SORT_NUMERIC).
+ *   - Missing fields result in NULL values for sorting.
+ *   - Numeric keys WILL be reindexed by array_multisort().
+ *
+ * @param array $data        The array to sort.
+ * @param mixed ...$fields   Field names and sort flags in array_multisort() order.
+ *
+ * @return array             Sorted array (keys may be reindexed).
  */
-function array_sort_by()
-{
+function array_sort_by() {
+
     $args = func_get_args();
     $data = array_shift($args);
+
+    // Empty array, nothing to sort
+    if (!is_array($data) || !$data) {
+        return (array)$data;
+    }
+
+    // Convert field names into sortable column arrays
     foreach ($args as $n => $field) {
         if (is_string($field)) {
-            $tmp = [];
+            $column = [];
             foreach ($data as $key => $row) {
-                $tmp[$key] = $row[$field];
+                // Use NULL when the field is missing or the row is not an array
+                $column[$key] = (is_array($row) && array_key_exists($field, $row)) ? $row[$field] : NULL;
             }
-            $args[$n] = $tmp;
+            $args[$n] = $column;
         }
     }
     $args[] = &$data;
     array_multisort(...$args);
-    return array_pop($args);
+
+    return $data;
 }
 
-function array_sort_order(&$vars, $inverted = FALSE) {
-    switch ($vars['sort_order']) {
-        case 'desc':
-            return !$inverted ? SORT_DESC : SORT_ASC;
-
-        case 'reset':
-            unset($vars['sort'], $vars['sort_order']);
-        // no break here
-        default:
-            return !$inverted ? SORT_ASC : SORT_DESC;
+/**
+ * Sort array of items by custom order of values in $sort_key.
+ * Keys of the original array are preserved.
+ *
+ * @param array  $array       Array to sort
+ * @param array  $sort_order  Ordered list of values in desired priority
+ * @param string $sort_key    Key inside each element to compare
+ * @param bool   $strict      If TRUE, items without $sort_key are removed.
+ *
+ * @return array Sorted array preserving keys
+ */
+function array_sort_by_order(array $array, array $sort_order, $sort_key, $strict = FALSE) {
+    if (empty($array) || empty($sort_order) || empty($sort_key)) {
+        return $array;
     }
+
+    //array_print_pretty($array, '$unsorted');
+    // Strict mode: drop items missing the sort key
+    if ($strict) {
+        foreach ($array as $k => $v) {
+            if (!array_key_exists($sort_key, $v)) {
+                unset($array[$k]);
+            }
+        }
+        if (!$array) {
+            return $array;
+        }
+    }
+
+    // Flip order for fast lookup
+    $order_map = array_flip($sort_order);
+
+    uasort($array, static function($a, $b) use ($order_map, $sort_key) {
+
+        // Get key values, defaulting to empty string if not set
+        $a_val = $a[$sort_key] ?? '';
+        $b_val = $b[$sort_key] ?? '';
+
+        // Get order positions for comparison
+        $a_order = $order_map[$a_val] ?? PHP_INT_MAX;
+        $b_order = $order_map[$b_val] ?? PHP_INT_MAX;
+
+        // Return comparison result
+        return $a_order <=> $b_order;
+    });
+
+    //array_print_pretty($array, '$sorted');
+    return $array;
+}
+
+/**
+ * Determine SORT_ASC or SORT_DESC based on $vars['sort_order'].
+ *
+ * Behaviour:
+ *   - 'desc'  → SORT_DESC (or SORT_ASC if inverted)
+ *   - 'asc'   → SORT_ASC (or SORT_DESC if inverted)
+ *   - 'reset' → removes sort keys from $vars and returns default direction
+ *   - missing or unknown → default ascending (or descending if inverted)
+ *
+ * @param array $vars      Input request variables, passed by reference.
+ * @param bool  $inverted  If true, returned direction is flipped.
+ *
+ * @return int SORT_ASC or SORT_DESC
+ */
+function sort_order(&$vars, $inverted = FALSE) {
+    $dir = strtolower($vars['sort_order'] ?? '');
+
+    if ($dir === 'desc') {
+        return $inverted ? SORT_ASC : SORT_DESC;
+    }
+
+    if ($dir === 'reset') {
+        // reset vars
+        unset($vars['sort'], $vars['sort_order']);
+    }
+
+    // Default: ascending
+    return $inverted ? SORT_DESC : SORT_ASC;
+}
+
+function array_merge_indexed($array1, $array2) {
+    foreach ($array2 as $key => $value) {
+        if (isset($array1[$key]) && is_array($array1[$key]) && is_array($value)) {
+            $array1[$key] = array_merge_indexed($array1[$key], $value);
+        } else {
+            $array1[$key] = $value;
+        }
+    }
+    //print_vars($array1);
+    return $array1;
+}
+
+// Merge 2 arrays by their index, ie:
+//  Array( [1] => [TestCase] = '1' ) + Array( [1] => [Bananas] = 'Yes )
+// becomes
+//  Array( [1] => [TestCase] = '1', [Bananas] = 'Yes' )
+//
+// array_merge_recursive() only works for string keys, not numeric as we get from snmp functions.
+//
+// Accepts infinite parameters.
+//
+// Currently not used. Does not cope well with multilevel arrays.
+// DOCME needs phpdoc block
+// MOVEME to includes/common.inc.php
+/*
+function array_merge_indexed()
+{
+  $array = array();
+
+  foreach (func_get_args() as $array2)
+  {
+    if (count($array2) == 0) continue; // Skip for loop for empty array, infinite loop ahead.
+    for ($i = 0; $i <= count($array2); $i++)
+    {
+      foreach (array_keys($array2[$i]) as $key)
+      {
+        $array[$i][$key] = $array2[$i][$key];
+      }
+    }
+  }
+
+  return $array;
+}
+*/
+
+function array_merge_map($array1, &$array2, $map) {
+
+    foreach ($array1 as &$item1) {
+        foreach ($array2 as $key2 => $item2) {
+            $match = TRUE;
+            foreach ($map as $field1 => $field2) {
+                if (!isset($item1[$field1], $item2[$field2]) ||
+                    $item1[$field1] !== $item2[$field2]) {
+                    $match = FALSE;
+                    break;
+                }
+            }
+            if ($match) {
+                $item1 = array_merge($item1, $item2);
+                unset($array2[$key2]);
+                break;
+            }
+        }
+    }
+    unset($item1);
+
+    return $array1;
 }
 
 // A function to process numerical values according to a $scale value
@@ -442,18 +761,33 @@ function diff($old, $new)
 }
 
 /**
+ * Split a string into the main part and the last word.
+ *
+ * @param string $string
+ * @param string $split
+ *
+ * @return array [ $first, $last ]
+ */
+function str_split_last($string, $split = ' ') {
+    $parts = explode($split, $string);
+    $last  = array_pop($parts);
+    $first = implode($split, $parts);
+
+    return [ $first, $last ];
+}
+
+/**
  * Return similar part of two strings (or empty)
  *
- * @param string $old First string
- * @param string $new Second string
+ * @param string $string1 First string
+ * @param string $string2 Second string
  *
  * @return string Similar part of two strings
  */
-function str_similar($old, $new)
-{
+function str_similar($string1, $string2) {
 
     $ret  = [];
-    $diff = diff(preg_split("/[\s]+/u", $old), preg_split("/[\s]+/u", $new));
+    $diff = diff(preg_split("/[\s\_]+/u", $string1), preg_split("/[\s\_]+/u", $string2));
     foreach ($diff as $k) {
         if (!is_array($k)) {
             $ret[] = $k;
@@ -465,15 +799,14 @@ function str_similar($old, $new)
 /**
  * Return sets of all similar strings from passed array.
  *
- * @param array   $array       Array with strings for find similar
- * @param boolean $return_flip If TRUE return pairs String -> Similar part,
- *                             instead vice versa by default return set of arrays Similar part -> Strings
- * @param integer $similarity  Percent of similarity compared string, mostly common is 90%
+ * @param array   $array       Array with strings for finding similar items.
+ * @param boolean $return_flip If TRUE, returns pairs: String -> Similar part.
+ *                             Otherwise, returns sets: Similar part -> Strings.
+ * @param integer $similarity  Minimum similarity percentage (commonly 89%).
  *
- * @return array Array with sets of similar strings
+ * @return array Array with sets of similar strings.
  */
-function find_similar($array, $return_flip = FALSE, $similarity = 89)
-{
+function find_similar($array, $return_flip = FALSE, $similarity = 89) {
     if (!is_array($array)) {
         return [];
     }
@@ -485,64 +818,85 @@ function find_similar($array, $return_flip = FALSE, $similarity = 89)
     $same_array_flip = [];
 
     // $i = 0; // DEBUG
-    foreach ($array as $k => $old) {
-        foreach ($array2 as $k2 => $new) {
-            if ($k === $k2) {
+    foreach ($array as $k1 => $string1) {
+        if (!isset($array2[$k1])) {
+            // Already processed in a previous iteration
+            continue;
+        }
+
+        [ $first1, $last1 ] = str_split_last($string1);
+        $simple_compare = !empty($first1) && is_numeric($last1);
+
+        foreach ($array2 as $k2 => $string2) {
+            if ($k1 === $k2) {
                 continue;
-            } // Skip same array elements
+            }
 
-            // Detect string similarity
-            similar_text($old, $new, $perc);
+            $percent = 0;
 
-            // $i++; echo "$i ($perc %): '$old' <> '$new' (".str_similar($old, $new).")\n"; // DEBUG
+            if ($simple_compare) {
+                // Simple comparison for strings ending with numbers
+                [ $first2, $last2 ] = str_split_last($string2);
 
-            if ($perc > $similarity) {
-                if (isset($same_array_flip[$old])) {
+                if ($first1 === $first2 && is_numeric($last2)) {
+                    $percent = 99; // Forced similarity
+                }
+            }
+
+            if ($percent === 0) {
+                // Use similar_text() for general similarity check
+                similar_text($string1, $string2, $percent);
+            }
+
+            // $i++; echo "$i ($percent %): '$string1' <> '$string2' (".str_similar($string1, $string2).")\n"; // DEBUG
+
+            if ($percent > $similarity) {
+
+                if (isset($same_array_flip[$string1])) {
                     // This is found already similar string by previous round(s)
-                    $same                  = $same_array_flip[$old];
-                    $same_array_flip[$new] = $same;
-                } elseif (isset($same_array_flip[$new])) {
+                    $same                  = $same_array_flip[$string1];
+                    $same_array_flip[$string2] = $same;
+                } elseif (isset($same_array_flip[$string2])) {
                     // This is found already similar string by previous round(s)
-                    $same                  = $same_array_flip[$new];
-                    $same_array_flip[$old] = $same;
+                    $same                  = $same_array_flip[$string2];
+                    $same_array_flip[$string1] = $same;
                 } else {
                     // New similarity, get similar string part
-                    $same = str_similar($old, $new);
+                    $same = str_similar($string1, $string2);
 
                     // Return array pairs as:
                     // String -> Similar part
-                    $same_array_flip[$old] = $same;
-                    $same_array_flip[$new] = $same;
+                    $same_array_flip[$string1] = $same;
+                    $same_array_flip[$string2] = $same;
                 }
 
                 // Return array elements as:
                 // Similar part -> Strings
-                if (!isset($same_array[$same]) || !in_array($old, $same_array[$same])) {
-                    $same_array[$same][] = $old;
+                if (!isset($same_array[$same]) || !in_array($string1, $same_array[$same])) {
+                    $same_array[$same][] = $string1;
                 }
-                $same_array[$same][] = $new;
+                $same_array[$same][] = $string2;
 
-                unset($array2[$k]); // Remove array element if similar found
+                unset($array2[$k1]); // Remove an array element if similar found
 
                 break;
             }
         }
-        if (!isset($same_array_flip[$old])) {
-            // Similarity not found, just add as single string
-            $same_array_flip[$old] = $old;
-            $same_array[$old][]    = $old;
+
+        if (!isset($same_array_flip[$string1])) {
+            // No similar strings found — add as its own group
+            $same_array[$string1][] = $string1;
+            $same_array_flip[$string1] = $string1;
         }
     }
 
     if ($return_flip) {
-        // Return array pairs as:
-        // String -> Similar part
+        // Return format: String -> Group Key
         return $same_array_flip;
-    } else {
-        // Return array elements as:
-        // Similar part -> Strings
-        return $same_array;
     }
+
+    // Return format: Group Key -> Array of Similar Strings
+    return $same_array;
 }
 
 /**
@@ -550,27 +904,25 @@ function find_similar($array, $return_flip = FALSE, $similarity = 89)
  *
  * @param string $filename Filename for include
  *
- * @return boolean Status of include
+ * @return bool Status of include
  */
-function include_wrapper($filename)
-{
+function include_wrapper($filename) {
     global $config;
 
     $status = include($filename);
 
-    return (boolean)$status;
+    return (bool)$status;
 }
 
 /**
- * Compares Numeric OID with $needle. Return TRUE if match.
+ * Compares Numeric OID with $needle. Return TRUE when matched.
  *
  * @param string       $oid    Numeric OID for compare
  * @param string|array $needle Compare with this
  *
- * @return bool                TRUE if match, otherwise FALSE
+ * @return bool                TRUE when matched, otherwise FALSE
  */
-function match_oid_num($oid, $needle)
-{
+function match_oid_num($oid, $needle) {
     if (is_array($needle)) {
         foreach ($needle as $entry) {
             //print_debug("OID $oid compare to $entry = ");
@@ -585,18 +937,18 @@ function match_oid_num($oid, $needle)
 
     # validate OID
     $oid = trim($oid);
-    if (!preg_match('/^(?:(?<start>\.?)(?:\d+(?:\.\d+)+)|\.\d+)$/', $oid, $matches)) {
+    if (empty($oid) || !preg_match('/^(\.?(\d+(?:\.\d+)+)|\.\d+)$/', $oid)) {
         print_debug("Incorrect OID passed to match_oid_num('$oid', '$needle').");
         return FALSE;
     }
     // append leading point if missing (1.3.6 -> .1.3.6)
-    if (isset($matches['start']) && $matches['start'] === '') {
+    if (!str_starts_with($oid, '.')) {
         $oid = '.' . $oid;
     }
 
     # validate needle (in other cases use regex)
     $needle = trim($needle);
-    if (!preg_match('/^(?:(?<start>\.?)(?:\d+(?:\.\d+)+)|\.\d+)(?<end>\.)?$/', $needle, $matches)) {
+    if (!preg_match('/^(?:\.?(\d+(\.\d+)+)|\.\d+)\.?$/', $needle)) {
 
         // Try simple regex matches, ie .1.*.1., .1.3.(4|5|9), .1.3.4[56].*
         if (preg_match('/^(?<start>\.?)\d+(?:\.(\d+|[\d\[\]\-]+|[\d\(\)\|]+|[\d\*]+))*(?<end>\.)?$/', $needle, $matches)) {
@@ -605,7 +957,7 @@ function match_oid_num($oid, $needle)
                 $needle = '.' . $needle;
             }
 
-            $needle_pattern = str_replace(['.', '*'], ['\.', '.*?'], $needle);
+            $needle_pattern = str_replace([ '.', '*' ], [ '\.', '.*?' ], $needle);
             if (isset($matches['end']) && $matches['end'] === '.') {
                 $needle_pattern .= '\d+(\.\d+)*';
             } else {
@@ -620,19 +972,19 @@ function match_oid_num($oid, $needle)
         return FALSE;
     }
     // append leading point if missing (1.3.6 -> .1.3.6)
-    if (isset($matches['start']) && $matches['start'] === '') {
+    if (!str_starts_with($needle, '.')) {
         $needle = '.' . $needle;
     }
 
     // Use wildcard compare if sysObjectID definition have '.' at end, ie:
     //   .1.3.6.1.4.1.2011.1.
-    if (isset($matches['end']) && $matches['end'] === '.') {
-        return str_starts($oid, $needle);
+    if (str_ends_with($needle, '.')) {
+        return str_starts_with($oid, $needle);
     }
 
     // Use exact match sysObjectID definition or wildcard compare with '.' at end, ie:
     //   .1.3.6.1.4.1.2011.2.27
-    return $oid === $needle || str_starts($oid, $needle . '.');
+    return $oid === $needle || str_starts_with($oid, $needle . '.');
 }
 
 /**
@@ -750,6 +1102,31 @@ function match_discovery_oids($device, $needle, $sysObjectID = NULL, $sysDescr =
                         break;
                     }
                 }
+                break;
+
+            case 'ifDescr':
+            case 'ifAlias':
+            case 'ifName':
+            case 'ifType':
+                // Limited ports IF-MIB oids, same fetched in ports module
+                $defs = (array)$needle[$oid];
+                foreach (snmp_cache_table($device, $oid, [], 'IF-MIB') as $entry) {
+                    $value = $entry[$oid];
+                    foreach ($defs as $def) {
+                        if (preg_match($def, $value)) {
+                            $matched_defs[] = [ $oid, $def, $value ];
+                            $needle_count--;
+                            $match = TRUE;
+                            break 2;
+                        }
+                    }
+                }
+                // Limited ports IF-MIB oids, prefer from db
+                // if (dbExist('ports', '`device_id` = ?' . generate_query_values_and($needle[$oid], $oid), [ $device['device_id'] ])) {
+                //     $matched_defs[] = [ $oid, 'ports', implode(',', (array)$needle[$oid]) ];
+                //     $needle_count--;
+                //     $match = TRUE;
+                // }
                 break;
 
             case 'package':
@@ -1025,17 +1402,18 @@ function compare_numeric_oids_reverse($oid1, $oid2)
     return compare_numeric_oids($oid2, $oid1);
 }
 
-function set_value_param_definition($param, $def, $entry)
-{
-    $value = NULL;
+function set_value_param_definition($param, $def, $entry) {
+
     $oid   = $def['oid_' . $param];
     if (isset($entry[$oid])) {
-        $value = $entry[$oid];
-    } elseif (isset($def[$param])) {
-        $value = array_tag_replace($entry, $def[$param]);
+        return $entry[$oid];
+    }
+    if (isset($def[$param])) {
+        // Replace tagged definitions and remove unknown tags
+        return array_tag_replace_clean($entry, $def[$param]);
     }
 
-    return $value;
+    return NULL;
 }
 
 // Rename a device
@@ -1095,7 +1473,7 @@ function renamehost($device_id, $new, $source = 'console', $options = []) {
     $old = dbFetchCell("SELECT `hostname` FROM `devices` WHERE `device_id` = ?", [ $device_id ]);
 
     // Test directory mess in /rrd/
-    if (!OBS_RRD_NOLOCAL) {
+    if (!OBS_RRD_REMOTE) {
         if (file_exists($config['rrd_dir'] . '/' . $new)) {
             // directory already exists
             print_error("NOT renamed. Directory rrd/$new already exists");
@@ -1516,7 +1894,7 @@ function scan_port($host, $port, $proto = 'udp', $timeout = 1.0) {
         $start = microtime(TRUE);
         print_debug(fread($handle, 1));
         $timediff = elapsed_time($start);
-        print_debug("Read from socket $host:$port ${timediff}s.");
+        print_debug("Read from socket $host:$port {$timediff}s.");
 
         fclose($handle);
         if ($timediff >= $timeout) {
@@ -1536,19 +1914,21 @@ function scan_port($host, $port, $proto = 'udp', $timeout = 1.0) {
  * Checks device availability by snmp query common oids
  *
  * @param array $device Device array
+ * @param bool  $discovery Try extra snmpable Oids by new or unknown host (not in autodiscovery)
  *
  * @return float SNMP query runtime in milliseconds
  */
 // TESTME needs unit testing
-function is_snmpable($device) {
+function is_snmpable($device, $discovery = TRUE) {
 
     // device cached dns ip
-    $cached_ip = is_pingable_cache_dns(strtolower($device['hostname']));
+    $cached_ip = dns_resolve_cached(strtolower($device['hostname']));
     if ($cached_ip && $device['ip'] !== $cached_ip) {
         // Temporary override cached device IP (right after is_pingable() when IP changed)
         $device['ip'] = $cached_ip;
     }
 
+    $os_generic = empty($device['os']) || $device['os'] === 'generic';
     if (!empty($device['snmpable'])) {
         // Custom OID for check snmpable (can be multiple OIDs by space)
         $oids = [];
@@ -1560,37 +1940,52 @@ function is_snmpable($device) {
         $pos = snmp_get_multi_oid($device, $oids, [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
         //$err   = snmp_error_code();
         $count = safe_count($pos);
-    } elseif (isset($device['os'][0], $GLOBALS['config']['os'][$device['os']]['snmpable']) && $device['os'] !== 'generic') {
+    } elseif (!$os_generic && isset($GLOBALS['config']['os'][$device['os']]['snmpable'])) {
         // Known device os, and defined custom snmpable OIDs
         $pos = snmp_get_multi_oid($device, $GLOBALS['config']['os'][$device['os']]['snmpable'], [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
         //$err   = snmp_error_code();
         $count = safe_count($pos);
+    } elseif (!$os_generic && isset($GLOBALS['config']['os'][$device['os']]['snmp']['noindex'])) {
+        // Known device os, but DERP hardware return common sysDescr/sysObjectID/sysUpTime without indexes
+        // See: netguard os definition
+        $pos = snmp_get_multi_oid($device, '.1.3.6.1.2.1.1.2 .1.3.6.1.2.1.1.3', [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
+        //$err   = snmp_error_code();
+        $count = safe_count($pos);
     } else {
-        // Normal checks by sysObjectID and sysUpTime
+        // Normal checks by sysObjectID.0 and sysUpTime.0
         $pos = snmp_get_multi_oid($device, '.1.3.6.1.2.1.1.2.0 .1.3.6.1.2.1.1.3.0', [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
         //print_vars($pos);
+
         $count = safe_count($pos);
+        $err   = snmp_error_code();
 
-        $err = snmp_error_code();
-
-        if ($count === 0 &&
+        // New device (or os changed) try to all snmpable OIDs
+        // Do not call extra snmpable Oids in autodiscovery
+        if ($count === 0 && $discovery &&                                                                 // skip on autodiscovery!
             $err !== OBS_SNMP_ERROR_AUTHENTICATION_FAILURE && $err !== OBS_SNMP_ERROR_UNSUPPORTED_ALGO && // skip on incorrect auth
-            (empty($device['os']) || !isset($GLOBALS['config']['os'][$device['os']]))) {
-            // New device (or os changed) try to all snmpable OIDs
-            foreach (array_chunk($GLOBALS['config']['os']['generic']['snmpable'], 3) as $snmpable) {
-                $pos = snmp_get_multi_oid($device, $snmpable, [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
-                if ($count = safe_count($pos)) {
-                    break;
-                } // stop foreach on first oids set
+            (empty($device['os']) || !isset($GLOBALS['config']['os'][$device['os']]))) {                  // add new device, try extra Oids
+
+            // Try no indexed common sysObjectID and sysUpTime
+            $pos   = snmp_get_multi_oid($device, '.1.3.6.1.2.1.1.2 .1.3.6.1.2.1.1.3', [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
+            //$err   = snmp_error_code();
+            if ($count = safe_count($pos)) {
+                print_warning("SNMPable warning: Device return SNMPv2-MIB::sysObjectID and SNMPv2-MIB::sysUpTime without Index!");
+                //set_entity_attrib('device', $device, 'snmpv2_no_index', 1); // Too hard for attribs use
+            } else {
+
+                foreach (array_chunk($GLOBALS['config']['os']['generic']['snmpable'], 3) as $snmpable) {
+                    $pos = snmp_get_multi_oid($device, $snmpable, [], 'SNMPv2-MIB', NULL, OBS_SNMP_ALL_NUMERIC);
+                    if ($count = safe_count($pos)) {
+                        break;
+                    } // stop foreach on first oids set
+                }
             }
         }
     }
 
     if (snmp_status() && $count > 0) {
         // SNMP response time in milliseconds.
-        $time_snmp = snmp_runtime() * 1000;
-
-        return number_format($time_snmp, 2, '.', '');
+        return number_format((snmp_runtime() * 1000), 2, '.', '');
     }
 
     return 0;
@@ -1619,7 +2014,7 @@ function is_pingable($hostname, $options = 'all', $ping_skip = FALSE) {
         $device = [ 'hostname' => $hostname ];
     }
 
-    if ($ip = is_pingable_cache_dns($hostname, $options, TRUE)) {
+    if ($ip = dns_resolve_cached($hostname, $options, TRUE)) {
         // Hostname resolved or already IP
         if (str_contains($ip, ':')) {
             // IPv6 need different fping cmd
@@ -1707,29 +2102,18 @@ function is_pingable($hostname, $options = 'all', $ping_skip = FALSE) {
 }
 
 /**
- * Resolve host and cache to ip by all ways (hosts/dns) for all possible cases IPv4/IPv6.
- * Additionally, set dns status cache var for use in poller (is_snmpable()) for reduce dns queries.
+ * Resolve hostname to IP address with support for IPv4/IPv6.
+ * Pure DNS resolution - returns IP or FALSE.
  *
- * @param string       $host
+ * @param string       $host    Hostname or IP address to resolve
  * @param string|array $options all - request any record ipv4/ipv6, ipv4 or a - only ipv4, ipv6 or aaaa - only ipv6
  *
- * @return string|false
+ * @return string|false Resolved IP address or FALSE on failure
  */
-function is_pingable_cache_dns($host, $options = 'all', $update = FALSE) {
-    global $cache;
+function dns_resolve($host, $options = 'all') {
+    global $config;
 
-    $host = strtolower($host);
-
-    // Return cached for is_snmpable() / device_status_array() / poll_device()
-    if (!$update) {
-        $ip = $cache['is_pingable'][$host]['dns_ip'] ?? '';
-
-        print_debug("Return cached '$host' = '$ip'\n");
-        print_debug_vars($cache['is_pingable'][$host]);
-
-        return $ip;
-    }
-
+    $host       = strtolower($host);
     $ping_debug = isset($config['ping']['debug']) && $config['ping']['debug'];
     $try_a      = array_value_exist($options, [ 'all', 'ipv4', 'a' ]);
     $try_aaaa   = array_value_exist($options, [ 'all', 'ipv6', 'aaaa' ]);
@@ -1742,77 +2126,107 @@ function is_pingable_cache_dns($host, $options = 'all', $update = FALSE) {
         } else {
             $debug_msg = 'IPv6 only';
         }
-        print_cli("Try resolve '$host' in DNS as $debug_msg..\n");
+        print_cli("Resolving '$host' as $debug_msg..\n");
     }
-
-    // Set initially dns status as ok and ip reset
-    $cache['is_pingable'][$host] = [ 'dns_status' => 'ok',
-                                     'dns_ip'     => '' ];
 
     // First, check that host is already IP address
     if ($ip_version = get_ip_version($host)) {
-
-        // Ping by IP
+        // Validate IP version matches requested options
         if ($ip_version === 4 && !$try_a) {
             if ($ping_debug) {
-                logfile('debug.log', __FUNCTION__ . "() | DEVICE: $host | Passed IPv4 address but device use IPv6 transport");
+                logfile('debug.log', __FUNCTION__ . "() | HOST: $host | IPv4 address provided but only IPv6 requested");
             }
-            print_debug('Into function ' . __FUNCTION__ . '() passed IPv4 address ('.$host.'but device use IPv6 transport');
-
-            // Set dns status incorrect, because resolved IPv4 but requested IPv6
-            $cache['is_pingable'][$host]['dns_status'] = 'incorrect';
-
+            print_debug('Into function ' . __FUNCTION__ . '() passed IPv4 address (' . $host . ') but IPv6 transport requested');
             return FALSE;
         }
 
-        // Cache IP address
-        $ip = ip_compress($host);
-        $cache['is_pingable'][$host]['dns_ip'] = $ip;
-
-        return $ip;
+        // Return compressed IP address
+        return ip_compress($host);
     }
 
     // Simple validate hostname is valid (no FQDN here)
     if (!is_valid_hostname($host)) {
-        // Set dns status incorrect, because resolved IPv4 but requested IPv6
-        $cache['is_pingable'][$host]['dns_status'] = 'incorrect';
-
+        if ($ping_debug) {
+            logfile('debug.log', __FUNCTION__ . "() | HOST: $host | Invalid hostname format");
+        }
         return FALSE;
     }
 
     // Now resolve host
-
     // First try resolve as IPv4, because we prefer it
     $ip = $try_a ? gethostbyname6($host, 'ipv4') : FALSE; // Do not check IPv4 if transport IPv6
 
     if ($ip && $ip != $host) {
-        $ip = ip_compress($ip);
-
-        // Cache IP address
-        $cache['is_pingable'][$host]['dns_ip'] = $ip;
-
-        return $ip;
+        return ip_compress($ip);
     }
 
     // Now try resolve as IPv6
     if ($try_aaaa && $ip = gethostbyname6($host, 'ipv6')) {
-        $ip = ip_compress($ip);
-
-        // Cache IP address
-        $cache['is_pingable'][$host]['dns_ip'] = $ip;
-
-        return $ip;
+        return ip_compress($ip);
     }
 
     // No DNS records
     if ($ping_debug) {
-        logfile('debug.log', __FUNCTION__ . "() | DEVICE: $host | NO DNS record found");
+        logfile('debug.log', __FUNCTION__ . "() | HOST: $host | NO DNS record found");
     }
 
-    // Set DNS status alert
-    $cache['is_pingable'][$host]['dns_status'] = 'alert';
-
     return FALSE;
+}
+
+/**
+ * Resolve host and cache to ip by all ways (hosts/dns) for all possible cases IPv4/IPv6.
+ * Additionally, set dns status cache var for use in poller (is_snmpable()) for reduce dns queries.
+ *
+ * @param string       $host    Hostname or IP address to resolve
+ * @param string|array $options all - request any record ipv4/ipv6, ipv4 or a - only ipv4, ipv6 or aaaa - only ipv6
+ * @param bool $update  Force cache update (bypass cache read)
+ *
+ * @return string|false Resolved IP address or FALSE on failure
+ */
+function dns_resolve_cached($host, $options = 'all', $update = FALSE) {
+
+    $host      = strtolower($host);
+    $cache_key = 'dns_resolve|' . $host;
+
+    // Return cached for is_snmpable() / device_status_array() / poll_device()
+    if (!$update && mem_cache_exists($cache_key)) {
+        $cache_dns = mem_cache_get($cache_key);
+        $ip = $cache_dns['dns_ip'] ?? '';
+
+        print_debug("DNS RESOLVE: Return cached '$host' = '$ip'\n");
+        print_debug_vars($cache_dns);
+
+        return $ip;
+    }
+
+    // Use dns_resolve() for actual DNS resolution
+    $ip = dns_resolve($host, $options);
+
+    // Set initially dns status as ok and ip reset
+    $cache_dns = [ 'dns_status' => 'ok',
+                   'dns_ip'     => '' ];
+
+    if ($ip !== FALSE) {
+        // Successfully resolved
+        $cache_dns['dns_ip'] = $ip;
+    } else {
+        // Check if it's a validation failure or DNS failure
+        if (get_ip_version($host)) {
+            // IP address but wrong version for transport
+            $cache_dns['dns_status'] = 'incorrect';
+        } elseif (!is_valid_hostname($host)) {
+            // Invalid hostname format
+            $cache_dns['dns_status'] = 'incorrect';
+        } else {
+            // DNS resolution failure
+            $cache_dns['dns_status'] = 'alert';
+        }
+    }
+
+    // Cache the result
+    mem_cache_set($cache_key, $cache_dns);
+
+    return $ip;
 }
 
 /**
@@ -1827,17 +2241,15 @@ function is_pingable_cache_dns($host, $options = 'all', $update = FALSE) {
  *
  * @return array
  */
-function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_oids = NULL)
-{
-    global $config;
+function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_oids = NULL) {
 
     $oids_limited = safe_count($limit_oids);
 
     $include_stats = [];
 
-    foreach ($config['mibs'][$mib][$entity_type] as $table => $def) {
+    foreach ($GLOBALS['config']['mibs'][$mib][$entity_type] as $table => $def) {
 
-        // Skip unknown definitions..
+        // Skip unknown definitions
         if (!isset($def['oids']) || !is_array($def['oids'])) {
             continue;
         }
@@ -1884,8 +2296,8 @@ function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_
             }
 
             echo $entry['oid'] . ' ';
-            $flags      = isset($entry['snmp_flags']) ? $entry['snmp_flags'] : OBS_SNMP_ALL;
-            $entity_tmp = snmpwalk_cache_oid($device, $entry['oid'], $entity_tmp, $mib, NULL, $flags);
+            //$flags      = isset($entry['snmp_flags']) ? $entry['snmp_flags'] : OBS_SNMP_ALL;
+            $entity_tmp = snmpwalk_cache_oid($device, $entry['oid'], $entity_tmp, $mib, NULL, get_def_snmp_flags($entry));
 
             // Skip next Oids walk if no response
             if (!snmp_status() && $oid === array_key_first($def['oids'])) {
@@ -1915,12 +2327,7 @@ function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_
             if (isset($def['map']['index'])) {
                 // Index by tags
                 foreach ($entity_tmp as $index => $entry) {
-                    $entry['index'] = $index;
-                    foreach (explode('.', $index) as $k => $idx) {
-                        $entry['index' . $k] = $idx;
-                    }
-                    $map_index       = array_tag_replace($entry, $def['map']['index']);
-                    $map_tmp[$index] = $map_index;
+                    $map_tmp[$index] = array_tag_replace(array_merge($entry, entity_index_tags($index)), $def['map']['index']);
                 }
             } else {
                 // Mapping by Oid
@@ -1928,7 +2335,7 @@ function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_
                 foreach ($entity_tmp as $index => $entry) {
                     if (isset($entry[$map_oid])) {
                         $value           = $entry[$map_oid];
-                        $map_tmp[$index] = isset($map_array[$value]) ? $map_array[$value] : $entry[$map_oid];
+                        $map_tmp[$index] = $map_array[$value] ?? $entry[$map_oid];
                     }
                 }
             }
@@ -1954,8 +2361,12 @@ function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_
                     continue;
                 }
 
-                $mib_oid = $entry['oid'];
-                if (isset($entry['oid']) && isset($port[$entry['oid']])) {
+                if (isset($entry['oid'], $port[$entry['oid']])) {
+                    if (isset($entry['invalid']) && in_array($port[$entry['oid']], (array)$entry['invalid'])) {
+                        print_debug("Excluded by $entity_type '{$entry['oid']}' value '{$port[$entry['oid']]}' in invalid range [" . implode(', ', (array)$entry['invalid']) . "].");
+                        echo '!';
+                        continue;
+                    }
 
                     if (isset($entry['transform'])) {
                         $entry['transformations'] = $entry['transform'];
@@ -1966,8 +2377,8 @@ function merge_private_mib(&$device, $entity_type, $mib, &$entity_stats, $limit_
                         echo 'T';
                     }
 
-                    if (isset($entry['unit']) && str_ends($entry['unit'], 'ps')) { // bps, pps
-                        // Set suffixied Oid instead main
+                    if (isset($entry['unit']) && str_ends_with($entry['unit'], 'ps')) { // bps, pps
+                        // Set suffixed Oid instead main
                         // Currently used for Rate Oids, see SPECTRA-LOGIC-STRATA-MIB definition
                         $entity_stats[$index][$oid . '_rate'] = $port[$entry['oid']];
                     } else {
@@ -2602,35 +3013,43 @@ function del_sql_config($key)
 
 // MOVEME to includes/common.inc.php
 /**
- * Convert SI scales to scalar scale.
+ * Convert SI prefixes to scalar scale.
  * Example return:
  *  si_to_scale('milli');    // return 0.001
  *  si_to_scale('femto', 8); // return 1.0E-23
  *  si_to_scale('-2');       // return 0.01
  *
- * @param $si
+ * @param $prefix
  * @param $precision
  *
  * @return float
  */
-function si_to_scale($si = 'units', $precision = NULL) {
-    // See all scales here: http://tools.cisco.com/Support/SNMP/do/BrowseOID.do?local=en&translate=Translate&typeName=SensorDataScale
-    $si       = strtolower($si);
+function si_to_scale($prefix = 'units', $precision = NULL) {
+    // See all si prefixes here:
+    // https://en.wikipedia.org/wiki/Metric_prefix
+    $prefix   = strtolower($prefix);
     $si_array = [
+        'quecto' => -30, 'ronto' => -27, // added in 2022
         'yocto' => -24, 'zepto' => -21, 'atto'  => -18,
         'femto' => -15, 'pico'  => -12, 'nano'  => -9,
         'micro' => -6,  'milli' => -3,  'centi' => -2,
         'deci'  => -1,  'units' => 0,   'deca'  => 1,
         'hecto' => 2,   'kilo'  => 3,   'mega'  => 6,
         'giga'  => 9,   'tera'  => 12,  'peta'  => 15,
-        'exa'   => 18,  'zetta' => 21,  'yotta' => 24
+        'exa'   => 18,  'zetta' => 21,  'yotta' => 24,
+        'ronna' => 27,  'quetta' => 30  // added in 2022
     ];
 
-    $exp = 0;
-    if (isset($si_array[$si])) {
-        $exp = $si_array[$si];
-    } elseif (is_numeric($si)) {
-        $exp = (int)$si;
+    $exp  = 0;
+    if (is_numeric($prefix)) {
+        $exp = (int)$prefix;
+    } elseif (isset($si_array[$prefix])) {
+        $exp = $si_array[$prefix];
+    } elseif (in_array($prefix, [ 'kibi', 'mebi', 'gibi', 'tebi',
+                                  'pebi', 'exbi', 'zebi', 'yobi' ])) {
+        // Try bits prefixes
+        print_debug("WARNING. Incorrect binary prefix passed to si_to_scale('$prefix'), use bi_to_scale('$prefix') instead.");
+        return bi_to_scale($prefix);
     }
 
     if (is_numeric($precision) && $precision > 0) {
@@ -2645,6 +3064,29 @@ function si_to_scale($si = 'units', $precision = NULL) {
     }
 
     return 10 ** $exp;
+}
+
+function bi_to_scale($prefix = 'units') {
+    // https://en.wikipedia.org/wiki/Binary_prefix
+    $prefix   = strtolower($prefix);
+    $bi_array = [
+        'kibi' => 10, 'mebi' => 20, 'gibi' => 30,
+        'tebi' => 40, 'pebi' => 50, 'exbi' => 60,
+        'zebi' => 70, 'yobi' => 80,
+    ];
+
+    $exp = 0;
+    if (is_numeric($prefix)) {
+        $exp = (int)$prefix;
+        if ($exp < 0) {
+            // binary prefixes always positive
+            return 0;
+        }
+    } elseif (isset($bi_array[$prefix])) {
+        $exp = $bi_array[$prefix];
+    }
+
+    return 2 ** $exp;
 }
 
 /**
@@ -2683,7 +3125,7 @@ function float_cmp($a, $b, $epsilon = NULL) {
             if ($a == 0 || $b == 0) {
                 // Around zero
                 $test    = $diff;
-                $epsilon = $epsilon ** 2;
+                $epsilon **= 2;
                 if ($test < $epsilon) {
                     $compare = 0;
                 }
@@ -2720,7 +3162,7 @@ function float_div($a, $b) {
 
     $div = fdiv(clean_number($a), clean_number($b));
     if (!is_finite($div)) {
-        $div = 0;
+        return 0;
     }
 
     return $div;
@@ -2728,16 +3170,9 @@ function float_div($a, $b) {
 
 function float_pow($a, $b) {
 
-    if (PHP_VERSION_ID < 80400) {
-        $pow = clean_number($a) ** clean_number($b);
-    } else {
-        // PHP 8.4+
-        // https://wiki.php.net/rfc/raising_zero_to_power_of_negative_number
-        $pow = fpow(clean_number($a), clean_number($b));
-    }
-
+    $pow = fpow(clean_number($a), clean_number($b));
     if (!is_finite($pow)) {
-        $pow = 0;
+        return 0;
     }
 
     return $pow;
@@ -2762,12 +3197,12 @@ function int_add($a, $b) {
 
 /**
  * Subtract integer numbers.
- * This function better to use with big Counter64 numbers
+ * This function is better to use with big Counter64 numbers
  *
  * @param int|string $a The first number
  * @param int|string $b The second number
  *
- * @return string       A number representing the subtract of the arguments.
+ * @return string       A number representing to subtract of the arguments.
  */
 function int_sub($a, $b) {
     //print_vars(\Brick\Math\Internal\Calculator::get());
@@ -2890,56 +3325,6 @@ function facility_string_to_numeric($facility)
     return $facility;
 }
 
-function array_merge_indexed(&$array1, &$array2)
-{
-    $merged = $array1;
-    //print_vars($merged);
-
-    foreach ($array2 as $key => &$value) {
-        if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
-            $merged[$key] = array_merge_indexed($merged[$key], $value);
-        } else {
-            $merged[$key] = $value;
-        }
-    }
-
-    //print_vars($merged);
-    return $merged;
-}
-
-// Merge 2 arrays by their index, ie:
-//  Array( [1] => [TestCase] = '1' ) + Array( [1] => [Bananas] = 'Yes )
-// becomes
-//  Array( [1] => [TestCase] = '1', [Bananas] = 'Yes' )
-//
-// array_merge_recursive() only works for string keys, not numeric as we get from snmp functions.
-//
-// Accepts infinite parameters.
-//
-// Currently not used. Does not cope well with multilevel arrays.
-// DOCME needs phpdoc block
-// MOVEME to includes/common.inc.php
-/*
-function array_merge_indexed()
-{
-  $array = array();
-
-  foreach (func_get_args() as $array2)
-  {
-    if (count($array2) == 0) continue; // Skip for loop for empty array, infinite loop ahead.
-    for ($i = 0; $i <= count($array2); $i++)
-    {
-      foreach (array_keys($array2[$i]) as $key)
-      {
-        $array[$i][$key] = $array2[$i][$key];
-      }
-    }
-  }
-
-  return $array;
-}
-*/
-
 // DOCME needs phpdoc block
 // TESTME needs unit testing
 function print_cli_heading($contents, $level = 2)
@@ -2994,7 +3379,7 @@ function print_cli_data($field, $data = NULL, $level = 2)
             $len  = $field_len;
             $data = explode(" ", $line);
             foreach ($data as $datum) {
-                $len = $len + strlen($datum);
+                $len += strlen($datum);
                 if ($len > $max_len) {
                     $len = strlen($datum);
                     //$datum = "\n". str_repeat(" ", 26+($level * 2)). $datum;
@@ -3118,6 +3503,8 @@ function print_cli_banner() {
                   str_pad(OBSERVIUM_PRODUCT_LONG . " " . OBSERVIUM_VERSION, 59, " ", STR_PAD_LEFT) . "\n" .
                   str_pad(OBSERVIUM_URL, 59, " ", STR_PAD_LEFT) . "%N\n", 'color');
 
+    $versions = get_versions();
+
     // One time alert about deprecated (eol) php version
     if (version_compare(PHP_VERSION, OBS_MIN_PHP_VERSION, '<')) {
         $php_version = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;
@@ -3128,9 +3515,9 @@ function print_cli_banner() {
 |                %rDANGER! ACHTUNG! BHUMAHUE!%n               |
 |                                                         |
 " .
-                      str_pad("| %WYour PHP version is too old (%r" . $php_version . "%W),", 64, ' ') . "%n|
+                      str_pad("| %WYour PHP version is outdate (%r" . $php_version . "%W),", 64, ' ') . "%n|
 | %Wfunctionality may be broken. Please update your PHP!%n    |
-| %WCurrently recommended version(s): >%g 7.2.x%n               |
+| %WRecommended version: >%g 8.x%n (minimum is %y".OBS_MIN_PHP_VERSION."%n)          |
 |                                                         |
 | See additional information here:                        |
 | %c" .
@@ -3140,7 +3527,6 @@ function print_cli_banner() {
 ", 'color');
     }
     // Same for MySQL/MariaDB/Python2
-    $versions = get_versions();
     if ($versions['python_old'] && str_starts_with($versions['python_version'], '2.')) {
         print_message("
 
@@ -3281,19 +3667,19 @@ function fix_path_slash($path)
 }
 
 /**
- * Calculates missing fields of a mempool based on supplied information and returns them all.
- * This function also applies the scaling as requested.
- * Also works for storage.
- *
- * @param numeric $scale   Scaling to apply to the supplied values.
- * @param numeric $used    Used value of mempool, before scaling, or NULL.
- * @param numeric $total   Total value of mempool, before scaling, or NULL.
- * @param numeric $free    Free value of mempool, before scaling, or NULL.
- * @param numeric $perc    Used percentage value of mempool, or NULL.
- * @param array   $options Additional options, ie separate scales for used/total/free
- *
- * @return array Array consisting of 'used', 'total', 'free' and 'perc' fields
- */
+* Calculates missing fields of a mempool based on supplied information and returns them all.
+* This function also applies the scaling as requested.
+* Also works for storage.
+*
+* @param numeric $scale   Scaling to apply to the supplied values.
+* @param numeric $used    Used value of mempool, before scaling, or NULL.
+* @param numeric $total   Total value of mempool, before scaling, or NULL.
+* @param numeric $free    Free value of mempool, before scaling, or NULL.
+* @param numeric $perc    Used percentage value of mempool, or NULL.
+* @param array   $options Additional options, ie separate scales for used/total/free
+*
+* @return array Array consisting of 'used', 'total', 'free' and 'perc' fields
+*/
 function calculate_mempool_properties($scale, $used, $total, $free, $perc = NULL, $options = [])
 {
     // Scale, before maths!
@@ -3344,13 +3730,14 @@ function calculate_mempool_properties($scale, $used, $total, $free, $perc = NULL
     return ['used' => $used, 'total' => $total, 'free' => $free, 'perc' => $perc, 'units' => $scale, 'scale' => $scale, 'valid' => $valid];
 }
 
-function discovery_check_if_type_exist($entry, $entity_type, $entity = [])
-{
+function discovery_check_if_type_exist($entry, $entity_type, $entity = []) {
 
-    if (is_string($entry) || is_array_list($entry)) {
+    if (is_string($entry) || is_array_flat($entry)) {
         $skip_if_valid_exist = $entry;
     } elseif (isset($entry['skip_if_valid_exist'])) {
         $skip_if_valid_exist = $entry['skip_if_valid_exist'];
+    } elseif (isset($entry['sive'])) { // compact key for Skip_If_Valid_Exist
+        $skip_if_valid_exist = $entry['sive'];
     } else {
         return FALSE;
     }
@@ -3574,46 +3961,6 @@ function get_pollers()
 }
 
 /**
- * Find the ID of the network port on a device that has an IP address in the same subnet as a given IP address.
- *
- * This function queries the database to get a list of IP addresses and CIDR lengths for the specified device.
- * It then checks each IP address against the specified search address using the `Net_IPv4` class to determine
- * whether it is in the same subnet. If a matching interface is found, its port ID is returned. Otherwise, null is returned.
- *
- * @param int    $device_id     The ID of the device to search for a matching interface.
- * @param string $ip_address    The IP address to match against.
- *
- * @return int|null The ID of the matching port, or null if no matching port was found.
- * @global array $address_cache An array that caches the list of IP addresses and CIDR lengths for each device.
- */
-function port_id_by_subnet_ipv4($device_id, $ip_address)
-{
-    global $address_cache; // global variable to cache the address list
-
-    // If the address list is not cached, query the database to get it
-    if (empty($address_cache[$device_id])) {
-        $address_query             = "SELECT * FROM `ipv4_addresses` WHERE `device_id` = ?";
-        $address_result            = dbFetchRows($address_query, [$device_id]);
-        $address_cache[$device_id] = $address_result;
-    } else {
-        // Otherwise, use the cached address list
-        $address_result = $address_cache[$device_id];
-    }
-
-    // Loop through the results and check each IP address against the search address
-    foreach ($address_result as $row) {
-        $network = $row['ipv4_address'] . '/' . $row['ipv4_prefixlen'];
-        if (Net_IPv4 ::ipInNetwork($ip_address, $network)) {
-            // The search address is in the same subnet as this IP address
-            return $row['port_id'];
-        }
-    }
-
-    // No matching port found
-    return NULL;
-}
-
-/**
  * Generates a WHERE clause from an array of conditions, ignoring any condition entries
  * that are empty or only contain white space. Returns NULL if there are no valid conditions.
  * Optionally takes a second set of conditions to append to the first.
@@ -3646,11 +3993,7 @@ function generate_where_clause($conditions, $additional_conditions = NULL, $join
 
     // Combine both sets of conditions if provided
     if (!safe_empty($additional_conditions)) {
-        // Convert to array if $additional_conditions is a string
-        if (!is_array($additional_conditions)) {
-            $additional_conditions = [$additional_conditions];
-        }
-        $conditions = array_merge($conditions, $additional_conditions);
+        $conditions = array_merge($conditions, (array)$additional_conditions);
     }
 
     // Filter out empty or white space conditions
@@ -3904,8 +4247,11 @@ function get_start_end_time_from_period($period, $end_time = NULL)
  *
  * @return int Number of deleted rows
  */
-function del_obs_attrib($attrib_type)
-{
+function del_obs_attrib($attrib_type) {
+    if (db_skip()) {
+        return FALSE;
+    }
+
     $cache = &attribs_cache();
 
     if (isset($cache[$attrib_type])) {
@@ -3923,23 +4269,21 @@ function del_obs_attrib($attrib_type)
  *
  * @return bool TRUE on success, FALSE on failure
  */
-function set_obs_attrib($attrib_type, $attrib_value)
-{
-    if (OBS_DB_SKIP) {
+function set_obs_attrib($attrib_type, $attrib_value) {
+    if (db_skip()) {
         return FALSE;
     }
 
-    $cache = &attribs_cache();
-
-    if (dbExist('observium_attribs', '`attrib_type` = ?', [$attrib_type])) {
-        $status = dbUpdate(['attrib_value' => $attrib_value], 'observium_attribs', "`attrib_type` = ?", [$attrib_type]);
+    if (dbExist('observium_attribs', '`attrib_type` = ?', [ $attrib_type ])) {
+        $status = dbUpdate([ 'attrib_value' => $attrib_value ], 'observium_attribs', "`attrib_type` = ?", [ $attrib_type ]);
     } else {
-        $status = dbInsert(['attrib_type' => $attrib_type, 'attrib_value' => $attrib_value], 'observium_attribs');
+        $status = dbInsert([ 'attrib_type' => $attrib_type, 'attrib_value' => $attrib_value ], 'observium_attribs');
         $status = $status !== FALSE; // Note dbInsert return IDs if exist or 0 for not indexed tables
     }
 
     // Update the cached value
     if ($status) {
+        $cache =& attribs_cache();
         $cache[$attrib_type] = $attrib_value;
     }
 
@@ -3953,14 +4297,13 @@ function set_obs_attrib($attrib_type, $attrib_value)
  *
  * @return array Associative array of attributes
  */
-function get_obs_attribs($type_filter = '')
-{
+function get_obs_attribs($type_filter = '') {
     $cache = attribs_cache();
 
     if ($type_filter) {
         $attribs = [];
         foreach ($cache as $type => $value) {
-            if (strpos($type, $type_filter) !== FALSE) {
+            if (str_contains($type, $type_filter)) {
                 $attribs[$type] = $value;
             }
         }
@@ -3974,11 +4317,17 @@ function get_obs_attribs($type_filter = '')
  * Retrieves a single observium attribute.
  *
  * @param string $attrib_type Attribute type
+ * @param bool   $bypass_cache If TRUE, query database directly without using cache
  *
  * @return string|null Attribute value, or NULL if not found
  */
-function get_obs_attrib($attrib_type)
+function get_obs_attrib($attrib_type, $bypass_cache = FALSE)
 {
+    if ($bypass_cache) {
+        // Query database directly without caching (useful for long-running processes)
+        return dbFetchCell("SELECT `attrib_value` FROM `observium_attribs` WHERE `attrib_type` = ?", [$attrib_type]);
+    }
+
     $cache = attribs_cache();
 
     return $cache[$attrib_type] ?? NULL;
@@ -3987,8 +4336,7 @@ function get_obs_attrib($attrib_type)
 /**
  * Resets the observium attributes cache.
  */
-function reset_attribs_cache()
-{
+function reset_attribs_cache() {
     $cache = &attribs_cache(TRUE);
 }
 
@@ -3999,18 +4347,22 @@ function reset_attribs_cache()
  *
  * @return array|null Reference to the cached observium attributes
  */
-function &attribs_cache($force_refresh = FALSE)
-{
-    static $cache = NULL;
+function &attribs_cache($force_refresh = FALSE) {
+    if (db_skip()) {
+        $null = NULL;
+        return $null;
+    }
 
-    if ($cache === NULL || $force_refresh) {
-        $cache = [];
+    if ($force_refresh) {
+        mem_cache_reset('observium_attribs');
+    }
 
-        if (!OBS_DB_SKIP) {
-            foreach (dbFetchRows("SELECT * FROM `observium_attribs`") as $entry) {
-                $cache[$entry['attrib_type']] = $entry['attrib_value'];
-            }
+    if (!$cache =& mem_cache_key('observium_attribs')) {
+        foreach (dbFetchRows("SELECT * FROM `observium_attribs`") as $entry) {
+            $cache[$entry['attrib_type']] = $entry['attrib_value'];
         }
+    } else {
+        print_debug("Observium Attributes already cached.");
     }
 
     return $cache;
@@ -4018,3 +4370,4 @@ function &attribs_cache($force_refresh = FALSE)
 
 
 // EOF
+

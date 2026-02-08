@@ -51,10 +51,13 @@ function build_devices_where_array($vars) {
                 case 'sysDescr':
                 case 'serial':
                 case 'purpose':
-                    $where_array[$var] = generate_query_values($value, $var, '%LIKE%');
+                    // Correctly request wildcards
+                    $condition = str_contains_array($value, [ '*', '?' ]) ? 'LIKE' : '%LIKE%';
+                    $where_array[$var] = generate_query_values($value, $var, $condition);
                     break;
                 case 'location_text':
-                    $where_array[$var] = generate_query_values($value, 'devices.location', '%LIKE%');
+                    $condition = str_contains_array($value, [ '*', '?' ]) ? 'LIKE' : '%LIKE%';
+                    $where_array[$var] = generate_query_values($value, 'devices.location', $condition);
                     break;
                 case 'location':
                     $where_array[$var] = generate_query_values($value, 'devices.location');
@@ -78,6 +81,7 @@ function build_devices_where_array($vars) {
                 case 'status':
                 case 'status_type':
                 case 'distro':
+                case 'ip':
                 case 'ignore':
                 case 'disabled':
                 case 'snmpable':
@@ -548,18 +552,20 @@ function get_device_icon($device, $base_icon = FALSE, $dark = FALSE) {
         }
         if ($try_vendor) {
             // 6. Icon by vendor name
-
+            //bdump("$icon.$ext");
             $vendor = $device['vendor'] ?: rewrite_vendor($config['os'][$os]['vendor']); // Compatibility, if a device not polled for long time
 
             $vendor_safe = safename(strtolower($vendor));
 
             if (isset($config['vendors'][$vendor_safe]['icon']) &&
-                $ext = is_file_ext($config['html_dir'] . '/images/os/' . $config['vendors'][$vendor_safe]['icon'])) {
+                $vext = is_file_ext($config['html_dir'] . '/images/os/' . $config['vendors'][$vendor_safe]['icon'])) {
                 // 6a. Icon in vendor definition
                 $icon = $config['vendors'][$vendor_safe]['icon'];
-            } elseif ($ext = is_file_ext($config['html_dir'] . '/images/os/' . $vendor_safe)) {
+                $ext  = $vext;
+            } elseif ($vext = is_file_ext($config['html_dir'] . '/images/os/' . $vendor_safe)) {
                 // 6b. Icon by Safe Vendor name
                 $icon = $vendor_safe;
+                $ext  = $vext;
             } else {
                 // 6c. Fallback, when Vendor is set, but icon does not exist
                 print_debug("Vendor ($vendor) icon does not exist in get_device_icon().");
@@ -574,6 +580,7 @@ function get_device_icon($device, $base_icon = FALSE, $dark = FALSE) {
         // function not should print extra cli/web output
         print_debug('Device is NOT permitted in get_device_icon().');
     }
+    //bdump("$icon.$ext");
 
     // Set dark mode by session
     if (isset($_SESSION['theme'])) {
@@ -782,8 +789,7 @@ function generate_device_link_short($device, $vars = [], $short = TRUE)
  *
  * @return array The generated device form values.
  */
-function generate_device_form_values($form_filter = FALSE, $column = 'device_id', $options = [])
-{
+function generate_device_form_values($form_filter = FALSE, $column = 'device_id', $options = []) {
     global $cache;
 
     //r($form_filter);
@@ -795,25 +801,27 @@ function generate_device_form_values($form_filter = FALSE, $column = 'device_id'
 
     $form_items = [];
     foreach ($cache['devices']['hostname'] as $hostname => $device_id) {
-        // Filter items based on filter_mode
         if ($options['filter_mode'] === 'include') {
+            // Apply to include filter, only process devices in the filter list
             if (!in_array($device_id, $form_filter)) {
                 //r($device_id);
                 continue;
             }
         } elseif ($options['filter_mode'] === 'exclude') {
+            // Apply to exclude filter, skip devices in the filter list
             if (in_array($device_id, $form_filter)) {
                 continue;
             }
         }
 
         if (in_array($device_id, $cache['devices']['disabled'])) {
+            // Check if a device is disabled
             if (isset($options['show_disabled'])) {
-                // Force display disabled devices
+                // Determine if disabled devices should be displayed
                 if (!$options['show_disabled']) {
                     continue;
                 }
-            } elseif (!$GLOBALS['config']['web_show_disabled'] && in_array($device_id, $cache['devices']['disabled'])) {
+            } elseif (!$GLOBALS['config']['web_show_disabled']) {
                 continue;
             }
 
@@ -821,21 +829,31 @@ function generate_device_form_values($form_filter = FALSE, $column = 'device_id'
             $form_items[$device_id]['class'] = 'bg-disabled';
 
         } elseif (in_array($device_id, $cache['devices']['down'])) {
+            // Check if a device is down
             if (isset($options['show_down']) && !$options['show_down']) {
+                // Skip down devices if option is set
                 continue;
-            } // Skip down
+            }
+
             $form_items[$device_id]['group'] = 'DOWN';
             $form_items[$device_id]['class'] = 'bg-danger';
         } else {
+            // Device is up
             if (isset($options['up']) && in_array($device_id, $cache['devices']['up'])) {
+                // Skip up devices if the option is set
                 continue;
-            } // Skip up
+            }
+
             $form_items[$device_id]['group'] = 'UP';
             $form_items[$device_id]['class'] = 'bg-info';
         }
+
         if ($GLOBALS['config']['web_device_name'] && $GLOBALS['config']['web_device_name'] !== 'hostname') {
+            // Set device name based on configuration
             $device = device_by_id_cache($device_id);
             $form_items[$device_id]['name'] = device_name($device);
+
+            // Add hostname as subtext if name differs from hostname
             if (!isset($options['subtext']) && $form_items[$device_id]['name'] !== $hostname) {
                 $form_items[$device_id]['subtext'] = $hostname;
             }
@@ -843,10 +861,13 @@ function generate_device_form_values($form_filter = FALSE, $column = 'device_id'
             $form_items[$device_id]['name'] = $hostname;
         }
 
+        // Set custom subtext if specified in options
         if (isset($options['subtext'])) {
             $device = $device ?? device_by_id_cache($device_id);
             $form_items[$device_id]['subtext'] = array_tag_replace($device, $options['subtext']);
         }
+
+        // Add device icon if requested
         if (isset($options['show_icon']) && $options['show_icon']) {
             $device = $device ?? device_by_id_cache($device_id);
             $form_items[$device_id]['icon'] = $GLOBALS['config']['devicetypes'][$device['type']]['icon'] ?? $GLOBALS['config']['entities']['device']['icon'];
@@ -854,12 +875,13 @@ function generate_device_form_values($form_filter = FALSE, $column = 'device_id'
         unset($device);
     }
 
-    return $form_items;
+    // Sort devices by default group order
+    return array_sort_by_order($form_items, [ '', 'UP', 'DOWN', 'DISABLED' ], 'group');
 }
 
 function print_device_permission_box($mode, $perms, $params = []) {
     global $config;
-    
+
     echo generate_box_open([ 'header-border' => TRUE, 'title' => 'Device Permissions' ]);
 
     $perms_devices = !safe_empty($perms['device']);
@@ -868,6 +890,11 @@ function print_device_permission_box($mode, $perms, $params = []) {
 
         foreach ($perms['device'] as $device_id => $status) {
             $device = device_by_id_cache($device_id);
+
+            if (!$device) {
+                entity_permission_cleanup($mode, 'device', $device_id, $params);
+                continue;
+            }
 
             echo('<tr><td style="width: 1px;"></td>
                 <td style="overflow: hidden;">' . get_icon($config['devicetypes'][$device['type']]['icon'] ?? $config['entities']['device']['icon']) . generate_device_link($device) . '
@@ -948,8 +975,119 @@ function print_device_permission_box($mode, $perms, $params = []) {
         'name'   => 'Permit Device',
         'width'  => '250px',
         //'value'    => $vars['entity_id'],
-        'groups'    => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
         'values' => $form_items['devices']
+    ];
+    // add button
+    $form['row'][0]['Submit'] = [
+        'type'  => 'submit',
+        'name'  => 'Add',
+        'icon'  => $config['icon']['plus'],
+        'right' => TRUE,
+        'value' => 'Add'
+    ];
+    print_form($form);
+
+    echo generate_box_close();
+}
+
+function print_poller_permission_box($mode, $perms, $params = []) {
+    global $config;
+
+    echo generate_box_open([ 'header-border' => TRUE, 'title' => 'Poller Permissions' ]);
+
+    $perms_pollers = !safe_empty($perms['poller']);
+    if ($perms_pollers) {
+        echo('<table class="' . OBS_CLASS_TABLE . '">' . PHP_EOL);
+
+        foreach ($perms['poller'] as $poller_id => $status) {
+            $poller = dbFetchRow('SELECT * FROM `pollers` WHERE `poller_id` = ?', [$poller_id]);
+
+            if (!$poller) {
+                entity_permission_cleanup($mode, 'poller', $poller_id, $params);
+                continue;
+            }
+
+            $device_count = dbFetchCell('SELECT COUNT(*) FROM `devices` WHERE `poller_id` = ?', [$poller_id]);
+
+            echo('<tr><td style="width: 1px;"></td>
+                <td style="overflow: hidden;">' . get_icon($config['icon']['node']) . '<strong>' . escape_html($poller['poller_name']) . '</strong> (ID: ' . $poller['poller_id'] . ')<br />
+                <small>' . $device_count . ' device' . ($device_count != 1 ? 's' : '') . '</small></td>
+                <td width="25">');
+
+            $form = [];
+            $form['type'] = 'simple';
+
+            $action_del = $mode === 'role' ? 'role_entity_del' : 'user_perm_del';
+            // Elements
+            $form['row'][0]['action'] = [
+                'type'  => 'hidden',
+                'value' => $action_del
+            ];
+            $form['row'][0]['entity_id'] = [
+                'type'  => 'hidden',
+                'value' => $poller['poller_id']
+            ];
+            $form['row'][0]['entity_type'] = [
+                'type'  => 'hidden',
+                'value' => 'poller'
+            ];
+            $form['row'][0]['submit'] = [
+                'type'  => 'submit',
+                'name'  => ' ',
+                'class' => 'btn-danger btn-mini',
+                'icon'  => 'icon-trash',
+                'value' => $action_del
+            ];
+            print_form($form);
+            unset($form);
+
+            echo('</td>
+              </tr>');
+        }
+        echo('</table>' . PHP_EOL);
+
+    } else {
+        echo('<p class="text-center text-warning bg-warning" style="padding: 10px; margin: 0px;"><strong>This '.$mode.' currently has no permitted pollers</strong></p>');
+    }
+
+    // Pollers
+    $permissions_list = array_keys((array)$perms['poller']);
+
+    // Display pollers this user doesn't have Permissions to
+    $form = [];
+    $form['type'] = 'simple';
+    $form['style'] = 'padding: 7px; margin: 0px;';
+
+    // Elements
+    if ($mode === 'role') {
+        $action_add = 'role_entity_add';
+        $form['row'][0]['role_id'] = [
+            'type'  => 'hidden',
+            'value' => $params['role_id']
+        ];
+    } else {
+        $action_add = 'user_perm_add';
+        $form['row'][0]['user_id'] = [
+            'type'  => 'hidden',
+            'value' => $params['user_id']
+        ];
+    }
+    $form['row'][0]['entity_type'] = [
+        'type'  => 'hidden',
+        'value' => 'poller'
+    ];
+    $form['row'][0]['action'] = [
+        'type'  => 'hidden',
+        'value' => $action_add
+    ];
+
+    $form_items['pollers'] = generate_form_values('poller', $permissions_list, 'poller_id',
+                                                  [ 'filter_mode' => 'exclude' ]);
+    $form['row'][0]['entity_id'] = [
+        'type'   => 'multiselect',
+        'name'   => 'Permit Poller',
+        'width'  => '250px',
+        'values' => $form_items['pollers']
     ];
     // add button
     $form['row'][0]['Submit'] = [
@@ -1103,9 +1241,7 @@ function navbar_health_menu($device, $vars = []) {
 
 // TESTME needs unit testing
 // DOCME needs phpdoc block
-function device_permitted($device_id)
-{
-    global $permissions;
+function device_permitted($device_id) {
 
     // If we've been passed an entity with device_id, just use that.
     if (is_array($device_id) && isset($device_id['device_id'])) {
@@ -1119,13 +1255,16 @@ function device_permitted($device_id)
 
     // Level >5 can see everything.
     if ($_SESSION['userlevel'] >= 5) {
-        $allowed = TRUE;
-    } elseif (isset($permissions['device'][$device_id])) {
-        $allowed = TRUE;
-    } else {
-        $allowed = FALSE;
+        return TRUE;
     }
-    return $allowed;
+
+    // Permissions stored by permissions_cache($_SESSION['user_id']);
+    $permissions = (array) mem_cache_get('user_permissions');
+    if (isset($permissions['device'][$device_id])) {
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 // TESTME needs unit testing

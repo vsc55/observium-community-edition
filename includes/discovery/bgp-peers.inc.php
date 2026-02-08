@@ -128,6 +128,7 @@ if (is_numeric($bgpLocalAs) && $bgpLocalAs != 0) {
 
 global $table_rows;
 $table_rows = [];
+$asn_changes = ['added' => [], 'updated' => [], 'deleted' => []]; // Track ASN changes
 
 if (!safe_empty($peerlist)) {
     print_debug_vars($peerlist);
@@ -201,6 +202,7 @@ if (!safe_empty($peerlist)) {
                     $GLOBALS['module_stats'][$module]['unchanged']++;
                 } else {
                     $GLOBALS['module_stats'][$module]['updated']++;
+                    $asn_changes['updated'][] = $peer['as'];
                 }
             } else {
                 $GLOBALS['module_stats'][$module]['unchanged']++;
@@ -210,6 +212,7 @@ if (!safe_empty($peerlist)) {
         } else {
             $peer_id = dbInsert($params, 'bgpPeers');
             $GLOBALS['module_stats'][$module]['added']++;
+            $asn_changes['added'][] = $peer['as'];
         }
 
         $peer['id']            = $peer_id;
@@ -276,6 +279,7 @@ foreach (dbFetchRows($query, [$device['device_id']]) as $entry) {
         // dbDelete('bgpPeers', '`bgpPeer_id` = ?', [ $entry['bgpPeer_id'] ]);
         $peers_delete[] = $entry['bgpPeer_id'];
         $GLOBALS['module_stats'][$module]['deleted']++;
+        $asn_changes['deleted'][] = $peer_as;
     } else {
         // Unset, for exclude duplicate entries in DB
         unset($p_list[$peer_ip][$peer_as]);
@@ -290,6 +294,36 @@ if (count($peers_delete)) {
 $table_headers = ['%WLocal: AS (VRF)%n', '%WIP%n', '%WPeer: AS%n', '%WIP%n', '%WFamily%n', '%WrDNS%n', '%WRemote Device%n'];
 print_cli_table($table_rows, $table_headers);
 
-unset($p_list, $peerlist, $vendor_mib, $cisco_version, $cisco_peers, $table_rows, $table_headers, $peer_devices, $peer_devices_ids);
+// Build ASN changes summary for CLI and eventlog
+$asn_msg = [];
+$log_msg_parts = [];
+foreach (['added', 'updated', 'deleted'] as $key) {
+    if (!safe_empty($asn_changes[$key])) {
+        $unique_asns = array_unique($asn_changes[$key]);
+        sort($unique_asns, SORT_NUMERIC);
+        $asns_formatted = array_map(function($as) { return 'AS' . $as; }, $unique_asns);
+        $asn_msg[] = count($unique_asns) . ' ' . $key . ' [' . implode(', ', $asns_formatted) . ']';
+    }
+    // Also build eventlog message with ASNs if there are stats
+    if ($GLOBALS['module_stats'][$module][$key] && $key !== 'unchanged') {
+        if (!safe_empty($asn_changes[$key])) {
+            $unique_asns = array_unique($asn_changes[$key]);
+            sort($unique_asns, SORT_NUMERIC);
+            $asns_formatted = array_map(function($as) { return 'AS' . $as; }, $unique_asns);
+            $log_msg_parts[] = $GLOBALS['module_stats'][$module][$key] . ' ' . $key . ' [' . implode(', ', $asns_formatted) . ']';
+        } else {
+            $log_msg_parts[] = $GLOBALS['module_stats'][$module][$key] . ' ' . $key;
+        }
+    }
+}
+if (!safe_empty($asn_msg)) {
+    print_cli_data("Peer Changes", implode(', ', $asn_msg));
+}
+// Set custom eventlog message with ASN details
+if (!safe_empty($log_msg_parts)) {
+    $GLOBALS['module_stats'][$module]['log_event'] = 'BGP-peers: ' . implode(', ', $log_msg_parts) . '.';
+}
+
+unset($p_list, $peerlist, $vendor_mib, $cisco_version, $cisco_peers, $table_rows, $table_headers, $peer_devices, $peer_devices_ids, $asn_changes, $asn_msg);
 
 // EOF

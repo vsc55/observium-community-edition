@@ -1,6 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpmst.mib,v 1.36 2016/03/18 13:08:57 siva Exp $
 AricentMIMst-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
@@ -132,8 +131,8 @@ FsMIDot1sFutureMstEntry ::=
               Counter32,
            fsMIMstMstpDownCount
               Counter32,
-           fsMIMstPathCostDefaultType
-              INTEGER,
+--         fsMIMstPathCostDefaultType
+--            INTEGER,
            fsMIMstTrace
               Integer32,
            fsMIMstDebug
@@ -193,7 +192,12 @@ FsMIDot1sFutureMstEntry ::=
            fsMIMstBpduGuard
               Integer32,
            fsMIMstStpPerfStatus
+              INTEGER,
+           fsMIMstInstPortsMap
+	      TruthValue,
+	   fsMIMstPathCostDefaultType
               INTEGER
+	   
     }
 
 fsMIDot1sFutureMstContextId OBJECT-TYPE
@@ -426,21 +430,21 @@ fsMIMstMstpDownCount OBJECT-TYPE
         "The number of times MSTP Module has been disabled."
    ::= { fsMIDot1sFutureMstEntry 20 } 
 
-fsMIMstPathCostDefaultType OBJECT-TYPE
-SYNTAX      INTEGER {
-               stp8021d1998(1),
-               stp8021t2001(2)
-            }
-   MAX-ACCESS  read-write 
-   STATUS      obsolete
-   DESCRIPTION
-        "********* THIS OBJECT IS obsolete **********
-        The version of the Spanning Tree default Path Costs that
-         are to be used by this Bridge.  A value of 8021d1998(1)
-         uses the 16-bit default Path Costs from IEEE Std. 802.1D-1998.
-         A value of stp8021t2001(2) uses the 32-bit default Path
-         Costs from IEEE Std. 802.1t."
-   ::= { fsMIDot1sFutureMstEntry 21 } 
+-- fsMIMstPathCostDefaultType OBJECT-TYPE
+-- SYNTAX      INTEGER {
+--                stp8021d1998(1),
+--                stp8021t2001(2)
+--             }
+--    MAX-ACCESS  read-write 
+--    STATUS      obsolete
+--    DESCRIPTION
+--         "********* THIS OBJECT IS obsolete **********
+--         The version of the Spanning Tree default Path Costs that
+--          are to be used by this Bridge.  A value of 8021d1998(1)
+--          uses the 16-bit default Path Costs from IEEE Std. 802.1D-1998.
+--          A value of stp8021t2001(2) uses the 32-bit default Path
+--          Costs from IEEE Std. 802.1t."
+--    ::= { fsMIDot1sFutureMstEntry 21 } 
 
 fsMIMstTrace OBJECT-TYPE
    SYNTAX      Integer32 (0..255) 
@@ -876,6 +880,37 @@ fsMIMstStpPerfStatus OBJECT-TYPE
     DEFVAL { 2 }
    ::= { fsMIDot1sFutureMstEntry 51 }
 
+fsMIMstInstPortsMap OBJECT-TYPE
+      SYNTAX      TruthValue
+      MAX-ACCESS  read-write
+      STATUS      current
+      DESCRIPTION
+         "This object defines the spanning tree participating ports for an instance based on
+          the GVRP enabled status. When the object is enabled and GVRP is enabled in the node,
+          the member ports of the vlan which are mapped to the instance alone will be
+          participating in the spanning tree topology of the instance. When the object is
+          enabled and GVRP is disabled in the node, all the ports in the system will be
+          participating in the spanning-tree of the instance. When this object is disabled,
+          all the ports in the system will be participating in the spanning-tree of the instance.
+          By default this is set to false."
+     DEFVAL { false }
+     ::= { fsMIDot1sFutureMstEntry 52 }
+ 
+fsMIMstPathCostDefaultType OBJECT-TYPE
+SYNTAX      INTEGER {
+               stp8021d1998(1),
+               stp8021t2001(2)
+            }
+   MAX-ACCESS  read-write 
+   STATUS      current
+   DESCRIPTION
+        "The version of the Spanning Tree default Path Costs that
+         are to be used by this Bridge.  A value of 8021d1998(1)
+         uses the 16-bit default Path Costs from IEEE Std. 802.1D-1998.
+         A value of stp8021t2001(2) uses the 32-bit default Path
+         Costs from IEEE Std. 802.1t."
+   DEFVAL { stp8021t2001 }
+   ::= { fsMIDot1sFutureMstEntry 53 } 
 -- -------------------------------------
 -- fsMIDot1sFutureMstTable - End
 -- -------------------------------------
@@ -1472,7 +1507,41 @@ FsMIMstCistPortEntry ::=
        fsMIMstPortBpduInconsistentState
        TruthValue,
        fsMIMstPortBpduGuardAction
-       Integer32
+       Integer32,
+        fsMIMstCistPortTCDetectedCount
+         Counter32,
+        fsMIMstCistPortTCReceivedCount
+         Counter32,
+        fsMIMstCistPortTCDetectedTimeStamp
+         TimeTicks,
+        fsMIMstCistPortTCReceivedTimeStamp
+         TimeTicks,
+        fsMIMstCistPortRcvInfoWhileExpCount
+         Counter32,
+        fsMIMstCistPortRcvInfoWhileExpTimeStamp
+         TimeTicks,
+        fsMIMstCistPortProposalPktsSent
+         Counter32,
+        fsMIMstCistPortProposalPktsRcvd
+         Counter32,
+        fsMIMstCistPortProposalPktSentTimeStamp
+         TimeTicks,
+        fsMIMstCistPortProposalPktRcvdTimeStamp
+         TimeTicks,
+        fsMIMstCistPortAgreementPktSent
+         Counter32,
+        fsMIMstCistPortAgreementPktRcvd
+         Counter32,
+        fsMIMstCistPortAgreementPktSentTimeStamp
+         TimeTicks,
+        fsMIMstCistPortAgreementPktRcvdTimeStamp
+         TimeTicks,
+        fsMIMstCistPortImpStateOccurCount
+         Counter32,
+        fsMIMstCistPortImpStateOccurTimeStamp
+         TimeTicks,
+        fsMIMstCistPortOldPortState
+          INTEGER
 }
 
 fsMIMstCistPort OBJECT-TYPE
@@ -2213,8 +2282,8 @@ fsMIMstPortBpduInconsistentState OBJECT-TYPE
 
 fsMIMstPortBpduGuardAction OBJECT-TYPE
    SYNTAX     INTEGER    {
-            disable-discarding (1),
-            admin-down (2)
+            disableDiscarding (1),
+            adminDown (2)
     }
     MAX-ACCESS  read-write
     STATUS      current
@@ -2241,6 +2310,155 @@ fsMIMstPortBpduGuardAction OBJECT-TYPE
 
     DEFVAL { 1 }
    ::= { fsMIMstCistPortEntry 62 }
+
+fsMIMstCistPortTCDetectedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+       "Indicates the number of topology changes detected on this port for CIST instance ."
+   ::= { fsMIMstCistPortEntry 63 }
+
+fsMIMstCistPortTCReceivedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Indicates the number of topology change messages received on this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 64 }
+
+fsMIMstCistPortTCDetectedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which the topology change is detected on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 65 }
+
+fsMIMstCistPortTCReceivedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which the topology change message received on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 66 }
+
+fsMIMstCistPortRcvInfoWhileExpCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+       "Indicates the number of times the received info while timer is expired on this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 67 }
+
+fsMIMstCistPortRcvInfoWhileExpTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which the received info while timer is expired on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 68 }
+
+fsMIMstCistPortProposalPktsSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of proposal packets sent by this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 69 }
+
+fsMIMstCistPortProposalPktsRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of proposal packets received on this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 70 }
+
+fsMIMstCistPortProposalPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which proposal packet sent by this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 71 }
+
+fsMIMstCistPortProposalPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which  proposal packet received on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 72 }
+
+fsMIMstCistPortAgreementPktSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of agreement packets sent by this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 73 }
+
+fsMIMstCistPortAgreementPktRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of agreement packets received on this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 74 }
+
+fsMIMstCistPortAgreementPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        " Time stamp(in hundredths of a second) at which agreement packet sent by this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 75 }
+
+fsMIMstCistPortAgreementPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which agreement packet received on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 76 }
+
+fsMIMstCistPortImpStateOccurCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Indicates the number of times impossible state that has occurred on this port for CIST instance."
+   ::= { fsMIMstCistPortEntry 77 }
+
+fsMIMstCistPortImpStateOccurTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which impossible state has occurred on this port last time for CIST instance."
+   ::= { fsMIMstCistPortEntry 78 }
+
+fsMIMstCistPortOldPortState OBJECT-TYPE
+   SYNTAX      INTEGER {
+               disabled (1),
+               discarding (2),
+               learning (4),
+               forwarding (5)
+               }
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This MIB object indicates the previous state of the port for CIST instance."
+   ::= { fsMIMstCistPortEntry 79 }
 
 -- -----------------------------------------------------------------
 -- Future Mst Multiple Spanning Tree Instance Port Table     
@@ -2315,7 +2533,36 @@ FsMIMstMstiPortEntry ::=
        fsMIMstMstiPortStateChangeTimeStamp
             Unsigned32,
        fsMIMstMstiPortRootInconsistentState
-	    TruthValue
+	    TruthValue,
+       fsMIMstMstiPortLoopInconsistentState
+           TruthValue,
+        fsMIMstMstiPortTCDetectedCount
+         Counter32,
+        fsMIMstMstiPortTCReceivedCount
+         Counter32,
+        fsMIMstMstiPortTCDetectedTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortTCReceivedTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortProposalPktsSent
+         Counter32,
+        fsMIMstMstiPortProposalPktsRcvd
+         Counter32,
+        fsMIMstMstiPortProposalPktSentTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortProposalPktRcvdTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortAgreementPktSent
+         Counter32,
+        fsMIMstMstiPortAgreementPktRcvd
+         Counter32,
+        fsMIMstMstiPortAgreementPktSentTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortAgreementPktRcvdTimeStamp
+         TimeTicks,
+        fsMIMstMstiPortOldPortState
+          INTEGER
+
 }
 
 fsMIMstMstiPort OBJECT-TYPE
@@ -2624,6 +2871,136 @@ fsMIMstMstiPortRootInconsistentState OBJECT-TYPE
             state "
          DEFVAL { false }
     ::= { fsMIMstMstiPortEntry 25 }
+
+fsMIMstMstiPortLoopInconsistentState   OBJECT-TYPE
+        SYNTAX      TruthValue
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+             " A Boolean value set when the non-designated port on which loop-guard is enabled, tries to transition
+		to Designated/Forwarding due to the expiry of Receive info while timer when bpdus are not received. 
+                A value of TRUE, indicates that the state of this port is moved into an loop-inconsistent
+                state.A value of  FALSE, indicates that this port is not moved into an loop-inconsistent
+                state "
+        DEFVAL { false }
+        ::= { fsMIMstMstiPortEntry 26 }
+
+
+fsMIMstMstiPortTCDetectedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+       "Indicates the number of topology changes detected on this port for MST instance ."
+   ::= { fsMIMstMstiPortEntry 27 }
+
+fsMIMstMstiPortTCReceivedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Indicates the number of topology change messages received on this port  for MST instance."
+   ::= { fsMIMstMstiPortEntry 28 }
+
+fsMIMstMstiPortTCDetectedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which the topology change is detected on this port last time  for MST instance."
+   ::= { fsMIMstMstiPortEntry 29 }
+
+fsMIMstMstiPortTCReceivedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which the topology change message received on this port last time for MST instance."
+   ::= { fsMIMstMstiPortEntry 30 }
+
+fsMIMstMstiPortProposalPktsSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of proposal packets sent by this port for MST instance."
+   ::= { fsMIMstMstiPortEntry 31 }
+
+fsMIMstMstiPortProposalPktsRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of proposal packets received on this port for MST instance."
+   ::= { fsMIMstMstiPortEntry 32 }
+
+fsMIMstMstiPortProposalPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which proposal packet sent by this port last time for MST instance."
+   ::= { fsMIMstMstiPortEntry 33 }
+
+fsMIMstMstiPortProposalPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which  proposal packet received on this port last time for MST instance."
+   ::= { fsMIMstMstiPortEntry 34 }
+
+fsMIMstMstiPortAgreementPktSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of agreement packets sent by this port for MST instance."
+   ::= { fsMIMstMstiPortEntry 35 }
+
+fsMIMstMstiPortAgreementPktRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "The number of agreement packets received on this port for MST instance."
+   ::= { fsMIMstMstiPortEntry 36 }
+
+fsMIMstMstiPortAgreementPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        " Time stamp(in hundredths of a second) at which agreement packet sent by this port last time for MST instance."
+   ::= { fsMIMstMstiPortEntry 37 }
+
+fsMIMstMstiPortAgreementPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "Time stamp(in hundredths of a second) at which agreement packet received on this port last time for MST instance."
+   ::= { fsMIMstMstiPortEntry 38 }
+
+fsMIMstMstiPortOldPortState OBJECT-TYPE
+   SYNTAX      INTEGER {
+               disabled (1),
+               discarding (2),
+               learning (4),
+               forwarding (5)
+               }
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This MIB object indicates the previous state of the port for MST instance."
+   ::= { fsMIMstMstiPortEntry 39 }
+
 
 fsMIMstPortExtTable OBJECT-TYPE
    SYNTAX        SEQUENCE OF FsMIMstPortExtEntry
@@ -3015,6 +3392,80 @@ fsMIMstMstiHwFailureTrap NOTIFICATION-TYPE
         "Generated whenever an NPAPI call that is invoked from the protocol
          to program the MSTI port state in hardware fails."
    ::= { fsMIMstTraps 10 }
+
+fsMIMstCistLoopIncStateChange NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstCistLoopInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the port has been moved to the loop inconsistent state for the CIST instance."
+    ::= { fsMIMstTraps 11 }
+
+fsMIMstMstiLoopIncStateChange NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstMstiPortLoopInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the port has been moved to the loop inconsistent state for the MST instance."
+    ::= { fsMIMstTraps 12 }
+
+fsMIMstCistBpduIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstPortBpduInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         " Generated when the port state goes to BPDU inconsistent state for the CIST instance."
+     ::= { fsMIMstTraps 13 }
+
+
+fsMIMstCistRootIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstCistPortRootInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the port state goes to root inconsistent state for the CIST instance. "
+     ::= { fsMIMstTraps 14 }
+
+fsMIMstMstiRootIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstMstiPortRootInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the port state goes to root inconsistent state for the MST instance. "
+     ::= { fsMIMstTraps 15 }
+
+fsMIMstCistPortStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstCistPortOldPortState,
+                    fsMIMstCistPortState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the current state of the port has been changed for the CIST instance."
+      ::= { fsMIMstTraps 16 }
+
+fsMIMstMstiPortStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIMstBrgAddress,
+                    fsMIMstMstiPortOldPortState,
+                    fsMIMstMstiPortState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "Generated when the current state of the port has been changed for the MST instance."
+      ::= { fsMIMstTraps 17 }
+
 
 -- TRAP MIB END
 

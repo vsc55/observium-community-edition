@@ -16,7 +16,7 @@ IMPORTS
     DateAndTime, RowStatus                      FROM SNMPv2-TC;
 
 aristaConfigCopyMIB MODULE-IDENTITY
-    LAST-UPDATED    "202109080000Z"
+    LAST-UPDATED    "202311020000Z"
     ORGANIZATION "Arista Networks, Inc."
     CONTACT-INFO
         "Arista Networks, Inc.
@@ -34,6 +34,8 @@ aristaConfigCopyMIB MODULE-IDENTITY
 
                  Currently supported URI schemes include: file, flash,
                  extension, system, ftp, http, https and tftp."
+    REVISION    "202311020000Z"
+    DESCRIPTION "Add explicit limit to aristaConfigCopyFailureMessage."
     REVISION    "202109080000Z"
     DESCRIPTION "Changed DisplayString to OCTET STRING."
     REVISION    "201408150000Z"
@@ -228,7 +230,7 @@ aristaConfigCopyFailureCause OBJECT-TYPE
     ::= { aristaConfigCopyCommandEntry 9 }
 
 aristaConfigCopyFailureMessage OBJECT-TYPE
-    SYNTAX          OCTET STRING
+    SYNTAX          OCTET STRING (SIZE (0..65535))
     MAX-ACCESS      read-only
     STATUS          current
     DESCRIPTION     "The details of a failed copy request."

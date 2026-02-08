@@ -203,34 +203,37 @@ $link_load_95_100 = '#a30101'; // dark red
 // get neighbours with port data from sql
 // note: only ports with operational status 'up', neighbour say's active and it's NOT a LAG (bc we want physical links)
 $ports_sql = '
-SELECT 
+SELECT
     `neighbours`.`active` as `active`,
-    `neighbours`.`neighbour_id` as `neighbour_id`, 
-    `neighbours`.`device_id` as `local_device_id`, 
-    `neighbours`.`port_id` as `local_port_id`, 
-    `neighbours`.`remote_port_id` as `remote_port_id`, 
+    `neighbours`.`neighbour_id` as `neighbour_id`,
+    `neighbours`.`device_id` as `local_device_id`,
+    `neighbours`.`port_id` as `local_port_id`,
+    `neighbours`.`remote_port_id` as `remote_port_id`,
     `neighbours`.`remote_hostname` as `remote_hostname`,
-    `neighbours`.`remote_port` as `remote_port`, 
-    `d1`.`hostname` as `local_hostname`, 
+    `neighbours`.`remote_port` as `remote_port`,
+    `d1`.`hostname` as `local_hostname`,
     `d1`.`type` as `type`,
-    `p1`.`ifName` as `local_ifname`, 
-    `p1`.`ifSpeed` as `local_ifspeed`, 
-    `p1`.`ifOperStatus` as `local_ifstatus`, 
-    `p1`.`ifType` as `localiftype`, 
+    `d1`.`disabled` as `local_disabled`,
+    `p1`.`ifName` as `local_ifname`,
+    `p1`.`ifSpeed` as `local_ifspeed`,
+    `p1`.`ifOperStatus` as `local_ifstatus`,
+    `p1`.`ifType` as `localiftype`,
     `p1`.`ifVlan` as `local_ifvlan`,
     `p1`.`ifInOctets_perc` as `local_ifInOctets_perc`,
     `p1`.`ifOutOctets_perc` as `local_ifOutOctets_perc`,
     `p2`.`device_id` as `remote_device_id`,
-    `p2`.`ifName` as `remote_ifname`, 
-    `p2`.`ifSpeed` as `remote_ifspeed`, 
-    `p2`.`ifOperStatus` as `remote_ifstatus`, 
-    `p2`.`ifType` as `remote_iftype`, 
-    `p2`.`ifVlan` as `remote_ifvlan`
+    `p2`.`ifName` as `remote_ifname`,
+    `p2`.`ifSpeed` as `remote_ifspeed`,
+    `p2`.`ifOperStatus` as `remote_ifstatus`,
+    `p2`.`ifType` as `remote_iftype`,
+    `p2`.`ifVlan` as `remote_ifvlan`,
+    `d2`.`disabled` as `remote_disabled`
 FROM `neighbours`
 JOIN `devices` d1 ON `neighbours`.`device_id` = `d1`.`device_id`
 JOIN `ports` p1 ON `neighbours`.`port_id` = `p1`.`port_id`
 JOIN `ports` p2 ON `neighbours`.`remote_port_id` = `p2`.`port_id`
-WHERE 
+LEFT JOIN `devices` d2 ON `p2`.`device_id` = `d2`.`device_id`
+WHERE
     (`d1`.`device_id` <> `neighbours`.`neighbour_id`) AND
     (`d1`.`type` IN (?, ?, ?)) AND
     (`active` = ?);
@@ -240,6 +243,13 @@ $ports            = dbFetchRows($ports_sql, $ports_sql_params);
 
 // foreach all links
 foreach ($ports as $link) {
+
+    // Skip links where either device is disabled (unless show_disabled is set)
+    if (!isset($vars['show_disabled'])) {
+        if ($link['local_disabled'] || $link['remote_disabled']) {
+            continue;
+        }
+    }
 
     // check if a device is choosen by the dropdown and save only these device links (depth = 1)
     if (isset($vars['device'])) {
@@ -393,6 +403,18 @@ foreach ($devices as $device) {
         }
     }
 
+    // Check if device is disabled - skip by default unless 'show_disabled' is set
+    if ($device['disabled']) {
+        if (!isset($vars['show_disabled'])) {
+            // Enable the 'Show Disabled' button and skip this disabled device
+            $menu_show_disabled_enable = TRUE;
+            continue;
+        } else {
+            // Disable the 'Show Disabled' button if it's pressed - show disabled devices
+            $menu_show_disabled_enable = FALSE;
+        }
+    }
+
     // insert the device for filtering in the $navbar dropdown
     $navbar['options']['devices']['suboptions'][$local_device_id]['text']      = $device_hostname;
     $navbar['options']['devices']['suboptions'][$local_device_id]['link_opts'] = 'data-deviceid=' . $local_device_id;
@@ -435,6 +457,11 @@ $navbar['options_right']['export'] = [ 'text' => 'Export Data', 'url' => 'map/ex
 // show all devices (default: only devices with links), but ONLY when there are hidden devices
 if ($menu_showall_enable) {
     $navbar['options_right']['hiddennodes'] = [ 'text' => 'Show all', 'url' => 'map/showall' ];
+}
+
+// show disabled devices button, but ONLY when there are hidden disabled devices
+if ($menu_show_disabled_enable) {
+    $navbar['options_right']['show_disabled'] = [ 'text' => 'Show Disabled', 'url' => 'map/show_disabled' ];
 }
 
 // re-arrange button and enable node_cache usage (in JS / local browser storage) only when no location or group is choosen

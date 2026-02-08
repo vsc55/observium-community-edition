@@ -4,8 +4,8 @@
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     web
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -19,8 +19,7 @@
 $form_items = [];
 $form_limit = 250; // Limit count for multiselect (use input instead)
 
-$form_devices          = dbFetchColumn('SELECT DISTINCT `device_id` FROM `bgpPeers`;');
-$form_items['devices'] = generate_form_values('device', $form_devices);
+$form_items['devices'] = generate_form_values('device', dbFetchColumn('SELECT DISTINCT `device_id` FROM `bgpPeers`'));
 //r($form_items['devices']);
 
 $param  = 'peer_as';
@@ -43,9 +42,9 @@ if ($count < $form_limit) {
 }
 
 $form_params = [
-  'local_ip' => 'bgpPeerLocalAddr',
-  'peer_ip'  => 'bgpPeerRemoteAddr',
-  //'peer_as'  => 'bgpPeerRemoteAs',
+    'local_ip' => 'bgpPeerLocalAddr',
+    'peer_ip'  => 'bgpPeerRemoteAddr',
+    //'peer_as'  => 'bgpPeerRemoteAs',
 ];
 
 foreach ($form_params as $param => $column) {
@@ -69,69 +68,70 @@ foreach ($form_params as $param => $column) {
     }
 }
 
-$form                     = [
-  'type'          => 'rows',
-  'space'         => '5px',
-  'submit_by_key' => TRUE,
-  'url'           => generate_url($vars)
+$form = [
+    'type'          => 'rows',
+    'space'         => '5px',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
 ];
 $form['row'][0]['device'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Local Device',
-  'width'  => '100%',
-  'value'  => $vars['device'],
-  'values' => $form_items['devices']
+    'type'   => 'multiselect',
+    'name'   => 'Local Device',
+    'width'  => '100%',
+    'value'  => $vars['device'],
+    'values' => $form_items['devices']
 ];
 $param                    = 'local_ip';
 $param_name               = 'Local address';
-foreach (['local_ip' => 'Local address',
-          'peer_ip'  => 'Peer address',
-          'peer_as'  => 'Remote AS'] as $param => $param_name) {
+foreach ([ 'local_ip' => 'Local address',
+           'peer_ip'  => 'Peer address',
+           'peer_as'  => 'Remote AS' ] as $param => $param_name) {
+
     if (isset($form_items[$param])) {
-        // If not so much item values, use multiselect
+        // If not so many item values, use multiselect
         $form['row'][0][$param] = [
-          'type'   => 'multiselect',
-          'name'   => $param_name,
-          'width'  => '100%',
-          'value'  => $vars[$param],
-          'values' => $form_items[$param]
+            'type'   => 'multiselect',
+            'name'   => $param_name,
+            'width'  => '100%',
+            'value'  => $vars[$param],
+            'values' => $form_items[$param]
         ];
     } else {
         // Instead, use input with autocomplete
         $form['row'][0][$param] = [
-          'type'        => 'text',
-          'name'        => $param_name,
-          'width'       => '100%',
-          'placeholder' => TRUE,
-          'ajax'        => TRUE,
-          'ajax_vars'   => ['field' => 'bgp_' . $param],
-          'value'       => $vars[$param]
+            'type'        => 'text',
+            'name'        => $param_name,
+            'width'       => '100%',
+            'placeholder' => TRUE,
+            'ajax'        => TRUE,
+            'ajax_vars'   => [ 'field' => 'bgp_' . $param ],
+            'value'       => $vars[$param]
         ];
     }
 }
 
 $form['row'][0]['type'] = [
-  'type'   => 'select',
-  'name'   => 'Type',
-  'width'  => '100%',
-  'value'  => $vars['type'],
-  'values' => ['' => 'All', 'internal' => 'iBGP', 'external' => 'eBGP']
+    'type'   => 'select',
+    'name'   => 'Type',
+    'width'  => '100%',
+    'value'  => $vars['type'],
+    'values' => [ '' => 'All', 'internal' => 'iBGP', 'external' => 'eBGP' ]
 ];
 
 // search button
 $form['row'][0]['search'] = [
-  'type'  => 'submit',
-  //'name'        => 'Search',
-  //'icon'        => 'icon-search',
-  'right' => TRUE
+    'type'  => 'submit',
+    //'name'        => 'Search',
+    //'icon'        => 'icon-search',
+    'right' => TRUE
 ];
 
 $panel_form = [
-  'type'          => 'rows',
-  'title'         => 'Search BGP',
-  'space'         => '10px',
-  'submit_by_key' => TRUE,
-  'url'           => generate_url($vars)
+    'type'          => 'rows',
+    'title'         => 'Search BGP',
+    'space'         => '10px',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
 ];
 
 $panel_form['row'][0]['device'] = $form['row'][0]['device'];
@@ -153,108 +153,11 @@ echo '</div>';
 
 unset($form, $panel_form, $form_items, $navbar);
 
-if (!isset($vars['view'])) {
-    $vars['view'] = 'details';
-}
-
-$link_array = ['page' => 'routing', 'protocol' => 'bgp'];
-
-$types = [
-  'all'      => 'All',
-  'internal' => 'iBGP',
-  'external' => 'eBGP'
-];
-foreach ($types as $option => $text) {
-    $navbar['options'][$option]['text'] = $text;
-    if ($vars['type'] == $option || (empty($vars['type']) && $option === 'all')) {
-        $navbar['options'][$option]['class'] .= " active";
-    }
-    $bgp_options = ['type' => $option];
-    if ($vars['adminstatus']) {
-        $bgp_options['adminstatus'] = $vars['adminstatus'];
-    } elseif ($vars['state']) {
-        $bgp_options['state'] = $vars['state'];
-    }
-    $navbar['options'][$option]['url'] = generate_url($link_array, $bgp_options);
-}
-
-$statuses = [
-  'stop'  => 'Shutdown',
-  'start' => 'Enabled',
-  'down'  => 'Down'
-];
-foreach ($statuses as $option => $text) {
-    $status                             = ($option === 'down') ? 'state' : 'adminstatus';
-    $navbar['options'][$option]['text'] = $text;
-    if ($vars[$status] == $option) {
-        $navbar['options'][$option]['class'] .= " active";
-        $bgp_options                         = [$status => NULL];
-    } else {
-        $bgp_options = [$status => $option];
-    }
-    if ($vars['type']) {
-        $bgp_options['type'] = $vars['type'];
-    }
-    $navbar['options'][$option]['url'] = generate_url($link_array, $bgp_options);
-}
-
-$navbar['options_right']['details']['text'] = 'No Graphs';
-if ($vars['view'] === 'details') {
-    $navbar['options_right']['details']['class'] .= ' active';
-}
-$navbar['options_right']['details']['url'] = generate_url($vars, ['view' => 'details', 'graph' => 'NULL']);
-
-$navbar['options_right']['updates']['text'] = 'Updates';
-if ($vars['graph'] === 'updates') {
-    $navbar['options_right']['updates']['class'] .= ' active';
-}
-$navbar['options_right']['updates']['url'] = generate_url($vars, ['view' => 'graphs', 'graph' => 'updates']);
-
-/*
-$bgp_graphs = array();
-foreach ($cache['graphs'] as $entry)
-{
-  if (preg_match('/^bgp_(?<subtype>prefixes)_(?<afi>ipv[46])(?<safi>[a-z]+)/', $entry, $matches))
-  {
-    if (!isset($bgp_graphs[$matches['safi']]))
-    {
-      $bgp_graphs[$matches['safi']] = array('text' => nicecase($matches['safi']));
-    }
-    $bgp_graphs[$matches['safi']]['types'][$matches['subtype'].'_'.$matches['afi'].$matches['safi']] = nicecase($matches['afi']) . ' ' . nicecase($matches['safi']) . ' ' . nicecase($matches['subtype']);
-  }
-}
-*/
-
-$bgp_graphs                       = ['unicast'   => ['text' => 'Unicast'],
-                                     'multicast' => ['text' => 'Multicast'],
-                                     'mac'       => ['text' => 'MAC Accounting']];
-$bgp_graphs['unicast']['types']   = ['prefixes_ipv4unicast' => 'IPv4 Ucast Prefixes',
-                                     'prefixes_ipv6unicast' => 'IPv6 Ucast Prefixes',
-                                     'prefixes_ipv4vpn'     => 'VPNv4 Prefixes'];
-$bgp_graphs['multicast']['types'] = ['prefixes_ipv4multicast' => 'IPv4 Mcast Prefixes',
-                                     'prefixes_ipv6multicast' => 'IPv6 Mcast Prefixes'];
-
-$bgp_graphs['mac']          = ['text' => 'MAC Accounting'];
-$bgp_graphs['mac']['types'] = ['macaccounting_bits' => 'MAC Bits',
-                               'macaccounting_pkts' => 'MAC Pkts'];
-foreach ($bgp_graphs as $bgp_graph => $bgp_options) {
-    $navbar['options_right'][$bgp_graph]['text'] = $bgp_options['text'];
-    foreach ($bgp_options['types'] as $option => $text) {
-        if ($vars['graph'] == $option) {
-            $navbar['options_right'][$bgp_graph]['class']                        .= ' active';
-            $navbar['options_right'][$bgp_graph]['suboptions'][$option]['class'] = 'active';
-        }
-        $navbar['options_right'][$bgp_graph]['suboptions'][$option]['text'] = $text;
-        $navbar['options_right'][$bgp_graph]['suboptions'][$option]['url']  = generate_url($vars, ['view' => 'graphs', 'graph' => $option]);
-    }
-}
-
-$navbar['class'] = "navbar-narrow";
-$navbar['brand'] = "BGP";
-print_navbar($navbar);
-unset($navbar);
+include($config['html_dir'] . "/includes/navbars/bgp.inc.php");
 
 //r($cache['bgp']);
 print_bgp_peer_table($vars);
+
+register_html_title("BGP Peers");
 
 // EOF

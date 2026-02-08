@@ -11,16 +11,11 @@
  *
  */
 
-// 'cEigrpHoldTime', 'cEigrpUpTime', 'cEigrpSrtt', 'cEigrpRto', 'cEigrpPktsEnqueued', 'cEigrpLastSeq', 'cEigrpRetrans', 'cEigrpRetries'
-
-$array = ['HoldTime'     => ['descr' => 'Holdtime', 'colour' => '22FF22'],
-          'UpTime'       => ['descr' => 'Uptime', 'colour' => '0022FF'],
-          'Srtt'         => ['descr' => 'SRTT', 'colour' => 'FF0000'],
-          'Rto'          => ['descr' => 'RTO', 'colour' => '00AAAA'],
-          'PktsEnqueued' => ['descr' => 'Packets Enqueued', 'colour' => 'FF00FF'],
-          'LastSeq'      => ['descr' => 'Last Seq', 'colour' => 'FFA500'],
-          'Retrans'      => ['descr' => 'Retransmissions', 'colour' => 'CC0000'],
-          'Retries'      => ['descr' => 'Retries', 'colour' => '0000CC'],
+// Keep peer graph focused on 3 high-signal metrics used by UI
+$array = [
+  'Srtt'         => ['descr' => 'SRTT', 'colour' => 'FF0000'],
+  'Rto'          => ['descr' => 'RTO',  'colour' => '00AAAA'],
+  'PktsEnqueued' => ['descr' => 'Queue','colour' => 'FF00FF'],
 ];
 
 $i = 0;
@@ -38,7 +33,7 @@ if (rrd_is_file($rrd_filename)) {
 
 $colours   = "mixed";
 $nototal   = 1;
-$unit_text = "Packets";
+$unit_text = "Metric";
 
 $log_y = TRUE;
 

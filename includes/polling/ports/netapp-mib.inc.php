@@ -54,7 +54,7 @@ if ($port_stats_count) {
             $netport_stat = snmpwalk_cache_twopart_oid($device, $netport_oid, $netport_stat, $mib, NULL, $flags);
         }
         // disable hex to string conversion for ifPhysAddress
-        $flags       = $flags | OBS_SNMP_HEX;
+        $flags |= OBS_SNMP_HEX;
         $netport_oid = $mib_def['ifPhysAddress']['oid'];
         print_cli($mib . '::' . $netport_oid . ' ');
         $netport_stat = snmpwalk_cache_twopart_oid($device, $netport_oid, $netport_stat, $mib, NULL, $flags);

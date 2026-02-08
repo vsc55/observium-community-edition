@@ -29,7 +29,7 @@ foreach (get_device_mibs_permitted($device) as $mib) {
     print_cli(PHP_EOL);
 }
 
-print_debug_vars($valid['storage']);
+//print_debug_vars($valid['storage']);
 
 // Remove storage which weren't redetected here
 $query = 'SELECT * FROM `storage` WHERE `device_id` = ?';

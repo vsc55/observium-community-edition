@@ -65,4 +65,11 @@ aristaExperiment OBJECT-IDENTITY
          for these MIBs can not be guaranteed between releases."
     ::= { arista 4 }
 
+aristaInternalUse OBJECT-IDENTITY
+    STATUS current
+    DESCRIPTION
+        "aristaInternalUse provides a root object identifier
+         for internal use by Arista Networks, Inc."
+    ::= { arista 5 }
+
 END

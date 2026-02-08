@@ -126,7 +126,7 @@ MefSoamTcDataPatternType ::= TEXTUAL-CONVENTION
     DESCRIPTION
        "This enumeration data type indicates the type of data pattern to be
         sent in an OAM PDU Data TLV.
-                              9
+
         The valid enumerated values associated with this type are:
 
         zeroPattern(1)          indicates the Data TLV contains all zeros

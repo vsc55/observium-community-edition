@@ -1,7 +1,6 @@
 -- Copyright (C) 2012 Aricent Group . All Rights Reserved
 
 --******************************************************************************
---$Id: fsusermgm.mib,v 1.6 2012/09/07 09:52:06 siva Exp $
 --
 --Description : This file contains MIB definitions for FPAM module.
 --
@@ -26,16 +25,20 @@ IMPORTS
 ---   futuresoftware OBJECT IDENTIFIER ::= { enterprises 2076 }    
 
 fsusrMgmt MODULE-IDENTITY
-         LAST-UPDATED "201209050000Z"
-         ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
-         CONTACT-INFO "support@aricent.com"
-	 DESCRIPTION
-                    "This MIB implementation is used to maintain User
-                     account management"
-	 REVISION "201209050000Z"
-         DESCRIPTION 
-                    "This MIB implementation is used to maintain User 
-                     account management" 
+        LAST-UPDATED "202303280000Z"
+        ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
+        CONTACT-INFO "support@aricent.com"
+        DESCRIPTION
+                 "This MIB implementation is used to maintain User
+                  account management"
+        REVISION "202303280000Z"
+        DESCRIPTION "Added BCRYPT for fsusrMgmtUserPasswordType"
+        REVISION "202203240000Z"
+        DESCRIPTION "Added fsusrMgmtUserPasswordType"
+        REVISION "201209050000Z"
+        DESCRIPTION
+                 "This MIB implementation is used to maintain User
+                  account management"
 
           ::= { enterprises  aricent-communication-holding-ltd(29601) iss(2) 70 }
 
@@ -67,8 +70,8 @@ fsusrMgmtMinPasswordLen OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-	"This is to configure the minimum length of password by
-	the administrator. Minimum length value must be 8"
+        "This is to configure the minimum length of password by
+        the administrator. Minimum length value must be 8"
     ::= { fsusrMgmtStats 3 }
 
 fsusrMgmtPasswdValidationChars OBJECT-TYPE
@@ -105,7 +108,7 @@ fsusrMgmtPasswdValidateNoOfLowerCase OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-	    "This is to configure the minimum number of lower case
+        "This is to configure the minimum number of lower case
          characters that are to be present in the password. If 
          the given password has less than the configured number of
          lower case characters, it will not be allowed."
@@ -117,7 +120,7 @@ fsusrMgmtPasswdValidateNoOfUpperCase OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-	    "This is to configure the minimum number of upper case 
+        "This is to configure the minimum number of upper case
          characters that are to be present in the password. If 
          the given password has less than the configured number of 
          upper case characters, it will not be allowed."
@@ -129,7 +132,7 @@ fsusrMgmtPasswdValidateNoOfNumericals OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-	    "This is to configure the minimum number of numerical 
+        "This is to configure the minimum number of numerical
          characters that are to be present in the password. If
          the given password has less than the configured number of 
          numerical characters, it will not be allowed."
@@ -141,7 +144,7 @@ fsusrMgmtPasswdValidateNoOfSplChars OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-	    "This is to configure the minimum number of special
+        "This is to configure the minimum number of special
          characters that are to be present in the password. If
          the given password has less than the configured number of 
          special characters, it will not be allowed."
@@ -204,7 +207,8 @@ FsUsrMgmtEntry   ::= SEQUENCE {
         fsusrMgmtUserStatus       INTEGER,
         fsusrMgmtUserLockRelTime  Unsigned32,
         fsusrMgmtUserRowStatus    RowStatus,
-        fsusrMgmtUserConfirmPwd   DisplayString
+        fsusrMgmtUserConfirmPwd   DisplayString,
+        fsusrMgmtUserPasswordType INTEGER
 }
 
 fsusrMgmtUserName    OBJECT-TYPE
@@ -229,7 +233,7 @@ fsusrMgmtAuthString    OBJECT-TYPE
     ::= { fsusrMgmtEntry 2 }
 
 fsusrMgmtUserPassword OBJECT-TYPE
-    SYNTAX      DisplayString (SIZE (8..32))
+    SYNTAX      DisplayString (SIZE (8..500))
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
@@ -292,13 +296,28 @@ fsusrMgmtUserRowStatus OBJECT-TYPE
    ::= { fsusrMgmtEntry 8 }
 
 fsusrMgmtUserConfirmPwd  OBJECT-TYPE
-    SYNTAX      DisplayString (SIZE (8..32))
+    SYNTAX      DisplayString (SIZE (8..500))
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
         "Enter the text values for confirmation password. This field is used
-		to confirm the password with the fsusrMgmtUserPassword"
+        to confirm the password with the fsusrMgmtUserPassword"
     DEFVAL { "Password123#" }
     ::= { fsusrMgmtEntry 9 }
+
+fsusrMgmtUserPasswordType OBJECT-TYPE
+    SYNTAX      INTEGER {
+                        unencrypted-password (0),
+                        unencrypted-secret (1),
+                        sha-512 (2),
+                        bcrypt (3),
+                        vigenere (7)
+                    }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "This is used to indicate how the password must be interpreted."
+    DEFVAL { unencrypted-password }
+    ::= { fsusrMgmtEntry 10 }
 
 END

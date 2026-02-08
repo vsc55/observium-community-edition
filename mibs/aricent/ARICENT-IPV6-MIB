@@ -1,6 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
---    $Id: fsipv6.mib,v 1.37 2016/03/24 10:27:37 siva Exp $
 --    IPv6 Proprietary MIB Definition
 
 ARICENT-IPV6-MIB DEFINITIONS ::= BEGIN 
@@ -10,21 +9,36 @@ ARICENT-IPV6-MIB DEFINITIONS ::= BEGIN
       MODULE-IDENTITY, OBJECT-TYPE, Counter32,
       enterprises, Integer32,
       Unsigned32,TimeTicks                           FROM SNMPv2-SMI
-      RowStatus,TruthValue, DisplayString            FROM SNMPv2-TC
+      RowStatus,TruthValue, DisplayString, 
+      TEXTUAL-CONVENTION                             FROM SNMPv2-TC
       InetZoneIndex,InetScopeType                    FROM INET-ADDRESS-MIB
       InterfaceIndex                                 FROM IF-MIB; 
 
       futureipv6 MODULE-IDENTITY
-         LAST-UPDATED "201209050000Z"
+         LAST-UPDATED "202407250000Z"
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
          CONTACT-INFO "support@aricent.com"
 
          DESCRIPTION
             " The MIB module for IPv6. "
+
+         REVISION "202407250000Z"
+         DESCRIPTION
+            "Updated fsipv6RouteProtocol enumerations
+            to match implementation. Added kernel route type 
+            for routes insalled by the kernel and sent to iss."
+
+         REVISION "202201260000Z"
+         DESCRIPTION
+            "Updated fsipv6PingOperStatus enumerations
+            to match implementation. Added limited 
+            continuous ping support for Web usage."
+
          REVISION "201209050000Z"
          DESCRIPTION
             "The revised version of the MIB for IPv6
             release 1.1.0.0. "
+
          REVISION "199912171330Z"
          DESCRIPTION
             "The first version of the MIB for IPv6
@@ -2426,7 +2440,9 @@ fsipv6RaRDNSSTable   OBJECT IDENTIFIER ::= { fsipv6 4 }
                   fsipv6PingDestAddrType
                       INTEGER,
                   fsipv6PingHostName
-                      OCTET STRING
+                      OCTET STRING,
+                  fsipv6PingContInterval
+                      Integer32
               }
           
 
@@ -2565,8 +2581,9 @@ fsipv6RaRDNSSTable   OBJECT IDENTIFIER ::= { fsipv6 4 }
 
           fsipv6PingOperStatus        OBJECT-TYPE
               SYNTAX  INTEGER { 
-                          inprogress(1),
-                          notinprogress(2)
+                          notInitiated(1),
+                          inProgress(2),
+                          completed(3)
                       }
               MAX-ACCESS  read-only
               STATUS  current
@@ -2649,6 +2666,21 @@ fsipv6RaRDNSSTable   OBJECT IDENTIFIER ::= { fsipv6 4 }
                   used to send echo requests."
               ::= { fsipv6PingEntry 20 }
 
+          fsipv6PingContInterval OBJECT-TYPE
+              SYNTAX      Integer32 (0..3600)
+              MAX-ACCESS  read-create
+              STATUS      current
+              DESCRIPTION
+                 "Specifies the interval for continuous ping operations.
+                 A value of 0 indicates that continuous ping generation 
+                 is not enabled. Other values indicate that continuous 
+                 ping is enabled and that a new ping attempt (based on 
+                 other entry settings) will be initiated periodically 
+                 per the current interval value."
+
+              DEFVAL { 0 }
+              ::= { fsipv6PingEntry 21 }
+          
 -- Supoort for Proxy ND - START
 
 --fsipv6NDProxyTable BEGIN
@@ -4396,7 +4428,8 @@ fsipv6UdpScalars  OBJECT IDENTIFIER ::= { fsipv6Udp 1 }
 
                             bgp(7),          -- Border Gateway Protocol
                             idrp(8),         -- InterDomain Routing Protocol
-                            igrp(9)          -- InterGateway Routing Protocol
+                            igrp(9),         -- InterGateway Routing Protocol
+                            kernel(12)       -- routes installed by kernel
 
                          }
               MAX-ACCESS    not-accessible
@@ -4892,6 +4925,4 @@ fsipv6UdpScalars  OBJECT IDENTIFIER ::= { fsipv6Udp 1 }
                    "Life time to be configured for the connected router"
                 ::= { fsipv6IfRaRDNSSEntry 18}
  
-
--- RDNSS END
 END

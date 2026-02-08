@@ -1117,7 +1117,7 @@ function discover_vrf($device, $vrf)
 }
 
 /**
- * This array used by html_highlight()
+ * This array used by html_highlight_entities()
  * @param $device
  *
  * @return void
@@ -1131,7 +1131,7 @@ function bgp_links_cache($device) {
     }
     $bgp_links = &$cache['entity_links']['bgp'];
 
-    // Highlight port links
+    // Highlight bgp links
     if (isset($bgp_links[$device['device_id']])) {
         return;
     }
@@ -1143,36 +1143,63 @@ function bgp_links_cache($device) {
     $bgp_links[$device['device_id']] = [];
 
     //SELECT `bgpPeer_id`, `bgpPeerRemoteAs`, `bgpPeerIdentifier`, `bgpPeerRemoteAddr` FROM `bgpPeers` WHERE `device_id` = 2
-    foreach (dbFetchRows('SELECT * FROM `bgpPeers` WHERE `device_id` = ?', [$device['device_id']]) as $bgp_descr) {
-        $search = [];
-        foreach ([ 'bgpPeerIdentifier', 'bgpPeerRemoteAddr' ] as $param) {
-            if ($bgp_descr[$param] === '0.0.0.0') {
+    foreach (dbFetchRows('SELECT * FROM `bgpPeers` WHERE `device_id` = ?', [ $device['device_id'] ]) as $entry) {
+        $bgp_descr = 'AS ' . $entry['bgpPeerRemoteAs'];
+        if ($entry['astext']) {
+            $bgp_descr .= ' - ' . $entry['astext'];
+        }
+
+        foreach ([ 'bgpPeerRemoteAddr', 'bgpPeerIdentifier' ] as $param) {
+            $bgp_addr = $entry[$param];
+            if ($bgp_addr === '0.0.0.0' || isset($bgp_links[$device['device_id']][$bgp_addr]) || safe_empty($bgp_addr)) {
                 continue;
             }
 
-            // Cisco Specific (and common)
-            $search[] = 'Nbr ' . $bgp_descr[$param];
-            $search[] = 'Neighbor ' . $bgp_descr[$param];
-            // JunOS specific
-            $search[] = 'BGP peer ' . $bgp_descr[$param];
-            if (get_ip_version($bgp_descr[$param]) === 6) {
-                // For IPv6 append compressed form
-                $bgp_descr[$param] = ip_compress($bgp_descr[$param]);
-                $search[]          = 'Nbr ' . $bgp_descr[$param];
-                $search[]          = 'Neighbor ' . $bgp_descr[$param];
-                $search[]          = 'BGP peer ' . $bgp_descr[$param];
-            }
-        }
-        $bgp_links[$device['device_id']][] = [
-            'search'  => $search,
-            'replace' => generate_entity_link('bgp_peer', $bgp_descr, '$2')
-        ];
+            $search = [];      // for simple search
+            $preg_search = []; // regexp search
 
-        // Additionally append AS text
-        if ($bgp_descr['astext'] && !isset($bgp_links[$device['device_id']]['as' . $bgp_descr['bgpPeerRemoteAs']])) {
-            $bgp_links[$device['device_id']]['as' . $bgp_descr['bgpPeerRemoteAs']] = [
-                'search'  => [ 'AS ' . $bgp_descr['bgpPeerRemoteAs'], 'AS: ' . $bgp_descr['bgpPeerRemoteAs'], 'AS' . $bgp_descr['bgpPeerRemoteAs'] ],
-                'replace' => generate_tooltip_link('', '$2', $bgp_descr['astext'])
+            // Cisco Specific (and common)
+            $search[] = 'Nbr ' . $bgp_addr;
+            $search[] = 'Neighbor ' . $bgp_addr;
+            // JunOS specific
+            $search[] = 'BGP peer ' . $bgp_addr;
+            $preg_search[] = '(?:Nbr|Neighbor|BGP peer) ' . preg_quote($bgp_addr, '%');
+            if (get_ip_version($bgp_addr) === 6) {
+                // For IPv6 append compressed form
+                $bgp_addr = ip_compress($bgp_addr);
+                $search[] = 'Nbr ' . $bgp_addr;
+                $search[] = 'Neighbor ' . $bgp_addr;
+                $search[] = 'BGP peer ' . $bgp_addr;
+                $preg_search[] = '(?:Nbr|Neighbor|BGP peer) ' . preg_quote($bgp_addr, '%');
+            }
+
+            $bgp_links[$device['device_id']][$bgp_addr] = [
+                'entity_type'  => 'bgp_peer',
+                'entity_id'    => $entry['bgpPeer_id'],
+                'entity_name'  => $entry['bgpPeerRemoteAddr'],
+                'entity_descr' => $bgp_descr . ($entry['reverse_dns'] ? ' (' . $entry['reverse_dns'] . ')' : ''),
+
+                'pattern' => '(' . implode('|', $preg_search) . ')',
+                'search'  => $search,
+                'replace' => generate_entity_link('bgp_peer', $entry, '$2')
+            ];
+        }
+
+        // Additionally, append AS text
+        $bgp_as = 'as' . $entry['bgpPeerRemoteAs'];
+        if (isset($bgp_links[$device['device_id']][$bgp_as])) {
+            continue;
+        }
+        if ($entry['astext'] && !isset($bgp_links[$device['device_id']][$bgp_as])) {
+            $bgp_links[$device['device_id']][$bgp_as] = [
+                'entity_type'  => 'bgp_peer',
+                'entity_id'    => $entry['bgpPeer_id'],
+                'entity_name'  => $entry['bgpPeerRemoteAddr'],
+                'entity_descr' => $bgp_descr,
+
+                'pattern' => '(AS:? ?' . preg_quote($entry['bgpPeerRemoteAs'], '%') . ')',
+                'search'  => [ 'AS ' . $entry['bgpPeerRemoteAs'], 'AS: ' . $entry['bgpPeerRemoteAs'], 'AS' . $entry['bgpPeerRemoteAs'] ],
+                'replace' => generate_tooltip_link('', '$2', $entry['astext'])
             ];
         }
     }

@@ -70,13 +70,13 @@ if (!safe_empty($results)) {
 
         $view                = str_contains($result['ip_address'], '.') ? 'ipv4' : 'ipv6';
         $ip_search_results[] = [
-          'url'    => $port ? generate_port_url($port) : generate_device_url($device, ['tab' => 'ports', 'view' => $view]),
-          'name'   => $name,
-          'colour' => $tab_colour,
-          'icon'   => $config['icon'][$view],
-          'data'   => [
-            '| ' . escape_html($device_name),
-            escape_html($descr)],
+            'url'    => $port ? generate_port_url($port) : generate_device_url($device, ['tab' => 'ports', 'view' => $view]),
+            'name'   => $name,
+            'colour' => $tab_colour,
+            'icon'   => $config['icon'][$view],
+            'data'   => [
+                '| ' . $device_name,
+                $descr ],
         ];
 
     }

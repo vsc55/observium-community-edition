@@ -57,21 +57,21 @@ switchModules          OBJECT IDENTIFIER ::= { switchMIBObjects 2 }
 
 -- Port Security   Table 
 portSecurityTable	OBJECT-TYPE
-			SYNTAX		SEQUENCE OF portSecurityEntry
+			SYNTAX		SEQUENCE OF PortSecurityEntry
 			MAX-ACCESS	not-accessible
 			STATUS		current
 			DESCRIPTION	"Port-based Security information,including security mode and max host setting."
 			::= { switchModules 1 }
 
 			portSecurityEntry	OBJECT-TYPE
-					SYNTAX		portSecurityEntry
+					SYNTAX		PortSecurityEntry
 					MAX-ACCESS	not-accessible
 					STATUS		current
 					DESCRIPTION	"An entry containing port security information."
       				INDEX   {portSecurityModuleIndex,portSecurityPortIndex }
 					::= { portSecurityTable 1 }
 
-			portSecurityEntry	::= SEQUENCE { 
+			PortSecurityEntry	::= SEQUENCE { 
            					portSecurityModuleIndex         INTEGER,
            					portSecurityPortIndex         INTEGER,
 							portSecurityMode		  INTEGER, 
@@ -134,7 +134,7 @@ portSecurityTable	OBJECT-TYPE
         
 -- Port Security mac address  Table      
 portSecurityMacAddressTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF portSecurityMacAddressEntry
+		SYNTAX		SEQUENCE OF PortSecurityMacAddressEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"A list of portSecurityMacAddressEntry entries. 
@@ -142,7 +142,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
 					::= { switchModules 2 }		
 	                       
 		portSecurityMacAddressEntry	OBJECT-TYPE
-				SYNTAX		portSecurityMacAddressEntry
+				SYNTAX		PortSecurityMacAddressEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"An entry containing security mac address information.Useing the format
@@ -152,7 +152,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
 				INDEX		{ portSecurityMacAddressPortIndex , portSecurityMacAddress}
 				::= { portSecurityMacAddressTable 1 }
        
-		portSecurityMacAddressEntry	::= SEQUENCE { 
+		PortSecurityMacAddressEntry	::= SEQUENCE { 
 		          			portSecurityMacAddressPortIndex     INTEGER,
 							portSecurityMacAddress				MacAddress, 
 							portSecurityMacAddressDel        TruthValue
@@ -196,7 +196,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
 --                                                        
                                                          
    switchUserMacTable OBJECT-TYPE
-       SYNTAX      SEQUENCE OF switchUserMacEntry
+       SYNTAX      SEQUENCE OF SwitchUserMacEntry
        MAX-ACCESS  not-accessible
        STATUS      mandatory
        DESCRIPTION
@@ -204,7 +204,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
        ::= { switchModules 11 }
 
    switchUserMacEntry OBJECT-TYPE
-       SYNTAX      switchUserMacEntry
+       SYNTAX      SwitchUserMacEntry
        MAX-ACCESS  not-accessible
        STATUS      mandatory
        DESCRIPTION
@@ -213,7 +213,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
        INDEX   { userMacModuleIndex , userMacPortIndex }
        ::= { switchUserMacTable 1 }
                               
-   switchUserMacEntry ::=
+   SwitchUserMacEntry ::=
        SEQUENCE {
            userMacModuleIndex                 INTEGER,
            userMacPortIndex                   INTEGER,
@@ -314,7 +314,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
        ::= { switchUserMacEntry 10 }   
        
    cpuBandwidthTable OBJECT-TYPE
-       SYNTAX  SEQUENCE OF cpuBandwidthEntry
+       SYNTAX  SEQUENCE OF CpuBandwidthEntry
        ACCESS  not-accessible
        STATUS  mandatory
        DESCRIPTION
@@ -322,7 +322,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
        ::= { switchSystem 2 }
 
    cpuBandwidthEntry OBJECT-TYPE
-       SYNTAX cpuBandwidthEntry
+       SYNTAX CpuBandwidthEntry
        ACCESS  not-accessible
        STATUS  mandatory
        DESCRIPTION
@@ -330,7 +330,7 @@ portSecurityMacAddressTable	OBJECT-TYPE
        INDEX { cpuBandwidthQueueIndex }
        ::= { cpuBandwidthTable 1 }
 
-   cpuBandwidthEntry ::=
+   CpuBandwidthEntry ::=
        SEQUENCE {
            cpuBandwidthQueueIndex                INTEGER,
            cpuBandwidthQueueBW                   INTEGER

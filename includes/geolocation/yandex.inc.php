@@ -49,23 +49,27 @@ if (isset($data['response'])) {
 
     $data = $data['GeoObject']['metaDataProperty']['GeocoderMetaData']['AddressDetails'];
     $location['location_country'] = strtolower($data['Country']['CountryNameCode']);
-    $location['location_state']   = $data['Country']['AdministrativeArea']['AdministrativeAreaName'];
-    if (isset($data['Country']['AdministrativeArea']['SubAdministrativeArea'])) {
-        $entry = $data['Country']['AdministrativeArea']['SubAdministrativeArea'];
+
+    $area = $data['Country']['AdministrativeArea'];
+    print_debug_vars($area);
+
+    $location['location_state']   = $area['AdministrativeAreaName'];
+    if (isset($area['SubAdministrativeArea'])) {
+        $entry = $area['SubAdministrativeArea'];
+        //print_vars($area);
         print_debug_vars($entry);
         $location['location_county'] = $entry['SubAdministrativeAreaName'];
         $location['location_city']   = $entry['Locality']['LocalityName'] ?? $entry['Locality']['DependentLocality']['DependentLocalityName'];
-    } elseif (isset($data['Country']['AdministrativeArea']['Locality']['DependentLocality'])) {
-        $entry = $data['Country']['AdministrativeArea']['Locality']['DependentLocality'];
+    } elseif (isset($area['Locality']['DependentLocality'])) {
+        $entry = $area['Locality']['DependentLocality'];
         print_debug_vars($entry);
         $location['location_county'] = $entry['DependentLocalityName'];
         $location['location_city']   = $entry['DependentLocality']['DependentLocalityName'];
     } else {
-        $entry = $data['Country']['AdministrativeArea'];
-        print_debug_vars($entry);
-        $location['location_county'] = $entry['AdministrativeAreaName'];
-        $location['location_city']   = $entry['Locality']['LocalityName'];
+        //$location['location_county'] = $area['AdministrativeAreaName'];
+        $location['location_city']   = $area['Locality']['LocalityName'];
     }
+    unset($area, $entry);
 } else {
     $data = FALSE;
 }

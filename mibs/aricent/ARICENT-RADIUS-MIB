@@ -1,21 +1,5 @@
 -- Copyright (C) 2008-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsradius.mib,v 1.5 2015/04/28 12:25:01 siva Exp $
-
--- ****************************************************************************
--- *                         Document Version Info                            *
--- ****************************************************************************
--- *Version |    Date        |   Author             |        Changes          *
--- * ------------------------------------------------------------------------ *
--- * 1.1    |  31st MAY 2000 | Private              |Removed duplicate objects*
--- *        |                |                      |available in Std Table   *
--- *        |                |                      |			      *
--- *        |                |                      |	 		      *
--- ****************************************************************************
-
--- RADIUS-CLIENT-MIB DEFINITIONS ::= BEGIN
-
-
 ARICENT-RADIUS-MIB DEFINITIONS ::= BEGIN
 
  IMPORTS

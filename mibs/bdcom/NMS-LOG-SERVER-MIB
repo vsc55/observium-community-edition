@@ -20,6 +20,24 @@
           
                logServer             OBJECT IDENTIFIER ::= { nmslocal 235 }
 
+--logTrap
+               logTrapLevel OBJECT-TYPE
+                   SYNTAX  INTEGER{
+                                   emerg(0), 
+                                   alert(1), 
+                                   critical(2), 
+                                   error(3), 
+                                   warning(4), 
+                                   notice(5),
+                                   info(6),
+                                   debug(7)
+                                  }
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Log trap level. And default value is info(6). "
+                   ::= { logServer 4 }
+
 --logServerTable
                logServerTable OBJECT-TYPE
                    SYNTAX  SEQUENCE OF LogServerTableEntry
@@ -146,22 +164,4 @@
                            "Log trap syslog format. Rfc3164 or Rfc5424."
                    ::= { logTrapTableEntry 3 }
          
---logTrap
-               logTrapLevel OBJECT-TYPE
-                   SYNTAX  INTEGER{
-                                   emerg(0), 
-                                   alert(1), 
-                                   critical(2), 
-                                   error(3), 
-                                   warning(4), 
-                                   notice(5),
-                                   info(6),
-                                   debug(7)
-                                  }
-                   ACCESS  read-write
-                   STATUS  mandatory
-                   DESCRIPTION
-                           "Log trap level. And default value is info(6). "
-                   ::= { logServer 4 }
-
 END

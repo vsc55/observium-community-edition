@@ -47,26 +47,10 @@ if (strpos($_SERVER['REQUEST_URI'], "anon")) {
 $sql = 'SELECT `devices`.*, COUNT(`neighbours`.`port_id`) AS `neighbours_count` FROM `devices` LEFT JOIN `neighbours` USING(`device_id`) ';
 //'WHERE `neighbours`.`active` = '1' AND `device_id` = 286 GROUP BY `device_id` ORDER BY COUNT(`neighbours`.`port_id`) DESC ';
 //$where  = 'WHERE `neighbours`.`active` = ?';
-$where = [];
-$where[] = '`neighbours`.`active` = ?';
-$params = [1];
-if (isset($vars['device'])) {
-    if (device_permitted($vars['device'])) {
-        //$where    .= ' AND `device_id` = ?';
-        $where[] = '`device_id` = ?';
-        $params[] = $vars['device'];
-    } else {
-        // not permitted
-        print_error_permission("Device not permitted");
-        return;
-    }
-    //$where = "WHERE D.`device_id` = ".$vars['device'];
-} else {
-    //$where .= $cache['where']['devices_permitted'];
-    $where[] = $cache['where']['devices_permitted'];
-}
-//$where .= " AND L.`active` = '1'";
-$where = generate_where_clause($where);
+
+// Initialize $where and $params
+$where = '';
+$params = [];
 
 // FIXME this shit probably needs tidied up.
 
@@ -74,6 +58,8 @@ $format = isset($vars['format']) && in_array($vars['format'], ['dot', 'png', 'sv
 
 if (isset($vars['device'])) {
     $rankdir = "LR";
+    $where = ' WHERE `devices`.`device_id` = ?';
+    $params[] = $vars['device'];
 } else {
     $rankdir = "TB";
 }
@@ -99,7 +85,7 @@ if (!$_SESSION['authenticated']) {
 
         $links       = dbFetchRows('SELECT * FROM `neighbours` LEFT JOIN `ports` USING(`device_id`, `port_id`) WHERE `device_id` = ? AND `active` = ? ORDER BY `remote_hostname`', [$device['device_id'], 1]);
         $links_group = [];
-        foreach ($links as $index => $link) {
+        foreach ($links as $link) {
             //$links_group[$link['device_id']][$link['port_id']][$link['remote_port']][$index] = $link['remote_hostname'] . '[' . nicecase($link['protocol']) . ']';
             $links_group[$link['device_id']][$link['port_id']][$link['remote_port']]++;
         }

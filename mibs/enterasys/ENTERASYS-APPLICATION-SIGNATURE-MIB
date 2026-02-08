@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-APPLICATION-SIGNATURE-MIB DEFINITIONS ::= BEGIN
 
 --
@@ -31,21 +33,21 @@ ENTERASYS-APPLICATION-SIGNATURE-MIB DEFINITIONS ::= BEGIN
 
 --  Copyright May 2016 Extreme Networks, Inc.
 
- 
+
 IMPORTS
     OBJECT-GROUP, MODULE-COMPLIANCE
         FROM SNMPv2-CONF
     Unsigned32,  OBJECT-TYPE, MODULE-IDENTITY
-        FROM SNMPv2-SMI            
+        FROM SNMPv2-SMI
     RowStatus, DisplayString
         FROM SNMPv2-TC
     SnmpAdminString
         FROM SNMP-FRAMEWORK-MIB
-    etsysModules            
-        FROM ENTERASYS-MIB-NAMES;            
+    etsysModules
+        FROM ENTERASYS-MIB-NAMES;
 
 
-etsysApplicationSignatureMIB MODULE-IDENTITY 
+etsysApplicationSignatureMIB MODULE-IDENTITY
     LAST-UPDATED "201605111256Z"  -- Wed May 11 12:56 UTC 2016
     ORGANIZATION "Extreme Networks"
     CONTACT-INFO
@@ -87,8 +89,8 @@ etsysAppSignGroupTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF EtsysAppSignGroupEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
-        "A table that contains the standard Application Groups for the 
+    DESCRIPTION
+        "A table that contains the standard Application Groups for the
         Extreme Network deep packet inspection engine."
     ::= { etsysApplicationSignatureMIBObjects 1 }
 
@@ -96,13 +98,13 @@ etsysAppSignGroupEntry OBJECT-TYPE
     SYNTAX      EtsysAppSignGroupEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
-        "An entry that ties a given application Group Name to a particular 
+    DESCRIPTION
+        "An entry that ties a given application Group Name to a particular
          application group ID."
     INDEX { etsysAppSignGroupId }
     ::= { etsysAppSignGroupTable 1 }
 
-EtsysAppSignGroupEntry  ::= 
+EtsysAppSignGroupEntry  ::=
     SEQUENCE {
         etsysAppSignGroupId
             Unsigned32,
@@ -110,21 +112,21 @@ EtsysAppSignGroupEntry  ::=
             SnmpAdminString
     }
 
-etsysAppSignGroupId OBJECT-TYPE    
+etsysAppSignGroupId OBJECT-TYPE
     SYNTAX      Unsigned32  (1..65535)
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "A pre-defined unique group index which points to the group to
          which the application belongs."
     ::= { etsysAppSignGroupEntry 1 }
 
 
-etsysAppSignGroupName OBJECT-TYPE    
+etsysAppSignGroupName OBJECT-TYPE
     SYNTAX      SnmpAdminString
     MAX-ACCESS  read-only
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "A pre-defined application group name."
     ::= { etsysAppSignGroupEntry 2 }
 
@@ -136,7 +138,7 @@ etsysAppSignDisplayNameTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF EtsysAppSignDisplayNameEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "A table that describes attributes of a user defined application
          display name."
     ::= { etsysApplicationSignatureMIBObjects 2 }
@@ -145,7 +147,7 @@ etsysAppSignDisplayNameEntry OBJECT-TYPE
     SYNTAX      EtsysAppSignDisplayNameEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "Describes a particular entry within the
          etsysAppSignDisplayNameTable."
     INDEX { etsysAppSignDisplayId }
@@ -161,38 +163,38 @@ EtsysAppSignDisplayNameEntry  ::=
             RowStatus
     }
 
-etsysAppSignDisplayId OBJECT-TYPE    
+etsysAppSignDisplayId OBJECT-TYPE
     SYNTAX      Unsigned32 (1..5999)
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
        "A unique ID assigned to a specific extended signature.
-        The user can only assign an index in a range from 5000 to 5999. 
+        The user can only assign an index in a range from 5000 to 5999.
         The rest of the indices are reserved for internal use."
     ::= { etsysAppSignDisplayNameEntry 1 }
 
-etsysAppSignDisplayName OBJECT-TYPE    
+etsysAppSignDisplayName OBJECT-TYPE
     SYNTAX      SnmpAdminString (SIZE(0..32))
     MAX-ACCESS  read-create
     STATUS      current
-    DESCRIPTION    
-        "A user friendly name assigned to this extended signature.  
-         The display name and display ID MUST be unique within 
-         the scope of a single managed entity. 
+    DESCRIPTION
+        "A user friendly name assigned to this extended signature.
+         The display name and display ID MUST be unique within
+         the scope of a single managed entity.
 
          This object MUST NOT be modifiable while this entry's
-         RowStatus is active(1) or if etsysAppSignDisplayId is a reserved 
+         RowStatus is active(1) or if etsysAppSignDisplayId is a reserved
          index."
     DEFVAL { "" }
     ::= { etsysAppSignDisplayNameEntry 2 }
 
-etsysAppSignDisplayNameRowStatus OBJECT-TYPE    
+etsysAppSignDisplayNameRowStatus OBJECT-TYPE
     SYNTAX      RowStatus
     MAX-ACCESS  read-create
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "This object allows for the dynamic creation and deletion
-         of entries within the etsysAppSignDisplayNameTable as 
+         of entries within the etsysAppSignDisplayNameTable as
          well as the activation and deactivation of these entries."
     ::= { etsysAppSignDisplayNameEntry 3 }
 
@@ -204,8 +206,8 @@ etsysAppSignPatternTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF EtsysAppSignPatternEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
-        "A table that describes attributes of a user defined pattern  
+    DESCRIPTION
+        "A table that describes attributes of a user defined pattern
          string."
     ::= { etsysApplicationSignatureMIBObjects 3 }
 
@@ -213,11 +215,11 @@ etsysAppSignPatternEntry OBJECT-TYPE
     SYNTAX      EtsysAppSignPatternEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
-        "An entry describing the matching pattern of a WebApplRule and 
-         its assigned index. For use by the Extreme Network deep packet 
+    DESCRIPTION
+        "An entry describing the matching pattern of a WebApplRule and
+         its assigned index. For use by the Extreme Network deep packet
          inspection engine."
-    INDEX { etsysAppSignGroupId, etsysAppSignDisplayId, 
+    INDEX { etsysAppSignGroupId, etsysAppSignDisplayId,
             etsysAppSignPatternIndex }
     ::= { etsysAppSignPatternTable 1 }
 
@@ -231,39 +233,39 @@ EtsysAppSignPatternEntry  ::=
             RowStatus
     }
 
-etsysAppSignPatternIndex OBJECT-TYPE    
+etsysAppSignPatternIndex OBJECT-TYPE
     SYNTAX      Unsigned32 (1000000..2000000)
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION    
-        "A unique identifier for a pattern string. The user can only 
-         assign an index in a range from 1000000 to 2000000. The rest 
+    DESCRIPTION
+        "A unique identifier for a pattern string. The user can only
+         assign an index in a range from 1000000 to 2000000. The rest
          of the indices are reserved for internal use."
     ::= { etsysAppSignPatternEntry 1 }
 
-etsysAppSignPattern OBJECT-TYPE    
+etsysAppSignPattern OBJECT-TYPE
     SYNTAX      DisplayString (SIZE(0..64))
     MAX-ACCESS  read-create
     STATUS      current
-    DESCRIPTION    
+    DESCRIPTION
         "A case sensitive string for matching against the 'host' field of
-         an http request packet, or the 'server name' in the 'client 
-         Hello' packet of a TLS session.  This is used to identify the 
+         an http request packet, or the 'server name' in the 'client
+         Hello' packet of a TLS session.  This is used to identify the
          application."
     DEFVAL { "" }
     ::= { etsysAppSignPatternEntry 2 }
 
-etsysAppSignPatternRowStatus OBJECT-TYPE    
+etsysAppSignPatternRowStatus OBJECT-TYPE
     SYNTAX      RowStatus
     MAX-ACCESS  read-create
     STATUS      current
-    DESCRIPTION    
-        "This object allows the dynamic creation and deletion of entries 
-         within the etsysAppSignPatternTable as well as the activation 
+    DESCRIPTION
+        "This object allows the dynamic creation and deletion of entries
+         within the etsysAppSignPatternTable as well as the activation
          and deactivation of these entries.
 
-         etsysAppSignPatternRowStatus MUST NOT be set to active(1) and 
-         createAndGo(4) if the etsysAppSignPattern object contains 
+         etsysAppSignPatternRowStatus MUST NOT be set to active(1) and
+         createAndGo(4) if the etsysAppSignPattern object contains
          an empty string."
     ::= { etsysAppSignPatternEntry 3 }
 
@@ -287,29 +289,29 @@ etsysAppSignCompliances OBJECT IDENTIFIER
 etsysAppSignGroup OBJECT-GROUP
     OBJECTS { etsysAppSignGroupName }
     STATUS  current
-    DESCRIPTION    
-        "A collection of objects that define attributes of an 
+    DESCRIPTION
+        "A collection of objects that define attributes of an
          application group."
     ::= { etsysAppSignGroups 1 }
 
 etsysAppSignDisplayNameGroup OBJECT-GROUP
-    OBJECTS { 
-        etsysAppSignDisplayName, 
-        etsysAppSignDisplayNameRowStatus 
+    OBJECTS {
+        etsysAppSignDisplayName,
+        etsysAppSignDisplayNameRowStatus
     }
     STATUS  current
-    DESCRIPTION    
-        "A collection of objects that define attributes of an 
+    DESCRIPTION
+        "A collection of objects that define attributes of an
          application display name."
     ::= { etsysAppSignGroups 2 }
 
 etsysAppSignPatternGroup OBJECT-GROUP
-    OBJECTS { 
-        etsysAppSignPattern, 
-        etsysAppSignPatternRowStatus 
+    OBJECTS {
+        etsysAppSignPattern,
+        etsysAppSignPatternRowStatus
     }
     STATUS  current
-    DESCRIPTION    
+    DESCRIPTION
         "A collection of objects that define attributes of a configured
          pattern string."
     ::= { etsysAppSignGroups 3 }
@@ -317,17 +319,17 @@ etsysAppSignPatternGroup OBJECT-GROUP
 -- -------------------------------------------------------------
 -- Compliance statements
 -- -------------------------------------------------------------
-    
+
 etsysAppSignCompliance MODULE-COMPLIANCE
     STATUS  current
-    DESCRIPTION    
-        "This group is mandatory for all devices that support 
+    DESCRIPTION
+        "This group is mandatory for all devices that support
          configuration of deep packet inspection application signatures."
     MODULE -- this module
-        MANDATORY-GROUPS { 
+        MANDATORY-GROUPS {
             etsysAppSignGroup,
-            etsysAppSignDisplayNameGroup, 
-            etsysAppSignPatternGroup 
+            etsysAppSignDisplayNameGroup,
+            etsysAppSignPatternGroup
         }
     ::= { etsysAppSignCompliances 1 }
 

@@ -1,4 +1,4 @@
--- ArubaOS 8.11.2.0_87947
+-- ArubaOS 8.12.0.4_91755
 -- vim:set ts=4 sw=4:
 WLSX-SYSTEMEXT-MIB DEFINITIONS ::= BEGIN
 

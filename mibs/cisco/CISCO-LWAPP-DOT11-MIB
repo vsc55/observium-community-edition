@@ -23,12 +23,12 @@ IMPORTS
         FROM SNMPv2-TC
     SnmpAdminString
         FROM SNMP-FRAMEWORK-MIB
-    cLApSysMacAddress,
-    cLApDot11IfSlotId
-        FROM CISCO-LWAPP-AP-MIB
     CLDot11Band,
     CLDot11ChannelBandwidth
         FROM CISCO-LWAPP-TC-MIB
+    cLApSysMacAddress,
+    cLApDot11IfSlotId
+        FROM CISCO-LWAPP-AP-MIB
     ciscoMgmt
         FROM CISCO-SMI;
 
@@ -250,6 +250,9 @@ ciscoLwappDot11MIB MODULE-IDENTITY
 
         [4] Enhanced Wireless Consortium PHY Specification,
             v1.27."
+    REVISION        "202405140000Z"
+    DESCRIPTION
+        "Corrected syntax errors"
     REVISION        "202305300000Z"
     DESCRIPTION
         "Added below objects to the cld11beMcsTable
@@ -2387,3 +2390,6 @@ cld11beMcsSupportEnable OBJECT-TYPE
 END
 
 
+-- %DNP%  MLC -Edit MLC
+
+--%DNP%  MTF -TRUE MTF

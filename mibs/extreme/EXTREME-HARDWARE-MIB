@@ -8,14 +8,73 @@ EXTREME-HARDWARE-MIB DEFINITIONS ::= BEGIN
     extremenetworks   FROM EXTREME-BASE-MIB;
 
     extremeHardware MODULE-IDENTITY
-        LAST-UPDATED "202001072243Z"  -- Tue Jan 07 22:43:00 UTC 2020
-
+        LAST-UPDATED "202504021600Z" -- Wed Apr  2 16:00 UTC 2025
         ORGANIZATION "Extreme Networks, Inc."
         CONTACT-INFO "www.extremenetworks.com"
         DESCRIPTION  "Extreme hardware OIDs.  These OIDs are used to identify
                       Extreme hardware entities in the entityMIB.  Specifically,
                       these OIDs are used for the entPysicalVendorType column
                       in the entPhysicalTable."
+
+        REVISION    "202504021600Z" -- Wed Apr  2 16:00 UTC 2025
+        DESCRIPTION "Added 5420M-24W-24S-4YE."
+
+        REVISION    "202501102115Z" -- Fri Jan 10 21:15 UTC 2025
+        DESCRIPTION "hardware.my is used by SwitchEngine, so changed Fabric Engine
+                     to SwitchEngine and updated description of 5320-16P-2MXT-2X."
+
+        REVISION    "202408071934Z" -- Wed Aug  7 19:34 UTC 2024
+        DESCRIPTION "Fix name and desciption of 5320-16P-2MXT-2X platform."
+
+        REVISION    "202405011200Z" -- Wed May 01 12:00 UTC 2024
+        DESCRIPTION "Added 5320-16P-2XT-2X hardware OID"
+
+        REVISION    "202404261200Z" -- Fri Apr 26 12:00 UTC 2024
+        DESCRIPTION "Added 5120 SwitchEngine products."
+
+        REVISION    "202404121200Z" -- Fri Apr 12 12:00 UTC 2024
+        DESCRIPTION "Fix 4120 Descriptions"
+
+        REVISION    "202309221200Z" -- Fri Sep 22 12:00 UTC 2023
+        DESCRIPTION "Add 4120 OIDs"
+
+        REVISION    "202309131430Z" -- Tue Sep 13 14:30 UTC 2023
+        DESCRIPTION "5320 Extended Temperature (XT) models"
+
+        REVISION    "202306011230Z" -- Thu Jun 1 21:30 UTC 2023
+        DESCRIPTION "Strike 1Gb from extreme752048YE8CESwitchEngine"
+
+        REVISION    "202305022130Z" -- Tue May 2 21:30 UTC 2023
+        DESCRIPTION "Add 5520 ACDC OIDs"
+
+        REVISION    "202302162130Z"  -- Thu Feb 16 21:30 UTC 2023
+        DESCRIPTION "Added 7520-48YE-8CE OIDs"
+
+        REVISION    "202210111900Z" -- Tue Oct 11 19:00 UTC 2022
+        DESCRIPTION "Add 4220 OIDs"
+
+        REVISION    "202204082010Z"  -- Fri Apr 08 20:10 UTC 2022
+        DESCRIPTION "Correct 5720, 7520, and 7720 OID names"
+
+        REVISION    "202111012000Z"  -- Mon Nov 01 20:30 UTC 2021
+        DESCRIPTION "Add 5720, 7520, and 7720 universal switch OIDs"
+
+        REVISION    "202110071400Z"  -- Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION "Remove EXOS from Name and Descriptions of all
+                     universal switch OIDs and remove the Exos
+                     suffix from the 5320 switch OIDs"
+
+        REVISION    "202106281630Z"  -- Mon Jun 28 16:30 UTC 2021
+        DESCRIPTION "Add 5320 OIDs"
+
+        REVISION    "202010141108Z"  -- Wed Oct 14 11:08:00 UTC 2020
+        DESCRIPTION "Corrected 5420 OID for 24S model"
+
+        REVISION    "202005282108Z"  -- Thu May 28 21:08:00 UTC 2020
+        DESCRIPTION "Add 5420 OIDs"
+
+        REVISION    "202004030115Z"  -- Fri Apr  3 01:15:00 UTC 2020
+        DESCRIPTION "Add 5520 OIDs"
 
         REVISION    "202001072243Z"  -- Tue Jan 07 22:43:00 UTC 2020
         DESCRIPTION "Add the following OIDs:
@@ -987,5 +1046,553 @@ EXTREME-HARDWARE-MIB DEFINITIONS ::= BEGIN
     --  Date        "202001072243Z"  - Tues Jan 07 22:43 UTC 2020
         DESCRIPTION "Extreme V300HT-8T-2X: V300 Series 8 10/100/1000BASE-T, 2 1/10GbE SFP+ uplink ports, high temp, and fanless"
     ::= { extremeHardware 135 }
+
+    extreme552024tExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-24T"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-24T with 24 10/100/1000BASE-T FDX/HDX MACsec
+         capable ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot."
+    ::= { extremeHardware 136 }
+
+    extreme552024wExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-24W"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-24W with 24 10/100/1000BASE-T FDX/HDX 802.3bt
+         Type4 PoE (90W) MACsec capable ports, two stacking/QSFP28 Universal Ethernet
+         ports, 1 VIM slot."
+    ::= { extremeHardware 137 }
+
+    extreme552048tExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-48T"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-48T with 48 10/100/1000BASE-T FDX/HDX MACsec
+         capable ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot."
+    ::= { extremeHardware 138 }
+
+    extreme552048wExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-48W"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-48W with 48 10/100/1000BASE-T FDX/HDX 802.3bt
+         Type4 POE (90W) MACsec capable ports, two stacking/QSFP28 Universal Ethernet
+         ports, 1 VIM slot."
+    ::= { extremeHardware 139 }
+
+    extreme552012mw36wExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-12MW-36W"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-12MW-36W with 12 1000Mb/1Gb/2.5Gb/5Gb 802.3bt
+         Type4 POE (90W) MACsec capable ports and 36 10/100/1000BASE-T FDX/HDX 802.3bt
+         Type4 POE (90W) MACsec capable ports, two stacking/QSFP28 Universal Ethernet 
+         ports, 1 VIM slot."
+    ::= { extremeHardware 140 }
+
+    extreme552048seExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-48SE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-48SE with 48 100/1000BASE-X MACsec capable
+         SFP ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot."
+    ::= { extremeHardware 141 }
+
+    extreme552024xExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5520-24X"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5520-24X with 24 100/1000BASE-X unpopulated SFP ports
+         upgradeable to 10Gb SFP+, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot."
+    ::= { extremeHardware 142 }
+
+    extreme5420f24p4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-24P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 24 10/100/1000 BASE-T PoE w/ Half Duplex ports,
+         4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 143 }
+
+    extreme5420f8w16p4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-8W-16P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 8 10/100/1000 BASE-T Type4 PoE (90W) w/ Half Duplex
+         ports, 16 10/100/1000 BASE-T PoE w/ Half Duplex ports, 4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 144 }
+
+    extreme5420f24t4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-24T-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 24 10/100/1000 BASE-T w/ Half Duplex ports,
+         4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 145 }
+
+    extreme5420f48p4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-48P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 48 10/100/1000 BASE-T PoE w/ Half Duplex ports,
+         4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 146 }
+
+    extreme5420f16w32p4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-16W-32P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 16 10/100/1000 BASE-T Type4 PoE (90W) w/ Half Duplex
+         ports, 32 10/100/1000 BASE-T PoE w/ Half Duplex ports, 4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 147 }
+
+    extreme5420f48t4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-48T-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 48 10/100/1000 BASE-T w/ Half Duplex ports, 4 10G
+         unpopulated SFP+ ports"
+    ::= { extremeHardware 148 }
+
+    extreme5420f16mw32p4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-16MW-32P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 16 100/1G/2.5G Multi-Rate 802.3bt Type4 PoE (90W)
+         ports, 32 10/100/1000 BASE-T w/ Half Duplex PoE ports, 4 10G unpopulated SFP+ ports"
+    ::= { extremeHardware 149 }
+
+    extreme5420f24s4xeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-24S-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 24 100/1G unpopulated SFP ports, 4 10G unpopulated
+         SFP+ ports"
+    ::= { extremeHardware 150 }
+
+    extreme5420f48p4xlExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420F-48P-4XL"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420F with 48 10/100/1000 BASE-T PoE w/ Half Duplex ports,
+         4 10G unpopulated SFP+ with LRM ports"
+    ::= { extremeHardware 151 }
+
+    extreme5420m24w4yeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420M-24W-4YE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420M with 24 10/100/1000 BASE-T PoE w/ Half Duplex ports,
+         4 10/25G unpopulated SFP28 ports (w/ modular PSU/Fan)"
+    ::= { extremeHardware 152 }
+
+    extreme5420m24t4yeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420M-24T-4YE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420M with 24 10/100/1000 BASE-T w/ Half Duplex ports,
+         4 10/25G unpopulated SFP28 ports (w/ modular PSU/Fan)"
+    ::= { extremeHardware 153 }
+
+    extreme5420m48w4yeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420M-48W-4YE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420M with 48 10/100/1000 BASE-T PoE w/ Half Duplex ports,
+         4 10/25G unpopulated SFP28 ports (w/ modular PSU/Fan)"
+    ::= { extremeHardware 154 }
+
+    extreme5420m48t4yeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420M-48T-4YE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420M with 48 10/100/1000 BASE-T w/ Half Duplex ports,
+         4 10/25G unpopulated SFP28 ports (w/ modular PSU/Fan)"
+    ::= { extremeHardware 155 }
+
+    extreme5420m16mw32p4yeExos OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5420M-16MW-32P-4YE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5420M with 16 100/1G/2.5G Multi-Rate 802.3bt Type4 PoE (90W)
+         ports, 32 10/100/1000 BASE-T w/ Half Duplex PoE ports, 4 10/25G unpopulated SFP28
+         ports (w/ modular PSU/Fan)"
+    ::= { extremeHardware 156 }
+
+    extreme532024p8xe OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-24P-8XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5320 with 24 10/100/1000BASET FDX/HDX PoE+,
+         8 10G unpopulated SFP+, MACSec capable, internal fixed PSU, fans"
+    ::= { extremeHardware 157 }
+
+    extreme532024t8xe OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-24T-8XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5320 with 24 10/100/1000BASET FDX/HDX,
+         8 10G unpopulated SFP+, MACSec capable, internal fixed PSU, fans"
+    ::= { extremeHardware 158 }
+
+    extreme532048p8xe OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-48P-8XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5320 with 48 10/100/1000BASET FDX/HDX PoE+,
+         8 10G unpopulated SFP+, MACSec capable, internal fixed PSU, fans"
+    ::= { extremeHardware 159 }
+
+    extreme532048t8xe OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-48T-8XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5320 with 48 10/100/1000BASET FDX/HDX,
+         8 10G unpopulated SFP+, MACSec capable, internal fixed PSU, fans"
+    ::= { extremeHardware 160 }
+
+    extreme532016p4xe OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-16P-4XE"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+        DESCRIPTION
+        "ExtremeSwitching 5320 with 16 10/100/1000BASET FDX/HDX PoE+,
+         4 10G unpopulated SFP+, MACSec capable, internal fixed PSU, fans"
+    ::= { extremeHardware 161 }
+
+    extreme532016p4xeDc OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-16P-4XE-DC"
+    --  Date        "202110071400Z"  - Thu Oct 07 14:30 UTC 2021
+    DESCRIPTION
+        "ExtremeSwitching 5320 with 16 10/100/1000BASET FDX/HDX PoE+,
+         4 10G unpopulated SFP+, MACSec capable, internal fixed DC PSU, fans"
+    ::= { extremeHardware 162 }
+
+    extreme572024mw OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5720-24MW"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 5720-24MW with 24 100Mb/1Gb/2.5Gb/5Gb 802.3bt 90W PoE,
+        2 stacking/QSFP28, 1 unpopulated VIM slot, MACsec capable, includes fan modules,
+        2 unpopulated modular PSU slots"
+    ::= { extremeHardware 163 }
+
+    extreme572048mw OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5720-48MW"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 5720-48MW with 48 100Mb/1Gb/2.5Gb/5Gb 802.3bt 90W PoE,
+        2 stacking/QSFP28, 1 unpopulated VIM slot, MACsec capable, includes fan modules,
+        2 unpopulated modular PSU slots"
+    ::= { extremeHardware 164 }
+
+    extreme572024mxw OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5720-24MXW"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 5720-24MXW with 24 100Mb/1Gb/2.5Gb/5Gb/10Gb 802.3bt 90W PoE,
+        2 stacking/QSFP28, 1 unpopulated VIM slot, MACsec capable, includes fan modules,
+        2 unpopulated modular PSU slots"
+    ::= { extremeHardware 165 }
+
+    extreme572048mxw OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5720-48MXW"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 5720-48MXW with 48 100Mb/1Gb/2.5Gb/5Gb/10Gb 802.3bt 90W PoE,
+        2 stacking/QSFP28, 1 unpopulated VIM slot, MACsec capable, includes fan modules,
+        2 unpopulated modular PSU slots"
+    ::= { extremeHardware 166 }
+
+    extreme752048y8c OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "7520-48Y-8C"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 7520-48Y-8C with 48 1Gb/10Gb/25Gb SFP28,
+        8 40Gb/100Gb QSFP28, 2 unpopulated modular PSU slots, 6 unpopulated fan slots"
+    ::= { extremeHardware 167 }
+
+    extreme752048xt6c OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "7520-48XT-6C"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 7520-48XT-6C with 48 1Gb/10Gb 10GBASE-T,
+        6 40Gb/100Gb QSFP28, 2 unpopulated modular PSU slots, 6 unpopulated fan slots"
+    ::= { extremeHardware 168 }
+
+    extreme772032c OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "7720-32C"
+    --  Date      "202204082010Z"  - Fri Apr 08 20:10 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 7720-32C with 32 40Gb/100Gb QSFP28,
+        2 unpopulated modular PSU slots, 6 unpopulated fan slots"
+    ::= { extremeHardware 169 }
+
+    extreme422012t4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-12T-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 12 10/100/1000BASET FDX/HDX,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 170 }
+
+    extreme422024t4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-24T-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 24 10/100/1000BASET FDX/HDX,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 171 }
+
+    extreme422048t4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-48T-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 48 10/100/1000BASET FDX/HDX,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 172 }
+
+    extreme422012p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-12P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 12 10/100/1000BASET FDX/HDX PoE+,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 173 }
+
+    extreme422024p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-24P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 24 10/100/1000BASET FDX/HDX PoE+,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 174 }
+
+    extreme422048p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-48P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 48 10/100/1000BASET FDX/HDX PoE+,
+         4 10G unpopulated SFP+, internal fixed PSU, fans"
+    ::= { extremeHardware 175 }
+
+    extreme42204mw8p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-4MW-8P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 4 1Gb/2.5Gb 802.3bt,
+         8 10/100/1000BASET FDX/HDX PoE+, 4 10G unpopulated SFP+,
+         internal fixed PSU, fans"
+    ::= { extremeHardware 176 }
+
+    extreme42204mw20p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-4MW-20P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 4 1Gb/2.5Gb 802.3bt,
+         20 10/100/1000BASET FDX/HDX PoE+, 4 10G unpopulated SFP+,
+         internal fixed PSU, fans"
+    ::= { extremeHardware 177 }
+
+    extreme42208mw40p4x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-8MW-40P-4X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 8 1Gb/2.5Gb 802.3bt,
+         40 10/100/1000BASET FDX/HDX PoE+, 4 10G unpopulated SFP+,
+         internal fixed PSU, fans"
+    ::= { extremeHardware 178 }
+
+    extreme42208x OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4220-8X"
+    --  Date        "202210111900Z" - Tue Oct 11 19:00 UTC 2022
+    DESCRIPTION
+        "ExtremeSwitching 4220 (SwitchEngine) 8 10G unpopulated SFP+,
+         internal fixed PSU, fans"
+    ::= { extremeHardware 179 }
+
+    extreme532024t4xXt OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-24T-4X-XT"
+    --  Date        "202309131430Z" - Tue Sep 13 14:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5320 (SwitchEngine) Extended Temperature (0-60C),
+         24 10/100/1000BASET FDX/HDX, 4 10G unpopulated SFP+,
+         internal fixed PSU, fans, RPS support"
+    ::= { extremeHardware 180 }
+
+    extreme532024t24s4xeXt OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "5320-24T-24S-4XE-XT"
+    --  Date        "202309131430Z" - Tue Sep 13 14:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5320 (SwitchEngine) Extended Temperature (0-60C),
+         24 10/100/1000BASET FDX/HDX, 24 100/1G unpopulated SFP,
+         4 10G unpopulated SFP+, MACsec capable, internal fixed PSU, fans,
+         RPS support"
+    ::= { extremeHardware 181 }
+
+    extreme752048ye8ce OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "7520-48YE-8CE"
+    --  Date      "202302162130Z" - Thu Feb 16 21:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 7520-48YE-8CE with 48 10Gb/25Gb SFP28,
+        MACSec capable, 8 40Gb/100Gb QSFP28, 2 unpopulated modular PSU slots, 6 unpopulated fan slots"
+    ::= { extremeHardware 182 }
+
+    extreme552024tAcdc OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5520-24T-ACDC"
+    --  Date      "202305022130Z" - Tue May 2 21:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5520-24T-ACDC with 24 10/100/1000BASE-T FDX/HDX MACsec
+        capable ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot, two ACDC unpopulated
+        power supplies."
+    ::= { extremeHardware 183 }
+
+    extreme552048tAcdc OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5520-48T-ACDC"
+    --  Date      "202305022130Z" - Tue May 2 21:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5520-48T-ACDC with 48 10/100/1000BASE-T FDX/HDX MACsec
+        capable ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot, two ACDC unpopulated
+        power supplies."
+    ::= { extremeHardware 184 }
+
+    extreme552024xAcdc OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5520-24X-ACDC"
+    --  Date      "202305022130Z" - Tue May 2 21:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5520-24X-ACDC with 24 100/1000BASE-X unpopulated SFP ports
+        upgradeable to 10Gb SFP+, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot, two ACDC unpopulated
+        power supplies."
+    ::= { extremeHardware 185 }
+
+    extreme552048seAcdc OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5520-48SE-ACDC"
+    --  Date      "202305022130Z" - Tue May 2 21:30 UTC 2023
+    DESCRIPTION
+        "ExtremeSwitching 5520-48SE-ACDC with 48 100/1000BASE-X MACsec capable
+        SFP ports, two stacking/QSFP28 Universal Ethernet ports, 1 VIM slot, two ACDC unpopulated
+        power supplies."
+    ::= { extremeHardware 186 }
+
+    extreme412024mw4y OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4120-24MW-4Y"
+    --  Date        "202404121200Z" - Fri Apr 12 12:00 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 4120 (SwitchEngine) 24 10Mb/100Mb/1Gb/2.5Gb 802.3bt 90W PoE,
+         4 1Gb/10Gb/25Gb SFP28 ports, 2 stacking/QSFP28 Universal Ethernet ports, fans,
+         1 fixed AC PSU, 1 unpopulated modular PSU slot"
+    ::= { extremeHardware 187 }
+
+    extreme412048mw4y OBJECT-IDENTITY
+        STATUS      current
+    --  Name        "4120-48MW-4Y"
+    --  Date        "202404121200Z" - Fri Apr 12 12:00 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 4120 (SwitchEngine) 48 10Mb/100Mb/1Gb/2.5Gb 802.3bt 90W PoE,
+         4 1Gb/10Gb/25Gb SFP28 ports, 2 stacking/QSFP28 Universal Ethernet ports, fans,
+         1 fixed AC PSU, 1 unpopulated modular PSU slot"
+    ::= { extremeHardware 188 }
+
+    extreme512044x4y2c OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5120-44X-4Y-2C"
+    --  Date      "202404261200Z"   - Fri Apr 26 12:00 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 5120 (SwitchEngine) 44 1G/10G SFP+ ports, 4 10G/25G SFP28 ports,
+         2 100G QSFP28 Universal/Stacking ports, MACSEC capable, 6 unpopulated fan slots,
+         2 unpopulated modular PSU slots"
+    ::= { extremeHardware 189 }
+
+    extreme512024x4y OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5120-24X-4Y"
+    --  Date      "202404261200Z"   - Fri Apr 26 12:00 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 5120 (SwitchEngine) 24 1G/10G SFP+ ports, 4 10G/25G SFP28 ports,
+         MACSEC capable, 4 unpopulated fan slots,
+         2 unpopulated modular PSU slots"
+    ::= { extremeHardware 190 }
+
+    extreme512024xt4y OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5120-24XT-4Y"
+    --  Date      "202404261200Z"   - Fri Apr 26 12:00 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 5120 (SwitchEngine) 24 1G/10GBase-T Non-PoE ports, 4 10G/25G SFP28 ports,
+         MACSEC capable, 4 unpopulated fan slots,
+         2 unpopulated modular PSU slots"
+    ::= { extremeHardware 191 }
+
+    extreme532016P2MXT2X OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5320-16P-2MXT-2X"
+    --  Date      "202408071934Z"   - Wed Aug  7 19:34 UTC 2024
+    DESCRIPTION
+        "ExtremeSwitching 5320 (SwitchEngine) with 16 10/100/1000Base-T FDX/HDX PoE+ ports,
+         2 1G/2.5G/5G/10G Base-T ports and 2 10G SFP+ uplink ports, 1 internal AC PSU, Fanless"
+    ::= { extremeHardware 192 }
+
+    extreme5420m24w24s4yeExos OBJECT-IDENTITY
+        STATUS    current
+    --  Name      "5420M-24W-24S-4YE"
+    --  Date      "202504021600Z"   - Wed Apr  2 16:00 UTC 2025
+    DESCRIPTION
+        "ExtremeSwitching 5420M (SwitchEngine) with 24 10/100/1000 BASE-T 90W PoE w/ Half Duplex
+         on 10/100M ports, 24 100M (FX/LX)/1G SFP, 4 1/10/25G unpopulated SFP28 ports, 2 stacking/
+         SFP-DD Universal Ethernet ports, MACSec capable, unpopulated Dual Modular PSUs and
+         Modular Fans (F2B only)"
+    ::= { extremeHardware 193 }
 
 END

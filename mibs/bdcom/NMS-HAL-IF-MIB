@@ -7,23 +7,21 @@
 
 NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
 
-	IMPORTS
+    IMPORTS
         MODULE-IDENTITY,
         OBJECT-TYPE,IpAddress
             FROM SNMPv2-SMI
         
-     	Gauge,TimeTicks
-      		FROM RFC1155-SMI
+        Gauge,TimeTicks
+            FROM RFC1155-SMI
         DisplayString
-			FROM RFC1213-MIB
+            FROM RFC1213-MIB
         nmsMgmt
             FROM NMS-SMI 
         PhysAddress,MacAddress
             FROM SNMPv2-TC
         nmsIfObjects
-            FROM NMS-IF-MIB
-        ipv6InterfaceIdentifier
-            FROM IP-MIB;
+            FROM NMS-IF-MIB;
             
             
 
@@ -64,8 +62,15 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
                   errorFrameCheck
                       INTEGER,
                   phyIfType
-                      INTEGER
-                  
+                      INTEGER,
+                  interPacketGap
+                      INTEGER,
+                  singlefiber
+                      INTEGER,  
+                  disablerx
+                      INTEGER,
+                  disabletx
+                      INTEGER 
               }
 
           ifConfigIndex OBJECT-TYPE
@@ -177,6 +182,47 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
                       "Port initial type. 1-copper, 2-fiber, 3-combo, 4-other."
               ::= { physicalIfConfigEntry 9 }
 
+          interPacketGap OBJECT-TYPE
+              SYNTAX  INTEGER(8..27)
+              ACCESS  read-write
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "InterPacketGap config. The range is 8-27 (unit:byte). default is 12."
+              ::= { physicalIfConfigEntry 10 }       
+              
+           singlefiber OBJECT-TYPE
+              SYNTAX  INTEGER(0..2)
+              ACCESS  read-write
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "singlefiber tx or rx config. The range is 0-2 0-disable ,1-rx, 2-tx."
+              ::= { physicalIfConfigEntry 11 }
+              
+           disablerx OBJECT-TYPE
+              SYNTAX  INTEGER{
+                              enable(0),
+                              disable(1)
+                              }
+              ACCESS  read-write
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "disable port recieve config. The range is 0-1 0-enable, 1-disable."
+              ::= { physicalIfConfigEntry 12 }
+              
+           disabletx OBJECT-TYPE
+              SYNTAX  INTEGER{
+                              enable(0),
+                              disable(1)
+                              }
+              ACCESS  read-write
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "disable port send config. The range is 0-1 0-enable, 1-disable."
+              ::= { physicalIfConfigEntry 13 }
 
 
 
@@ -413,7 +459,7 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
               DESCRIPTION
                       "An interface security binding block entry containing objects at the
                       subnetwork layer and below for a particular interface."
-              INDEX   { ifSecurityBindBlockIndex,ifBindBlockMacAddress,ifBindBlockIPAddress,ifBindBlockIPV6Address }
+              INDEX   { ifSecurityBindBlockIndex,ifBindBlockMacAddress,ifBindBlockIPAddress,ifBindBlockIPV6Address,ifBindBlockVlan }
               ::= { portSecurityBindBlockTable 1 }
 
           PortSecurityBindBlockEntry ::=
@@ -427,7 +473,9 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
                   ifBindBlockIPV6Address
                        OCTET STRING,
                   mode
-                      INTEGER 
+                      INTEGER,
+                  ifBindBlockVlan
+                      INTEGER
               }
 
           ifSecurityBindBlockIndex OBJECT-TYPE
@@ -441,7 +489,7 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
 
           ifBindBlockMacAddress OBJECT-TYPE
               SYNTAX  MacAddress
-              ACCESS  read-write
+              ACCESS  read-only
               STATUS  mandatory
 
               DESCRIPTION
@@ -450,7 +498,7 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
 
           ifBindBlockIPAddress OBJECT-TYPE
               SYNTAX  IpAddress
-              ACCESS  read-write
+              ACCESS  read-only
               STATUS  mandatory
 
               DESCRIPTION
@@ -459,7 +507,7 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
 
           ifBindBlockIPV6Address OBJECT-TYPE
               SYNTAX  OCTET STRING
-              ACCESS  read-write
+              ACCESS  read-only
               STATUS  mandatory
 
               DESCRIPTION
@@ -495,6 +543,14 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
                       7:bind arp ip mac,8:bind ipv6,9:bind ipv6 mac,10:block mac,11:block ip ,12:block arp,13:block arp ip,
                       14:block ip mac,15:block arp mac,16:block arp ip mac,17:block ipv6,18:block ipv6 mac"
               ::= { portSecurityBindBlockEntry 5 }
+
+          ifBindBlockVlan OBJECT-TYPE
+              SYNTAX  INTEGER(1..4094)
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                  "One of the indexes of portSecurityBindBlockEntry.If not care VLAN, the value should be set to 0."
+              ::= { portSecurityBindBlockEntry 6 }
 
 
 --vlanSecurityEntry
@@ -542,13 +598,56 @@ NMS-HAL-IF-MIB  DEFINITIONS ::= BEGIN
 
               DESCRIPTION
                       "The max number of mac address to be learned. The range is 1-32768. 0 means disable. Default is disable."
-              ::= { vlanSecurityEntry 2 }
+              ::= { vlanSecurityEntry 2 } 
+              
+--  portSecurityBindMac        
+         portSecurityBindMac       OBJECT IDENTIFIER ::= { ifSecurity 5 }
 
+           portSecurityBindMacGroup     OBJECT IDENTIFIER ::= { portSecurityBindMac 1 }
 
+           portSecurityMacChangeInfo OBJECT-TYPE
+              SYNTAX  DisplayString
+              ACCESS  accessible-for-notify
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "bind infomation: port, mac,vid ..."
+              ::= { portSecurityBindMacGroup 1 }
+              
+           portSecurityNoBindMacInfo OBJECT-TYPE
+              SYNTAX  DisplayString
+              ACCESS  accessible-for-notify
+              STATUS  mandatory
+
+              DESCRIPTION
+                      "bind infomation:port1&port2&..."
+              ::= { portSecurityBindMacGroup 2 }
+
+           portSecurityBindMacNotifications    OBJECT IDENTIFIER ::= { portSecurityBindMac 2 }
+        
+           portSecurityMacChangeNotification NOTIFICATION-TYPE
+              OBJECTS {
+                  portSecurityMacChangeInfo
+              }
+              STATUS  mandatory
+              DESCRIPTION
+                      "The agent generates this notification when bind mac address change."
+              ::= { portSecurityBindMacNotifications 1 }
+              
+           portSecurityNoBindMacNotification NOTIFICATION-TYPE
+              OBJECTS {
+                  portSecurityNoBindMacInfo
+              }
+              STATUS  mandatory
+              DESCRIPTION
+                      "The agent generates this notification when port not bind mac address."
+              ::= { portSecurityBindMacNotifications 2 }
+
+ 
 --portProtectTable
 
         ifProtect   OBJECT IDENTIFIER ::= { nmsIfObjects 6 }  
-	
+    
 --portProtectGroupTable
 
           portProtectGroupTable OBJECT-TYPE

@@ -57,13 +57,18 @@ function discover_processor_definition($device, $mib, $entry) {
 
     $found = FALSE;
     $i = 1; // Used in descr as $i++
-    $processors_count = count($processors_array);
+    $processors_count = safe_count($processors_array);
     foreach ($processors_array as $index => $processor) {
         $dot_index = '.' . $index;
         $oid_num   = $entry['oid_num'] . $dot_index;
 
         // Check valid exist with entity tags
         if (discovery_check_if_type_exist($entry, 'processor', $processor)) {
+            continue;
+        }
+
+        // Check array requirements list
+        if (discovery_check_requires($device, $entry, $processor, 'processor')) {
             continue;
         }
 
@@ -112,7 +117,7 @@ function discover_processor_definition($device, $mib, $entry) {
         $scale     = entity_scale_definition($device, $entry, $processor, 'processor');
         $precision = $scale !== 1 ? round(float_div(1, $scale)) : 1;
 
-        $usage = snmp_fix_numeric($processor[$entry['oid']], $unit);
+        $usage = snmp_fix_numeric($processor[$entry['oid']], $unit, $mib);
         if (discovery_check_value_valid($device, $usage, $entry, 'processor')) {
             discover_processor_ng($device, $mib, $entry['object'], $oid_num, $index, $descr, $precision, $usage, $options);
             $found = TRUE;
@@ -157,7 +162,7 @@ function discover_processor_ng($device, $processor_mib, $processor_object, $proc
     }
 
     // Split unit need extend type for multiple entities (see NEWTEC-DEVICE-MIB definition)
-    if (!empty($options['unit']) && str_starts_with($options['unit'], 'split_cpu')) {
+    if (!empty($options['unit']) && str_starts_with($options['unit'], 'split')) {
         $processor_type .= '-' . $options['unit'];
     }
 
@@ -167,13 +172,13 @@ function discover_processor_ng($device, $processor_mib, $processor_object, $proc
     print_debug($device['device_id'] . " -> $processor_oid, $processor_index, $processor_type, $processor_descr, $processor_precision, $value");
 
     // Check processor ignore filters
-    if (entity_descr_check($processor_descr, 'processor')) {
+    if (entity_descr_check($processor_descr, 'processor', 255)) { // Limit descr to 255 chars accordingly as in DB
         return FALSE;
     }
 
     // Skip discovery processor if value not numeric or null(default)
     if ($value !== NULL) {
-        $value = snmp_fix_numeric($value);
+        $value = snmp_fix_numeric($value, $options['unit'], $processor_mib);
     }
 
     if (!(is_numeric($value) || $value === NULL)) {

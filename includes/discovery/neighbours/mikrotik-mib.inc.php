@@ -83,7 +83,7 @@ if (snmp_status()) {
 print_debug_vars($mtxr_array);
 unset($lldp_array);
 
-foreach ($mtxr_array as $key => $entry) {
+foreach ($mtxr_array as $entry) {
 
     // Need to straighten out the MAC first for use later. Mikrotik does not pad the numbers! (i.e. 0:12:23:3:5c:6b)
     //$remote_mac = mac_zeropad($entry['mtxrNeighborMacAddress']);

@@ -12,56 +12,61 @@
 
 // This is an include so that we don't lose variable scope.
 
-$include_lib = isset($include_lib) && $include_lib;
-if (!isset($include_order)) {
-    // Order for include MIBs definitions, default: 'model,os,group,default'
-    $include_order = NULL;
+$include_lib   = $include_lib   ?? FALSE;
+$include_order = $include_order ?? NULL; // Order for include MIBs definitions, default: 'model,os,group,default'
+$include_stats = $include_stats ?? [];   // Initialise stats array if not exists
+
+$mibs = get_device_mibs_permitted($device, $include_order);
+
+// Bodge for <os|os_group>[|/*].inc.php loading.
+if (isset($include_dir_os) && $include_dir_os) {
+    $mibs[] = $device['os'];
+    if (isset($device['os_group']) && !empty($device['os_group'])) {
+        $mibs[] = $device['os_group'];
+    }
+
+    unset($include_dir_os);
 }
 
-// Extend or init stats
-$include_stats = !safe_empty($include_stats) ? $include_stats : [];
+foreach ($mibs as $mib) {
+    $inc_dir   = $config['install_dir'] . '/' . $include_dir . '/' . strtolower($mib);
+    $inc_file  = $inc_dir . '.inc.php';
 
-foreach (get_device_mibs_permitted($device, $include_order) as $mib) {
-    $inc_dir  = $config['install_dir'] . '/' . $include_dir . '/' . strtolower($mib);
-    $inc_file = $inc_dir . '.inc.php';
-
+    // MIB timing start
+    $inc_start  = microtime(TRUE);
+    $inc_status = FALSE; // TRUE, when mib file(s) exist and included
     if (is_file($inc_file)) {
         print_cli_data_field("$mib ");
 
-        $inc_start  = microtime(TRUE); // MIB timing start
-        $inc_status = include($inc_file);
+        include($inc_file);
+        $inc_status = TRUE;
         echo(PHP_EOL);
-
-        if ($include_lib && is_file($inc_dir . '.lib.php')) {
-            // separated functions include, for exclude fatal redeclare errors
-            include_once($inc_dir . '.lib.php');
-        }
-        if ($inc_status !== FALSE) {
-            // MIB timing only for valid includes
-            $include_stats[$mib] = elapsed_time($inc_start);
-        }
-
     } elseif (is_dir($inc_dir)) {
         if (OBS_DEBUG) {
             echo("[[$mib]]");
         }
 
-        $inc_start = microtime(TRUE); // MIB timing start
         foreach (glob($inc_dir . '/*.inc.php') as $dir_file) {
             if (is_file($dir_file)) {
                 print_cli_data_field("$mib ");
                 include($dir_file);
+                $inc_status = TRUE;
                 echo(PHP_EOL);
             }
         }
-
-        if ($include_lib && is_file($inc_dir . '.lib.php')) {
-            // separated functions include, for exclude fatal redeclare errors
-            include_once($inc_dir . '.lib.php');
-        }
-        $include_stats[$mib] += elapsed_time($inc_start); // MIB timing
-
     }
+
+    if ($inc_status === FALSE) {
+        continue;
+    }
+
+    if ($include_lib && is_file($inc_dir . '.lib.php')) {
+        // separated functions include, for exclude fatal redeclare errors
+        include_once($inc_dir . '.lib.php');
+    }
+
+    // MIB timing only for valid includes
+    $include_stats[$mib] = ($include_stats[$mib] ?? 0) + elapsed_time($inc_start);
 }
 
 unset($include_dir, $include_lib, $include_order, $inc_file, $inc_dir, $dir_file, $mib);

@@ -1,4 +1,4 @@
--- ArubaOS 8.11.2.0_87947
+-- ArubaOS 8.12.0.4_91755
 -- vim:set ts=4 sw=4: 
 WLSX-WLAN-MIB DEFINITIONS ::= BEGIN
 
@@ -3598,7 +3598,8 @@ WLSX-WLAN-MIB DEFINITIONS ::= BEGIN
          wlanAPChUtilization         INTEGER,
          wlanAPChPhyType             ArubaPhyType,
          wlanAPChannelNumberV2       Integer32,
-         wlanAPChHTMode              ArubaHTMode
+         wlanAPChHTMode              ArubaHTMode,
+         wlanAPChTotBytes64          Counter64
    }
 
 	wlanAPChannelNumber OBJECT-TYPE
@@ -4052,6 +4053,16 @@ WLSX-WLAN-MIB DEFINITIONS ::= BEGIN
             The HT mode of the AP, if any.
             "
         ::= { wlsxWlanAPChStatsEntry 40 }
+
+   wlanAPChTotBytes64 OBJECT-TYPE
+         SYNTAX Counter64
+         MAX-ACCESS read-only
+         STATUS current
+         DESCRIPTION
+            "
+            This attribute indicates the total Bytes observed on this channel.
+            "
+        ::= { wlsxWlanAPChStatsEntry 41 }
 
 -- AP Wired Stats table
 

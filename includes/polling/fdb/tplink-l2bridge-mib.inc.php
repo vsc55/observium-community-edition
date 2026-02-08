@@ -35,7 +35,7 @@ if (!snmp_status()) {
 // TPLINK-L2BRIDGE-MIB::tpl2BridgeManageDynAgeStatus.20.88.208.75.9.0.744 = INTEGER: aging(1)
 // TPLINK-L2BRIDGE-MIB::tpl2BridgeManageDynStatus.20.88.208.75.9.0.10 = INTEGER: active(1)
 // TPLINK-L2BRIDGE-MIB::tpl2BridgeManageDynStatus.20.88.208.75.9.0.744 = INTEGER: active(1)
-foreach (snmpwalk_cache_oid($device, 'tpl2BridgeManageDynAddrCtrlTable', [], 'TPLINK-L2BRIDGE-MIB', NULL, OBS_SNMP_ALL_NUMERIC_INDEX) as $index => $entry) {
+foreach (snmpwalk_cache_oid($device, 'tpl2BridgeManageDynAddrCtrlTable', [], 'TPLINK-L2BRIDGE-MIB', NULL, OBS_SNMP_ALL_NUMERIC_INDEX) as $entry) {
     if ($entry['tpl2BridgeManageDynAgeStatus'] !== 'aging') {
         continue;
     }

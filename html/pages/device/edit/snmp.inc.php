@@ -4,8 +4,8 @@
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     web
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -115,13 +115,13 @@ if (get_var_true($vars['editing']) && request_token_valid($vars)) {
             }
 
             // SNMPbulk max repetitions, allow 0 for disable snmpbulk(walk|get)
-            if (is_intnum($vars['snmp_maxrep']) && $vars['snmp_maxrep'] >= 0 && $vars['snmp_maxrep'] <= 500) {
+            if (is_valid_param($vars['snmp_maxrep'], 'snmp_maxrep')) {
                 $update['snmp_maxrep'] = (int)$vars['snmp_maxrep'];
             } else {
                 if (strlen($vars['snmp_maxrep'])) {
-                    print_warning('Passed incorrect SNMPbulk max repetitions (' . $vars['snmp_maxrep'] . '). Should be between 0 and 500. When 0 - snmpbulk will disable.');
+                    print_warning('Passed incorrect SNMPbulk max repetitions (' . $vars['snmp_maxrep'] . '). Should be between 0 and 5000. When 0 - snmpbulk will disable.');
                 }
-                $update['snmp_maxrep'] = ['NULL'];
+                $update['snmp_maxrep'] = [ 'NULL' ];
             }
 
             if ($snmpable) {

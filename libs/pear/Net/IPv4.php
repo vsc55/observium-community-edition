@@ -409,12 +409,12 @@ class Net_IPv4
     /**
      * Converts an IP address to a PHP double.  Better than ip2long because
      * a long in PHP is a signed integer.
-     * @param  string $ip  dot-quad formatted IP adress
-     * @return float       IP adress as double - positive value unlike ip2long
+     * @param  string $ip  dot-quad formatted IP address
+     * @return float       IP address as double - positive value unlike ip2long
      */
     public static function ip2double($ip)
     {
-        return (double)(sprintf("%u", ip2long($ip)));
+        return (float)(sprintf("%u", ip2long($ip)));
     }
 
     // }}}

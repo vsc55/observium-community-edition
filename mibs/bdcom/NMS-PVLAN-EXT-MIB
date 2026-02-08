@@ -9,7 +9,7 @@
 NMS-PVLAN-EXT-MIB DEFINITIONS ::= BEGIN 
 	
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32,Counter64             FROM SNMPv2-SMI
     TEXTUAL-CONVENTION, RowStatus, TimeStamp,
     TruthValue                                  FROM SNMPv2-TC
@@ -27,7 +27,7 @@ IMPORTS
 	
 	                 	
   pvlanVlanTable  OBJECT-TYPE
-                   SYNTAX  SEQUENCE OF pvlanVlanTableEntry
+                   SYNTAX  SEQUENCE OF PvlanVlanTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -35,7 +35,7 @@ IMPORTS
                    ::= { nmsvlanExt 6 }
                    	
   pvlanVlanTableEntry  OBJECT-TYPE
-                   SYNTAX  pvlanVlanTableEntry
+                   SYNTAX  PvlanVlanTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -43,7 +43,7 @@ IMPORTS
                    INDEX { ifIndex }
                	   ::= {  pvlanVlanTable 1 }
                	
-               	   pvlanVlanTableEntry ::=
+               	   PvlanVlanTableEntry ::=
                    SEQUENCE {
                    	   pvlanPrivateVlanType
                            INTEGER,
@@ -92,7 +92,7 @@ IMPORTS
                    ::= { pvlanVlanTableEntry 3}                  	
 
    pvlanPortTable  OBJECT-TYPE
-                   SYNTAX  SEQUENCE OF pvlanPortTableEntry
+                   SYNTAX  SEQUENCE OF PvlanPortTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -100,7 +100,7 @@ IMPORTS
                    ::= { nmsvlanExt 7 }	
                    	
    pvlanPortTableEntry  OBJECT-TYPE
-                   SYNTAX  pvlanPortTableEntry
+                   SYNTAX  PvlanPortTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -108,7 +108,7 @@ IMPORTS
                    INDEX { ifIndex }
                    ::= {   pvlanPortTable 1 }
                    	
-  pvlanPortTableEntry ::=
+  PvlanPortTableEntry ::=
                    SEQUENCE {
                    	   pvlanPrivatePortType
                    		 		 INTEGER,

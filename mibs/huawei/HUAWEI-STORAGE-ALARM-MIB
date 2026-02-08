@@ -10,12 +10,13 @@
 			OBJECT-GROUP, MODULE-COMPLIANCE, NOTIFICATION-GROUP			
 				FROM SNMPv2-CONF			
 			enterprises, Integer32, Unsigned32, Gauge32, 
-			Counter32, OBJECT-TYPE, MODULE-IDENTITY, NOTIFICATION-TYPE			
+			Counter64, OBJECT-TYPE, MODULE-IDENTITY, NOTIFICATION-TYPE			
 				FROM SNMPv2-SMI			
 			DisplayString			
 				FROM SNMPv2-TC;
 	
 	
+		-- 1.3.6.1.4.1.2011.2.251
 		storage MODULE-IDENTITY 
 			LAST-UPDATED "201612271804Z"		-- December 27, 2016 at 18:04 GMT
 			ORGANIZATION 
@@ -28,7 +29,10 @@
 				Website: http://www.huawei.com
 				Email: support@huawei.com"
 			DESCRIPTION 
-				"Description."
+				"The HUAWEI-STORAGE-ALARM-MIB contains objects of alarm module."
+			REVISION "201612271804Z"
+			DESCRIPTION 
+				"There have been no additional objects defined."
 			::= { products 251 }
 
 		
@@ -38,38 +42,43 @@
 -- Node definitions
 --
 	
+		-- 1.3.6.1.4.1.2011
 		huawei OBJECT IDENTIFIER ::= { enterprises 2011 }
 
 		
+		-- 1.3.6.1.4.1.2011.2
 		products OBJECT IDENTIFIER ::= { huawei 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20
 		alarm OBJECT IDENTIFIER ::= { storage 20 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1
 		hwStorageNotification OBJECT IDENTIFIER ::= { alarm 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1
 		hwStorageActiveAlarmInfo OBJECT IDENTIFIER ::= { hwStorageNotification 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1
 		hwStorageActiveAlarmInfoTable OBJECT-TYPE
 			SYNTAX SEQUENCE OF HwStorageActiveAlarmInfoEntry
 			MAX-ACCESS not-accessible
 			STATUS current
 			DESCRIPTION
-				"ActiveAlarm Information Table
-				"
+				"This table saves active alarms, which can be queried by the NMS."
 			::= { hwStorageActiveAlarmInfo 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1
 		hwStorageActiveAlarmInfoEntry OBJECT-TYPE
 			SYNTAX HwStorageActiveAlarmInfoEntry
 			MAX-ACCESS not-accessible
 			STATUS current
 			DESCRIPTION
-				"Entry of Active Alarm Information Table
-				"
+				"A table containing the part component."
 			INDEX { hwStorageActiveAlarmInfoNodeCode, hwStorageActiveAlarmInfoSerialNo }
 			::= { hwStorageActiveAlarmInfoTable 1 }
 
@@ -102,51 +111,57 @@
 					Counter64
 			 }
 
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.1
 		hwStorageActiveAlarmInfoNodeCode OBJECT-TYPE
-			SYNTAX OCTET STRING
+			SYNTAX OCTET STRING (SIZE (0..1024))
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm NodeCode"
+				"ID of the node where an alarm occurs."
 			::= { hwStorageActiveAlarmInfoEntry 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.2
 		hwStorageActiveAlarmInfoLocationInfo OBJECT-TYPE
 			SYNTAX DisplayString
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Location Information"
+				"Alarm location information. The format is: Name1 = Value1, ..., NameN = ValueN"
 			::= { hwStorageActiveAlarmInfoEntry 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.3
 		hwStorageActiveAlarmInfoRestoreAdvice OBJECT-TYPE
 			SYNTAX DisplayString
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Restore Advice"
+				"Alarm handling suggestion."
 			::= { hwStorageActiveAlarmInfoEntry 3 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.4
 		hwStorageActiveAlarmInfoTitle OBJECT-TYPE
 			SYNTAX DisplayString
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Title"
+				"Alarm information title."
 			::= { hwStorageActiveAlarmInfoEntry 4 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.5
 		hwStorageActiveAlarmInfoType OBJECT-TYPE
 			SYNTAX INTEGER { equipmentFault(2) }
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Type"
+				"Alarm type: 2-EquipmentAlarm"
 			::= { hwStorageActiveAlarmInfoEntry 5 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.6
 		hwStorageActiveAlarmInfoLevel OBJECT-TYPE
 			SYNTAX INTEGER
 				{
@@ -158,54 +173,56 @@
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Level
-				
-				
-				1-criticalAlarm 
-				2-majorAlarm 
-				3-minorAlarm 
-				4-warningAlarm 
-				
+				"Alarm severity of I2000 network management software:
+				1-criticalAlarm
+				2-majorAlarm
+				3-minorAlarm
+				4-warningAlarm
 				"
 			::= { hwStorageActiveAlarmInfoEntry 6 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.7
 		hwStorageActiveAlarmInfoAlarmID OBJECT-TYPE
 			SYNTAX Gauge32
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm ID"
+				"Alarm ID of I2000 network management software."
 			::= { hwStorageActiveAlarmInfoEntry 7 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.8
 		hwStorageActiveAlarmInfoOccurTime OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Occurrence Time of Alarm"
+				"Time when an alarm was generated."
 			::= { hwStorageActiveAlarmInfoEntry 8 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.9
 		hwStorageActiveAlarmInfoSerialNo OBJECT-TYPE
 			SYNTAX Gauge32
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Serial No."
+				"Alarm serial number(SN)."
 			::= { hwStorageActiveAlarmInfoEntry 9 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.10
 		hwStorageActiveAlarmInfoAddtionInfo OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Addtion Information"
+				"Alarm cause."
 			::= { hwStorageActiveAlarmInfoEntry 10 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.11
 		hwStorageActiveAlarmInfoCategory OBJECT-TYPE
 			SYNTAX INTEGER
 				{
@@ -216,87 +233,95 @@
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active Alarm Category
-				
-				
+				"Alarm Category:
 				1-faultAlarm  
 				2-resumeAlarm 
-				3-eventAlarm  "
+				3-eventAlarm
+				"
 			::= { hwStorageActiveAlarmInfoEntry 11 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.1.1.1.12
 		hwStorageActiveAlarmInfoLocalAlarmID OBJECT-TYPE
 			SYNTAX Counter64
 			MAX-ACCESS read-only
 			STATUS current
 			DESCRIPTION
-				"Active original Alarm ID"
+				"Original Alarm ID"
 			::= { hwStorageActiveAlarmInfoEntry 12 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.2
 		hwStorageNotificationType OBJECT IDENTIFIER ::= { hwStorageNotification 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.2.1
 		hwStorageAlarmReporting NOTIFICATION-TYPE
 			OBJECTS { hwStorageReportingAlarmNodeCode, hwStorageReportingAlarmLocationInfo, hwStorageReportingAlarmRestoreAdvice, hwStorageReportingAlarmFaultTitle, hwStorageReportingAlarmFaultType, 
 				hwStorageReportingAlarmFaultLevel, hwStorageReportingAlarmAlarmID, hwStorageReportingAlarmFaultTime, hwStorageReportingAlarmSerialNo, hwStorageReportingAlarmAdditionInfo, 
-				hwStorageReportingAlarmFaultCategory, hwStorageReportingAlarmLocationAlarmID, hwStorageReportingAlarmProductModel, hwStorageReportingAlarmProductSN }
+				hwStorageReportingAlarmFaultCategory, hwStorageReportingAlarmLocationAlarmID, hwStorageReportingAlarmProductModel, hwStorageReportingAlarmProductSN, hwStorageReportingAlarmProductSystemName}
 			STATUS current
 			DESCRIPTION 
-				"Description."
+				"The node is used for reporting the parsed alarm."
 			::= { hwStorageNotificationType 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3
 		hwStorageReportingAlarm OBJECT IDENTIFIER ::= { hwStorageNotification 3 }
 
 		
 --  1.3.6.1.4.1.2011.2.91.10.3.1.1.1
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.1
 		hwStorageReportingAlarmNodeCode OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Alarm Node Code"
+				"ID of the node where an alarm occurs."
 			REFERENCE
 				"Location info of  Fault Alarm"
 			::= { hwStorageReportingAlarm 1 }
 
 		
 --  1.3.6.1.4.1.2011.2.91.10.3.1.1.2
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.2
 		hwStorageReportingAlarmLocationInfo OBJECT-TYPE
 			SYNTAX DisplayString
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Reporting Alarm Location Information"
+				"Alarm location information. The format is: Name1 = Value1, ..., NameN = ValueN"
 			::= { hwStorageReportingAlarm 2 }
 
 		
 --  1.3.6.1.4.1.2011.2.91.10.3.1.1.3
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.3
 		hwStorageReportingAlarmRestoreAdvice OBJECT-TYPE
 			SYNTAX OCTET STRING (SIZE (0..256))
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Advice of Restore Reporting Alarm "
+				"Alarm handling suggestion."
 			::= { hwStorageReportingAlarm 3 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.4
 		hwStorageReportingAlarmFaultTitle OBJECT-TYPE
 			SYNTAX OCTET STRING (SIZE (0..256))
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Fault Alarm Title "
+				"Alarm information title."
 			::= { hwStorageReportingAlarm 4 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.5
 		hwStorageReportingAlarmFaultType OBJECT-TYPE
 			SYNTAX INTEGER
 				{
 				communicationQuality(1),
 				equipmentFault(2),
-				processError(3),
+				eventAlarm(3),
 				serviceQuality(4),
 				environmentFault(5),
 				performanceLimit(6)
@@ -304,68 +329,75 @@
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Fault Alarm  Type"
+				"Alarm type:
+				2-EquipmentAlarm
+				3-EventAlarm"
 			::= { hwStorageReportingAlarm 5 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.6
 		hwStorageReportingAlarmFaultLevel OBJECT-TYPE
 			SYNTAX INTEGER
 				{
 				criticalAlarm(1),
 				majorAlarm(2),
 				minorAlarm(3),
-				warningAlarm(4)
+				warningAlarm(4),
+				eventAlarm(5)
 				}
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Level of Fault Alarm
-				
-				
-				CriticalAlarm(1)      
-				MajorAlarm(2)         
-				MinorAlarm(3)         
-				WarningAlarm(4)       
-				"
+				"Alarm severity of I2000 network management software:
+				1-criticalAlarm
+				2-majorAlarm
+				3-minorAlarm
+				4-warningAlarm
+				5-eventAlarm"
 			::= { hwStorageReportingAlarm 6 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.7
 		hwStorageReportingAlarmAlarmID OBJECT-TYPE
 			SYNTAX Gauge32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Fault Alarm ID"
+				"Alarm ID of I2000 network management software."
 			::= { hwStorageReportingAlarm 7 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.8
 		hwStorageReportingAlarmFaultTime OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Occurrence Time of Fault Alarm"
+				"Time when an alarm was generated."
 			::= { hwStorageReportingAlarm 8 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.9
 		hwStorageReportingAlarmSerialNo OBJECT-TYPE
 			SYNTAX Gauge32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Fault Alarm Serial No."
+				"Alarm serial number(SN)."
 			::= { hwStorageReportingAlarm 9 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.10
 		hwStorageReportingAlarmAdditionInfo OBJECT-TYPE
 			SYNTAX DisplayString
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Addition Info of Fault Alarm"
+				"Alarm cause."
 			::= { hwStorageReportingAlarm 10 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.11
 		hwStorageReportingAlarmFaultCategory OBJECT-TYPE
 			SYNTAX INTEGER
 				{
@@ -376,151 +408,183 @@
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Category of Fault Alarm
-				
-				
-				faultAlarm (1):
-				resumeAlarm (2):
-				eventAlarm (3):
-				"
+				"Alarm category:
+				1-faultAlarm
+				2-resumeAlarm
+				3-eventAlarm"
 			::= { hwStorageReportingAlarm 11 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.12
 		hwStorageReportingAlarmLocationAlarmID OBJECT-TYPE
 			SYNTAX Counter64
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Original alarm ID."
 			::= { hwStorageReportingAlarm 12 }
 
 		
 --  1.3.6.1.4.1.2011.2.91.10.3.1.1.13
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.13
 		hwStorageReportingAlarmProductModel OBJECT-TYPE
 			SYNTAX Integer32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Product Model."
 			::= { hwStorageReportingAlarm 13 }
 
 		
 --  1.3.6.1.4.1.2011.2.91.10.3.1.1.14
+		-- 1.3.6.1.4.1.2011.2.251.20.1.3.14
 		hwStorageReportingAlarmProductSN OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"SN"
 			::= { hwStorageReportingAlarm 14 }
+			
+		
+		hwStorageReportingAlarmProductSystemName OBJECT-TYPE
+			SYNTAX OCTET STRING
+			MAX-ACCESS accessible-for-notify
+			STATUS current
+			DESCRIPTION
+				"SN"
+			::= { hwStorageReportingAlarm 15 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2
 		hwStorageEvent OBJECT IDENTIFIER ::= { alarm 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.1
 		notificationType OBJECT IDENTIFIER ::= { hwStorageEvent 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.1.1
 		hwStorageEventType NOTIFICATION-TYPE
 			OBJECTS { hwStorageTrapEventType, hwStorageTrapEventID, hwStorageTrapEventLevel, hwStorageTrapEventSequence, hwStorageTrapEventTime, 
 				hwStorageTrapEventRecoveryTime, hwStorageTrapEventParameter, hwStorageTrapEventID32Bit, hwStorageTrapEventTimeStr, hwStorageTrapEventRecoveryTimeStr
 				 }
 			STATUS current
 			DESCRIPTION 
-				" "
+				"This table is used exclusively for ISM management software and is not available to others."
 			::= { notificationType 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2
 		trapEvent OBJECT IDENTIFIER ::= { hwStorageEvent 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.1
 		hwStorageTrapEventType OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Alarm type. The value can be:
+				0: Event
+				1: Fault
+				2: Recovery"
 			::= { trapEvent 1 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.2
 		hwStorageTrapEventID OBJECT-TYPE
 			SYNTAX Counter64
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Original alarm ID."
 			::= { trapEvent 2 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.3
 		hwStorageTrapEventLevel OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Alarm severity. The value can be:
+				2: Info
+				3: Warning
+				5: Major
+				6: Critical"
 			::= { trapEvent 3 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.4
 		hwStorageTrapEventSequence OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Alarm SN, namely, unique identifier of the alarm."
 			::= { trapEvent 4 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.5
 		hwStorageTrapEventTime OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"UTC time when the alarm was generated, unit: seconds."
 			::= { trapEvent 5 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.6
 		hwStorageTrapEventRecoveryTime OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"UTC time when the alarm was cleared, unit: seconds."
 			::= { trapEvent 6 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.7
 		hwStorageTrapEventParameter OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Alarm location parameter.
+				This parameter can be used to resolve alarm description. 
+				It is used with the alarm configuration file of the upper-layer network management system."
 			::= { trapEvent 7 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.8
 		hwStorageTrapEventID32Bit OBJECT-TYPE
 			SYNTAX Unsigned32
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Alarm ID of I2000 network management software."
 			::= { trapEvent 8 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.9
 		hwStorageTrapEventTimeStr OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Time when an alarm was generated. string format."
 			::= { trapEvent 9 }
 
 		
+		-- 1.3.6.1.4.1.2011.2.251.20.2.2.10
 		hwStorageTrapEventRecoveryTimeStr OBJECT-TYPE
 			SYNTAX OCTET STRING
 			MAX-ACCESS accessible-for-notify
 			STATUS current
 			DESCRIPTION
-				"Description."
+				"Time when an alarm was cleared. string format."
 			::= { trapEvent 10 }
 
 		
@@ -538,7 +602,7 @@
 				hwStorageActiveAlarmInfoCategory, hwStorageActiveAlarmInfoLocalAlarmID, hwStorageReportingAlarmNodeCode, hwStorageReportingAlarmLocationInfo, hwStorageReportingAlarmRestoreAdvice, 
 				hwStorageReportingAlarmFaultTitle, hwStorageReportingAlarmFaultType, hwStorageReportingAlarmFaultLevel, hwStorageReportingAlarmAlarmID, hwStorageReportingAlarmFaultTime, 
 				hwStorageReportingAlarmSerialNo, hwStorageReportingAlarmAdditionInfo, hwStorageReportingAlarmFaultCategory, hwStorageReportingAlarmLocationAlarmID, hwStorageReportingAlarmProductModel, 
-				hwStorageReportingAlarmProductSN, hwStorageTrapEventType, hwStorageTrapEventID, hwStorageTrapEventLevel, hwStorageTrapEventSequence, 
+				hwStorageReportingAlarmProductSN, hwStorageReportingAlarmProductSystemName, hwStorageTrapEventType, hwStorageTrapEventID, hwStorageTrapEventLevel, hwStorageTrapEventSequence, 
 				hwStorageTrapEventTime, hwStorageTrapEventRecoveryTime, hwStorageTrapEventParameter, hwStorageTrapEventID32Bit, hwStorageTrapEventTimeStr, 
 				hwStorageTrapEventRecoveryTimeStr }
 			STATUS current

@@ -17,7 +17,7 @@ $update_ports = [];
 
 foreach ($vars['port'] as $port_id => $port_data) {
 
-    if (is_entity_write_permitted('port', $port_id)) {
+    if (is_entity_write_permitted($port_id, 'port')) {
         $port   = get_port_by_id_cache($port_id);
         $device = device_by_id_cache($port['device_id']);
 

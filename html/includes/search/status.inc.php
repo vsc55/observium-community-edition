@@ -27,7 +27,7 @@ foreach ($results as $result) {
     if ($result['hostname'] != $result['sysName'] && $result['sysName']) {
         $device_name .= ' | ' . truncate($result['sysName'], $max_len);
     }
-    $descr = strlen($result['location']) ? escape_html($result['location']) . ' | ' : '';
+    $descr = strlen($result['location']) ? $result['location'] . ' | ' : '';
     $descr .= nicecase($result['entPhysicalClass']) . ' status';
 
     /// FIXME: once we have alerting, colour this to the sensor's status
@@ -38,7 +38,7 @@ foreach ($results as $result) {
         'name'   => $name,
         'colour' => $tab_colour,
         'icon'   => $config['icon']['status'],
-        'data'   => ['| ' . escape_html($device_name), $descr]
+        'data'   => [ '| ' . $device_name, $descr ]
     ];
 
 }

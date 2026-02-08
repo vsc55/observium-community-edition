@@ -19,7 +19,7 @@
 $def_start = microtime(TRUE);
 $def_pre   = memory_get_usage();
 
-$definition_loaded = [ 'version.inc.php' ];
+$definition_loaded = [ 'version' => 'version.inc.php' ];
 require($config['install_dir'] . '/includes/definitions/version.inc.php');
 
 // Here whitelist of base definitions keys which can be overridden by config.php file
@@ -31,6 +31,9 @@ if (defined('OBS_DEFINITIONS_SKIP') && OBS_DEFINITIONS_SKIP === TRUE) {
     return;
 }
 
+// Initialise definitions array if not exists
+$definitions = $definitions ?? [];
+
 // Community specific definition
 if (OBSERVIUM_EDITION === 'community' &&
     is_file($config['install_dir'] . '/includes/definitions/definitions.dat')) {
@@ -41,7 +44,7 @@ if (OBSERVIUM_EDITION === 'community' &&
     //var_dump($config_tmp);
     if (is_array($config_tmp) && isset($config_tmp['os'])) { // Simple check for passed correct data
         $config = array_merge($config, $config_tmp);
-        $definition_loaded[] = 'definitions.dat';
+        $definition_loaded['community'] = 'definitions.dat';
     }
     unset($config_tmp);
 }
@@ -58,40 +61,46 @@ $definition_files = [
     'vendors'     => TRUE, //is_cli() || !is_ajax(), // Vendor/manufacturer definitions
     'geo'         => TRUE,   // Geolocation api definitions
     'vm'          => TRUE,   // Virtual Machine definitions
-    'transports'  => TRUE,   // Alerting transport definitions
+    //'transports'  => TRUE,   // Alerting transport definitions (moved to separate dir includes)
     'apis'        => TRUE,   // External APIs definitions
     'apps'        => TRUE,   // Apps system definitions
 ];
 
 //echo "definitions was last modified: " . date ("F d Y H:i:s.", filemtime('/opt/observium/includes/definitions/')) . "\n";
 
-foreach ($definition_files as $file => $valid) {
-    $file .= '.inc.php';
+foreach ($definition_files as $definition_load => $valid) {
+    $file = $definition_load . '.inc.php';
     if ($valid && is_file($config['install_dir'] . '/includes/definitions/' . $file)) {
-        $definition_loaded[] = $file;
+        $definition_loaded[$definition_load] = $file;
         include($config['install_dir'] . '/includes/definitions/' . $file);
     }
+}
+
+// Load new single-file transport definitions and functions
+foreach (glob($config['install_dir'] . '/includes/transports/*.inc.php') as $file) {
+    $definition_loaded['transports'][] = basename($file);
+    include_once($file);
 }
 
 // IP types
 // https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml
 $config['ip_types']['unspecified']   = [
-  'networks'    => [ '0.0.0.0', '::/128' ],
-  'name'        => 'Unspecified', 'subtext' => 'Example: ::/128, 0.0.0.0',
-  'label-class' => 'error',
-  'descr'       => 'This address may only be used as a source address by an initialising host before it has learned its own address. Example: ::/128, 0.0.0.0'
+    'networks'    => [ '0.0.0.0', '::/128' ],
+    'name'        => 'Unspecified', 'subtext' => 'Example: ::/128, 0.0.0.0',
+    'label-class' => 'error',
+    'descr'       => 'This address may only be used as a source address by an initialising host before it has learned its own address. Example: ::/128, 0.0.0.0'
 ];
 $config['ip_types']['loopback']      = [
-  'networks'    => [ '127.0.0.0/8', '::1/128' ],
-  'name'        => 'Loopback', 'subtext' => 'Example: ::1/128, 127.0.0.1',
-  'label-class' => 'info',
-  'descr'       => 'This address is used when a host talks to itself. Example: ::1/128, 127.0.0.1'
+    'networks'    => [ '127.0.0.0/8', '::1/128' ],
+    'name'        => 'Loopback', 'subtext' => 'Example: ::1/128, 127.0.0.1',
+    'label-class' => 'info',
+    'descr'       => 'This address is used when a host talks to itself. Example: ::1/128, 127.0.0.1'
 ];
 $config['ip_types']['private']       = [
-  'networks'    => [ '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7' ],
-  'name'        => 'Private Local Addresses', 'subtext' => 'Example: fdf8:f53b:82e4::53, 192.168.0.1',
-  'label-class' => 'warning',
-  'descr'       => 'These addresses are reserved for local use in home and enterprise environments and are not public address space. Example: fdf8:f53b:82e4::53, 192.168.0.1'
+    'networks'    => [ '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7' ],
+    'name'        => 'Private Local Addresses', 'subtext' => 'Example: fdf8:f53b:82e4::53, 192.168.0.1',
+    'label-class' => 'warning',
+    'descr'       => 'These addresses are reserved for local use in home and enterprise environments and are not public address space. Example: fdf8:f53b:82e4::53, 192.168.0.1'
 ];
 $config['ip_types']['cgnat']       = [
     'networks'    => [ '100.64.0.0/10' ],
@@ -100,46 +109,46 @@ $config['ip_types']['cgnat']       = [
     'descr'       => 'Carrier Grade NAT is expressly reserved as a range that does not conflict with either the private network address ranges or the public Internet ranges. Example: 100.80.76.30'
 ];
 $config['ip_types']['multicast']     = [
-  'networks'    => [ '224.0.0.0/4', 'ff00::/8' ],
-  'name'        => 'Multicast', 'subtext' => 'Example: ff01:0:0:0:0:0:0:2, 224.0.0.1',
-  'label-class' => 'inverse',
-  'descr'       => 'These addresses are used to identify multicast groups. Example: ff01:0:0:0:0:0:0:2, 224.0.0.1'
+    'networks'    => [ '224.0.0.0/4', 'ff00::/8' ],
+    'name'        => 'Multicast', 'subtext' => 'Example: ff01:0:0:0:0:0:0:2, 224.0.0.1',
+    'label-class' => 'inverse',
+    'descr'       => 'These addresses are used to identify multicast groups. Example: ff01:0:0:0:0:0:0:2, 224.0.0.1'
 ];
 $config['ip_types']['link-local']    = [
-  'networks'    => [ '169.254.0.0/16', 'fe80::/10' ],
-  'name'        => 'Link-Local Addresses', 'subtext' => 'Example: fe80::200:5aee:feaa:20a2, 169.254.3.1',
-  'label-class' => 'suppressed',
-  'descr'       => 'These addresses are used on a single link or a non-routed common access network, such as an Ethernet LAN. Example: fe80::200:5aee:feaa:20a2, 169.254.3.1'
+    'networks'    => [ '169.254.0.0/16', 'fe80::/10' ],
+    'name'        => 'Link-Local Addresses', 'subtext' => 'Example: fe80::200:5aee:feaa:20a2, 169.254.3.1',
+    'label-class' => 'suppressed',
+    'descr'       => 'These addresses are used on a single link or a non-routed common access network, such as an Ethernet LAN. Example: fe80::200:5aee:feaa:20a2, 169.254.3.1'
 ];
 $config['ip_types']['ipv4mapped']    = [
-  'networks'    => [ '::ffff/96' ],
-  'name'        => 'IPv6 IPv4-Mapped', 'subtext' => 'Example: ::ffff:192.0.2.47',
-  'label-class' => 'primary',
-  'descr'       => 'These addresses are used to embed IPv4 addresses in an IPv6 address. Example: 64:ff9b::192.0.2.33'
+    'networks'    => [ '::ffff/96' ],
+    'name'        => 'IPv6 IPv4-Mapped', 'subtext' => 'Example: ::ffff:192.0.2.47',
+    'label-class' => 'primary',
+    'descr'       => 'These addresses are used to embed IPv4 addresses in an IPv6 address. Example: 64:ff9b::192.0.2.33'
 ];
 $config['ip_types']['ipv4embedded']  = [
-  'networks'    => [ '64:ff9b::/96' ],
-  'name'        => 'IPv6 IPv4-Embedded', 'subtext' => 'Example: ::ffff:192.0.2.47',
-  'label-class' => 'primary',
-  'descr'       => 'IPv4-converted IPv6 addresses and IPv4-translatable IPv6 addresses. Example: 64:ff9b::192.0.2.33'
+    'networks'    => [ '64:ff9b::/96' ],
+    'name'        => 'IPv6 IPv4-Embedded', 'subtext' => 'Example: ::ffff:192.0.2.47',
+    'label-class' => 'primary',
+    'descr'       => 'IPv4-converted IPv6 addresses and IPv4-translatable IPv6 addresses. Example: 64:ff9b::192.0.2.33'
 ];
 $config['ip_types']['6to4']          = [
-  'networks'    => [ '192.88.99.0/24', '2002::/16' ],
-  'name'        => 'IPv6 6to4', 'subtext' => 'Example: 2002:cb0a:3cdd:1::1, 192.88.99.1',
-  'label-class' => 'primary',
-  'descr'       => 'A 6to4 gateway adds its IPv4 address to this 2002::/16, creating a unique /48 prefix. Example: 2002:cb0a:3cdd:1::1, 192.88.99.1'
+    'networks'    => [ '192.88.99.0/24', '2002::/16' ],
+    'name'        => 'IPv6 6to4', 'subtext' => 'Example: 2002:cb0a:3cdd:1::1, 192.88.99.1',
+    'label-class' => 'primary',
+    'descr'       => 'A 6to4 gateway adds its IPv4 address to this 2002::/16, creating a unique /48 prefix. Example: 2002:cb0a:3cdd:1::1, 192.88.99.1'
 ];
 $config['ip_types']['documentation'] = [
-  'networks'    => [ '192.0.2.0/24', '198.51.100.0/24', '203.0.113.0/24', '2001:db8::/32' ],
-  'name'        => 'Documentation', 'subtext' => 'Example: 2001:db8:8:4::2, 203.0.113.1',
-  'label-class' => 'primary',
-  'descr'       => 'These addresses are used in examples and documentation. Example: 2001:db8:8:4::2, 203.0.113.1'
+    'networks'    => [ '192.0.2.0/24', '198.51.100.0/24', '203.0.113.0/24', '2001:db8::/32' ],
+    'name'        => 'Documentation', 'subtext' => 'Example: 2001:db8:8:4::2, 203.0.113.1',
+    'label-class' => 'primary',
+    'descr'       => 'These addresses are used in examples and documentation. Example: 2001:db8:8:4::2, 203.0.113.1'
 ];
 $config['ip_types']['teredo']        = [
-  'networks'    => [ '2001:0000::/32' ],
-  'name'        => 'IPv6 Teredo', 'subtext' => 'Example: 2001:0000:4136:e378:8000:63bf:3fff:fdd2',
-  'label-class' => 'primary',
-  'descr'       => 'This is a mapped address allowing IPv6 tunneling through IPv4 NATs. The address is formed using the Teredo prefix, the servers unique IPv4 address, flags describing the type of NAT, the obfuscated client port and the client IPv4 address, which is probably a private address. Example: 2001:0000:4136:e378:8000:63bf:3fff:fdd2'
+    'networks'    => [ '2001:0000::/32' ],
+    'name'        => 'IPv6 Teredo', 'subtext' => 'Example: 2001:0000:4136:e378:8000:63bf:3fff:fdd2',
+    'label-class' => 'primary',
+    'descr'       => 'This is a mapped address allowing IPv6 tunneling through IPv4 NATs. The address is formed using the Teredo prefix, the servers unique IPv4 address, flags describing the type of NAT, the obfuscated client port and the client IPv4 address, which is probably a private address. Example: 2001:0000:4136:e378:8000:63bf:3fff:fdd2'
 ];
 $config['ip_types']['benchmark']     = [
   'networks'    => [ '198.18.0.0/15', '2001:0002::/48' ],
@@ -148,19 +157,19 @@ $config['ip_types']['benchmark']     = [
   'descr'       => 'These addresses are reserved for use in documentation. Example: 2001:0002:6c::430, 198.18.0.1'
 ];
 $config['ip_types']['orchid']        = [
-  'networks'    => [ '2001:0010::/28', '2001:0020::/28' ],
-  'name'        => 'IPv6 Orchid', 'subtext' => 'Example: 2001:10:240:ab::a',
-  'label-class' => 'primary',
-  'descr'       => 'These addresses are used for a fixed-term experiment. Example: 2001:10:240:ab::a'
+    'networks'    => [ '2001:0010::/28', '2001:0020::/28' ],
+    'name'        => 'IPv6 Orchid', 'subtext' => 'Example: 2001:10:240:ab::a',
+    'label-class' => 'primary',
+    'descr'       => 'These addresses are used for a fixed-term experiment. Example: 2001:10:240:ab::a'
 ];
 $config['ip_types']['reserved']      = [
-    'networks' => [ '192.0.0.0/24' ],
+    'networks'    => [ '192.0.0.0/24' ],
     'name'        => 'Reserved', 'subtext' => 'Address in reserved address space',
     'label-class' => 'error',
     'descr'       => 'Reserved address space'
 ];
 $config['ip_types']['broadcast']     = [
-    'networks' => [ '255.255.255.255/32' ],
+    'networks'    => [ '255.255.255.255/32' ],
     'name'        => 'IPv4 Broadcast', 'subtext' => 'Example: 255.255.255.255',
     'label-class' => 'disabled',
     'descr'       => 'IPv4 broadcast address. Example: 255.255.255.255'
@@ -173,10 +182,10 @@ $config['ip_types']['anycast']       = [
 ];
 // Keep this at last!
 $config['ip_types']['unicast'] = [
-  'networks'    => [ '2000::/3' ], // 'networks' => [ '0.0.0.0/0', '2000::/3' ],'
-  'name'        => 'Global Unicast', 'subtext' => 'Example: 2a02:408:7722::, 80.94.60.2', 'disabled' => 1,
-  'label-class' => 'success',
-  'descr'       => 'Global Unicast addresses. Example: 2a02:408:7722::, 80.94.60.2'
+    'networks'    => [ '2000::/3' ], // 'networks' => [ '0.0.0.0/0', '2000::/3' ],'
+    'name'        => 'Global Unicast', 'subtext' => 'Example: 2a02:408:7722::, 80.94.60.2', 'disabled' => 1,
+    'label-class' => 'success',
+    'descr'       => 'Global Unicast addresses. Example: 2a02:408:7722::, 80.94.60.2'
 ];
 
 // Syslog colour and name translation
@@ -478,6 +487,7 @@ $config['obsolete_config'][] = ['old' => 'discovery_modules->cisco-vrf', 'new' =
 
 $config['obsolete_config'][] = ['old' => 'web_enable_showtech', 'new' => 'web_show_tech', 'info' => 'changed since 23.5.12832'];
 $config['obsolete_config'][] = ['old' => 'show_overview_tab',   'new' => 'web_show_overview', 'info' => 'changed since 23.5.12832'];
+$config['obsolete_config'][] = ['old' => 'overview_show_sysDescr', 'new' => 'web_show_overview_extra', 'info' => 'changed since 25.4.13975'];
 
 $config['obsolete_config'][] = ['old' => 'show_locations', 'new' => 'web_show_locations', 'info' => 'changed since 23.7.12893'];
 
@@ -500,10 +510,10 @@ $defs_mem  = memory_get_usage() - $def_pre;
 
 print_debug("DEFINITIONS Time  : " . format_number_short($defs_time, 6) . " ms\n");
 print_debug("DEFINITIONS Memory: " . format_bytes($defs_mem) . "\n");
-if ($config['devel']) {
+if (isset($config['devel']) && $config['devel']) {
     bdump($definition_loaded);
 }
 
-unset($definition_files, $definition_loaded, $file, $valid); // Clean
+unset($definition_files, $definition_loaded, $file, $info, $valid); // Clean
 
 // End of includes/definitions.inc.php

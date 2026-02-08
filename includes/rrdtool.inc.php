@@ -76,7 +76,7 @@ function rename_rrd($device, $old_rrd, $new_rrd, $overwrite = FALSE)
             // If not forced overwrite file, return false
             print_debug("RRD already exist new file: '$new_rrd'");
             $renamed = FALSE;
-        } elseif (OBS_RRD_NOLOCAL) {
+        } elseif (OBS_RRD_REMOTE) {
             // Currently external rrd(cached) not support rename (also dump/restore), see:
             // https://github.com/oetiker/rrdtool-1.x/issues/1141
             // https://github.com/oetiker/rrdtool-1.x/issues/1142
@@ -109,42 +109,61 @@ function rename_rrd($device, $old_rrd, $new_rrd, $overwrite = FALSE)
 function rrdtool_pipe_open(&$rrd_process, &$rrd_pipes)
 {
     global $config;
-
+    
     $command = $config['rrdtool'] . ' -'; // Waits for input via standard input (STDIN)
-
-    /*
-    $descriptorspec = array(
-       0 => array('pipe', 'r'),  // stdin
-       1 => array('pipe', 'w'),  // stdout
-       2 => array('pipe', 'w')   // stderr
-    );
-
-    $cwd = $config['rrd_dir'];
-    $env = array();
-
-    $rrd_process = proc_open($command, $descriptorspec, $rrd_pipes, $cwd, $env);
-    */
-    $rrd_process = pipe_open($command, $rrd_pipes, $config['rrd_dir']);
-
-    if (is_resource($rrd_process)) {
-
-        // $pipes now looks like this:
-        // 0 => writeable handle connected to child stdin
-        // 1 => readable handle connected to child stdout
-        // 2 => readable handle connected to child stderr
-        if (OBS_DEBUG > 1) {
-            print_message('RRD PIPE OPEN[%gTRUE%n]', 'console');
-        }
-
-        return TRUE;
+    
+    // Basic debugging output
+    if (OBS_DEBUG) {
+        print_message('[%yRRD PIPE%n] Attempting to open pipe connection', 'console');
+        print_message('[%yRRD PIPE%n] RRD binary: ' . $config['rrdtool'], 'console');
+        print_message('[%yRRD PIPE%n] Full command: ' . $command, 'console');
+    }
+    
+    // Only check if RRD binary exists (this is still relevant)
+    if (!is_executable($config['rrdtool'])) {
+        print_warning("RRD binary not found at path: " . $config['rrdtool']);
+        return FALSE;
     }
 
+    if (OBS_DEBUG) print_message("[%bRRD PIPE%n] Calling pipe_open()...", 'console');
+    if (OBS_RRD_REMOTE) {
+        // For remote rrdcahed not require cwd to rrd dir
+        $rrd_process = pipe_open($command, $rrd_pipes);
+    } elseif (is_dir($config['rrd_dir'])) {
+        $rrd_process = pipe_open($command, $rrd_pipes, $config['rrd_dir']);
+    } else {
+        print_warning("RRD dir not exist at path: " . $config['rrd_dir']);
+        return FALSE;
+    }
+    
+    if (is_resource($rrd_process)) {
+        // Validate individual pipes
+        $pipes_valid = is_resource($rrd_pipes[0]) && is_resource($rrd_pipes[1]) && is_resource($rrd_pipes[2]);
+        
+         if (OBS_DEBUG) {
+             print_message("[%yRRD PIPE%n] Process resource: %gSUCCESS%n");
+             print_message("[%yRRD PIPE%n] Pipe validation - stdin: "  . (is_resource($rrd_pipes[0]) ? '%gOK%n' : '%rFAILED%n'), 'console');
+             print_message("[%yRRD PIPE%n] Pipe validation - stdout: " . (is_resource($rrd_pipes[1]) ? '%gOK%n' : '%rFAILED%n'), 'console');
+             print_message("[%yRRD PIPE%n] Pipe validation - stderr: " . (is_resource($rrd_pipes[2]) ? '%gOK%n' : '%rFAILED%n'), 'console');
+         }
+        
+        if ($pipes_valid) {
+             if (OBS_DEBUG) print_message('[%yRRD PIPE%n] PIPE OPEN[%gTRUE%n]', 'console');
+            return TRUE;
+        } else {
+            print_warning("RRD pipes invalid despite successful process creation");
+            proc_close($rrd_process);
+            $rrd_process = null;
+        }
+    } else {
+        if (OBS_DEBUG) print_message("[%bRRD PIPE%n] Process resource: FAILED", 'console');
+    }
+    
     if (isset($config['rrd']['debug']) && $config['rrd']['debug']) {
         logfile('rrd.log', "RRD pipe process not opened '$command'.");
     }
-    if (OBS_DEBUG > 1) {
-        print_message('RRD PIPE OPEN[%rFALSE%n]', 'console');
-    }
+
+    print_message('[%bRRD PIPE%n] PIPE OPEN[%rFALSE%n]', 'console');
     return FALSE;
 }
 
@@ -164,19 +183,11 @@ function rrdtool_pipe_close($rrd_process, &$rrd_pipes)
         $rrd_status['stderr'] = stream_get_contents($rrd_pipes[2]);
     }
 
-    /*
-    if (is_resource($rrd_pipes[0]))
-    {
-      fclose($rrd_pipes[0]);
+    if (!is_resource($rrd_process)) {
+        print_debug("RRD PIPE is not created.");
+        return -1;
     }
-    fclose($rrd_pipes[1]);
-    fclose($rrd_pipes[2]);
 
-    // It is important that you close any pipes before calling
-    // proc_close in order to avoid a deadlock
-
-    $rrd_status['exitcode'] = proc_close($rrd_process);
-    */
     $rrd_status['exitcode'] = pipe_close($rrd_process, $rrd_pipes);
     if (OBS_DEBUG > 1) {
         print_message('RRD PIPE CLOSE[' . ($rrd_status['exitcode'] !== 0 ? '%rFALSE' : '%gTRUE') . '%n]', 'console');
@@ -291,9 +302,9 @@ function rrdtool($command, $filename, $options)
     $fsfilename = $filename; // keep full filename
     // Remote RRDcached require minimum version 1.5.5
     // Do not use rrdcached on local hosted rrd, for some commands
-    if ($config['rrdcached'] && (OBS_RRD_NOLOCAL || !in_array($command, [ 'create', 'tune', 'info', 'last', 'lastupdate' ]))) {
+    if ($config['rrdcached'] && (OBS_RRD_REMOTE || !in_array($command, [ 'create', 'tune', 'info', 'last', 'lastupdate' ]))) {
         $filename = str_replace($config['rrd_dir'] . '/', '', $filename);
-        if (OBS_RRD_NOLOCAL && $command === 'create') {
+        if (OBS_RRD_REMOTE && $command === 'create') {
             // No overwriting for remote rrdtool, since no way for check if rrdfile exist
             $options .= ' --no-overwrite';
         }
@@ -325,8 +336,14 @@ function rrdtool($command, $filename, $options)
             logfile('rrd.log', "RRD " . $exec_status['stderr'] . ", CMD: $cmd");
         }
     } else {
-        // FIXME, need add check if pipes exist
         $start = microtime(TRUE);
+
+        // Bail if no pipes. We can't do anything anyways!
+        if (!is_resource($rrd_pipes[0])) {
+          print_error("RRD stdin pipe not available");
+          return FALSE;
+        }
+
         fwrite($rrd_pipes[0], $cmd . "\n");
         // FIXME, complete not sure why sleep required here.. @mike
         usleep(1000);
@@ -434,7 +451,7 @@ function rrdtool_create($device, $filename, $ds, $options = '')
         return NULL;
     }
 
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         print_debug("RRD create $fsfilename passed to remote rrdcached with --no-overwrite.");
     } elseif (rrd_exists($device, $filename)) {
         print_debug("RRD $fsfilename already exists - no need to create.");
@@ -533,7 +550,7 @@ function rrdtool_create_ng($device, $type, $index = NULL, $options = [])
         return NULL;
     }
 
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         print_debug("RRD create $fsfilename passed to remote rrdcached with --no-overwrite.");
     } elseif (rrd_exists($device, $filename)) {
         print_debug("RRD $fsfilename already exists - no need to create.");
@@ -803,20 +820,21 @@ function rrd_exists($device, $filename)
  *
  * @return bool
  */
-function rrd_is_file($filename, $remote_validate = FALSE)
-{
+function rrd_is_file($filename, $remote_validate = FALSE) {
 
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         // NOTE. RRD last on remote daemon reduce polling times
         if ($remote_validate) {
             // Extra way for skip use phpFastCache in polling
             // WARNING. Don't use this until you know what you are doing
             print_debug("Requested rrd file exist on Remote RRDcacheD for rrd_is_file('$filename', TRUE) call.");
             $unixtime = rrdtool_last($filename);
-            if (is_numeric($unixtime) && $unixtime > OBS_MIN_UNIXTIME) {
+            if (is_valid_unixtime($unixtime)) {
                 // Correct unixtime without errors
                 return TRUE;
             }
+            print_debug("\nrrd_is_file($filename):\n");
+            print_debug_vars($unixtime, 1);
 
             // CMD[/usr/bin/rrdtool last hostname/sensor-fanspeed-cisco-entity-sensor-66237848.rrd  --daemon 127.0.0.1:42217]
             //
@@ -829,7 +847,7 @@ function rrd_is_file($filename, $remote_validate = FALSE)
             // ERROR: rrdcached@127.0.0.1:42217: RRD Error: opening '/opt/observium/rrd/hostname/sensor-fanspeed-cisco-entity-sensor-66237848.rrd': No such file or directory
             // ]
             //ERROR: realpath(hostname/status.rrd): No such file or directory
-            return strpos($GLOBALS['rrd_stderr'], 'No such file') === FALSE;
+            return !str_contains($GLOBALS['rrd_stderr'], 'No such file');
             //return $GLOBALS['rrd_status'];
         }
 
@@ -841,11 +859,9 @@ function rrd_is_file($filename, $remote_validate = FALSE)
     return is_file($filename);
 }
 
-function rrdtool_file_valid($file)
-{
-    global $config;
+function rrdtool_file_valid($file) {
 
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         print_message('[%gRRD REMOTE UNSUPPORTED%n] ');
 
         return TRUE;
@@ -857,7 +873,7 @@ function rrdtool_file_valid($file)
 
     // Just validate
     $unixtime = rrdtool_last($file);
-    if (is_numeric($unixtime) && $unixtime > OBS_MIN_UNIXTIME) {
+    if (is_valid_unixtime($unixtime)) {
         // Correct unixtime without errors
         return TRUE;
     }
@@ -966,7 +982,7 @@ function rrdtool_rename_ds($device, $filename, $oldname, $newname)
     }
 
     // Comparability with old version (but we support only >= v1.5.5, this not required)
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         print_message('[%gRRD REMOTE UNSUPPORTED%n] ');
     } else {
         $fsfilename = get_rrd_path($device, $filename);
@@ -1013,7 +1029,7 @@ function rrdtool_add_ds($device, $filename, $add)
     }
 
     // Comparability with old version (but we support only >= v1.5.5, this not required)
-    if (OBS_RRD_NOLOCAL) {
+    if (OBS_RRD_REMOTE) {
         print_message('[%gRRD REMOTE UNSUPPORTED%n] ');
     } else {
         $fsfilename = get_rrd_path($device, $filename);
@@ -1094,7 +1110,7 @@ function rrdtool_add_rra($device, $filename, $options)
 
     if ($config['norrd']) {
         print_message('[%gRRD Disabled%n] ');
-    } elseif (OBS_RRD_NOLOCAL) {
+    } elseif (OBS_RRD_REMOTE) {
         ///FIXME Currently unsupported on remote rrdcached
         print_message('[%gRRD REMOTE UNSUPPORTED%n] ');
     } else {
@@ -1164,7 +1180,7 @@ function rrdtool_file_info($file)
     if (!$out) {
         return $info;
     }
-    // if (OBS_RRD_NOLOCAL) {
+    // if (OBS_RRD_REMOTE) {
     //   ///FIXME Currently unsupported on remote rrdcached
     //   print_message('[%gRRD REMOTE UNSUPPORTED%n] ');
     //   return $info;

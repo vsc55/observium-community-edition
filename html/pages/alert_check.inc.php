@@ -16,7 +16,7 @@ if ($_SESSION['userlevel'] < 5) {
 }
 
 // Alert test display and editing page.
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 // Begin Actions
 $readonly = $_SESSION['userlevel'] < 9; // Currently edit allowed only for Admins
@@ -219,13 +219,16 @@ echo '<table class="' . OBS_CLASS_TABLE_STRIPED_MORE . '">';
 foreach ($conditions as $condition) {
     // Detect incorrect metric used
     if (!in_array($condition['metric'], $allowed_metrics, TRUE)) {
-        print_error("Unknown condition metric '" . escape_html($condition['metric']) . "' for Entity type '" . escape_html($check['entity_type']) . "'");
+        print_box("Unknown condition metric '" . escape_html($condition['metric']) . "' for Entity type '" . escape_html($check['entity_type']) . "'", 'error', 'no-shadow');
 
         foreach (array_keys($config['entities']) as $suggest_entity) {
             if (isset($config['entities'][$suggest_entity]['metrics'][$condition['metric']])) {
-                print_warning("Suggested Entity type: '$suggest_entity'. Change Entity in Edit Alert below.");
-                $suggest_entity_types[$suggest_entity] = ['name' => $config['entities'][$suggest_entity]['name'],
-                                                          'icon' => $config['entities'][$suggest_entity]['icon']];
+                print_box("Suggested Entity type: '$suggest_entity'. Change Entity in Edit Alert below.", 'warning', 'no-shadow');
+
+                $suggest_entity_types[$suggest_entity] = [
+                    'name' => $config['entities'][$suggest_entity]['name'],
+                    'icon' => $config['entities'][$suggest_entity]['icon']
+                ];
             }
         }
     }
@@ -707,7 +710,7 @@ if ($vars['view'] === "assoc") {
 
             <?php
 
-            foreach ($assocs as $assoc_id => $assoc) {
+            foreach ($assocs as $assoc) {
                 echo('<tr>' . PHP_EOL);
                 echo('<td>' . $assoc['alert_assoc_id'] . '</td>' . PHP_EOL);
                 echo('<td>');

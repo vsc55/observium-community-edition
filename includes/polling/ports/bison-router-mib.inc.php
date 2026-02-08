@@ -10,13 +10,10 @@
  *
  */
 
-// Untagged/primary port vlans
-$port_module = 'vlan';
-
-if (!$ports_modules[$port_module]) {
-    // Module disabled
-    return;
-}
+// Virtual ports counters
+echo("vifTable ");
+$vifTable = snmpwalk_cache_oid($device, 'vifTable', [], 'BISON-ROUTER-MIB');
+print_debug_vars($vifTable);
 
 // BISON-ROUTER-MIB::vifIndex.2 = INTEGER: 2
 // BISON-ROUTER-MIB::vifIndex.3 = INTEGER: 3
@@ -55,31 +52,84 @@ if (!$ports_modules[$port_module]) {
 // BISON-ROUTER-MIB::vifTxOctets.4 = Counter64: 380461278833
 // BISON-ROUTER-MIB::vifTxOctets.5 = Counter64: 317404718753
 
-// Base vlan IDs
-$ports_vlans_oids = snmpwalk_cache_oid($device, 'vifCvid', [], 'BISON-ROUTER-MIB');
-
-if (snmp_status()) {
-    echo("vifCvid vifPort ");
-
-    $ports_vlans_oids = snmpwalk_cache_oid($device, 'vifPort', $ports_vlans_oids, 'BISON-ROUTER-MIB');
-
-    print_debug_vars($ports_vlans_oids);
-
-    $vlan_rows = [];
-    foreach ($ports_vlans_oids as $vifIndex => $vlan) {
-        $ifIndex     = $vlan['vifPort'];
-        $vlan_num    = $vlan['vifCvid'];
-        $trunk       = 'access';
-        $vlan_rows[] = [ $ifIndex, $vlan_num, $trunk ];
-
-        // Set Vlan and Trunk
-        $port_stats[$ifIndex]['ifVlan']  = $vlan_num;
-        $port_stats[$ifIndex]['ifTrunk'] = $trunk;
-
-    }
-
-    $headers = ['%WifIndex%n', '%WVlan%n', '%WTrunk%n'];
-    print_cli_table($vlan_rows, $headers);
+if (!snmp_status()) {
+    return;
 }
+
+foreach ($vifTable as $vifIndex => $entry) {
+    $portIndex   = $entry['vifPort']; // parent port index
+    $ifIndex     = $entry['vifCvid']; // virtual port index
+
+    if (isset($port_stats[$portIndex]) && !isset($port_stats[$ifIndex])) {
+        // Add hidden/ignored Vlan port
+        $port_stats[$ifIndex] = [
+            'ifIndex'       => $ifIndex,
+            'ifDescr'       => $entry['vifName'],
+            'ifType'        => 'l2vlan', // FIXME. I do not know which type can used here
+            'ifAlias'       => '',
+            'ifSpeed'       => $port_stats[$portIndex]['ifSpeed'],
+            'ifHighSpeed'   => $port_stats[$portIndex]['ifHighSpeed'],
+            'ifPhysAddress' => $port_stats[$portIndex]['ifPhysAddress'],
+            'ifOperStatus'  => $port_stats[$portIndex]['ifOperStatus'],  // Oper status from parent port
+            'ifAdminStatus' => $port_stats[$portIndex]['ifAdminStatus'], // Admin status from parent port
+            'ignore'        => '1',       // Set this ports ignored ?
+            'disabled'      => '0',
+
+            // Counters
+            'ifInOctets'       => $entry['vifRxOctets'],
+            'ifHCInOctets'     => $entry['vifRxOctets'],
+            'ifOutOctets'      => $entry['vifTxOctets'],
+            'ifHCOutOctets'    => $entry['vifTxOctets'],
+
+            'ifInUcastPkts'    => $entry['vifRxPkts'],
+            'ifHCInUcastPkts'  => $entry['vifRxPkts'],
+            'ifOutUcastPkts'   => $entry['vifTxPkts'],
+            'ifHCOutUcastPkts' => $entry['vifTxPkts'],
+        ];
+
+        // set to zero all other stat oids..
+        foreach ($stat_oids_ifEntry as $oid) {
+            if (!isset($port_stats[$ifIndex][$oid])) {
+                $port_stats[$ifIndex][$oid] = 0;
+            }
+        }
+        // foreach ($stat_oids_ifXEntry as $oid) {
+        //     if (!isset($port_stats[$ifIndex][$oid])) {
+        //         $port_stats[$ifIndex][$oid] = 0;
+        //     }
+        // }
+    }
+}
+
+// Untagged/primary port vlans
+$port_module = 'vlan';
+if (!$ports_modules[$port_module]) {
+    // Module disabled
+    return;
+}
+
+// Base vlan IDs
+// $ports_vlans_oids = snmpwalk_cache_oid($device, 'vifCvid', [], 'BISON-ROUTER-MIB');
+
+echo("vifCvid vifPort ");
+
+// $ports_vlans_oids = snmpwalk_cache_oid($device, 'vifPort', $ports_vlans_oids, 'BISON-ROUTER-MIB');
+// print_debug_vars($ports_vlans_oids);
+
+$vlan_rows = [];
+foreach ($vifTable as $entry) {
+    $ifIndex     = $entry['vifPort'];
+    $vlan_num    = $entry['vifCvid'];
+    $trunk       = 'access';
+    $vlan_rows[] = [ $ifIndex, $vlan_num, $trunk ];
+
+    // Set Vlan and Trunk
+    $port_stats[$ifIndex]['ifVlan']  = $vlan_num;
+    $port_stats[$ifIndex]['ifTrunk'] = $trunk;
+
+}
+
+$headers = ['%WifIndex%n', '%WVlan%n', '%WTrunk%n'];
+print_cli_table($vlan_rows, $headers);
 
 // EOF

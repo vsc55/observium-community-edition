@@ -35,7 +35,7 @@ $inventory[$index] = [
 ];
 discover_inventory($device, $index, $inventory[$index], $mib);
 
-foreach ($oids as $tmp => $entry) {
+foreach ($oids as $entry) {
     if ($entry['drsServerSlotNumber'] === "N/A") {
         continue;
     }

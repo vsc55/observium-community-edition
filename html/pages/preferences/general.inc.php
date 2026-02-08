@@ -114,7 +114,7 @@ humanize_user($user_data); // Get level_label, level_real, row_class, etc
                     <?php
                     // Warn about lack of encrypt modules unless told not to.
                     if (!OBS_ENCRYPT) {
-                        echo('<td colspan="2"><span class="text text-danger">To use RSS/Atom feeds the PHP mcrypt or sodium (php >= 7.2) extension is required.</span></td>');
+                        echo('<td colspan="2"><span class="text text-danger">To use RSS/Atom feeds the PHP sodium extension is required.</span></td>');
                     } elseif (!check_extension_exists('SimpleXML')) {
                         echo('<td colspan="2"><span class="text text-danger">To use RSS/Atom feeds the PHP SimpleXML module is required.</span></td>');
                     } else {
@@ -323,7 +323,7 @@ humanize_user($user_data); // Get level_label, level_real, row_class, etc
 
 if (isset($config['debug_user_perms']) && $config['debug_user_perms']) {
     r($_SESSION);
-    r($permissions);
+    r(mem_cache_get('user_permissions'));
 }
 
 // EOF

@@ -108,28 +108,11 @@ function generate_inventory_query($vars)
  * @return void|boolean
  *
  */
-function print_inventory($vars)
-{
+function print_inventory($vars) {
+
     // On "Inventory" device tab display hierarchical list
-    if ($vars['page'] === 'device' && is_numeric($vars['device']) && device_permitted($vars['device'])) {
-        // DHTML expandable tree
-        register_html_resource('js', 'mktree.js');
-        register_html_resource('css', 'mktree.css');
-
-        echo generate_box_open($vars['header']);
-        echo('<table class="table table-striped  table-condensed "><tr><td>');
-        echo('<div class="btn-group pull-right" style="margin-top:5px; margin-right: 5px;">
-      <button class="btn btn-small" onClick="expandTree(\'enttree\');return false;"><i class="icon-plus muted small"></i> Expand</button>
-      <button class="btn btn-small" onClick="collapseTree(\'enttree\');return false;"><i class="icon-minus muted small"></i> Collapse</button>
-    </div>');
-
-        echo('<div style="clear: left; margin: 5px;"><ul class="mktree" id="enttree" style="margin-left: -10px;">');
-        print_ent_physical(0, 0, "liOpen");
-        echo('</ul></div>');
-        echo('</td></tr></table>');
-        echo generate_box_close();
-
-        return TRUE;
+    if ($vars['page'] === 'device') {
+        return print_inventory_tree($vars);
     }
 
     // With pagination? (display page numbers in header)
@@ -230,39 +213,80 @@ function print_inventory($vars)
 }
 
 /**
+ * @param array $vars
+ *
+ * @return true|void
+ */
+function print_inventory_tree($vars) {
+
+    // On "Inventory" device tab display hierarchical list
+    if (!is_numeric($vars['device']) || !device_permitted($vars['device'])) {
+        return;
+    }
+    // In some rare cases device report initial entity with index -1
+    //$entPhysicalContainedIn -= 1;
+    $entPhysicalContainedIn = dbFetchColumn("SELECT `entPhysicalContainedIn` FROM `entPhysical` WHERE `device_id` = ? AND `deleted` IS NULL", [ $vars['device'] ]);
+    if (safe_empty($entPhysicalContainedIn)) {
+        return;
+    }
+
+    // DHTML expandable tree
+    register_html_resource('js', 'mktree.js');
+    register_html_resource('css', 'mktree.css');
+
+    echo generate_box_open($vars['header']);
+
+    echo('<table class="table table-striped  table-condensed "><tr><td>');
+    echo('<div class="btn-group pull-right" style="margin-top:5px; margin-right: 5px;">
+      <button class="btn btn-small" onClick="expandTree(\'enttree\');return false;"><i class="icon-plus muted small"></i> Expand</button>
+      <button class="btn btn-small" onClick="collapseTree(\'enttree\');return false;"><i class="icon-minus muted small"></i> Collapse</button>
+    </div>');
+
+    echo('<div style="clear: left; margin: 5px;"><ul class="mktree" id="enttree" style="margin-left: -10px;">');
+
+    for ($i = 0; $i < 1000 && !empty($entPhysicalContainedIn); $i++) {
+        print_ent_physical(min($entPhysicalContainedIn), 0, $entPhysicalContainedIn);
+    }
+
+    echo('</ul></div>');
+    echo('</td></tr></table>');
+    echo generate_box_close();
+
+    return TRUE;
+}
+
+/**
  * Display device inventory hierarchy.
  *
  * @param string $entPhysicalContainedIn
- * @param string $level
- * @param string $class
+ * @param integer $level
  *
  * @return null
  *
  */
-function print_ent_physical($entPhysicalContainedIn, $level, $class)
-{
-    global $device, $config;
+function print_ent_physical($entPhysicalContainedIn, $level, &$all_in = []) {
+    global $device, $vars;
 
-    $initial = $entPhysicalContainedIn === 0 && $level === 0;
+
     $where   = '`device_id` = ? AND `entPhysicalContainedIn` = ?';
-    if ($initial) {
-        // First level must be not deleted!
+    if ($level === 0) {
+        $class = "liOpen";
+        // The First level must be not deleted!
         $where .= ' AND `deleted` IS NULL';
+    } else {
+        $class = "";
+        // Do not show deleted if not requested
+        if (!get_var_true($vars['deleted'])) {
+            $where .= ' AND `deleted` IS NULL';
+        }
     }
 
-    $ents = dbFetchRows("SELECT * FROM `entPhysical` WHERE $where ORDER BY `entPhysicalContainedIn`, `ifIndex`, `entPhysicalIndex`", [$device['device_id'], $entPhysicalContainedIn]);
-    if ($initial && empty($ents)) {
-        // In some rare cases device report initial entity with index -1
-        //$entPhysicalContainedIn -= 1;
-        $entPhysicalContainedIn = dbFetchCell("SELECT MIN(`entPhysicalContainedIn`) FROM `entPhysical` WHERE `device_id` = ? AND `deleted` IS NULL", [$device['device_id']]);
+    $sql = "SELECT * FROM `entPhysical` WHERE $where ORDER BY `entPhysicalContainedIn`, `ifIndex`, `entPhysicalIndex`";
 
-        $ents = dbFetchRows("SELECT * FROM `entPhysical` WHERE $where ORDER BY `entPhysicalContainedIn`, `ifIndex`, `entPhysicalIndex`", [$device['device_id'], $entPhysicalContainedIn]);
-    }
-    //r($ents);
+    foreach (dbFetchRows($sql, [ $device['device_id'], $entPhysicalContainedIn ]) as $ent) {
 
-    foreach ($ents as $ent) {
-        $link  = '';
         $value = NULL;
+        $link  = NULL;
         $text  = " <li class='$class'>";
 
         /*
@@ -347,13 +371,13 @@ function print_ent_physical($entPhysicalContainedIn, $level, $class)
                 break;
         }
         if ($ent['deleted'] !== NULL) {
-            $icon = 'minus';
+            //$icon = 'minus';
             $icon = ':x:'; // emoji icon just for experiment
         }
 
-        $text .= get_icon($icon) . ' ';
+        $text .= get_icon($icon) . '&nbsp;';
         if ($ent['entPhysicalParentRelPos'] > '-1') {
-            $text .= '<strong>' . $ent['entPhysicalParentRelPos'] . '.</strong> ';
+            $text .= '<strong>' . escape_html($ent['entPhysicalParentRelPos']) . '.</strong> ';
         }
 
         $ent_text = '';
@@ -364,7 +388,9 @@ function print_ent_physical($entPhysicalContainedIn, $level, $class)
         }
 
         if ($link) {
-            $ent['entPhysicalName'] = $link;
+            $ent_name = $link;
+        } else {
+            $ent_name = escape_html($ent['entPhysicalName']);
         }
 
         // vendor + model + hw
@@ -379,38 +405,38 @@ function print_ent_physical($entPhysicalContainedIn, $level, $class)
             if ($ent['entPhysicalHardwareRev'] && is_valid_param($ent['entPhysicalHardwareRev'], 'revision')) {
                 $ent_model .= " " . $ent['entPhysicalHardwareRev'];
             }
-            $ent_model = trim($ent_model);
+            $ent_model = escape_html(trim($ent_model));
         }
 
         if ($ent['entPhysicalModelName'] && $ent_model) {
             if ($ent['ifIndex']) {
                 // For ports different order
-                $ent_text .= "<strong>" . $ent['entPhysicalName'] . " (" . $ent_model . ")</strong>";
+                $ent_text .= "<strong>" . $ent_name . " (" . $ent_model . ")</strong>";
             } else {
-                $ent_text .= "<strong>" . $ent_model . "</strong> (" . $ent['entPhysicalName'] . ")";
+                $ent_text .= "<strong>" . $ent_model . "</strong> (" . $ent_name . ")";
             }
         } elseif ($ent_model) {
             $ent_text .= "<strong>" . $ent_model . "</strong>";
-        } elseif ($ent['entPhysicalName']) {
-            $ent_text .= "<strong>" . $ent['entPhysicalName'] . "</strong>";
+        } elseif ($ent_name) {
+            $ent_text .= "<strong>" . $ent_name . "</strong>";
         } elseif ($ent['entPhysicalDescr']) {
-            $ent_text .= "<strong>" . $ent['entPhysicalDescr'] . "</strong>";
+            $ent_text .= "<strong>" . escape_html($ent['entPhysicalDescr']) . "</strong>";
         }
 
         // entPhysicalAssetID
         if (!safe_empty($ent['entPhysicalAssetID']) &&
-            !in_array($ent['entPhysicalAssetID'], ['zeroDotZero', 'zeroDotZero.0'])) {
-            $ent_text .= " (" . $ent['entPhysicalAssetID'] . ")";
+            !str_contains($ent['entPhysicalAssetID'], 'zeroDotZero')) {
+            $ent_text .= " (" . escape_html($ent['entPhysicalAssetID']) . ")";
         }
 
         // entPhysicalVendorType
         if (!safe_empty($ent['entPhysicalVendorType']) &&
-            !in_array($ent['entPhysicalVendorType'], ['zeroDotZero', 'zeroDotZero.0'])) {
-            $ent_text .= " (" . $ent['entPhysicalVendorType'] . ")";
+            !str_contains($ent['entPhysicalVendorType'], 'zeroDotZero')) {
+            $ent_text .= " (" . escape_html($ent['entPhysicalVendorType']) . ")";
         }
         //$ent_text .= " [" . $ent['entPhysicalClass'] . "]"; // DEVEL
 
-        $ent_text .= "<br /><div class='small' style='margin-left: 20px;'>" . $ent['entPhysicalDescr'];
+        $ent_text .= "<br /><div class='small' style='margin-left: 20px;'>" . escape_html($ent['entPhysicalDescr']);
 
         // Value
         if ($value) {
@@ -421,16 +447,16 @@ function print_ent_physical($entPhysicalContainedIn, $level, $class)
 
         // Serial, Hardware/Firmware/Software Rev
         if ($ent['entPhysicalSerialNum']) {
-            $text .= ' <span class="label label-primary">SN: ' . $ent['entPhysicalSerialNum'] . '</span> ';
+            $text .= ' <span class="label label-primary">SN: ' . escape_html($ent['entPhysicalSerialNum']) . '</span> ';
         }
         if ($ent['entPhysicalHardwareRev']) {
-            $text .= ' <span class="label label-default">HW: ' . $ent['entPhysicalHardwareRev'] . '</span> ';
+            $text .= ' <span class="label label-default">HW: ' . escape_html($ent['entPhysicalHardwareRev']) . '</span> ';
         }
         if ($ent['entPhysicalFirmwareRev']) {
-            $text .= ' <span class="label label-info">FW: ' . $ent['entPhysicalFirmwareRev'] . '</span> ';
+            $text .= ' <span class="label label-info">FW: '    . escape_html($ent['entPhysicalFirmwareRev']) . '</span> ';
         }
         if ($ent['entPhysicalSoftwareRev']) {
-            $text .= ' <span class="label label-success">SW: ' . $ent['entPhysicalSoftwareRev'] . '</span> ';
+            $text .= ' <span class="label label-success">SW: ' . escape_html($ent['entPhysicalSoftwareRev']) . '</span> ';
         }
 
         // Deleted
@@ -441,14 +467,20 @@ function print_ent_physical($entPhysicalContainedIn, $level, $class)
         $text .= "</div>";
         echo($text);
 
-        $count = dbFetchCell("SELECT COUNT(*) FROM `entPhysical` WHERE `device_id` = ? AND `entPhysicalContainedIn` = ?", [$device['device_id'], $ent['entPhysicalIndex']]);
-        if ($count) {
+        // Next level
+        if (dbExist('entPhysical', "`device_id` = ? AND `entPhysicalContainedIn` = ?", [ $device['device_id'], $ent['entPhysicalIndex']])) {
             echo("<ul>");
-            print_ent_physical($ent['entPhysicalIndex'], $level + 1, '');
+            print_ent_physical($ent['entPhysicalIndex'], $level + 1, $all_in);
             echo("</ul>");
         }
         echo("</li>");
     }
+
+    // Remove printed id from all array
+    $all_in =  array_filter($all_in, static function ($v) use ($entPhysicalContainedIn) {
+        return $v != $entPhysicalContainedIn;
+    });
+    //r($all_in);
 }
 
 // EOF

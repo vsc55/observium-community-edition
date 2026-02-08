@@ -47,18 +47,18 @@ function geo_detect($device, $poll_device, $geo_db, &$dns_only) {
 // DOCME needs phpdoc block
 // TESTME needs unit testing
 function get_geolocation($address, $geo_db = [], $dns_only = FALSE) {
-    global $config;
+    global $config, $options;
 
     $ok                          = FALSE;
     $address                     = trim($address);
     $location                    = [ 'location' => $address ]; // Init location array
     $location['location_geoapi'] = strtolower(trim($config['geocoding']['api']));
-    if (!isset($config['geo_api'][$location['location_geoapi']])) {
+    if (!isset($config['geo_api'][$location['location_geoapi']]['forward'])) {
         // Use default if unknown api
-        $location['location_geoapi'] = 'geocodefarm';
+        $location['location_geoapi'] = 'arcgis';
     }
 
-    // Geo definitions
+    // Geo definition for forward & reverse
     $geo_def = $config['geo_api'][$location['location_geoapi']];
 
     if (isset($config['geocoding']['enable']) && $config['geocoding']['enable']) {
@@ -83,7 +83,7 @@ function get_geolocation($address, $geo_db = [], $dns_only = FALSE) {
             } else {
                 $debug_msg .= '  DNS LOC records - NOT FOUND' . PHP_EOL;
                 if ($dns_only) {
-                    // If we check only DNS LOC records, but it not found, exit
+                    // If we check only DNS LOC records, but it didn't found - stop
                     print_debug($debug_msg);
                     return FALSE;
                 }
@@ -104,14 +104,15 @@ function get_geolocation($address, $geo_db = [], $dns_only = FALSE) {
          */
         if ($geo_type === 'forward' &&
             (preg_match(OBS_PATTERN_LATLON, $address, $matches) ||
-             preg_match(OBS_PATTERN_LATLON_ALT, $address, $matches)))
-        {
+             preg_match(OBS_PATTERN_LATLON_ALT, $address, $matches))) {
+
             if ($matches['lat'] >= -90 && $matches['lat'] <= 90 &&
-                $matches['lon'] >= -180 && $matches['lon'] <= 180)
-            {
+                $matches['lon'] >= -180 && $matches['lon'] <= 180) {
+                // Force reverse request
+                $geo_type = 'reverse';
+
                 $location['location_lat'] = $matches['lat'];
                 $location['location_lon'] = $matches['lon'];
-                $geo_type                 = 'reverse';
             }
         }
 
@@ -208,7 +209,11 @@ function get_geolocation($address, $geo_db = [], $dns_only = FALSE) {
                 }
             }
 
-            print_debug_vars($data);
+            if (isset($options['l'])) {
+                print_vars($data);
+            } else {
+                print_debug_vars($data);
+            }
         } else {
             $geo_status = 'NOT REQUESTED';
         }
@@ -284,40 +289,46 @@ function get_geolocation($address, $geo_db = [], $dns_only = FALSE) {
  */
 function get_geo_dnsloc($hostname) {
 
-    if ($hostname) {
-        //include_once('Net/DNS2.php');
-        //include_once('Net/DNS2/RR/LOC.php');
+    if (!is_valid_hostname($hostname)) {
+        print_debug("  DNS LOC enabled, but device hostname '$hostname' invalid.");
+        return [];
+    }
 
-        $resolver = new Net_DNS2_Resolver();
-        try {
-            $response = $resolver->query($hostname, 'LOC', 'IN');
-        } catch (Net_DNS2_Exception $e) {
-            $response = FALSE;
-            print_debug('  Resolver error: ' . $e->getMessage() . ' (hostname: ' . $hostname . ')');
-        }
-    } else {
+    $resolver = new Net_DNS2_Resolver();
+    try {
+        $response = $resolver->query($hostname, 'LOC');
+    } catch (Net_DNS2_Exception $e) {
         $response = FALSE;
-        print_debug("  DNS LOC enabled, but device hostname empty.");
+        print_debug('  DNS Resolver error: ' . $e->getMessage() . ' (hostname: ' . $hostname . ')');
     }
 
-    if ($response) {
-        //print_debug_vars($response->answer);
-        foreach ($response->answer as $answer) {
-            print_debug_vars($answer);
-            if (is_numeric($answer->latitude) && is_numeric($answer->longitude)) {
-                return [ 'location_lat' => $answer->latitude,
-                         'location_lon' => $answer->longitude ];
-            }
+    if (!$response) {
+        // No LOC record found
+        print_debug("  DNS LOC record for hostname '$hostname' not found.");
+        return [];
+    }
 
-            if (is_numeric($answer->degree_latitude) && is_numeric($answer->degree_longitude)) {
-                $ns_multiplier = $answer->ns_hem === 'N' ? 1 : -1;
-                $ew_multiplier = $answer->ew_hem === 'E' ? 1 : -1;
+    //print_debug_vars($response->answer);
+    foreach ($response->answer as $answer) {
+        print_debug_vars($answer);
+        if (is_numeric($answer->latitude) && is_numeric($answer->longitude)) {
+            print_debug("  DNS LOC record for hostname '$hostname' found.");
+            return [ 'location_lat' => $answer->latitude,
+                     'location_lon' => $answer->longitude ];
+        }
 
-                return [ 'location_lat' => round(($answer->degree_latitude  + $answer->min_latitude / 60  + $answer->sec_latitude / 3600)  * $ns_multiplier, 7),
-                         'location_lon' => round(($answer->degree_longitude + $answer->min_longitude / 60 + $answer->sec_longitude / 3600) * $ew_multiplier, 7) ];
-            }
+        if (is_numeric($answer->degree_latitude) && is_numeric($answer->degree_longitude)) {
+            $ns_multiplier = $answer->ns_hem === 'N' ? 1 : -1;
+            $ew_multiplier = $answer->ew_hem === 'E' ? 1 : -1;
+
+            print_debug("  DNS LOC record for hostname '$hostname' found.");
+            return [ 'location_lat' => round(($answer->degree_latitude  + $answer->min_latitude / 60  + $answer->sec_latitude / 3600)  * $ns_multiplier, 7),
+                     'location_lon' => round(($answer->degree_longitude + $answer->min_longitude / 60 + $answer->sec_longitude / 3600) * $ew_multiplier, 7) ];
         }
     }
+
+    print_debug("  DNS LOC record for hostname '$hostname' invalid.");
+    print_debug_vars($response->answer);
 
     return [];
 }
@@ -371,6 +382,12 @@ function generate_location_alt($address) {
     if (str_contains($address, ' - ')) {
         // Rack: NK-76 - Nikhef, Amsterdam, NL
         $address_second = trim(explode(' - ', $address, 2)[1]);
+    } elseif (str_contains($address, ' (')) {
+        // 1100 Congress Ave, Austin, TX 78701 (3rd floor cabinet)
+        $address_second = trim(explode(' (', $address, 2)[0]);
+    } elseif (str_contains($address, ' [')) {
+        // 1100 Congress Ave, Austin, TX 78701 [3rd floor cabinet]
+        $address_second = trim(explode(' [', $address, 2)[0]);
     } elseif (str_contains($address, ',')) {
         // ZRH2, Badenerstrasse 569, Zurich, Switzerland
         $address_second = trim(explode(',', $address, 2)[1]);

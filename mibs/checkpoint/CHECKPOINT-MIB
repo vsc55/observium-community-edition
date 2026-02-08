@@ -5,9 +5,9 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	  -- iso.org.dod.internet.private.enterprises.checkpoint.products
 
           IMPORTS
-                  MODULE-IDENTITY, OBJECT-TYPE, Integer32, Unsigned32, IpAddress, Counter32, Counter64, Gauge32, enterprises
+                  MODULE-IDENTITY, OBJECT-TYPE, Integer32, Unsigned32, IpAddress, Counter32, Counter64, Gauge32, NOTIFICATION-TYPE, enterprises
                       	FROM SNMPv2-SMI
-				  MODULE-COMPLIANCE, OBJECT-GROUP
+				  MODULE-COMPLIANCE, OBJECT-GROUP, NOTIFICATION-GROUP
                       	FROM SNMPv2-CONF
                   DisplayString 
                   		FROM SNMPv2-TC;
@@ -18,7 +18,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		CONTACT-INFO "Check Point"
 		DESCRIPTION "Check Point MIB
 					 See the most common OIDs, with detailed descriptions, in the SNMP Best Practices Guide - sk98552
-					(https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk98552)"
+					(https://support.checkpoint.com/results/sk/sk98552)"
 		REVISION    "202101310000Z"  -- January 31, 2021
         DESCRIPTION "Fix MIB errors and warnings based on RFC"
 		REVISION "201312261309Z"
@@ -60,12 +60,14 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	ips						OBJECT IDENTIFIER ::= { products 53 }
 	httpsInspection			OBJECT IDENTIFIER ::= { products 54 }
 	mho						OBJECT IDENTIFIER ::= { products 55 }
+	zph						OBJECT IDENTIFIER ::= { products 60 }
 
 	-- conformance information
 	chkpntMIBConformance  OBJECT IDENTIFIER ::= { checkpoint 2 }
 	
 	chkpntMIBCompliances  OBJECT IDENTIFIER ::= { chkpntMIBConformance 1 }
 	chkpntMIBGroups  OBJECT IDENTIFIER ::= { chkpntMIBConformance 2 }
+        chkpntMIBNotifGroups  OBJECT IDENTIFIER ::= { chkpntMIBConformance 3 }
 	
 	-- compliance statements
 
@@ -197,13 +199,18 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			GROUP   mhoProductsGroup
 			DESCRIPTION
 				"This group is for Check Point entities which support Maestro Hyperscale Orchestrator"
+				
+			GROUP   zphProductsGroup
+			DESCRIPTION
+				"This group is for Check Point entities which support Zero Phishing statistics"
+				
 
 		::= { chkpntMIBCompliances 1 }
 		
 	-- units of conformance
 	
 	fwProductsGroup OBJECT-GROUP
-		OBJECTS { fwPolicyName, fwInstallTime, fwNumConn, fwPeakNumConn, fwIspName, fwIspStatus, fwIspRole, unknown, fwIfName, fwAcceptPcktsIn, fwAcceptPcktsOut, fwAcceptBytesIn, fwAcceptBytesOut, fwDropPcktsIn, fwDropPcktsOut, fwRejectPcktsIn, fwRejectPcktsOut, fwLogIn, fwLogOut, fwConnTableLimit, fwAcceptedTotal, fwDroppedTotal, fwRejectedTotal, fwLoggedTotal, fwAcceptedBytesTotal, fwDroppedBytesTotal, fwRejectedBytesTotal, fwAcceptedBytesRates, fwAcceptedPcktsRates, fwConnsRate, fwIfName64, fwAcceptPcktsIn64, fwAcceptPcktsOut64, fwAcceptBytesIn64, fwAcceptBytesOut64, fwDropPcktsIn64, fwDropPcktsOut64, fwRejectPcktsIn64, fwRejectPcktsOut64, fwLogIn64, fwLogOut64, fwFullyUtilizedDrops, fwHmem-block-size, fwHmem-requested-bytes, fwHmem-initial-allocated-bytes, fwHmem-initial-allocated-blocks, fwHmem-initial-allocated-pools, fwHmem-current-allocated-bytes, fwHmem-current-allocated-blocks, fwHmem-current-allocated-pools, fwHmem-maximum-bytes, fwHmem-maximum-pools, fwHmem-bytes-used, fwHmem-blocks-used, fwHmem-bytes-unused, fwHmem-blocks-unused, fwHmem-bytes-peak, fwHmem-blocks-peak, fwHmem-bytes-internal-use, fwHmem-number-of-items, fwHmem-alloc-operations, fwHmem-free-operations, fwHmem-failed-alloc, fwHmem-failed-free, fwKmem-system-physical-mem, fwKmem-available-physical-mem, fwKmem-aix-heap-size, fwKmem-bytes-used, fwKmem-blocking-bytes-used, fwKmem-non-blocking-bytes-used, fwKmem-bytes-unused, fwKmem-bytes-peak, fwKmem-blocking-bytes-peak, fwKmem-non-blocking-bytes-peak, fwKmem-bytes-internal-use, fwKmem-number-of-items, fwKmem-alloc-operations, fwKmem-free-operations, fwKmem-failed-alloc, fwKmem-failed-free, fwInspect-packets, fwInspect-operations, fwInspect-lookups, fwInspect-record, fwInspect-extract, fwCookies-total, fwCookies-allocfwCookies-total, fwCookies-freefwCookies-total, fwCookies-dupfwCookies-total, fwCookies-getfwCookies-total, fwCookies-putfwCookies-total, fwCookies-lenfwCookies-total, fwChains-alloc, fwChains-free, fwFrag-fragments, fwFrag-expired, fwFrag-packets, fwUfpHitRatio, fwUfpInspected, fwUfpHits, fwSS-http-pid, fwSS-http-proto, fwSS-http-port, fwSS-http-logical-port, fwSS-http-max-avail-socket, fwSS-http-socket-in-use-max, fwSS-http-socket-in-use-curr, fwSS-http-socket-in-use-count, fwSS-http-sess-max, fwSS-http-sess-curr, fwSS-http-sess-count, fwSS-http-auth-sess-max, fwSS-http-auth-sess-curr, fwSS-http-auth-sess-count, fwSS-http-accepted-sess, fwSS-http-rejected-sess, fwSS-http-auth-failures, fwSS-http-ops-cvp-sess-max, fwSS-http-ops-cvp-sess-curr, fwSS-http-ops-cvp-sess-count, fwSS-http-ops-cvp-rej-sess, fwSS-http-ssl-encryp-sess-max, fwSS-http-ssl-encryp-sess-curr, fwSS-http-ssl-encryp-sess-count, fwSS-http-transp-sess-max, fwSS-http-transp-sess-curr, fwSS-http-transp-sess-count, fwSS-http-proxied-sess-max, fwSS-http-proxied-sess-curr, fwSS-http-proxied-sess-count, fwSS-http-tunneled-sess-max, fwSS-http-tunneled-sess-curr, fwSS-http-tunneled-sess-count, fwSS-http-ftp-sess-max, fwSS-http-ftp-sess-curr, fwSS-http-ftp-sess-count, fwSS-http-time-stamp, fwSS-http-is-alive, fwSS-http-blocked-cnt, fwSS-http-blocked-total, fwSS-http-scanned-total, fwSS-http-blocked-by-file-type, fwSS-http-blocked-by-size-limit, fwSS-http-blocked-by-archive-limit, fwSS-http-blocked-by-internal-error, fwSS-http-passed-cnt, fwSS-http-passed-by-file-type, fwSS-http-passed-by-size-limit, fwSS-http-passed-by-archive-limit, fwSS-http-passed-by-internal-error, fwSS-http-passed-total, fwSS-http-blocked-by-AV-settings, fwSS-http-passed-by-AV-settings, fwSS-http-blocked-by-URL-filter-category, fwSS-http-blocked-by-URL-block-list, fwSS-http-passed-by-URL-allow-list, fwSS-http-passed-by-URL-filter-category, fwSS-ftp-pid, fwSS-ftp-proto, fwSS-ftp-port, fwSS-ftp-logical-port, fwSS-ftp-max-avail-socket, fwSS-ftp-socket-in-use-max, fwSS-ftp-socket-in-use-curr, fwSS-ftp-socket-in-use-count, fwSS-ftp-sess-max, fwSS-ftp-sess-curr, fwSS-ftp-sess-count, fwSS-ftp-auth-sess-max, fwSS-ftp-auth-sess-curr, fwSS-ftp-auth-sess-count, fwSS-ftp-accepted-sess, fwSS-ftp-rejected-sess, fwSS-ftp-auth-failures, fwSS-ftp-ops-cvp-sess-max, fwSS-ftp-ops-cvp-sess-curr, fwSS-ftp-ops-cvp-sess-count, fwSS-ftp-ops-cvp-rej-sess, fwSS-ftp-time-stamp, fwSS-ftp-is-alive, fwSS-ftp-blocked-cnt, fwSS-ftp-blocked-total, fwSS-ftp-scanned-total, fwSS-ftp-blocked-by-file-type, fwSS-ftp-blocked-by-size-limit, fwSS-ftp-blocked-by-archive-limit, fwSS-ftp-blocked-by-internal-error, fwSS-ftp-passed-cnt, fwSS-ftp-passed-by-file-type, fwSS-ftp-passed-by-size-limit, fwSS-ftp-passed-by-archive-limit, fwSS-ftp-passed-by-internal-error, fwSS-ftp-passed-total, fwSS-ftp-blocked-by-AV-settings, fwSS-ftp-passed-by-AV-settings, fwSS-telnet-pid, fwSS-telnet-proto, fwSS-telnet-port, fwSS-telnet-logical-port, fwSS-telnet-max-avail-socket, fwSS-telnet-socket-in-use-max, fwSS-telnet-socket-in-use-curr, fwSS-telnet-socket-in-use-count, fwSS-telnet-sess-max, fwSS-telnet-sess-curr, fwSS-telnet-sess-count, fwSS-telnet-auth-sess-max, fwSS-telnet-auth-sess-curr, fwSS-telnet-auth-sess-count, fwSS-telnet-accepted-sess, fwSS-telnet-rejected-sess, fwSS-telnet-auth-failures, fwSS-telnet-time-stamp, fwSS-telnet-is-alive, fwSS-rlogin-pid, fwSS-rlogin-proto, fwSS-rlogin-port, fwSS-rlogin-logical-port, fwSS-rlogin-max-avail-socket, fwSS-rlogin-socket-in-use-max, fwSS-rlogin-socket-in-use-curr, fwSS-rlogin-socket-in-use-count, fwSS-rlogin-sess-max, fwSS-rlogin-sess-curr, fwSS-rlogin-sess-count, fwSS-rlogin-auth-sess-max, fwSS-rlogin-auth-sess-curr, fwSS-rlogin-auth-sess-count, fwSS-rlogin-accepted-sess, fwSS-rlogin-rejected-sess, fwSS-rlogin-auth-failures, fwSS-rlogin-time-stamp, fwSS-rlogin-is-alive, fwSS-ufp-ops-ufp-sess-max, fwSS-ufp-ops-ufp-sess-curr, fwSS-ufp-ops-ufp-sess-count, fwSS-ufp-ops-ufp-rej-sess, fwSS-ufp-time-stamp, fwSS-ufp-is-alive, fwSS-smtp-pid, fwSS-smtp-proto, fwSS-smtp-port, fwSS-smtp-logical-port, fwSS-smtp-max-avail-socket, fwSS-smtp-socket-in-use-max, fwSS-smtp-socket-in-use-curr, fwSS-smtp-socket-in-use-count, fwSS-smtp-sess-max, fwSS-smtp-sess-curr, fwSS-smtp-sess-count, fwSS-smtp-auth-sess-max, fwSS-smtp-auth-sess-curr, fwSS-smtp-auth-sess-count, fwSS-smtp-accepted-sess, fwSS-smtp-rejected-sess, fwSS-smtp-auth-failures, fwSS-smtp-mail-max, fwSS-smtp-mail-curr, fwSS-smtp-mail-count, fwSS-smtp-outgoing-mail-max, fwSS-smtp-outgoing-mail-curr, fwSS-smtp-outgoing-mail-count, fwSS-smtp-max-mail-on-conn, fwSS-smtp-total-mails, fwSS-smtp-time-stamp, fwSS-smtp-is-alive, fwSS-smtp-blocked-cnt, fwSS-smtp-blocked-total, fwSS-smtp-scanned-total, fwSS-smtp-blocked-by-file-type, fwSS-smtp-blocked-by-size-limit, fwSS-smtp-blocked-by-archive-limit, fwSS-smtp-blocked-by-internal-error, fwSS-smtp-passed-cnt, fwSS-smtp-passed-by-file-type, fwSS-smtp-passed-by-size-limit, fwSS-smtp-passed-by-archive-limit, fwSS-smtp-passed-by-internal-error, fwSS-smtp-passed-total, fwSS-smtp-blocked-by-AV-settings, fwSS-smtp-passed-by-AV-settings, fwSS-POP3-pid, fwSS-POP3-proto, fwSS-POP3-port, fwSS-POP3-logical-port, fwSS-POP3-max-avail-socket, fwSS-POP3-socket-in-use-max, fwSS-POP3-socket-in-use-curr, fwSS-POP3-socket-in-use-count, fwSS-POP3-sess-max, fwSS-POP3-sess-curr, fwSS-POP3-sess-count, fwSS-POP3-auth-sess-max, fwSS-POP3-auth-sess-curr, fwSS-POP3-auth-sess-count, fwSS-POP3-accepted-sess, fwSS-POP3-rejected-sess, fwSS-POP3-auth-failures, fwSS-POP3-mail-max, fwSS-POP3-mail-curr, fwSS-POP3-mail-count, fwSS-POP3-outgoing-mail-max, fwSS-POP3-outgoing-mail-curr, fwSS-POP3-outgoing-mail-count, fwSS-POP3-max-mail-on-conn, fwSS-POP3-total-mails, fwSS-POP3-time-stamp, fwSS-POP3-is-alive, fwSS-POP3-blocked-cnt, fwSS-POP3-blocked-total, fwSS-POP3-scanned-total, fwSS-POP3-blocked-by-file-type, fwSS-POP3-blocked-by-size-limit, fwSS-POP3-blocked-by-archive-limit, fwSS-POP3-blocked-by-internal-error, fwSS-POP3-passed-cnt, fwSS-POP3-passed-by-file-type, fwSS-POP3-passed-by-size-limit, fwSS-POP3-passed-by-archive-limit, fwSS-POP3-passed-by-internal-error, fwSS-POP3-passed-total, fwSS-POP3-blocked-by-AV-settings, fwSS-POP3-passed-by-AV-settings, fwSS-total-blocked-by-av, fwSS-total-blocked, fwSS-total-scanned, fwSS-total-blocked-by-file-type, fwSS-total-blocked-by-size-limit, fwSS-total-blocked-by-archive-limit, fwSS-total-blocked-by-interal-error, fwSS-total-passed-by-av, fwSS-total-passed-by-file-type, fwSS-total-passed-by-size-limit, fwSS-total-passed-by-archive-limit, fwSS-total-passed-by-interal-error, fwSS-total-passed, fwSS-total-blocked-by-av-settings, fwSS-total-passed-by-av-settings, fwConnectionsStatConnectionsTcp, fwConnectionsStatConnectionsUdp, fwConnectionsStatConnectionsIcmp, fwConnectionsStatConnectionsOther, fwConnectionsStatConnections, fwConnectionsStatConnectionRate, fwHmem64-block-size, fwHmem64-requested-bytes, fwHmem64-initial-allocated-bytes, fwHmem64-initial-allocated-blocks, fwHmem64-initial-allocated-pools, fwHmem64-current-allocated-bytes, fwHmem64-current-allocated-blocks, fwHmem64-current-allocated-pools, fwHmem64-maximum-bytes, fwHmem64-maximum-pools, fwHmem64-bytes-used, fwHmem64-blocks-used, fwHmem64-bytes-unused, fwHmem64-blocks-unused, fwHmem64-bytes-peak, fwHmem64-blocks-peak, fwHmem64-bytes-internal-use, fwHmem64-number-of-items, fwHmem64-alloc-operations, fwHmem64-free-operations, fwHmem64-failed-alloc, fwHmem64-failed-free, fwModuleState, fwFilterName, fwFilterDate, fwAccepted, fwRejected, fwDropped, fwLogged, fwMajor, fwMinor, fwProduct, fwSICTrustState, fwProdName, fwVerMajor, fwVerMinor, fwKernelBuild, fwNetIfName, fwNetIfIPAddr, fwNetIfNetmask, fwNetIfFlags, fwNetIfPeerName, fwNetIfRemoteIp, fwNetIfTopology, fwNetIfProxyName, fwNetIfSlaves, fwNetIfPorts, fwNetIfIPV6Addr, fwNetIfIPV6AddrLen, fwLSConnOverall, fwLSConnOverallDesc, fwLSConnName, fwLSConnState, fwLSConnStateDesc, fwLSConnSendRate, fwLocalLoggingDesc, fwLocalLoggingStat, fwLocalLoggingWriteRate, fwLoggingHandlingRate, fwInstancesCPUInstanceName, fwInstancesCPUUsage, fwInstancesCPUTotal }
+		OBJECTS { fwPolicyName, fwInstallTime, fwNumConn, fwPeakNumConn, fwIspName, fwIspStatus, fwIspRole, unknown, fwIfName, fwAcceptPcktsIn, fwAcceptPcktsOut, fwAcceptBytesIn, fwAcceptBytesOut, fwDropPcktsIn, fwDropPcktsOut, fwRejectPcktsIn, fwRejectPcktsOut, fwLogIn, fwLogOut, fwConnTableLimit, fwAcceptedTotal, fwDroppedTotal, fwRejectedTotal, fwLoggedTotal, fwAcceptedBytesTotal, fwDroppedBytesTotal, fwRejectedBytesTotal, fwAcceptedBytesRates, fwAcceptedPcktsRates, fwConnsRate, fwIfName64, fwAcceptPcktsIn64, fwAcceptPcktsOut64, fwAcceptBytesIn64, fwAcceptBytesOut64, fwDropPcktsIn64, fwDropPcktsOut64, fwRejectPcktsIn64, fwRejectPcktsOut64, fwLogIn64, fwLogOut64, fwFullyUtilizedDrops, fwHmem-block-size, fwHmem-requested-bytes, fwHmem-initial-allocated-bytes, fwHmem-initial-allocated-blocks, fwHmem-initial-allocated-pools, fwHmem-current-allocated-bytes, fwHmem-current-allocated-blocks, fwHmem-current-allocated-pools, fwHmem-maximum-bytes, fwHmem-maximum-pools, fwHmem-bytes-used, fwHmem-blocks-used, fwHmem-bytes-unused, fwHmem-blocks-unused, fwHmem-bytes-peak, fwHmem-blocks-peak, fwHmem-bytes-internal-use, fwHmem-number-of-items, fwHmem-alloc-operations, fwHmem-free-operations, fwHmem-failed-alloc, fwHmem-failed-free, fwKmem-system-physical-mem, fwKmem-available-physical-mem, fwKmem-aix-heap-size, fwKmem-bytes-used, fwKmem-blocking-bytes-used, fwKmem-non-blocking-bytes-used, fwKmem-bytes-unused, fwKmem-bytes-peak, fwKmem-blocking-bytes-peak, fwKmem-non-blocking-bytes-peak, fwKmem-bytes-internal-use, fwKmem-number-of-items, fwKmem-alloc-operations, fwKmem-free-operations, fwKmem-failed-alloc, fwKmem-failed-free, fwInspect-packets, fwInspect-operations, fwInspect-lookups, fwInspect-record, fwInspect-extract, fwCookies-total, fwCookies-allocfwCookies-total, fwCookies-freefwCookies-total, fwCookies-dupfwCookies-total, fwCookies-getfwCookies-total, fwCookies-putfwCookies-total, fwCookies-lenfwCookies-total, fwChains-alloc, fwChains-free, fwFrag-fragments, fwFrag-expired, fwFrag-packets, fwUfpHitRatio, fwUfpInspected, fwUfpHits, fwSS-http-pid, fwSS-http-proto, fwSS-http-port, fwSS-http-logical-port, fwSS-http-max-avail-socket, fwSS-http-socket-in-use-max, fwSS-http-socket-in-use-curr, fwSS-http-socket-in-use-count, fwSS-http-sess-max, fwSS-http-sess-curr, fwSS-http-sess-count, fwSS-http-auth-sess-max, fwSS-http-auth-sess-curr, fwSS-http-auth-sess-count, fwSS-http-accepted-sess, fwSS-http-rejected-sess, fwSS-http-auth-failures, fwSS-http-ops-cvp-sess-max, fwSS-http-ops-cvp-sess-curr, fwSS-http-ops-cvp-sess-count, fwSS-http-ops-cvp-rej-sess, fwSS-http-ssl-encryp-sess-max, fwSS-http-ssl-encryp-sess-curr, fwSS-http-ssl-encryp-sess-count, fwSS-http-transp-sess-max, fwSS-http-transp-sess-curr, fwSS-http-transp-sess-count, fwSS-http-proxied-sess-max, fwSS-http-proxied-sess-curr, fwSS-http-proxied-sess-count, fwSS-http-tunneled-sess-max, fwSS-http-tunneled-sess-curr, fwSS-http-tunneled-sess-count, fwSS-http-ftp-sess-max, fwSS-http-ftp-sess-curr, fwSS-http-ftp-sess-count, fwSS-http-time-stamp, fwSS-http-is-alive, fwSS-http-blocked-cnt, fwSS-http-blocked-total, fwSS-http-scanned-total, fwSS-http-blocked-by-file-type, fwSS-http-blocked-by-size-limit, fwSS-http-blocked-by-archive-limit, fwSS-http-blocked-by-internal-error, fwSS-http-passed-cnt, fwSS-http-passed-by-file-type, fwSS-http-passed-by-size-limit, fwSS-http-passed-by-archive-limit, fwSS-http-passed-by-internal-error, fwSS-http-passed-total, fwSS-http-blocked-by-AV-settings, fwSS-http-passed-by-AV-settings, fwSS-http-blocked-by-URL-filter-category, fwSS-http-blocked-by-URL-block-list, fwSS-http-passed-by-URL-allow-list, fwSS-http-passed-by-URL-filter-category, fwSS-ftp-pid, fwSS-ftp-proto, fwSS-ftp-port, fwSS-ftp-logical-port, fwSS-ftp-max-avail-socket, fwSS-ftp-socket-in-use-max, fwSS-ftp-socket-in-use-curr, fwSS-ftp-socket-in-use-count, fwSS-ftp-sess-max, fwSS-ftp-sess-curr, fwSS-ftp-sess-count, fwSS-ftp-auth-sess-max, fwSS-ftp-auth-sess-curr, fwSS-ftp-auth-sess-count, fwSS-ftp-accepted-sess, fwSS-ftp-rejected-sess, fwSS-ftp-auth-failures, fwSS-ftp-ops-cvp-sess-max, fwSS-ftp-ops-cvp-sess-curr, fwSS-ftp-ops-cvp-sess-count, fwSS-ftp-ops-cvp-rej-sess, fwSS-ftp-time-stamp, fwSS-ftp-is-alive, fwSS-ftp-blocked-cnt, fwSS-ftp-blocked-total, fwSS-ftp-scanned-total, fwSS-ftp-blocked-by-file-type, fwSS-ftp-blocked-by-size-limit, fwSS-ftp-blocked-by-archive-limit, fwSS-ftp-blocked-by-internal-error, fwSS-ftp-passed-cnt, fwSS-ftp-passed-by-file-type, fwSS-ftp-passed-by-size-limit, fwSS-ftp-passed-by-archive-limit, fwSS-ftp-passed-by-internal-error, fwSS-ftp-passed-total, fwSS-ftp-blocked-by-AV-settings, fwSS-ftp-passed-by-AV-settings, fwSS-telnet-pid, fwSS-telnet-proto, fwSS-telnet-port, fwSS-telnet-logical-port, fwSS-telnet-max-avail-socket, fwSS-telnet-socket-in-use-max, fwSS-telnet-socket-in-use-curr, fwSS-telnet-socket-in-use-count, fwSS-telnet-sess-max, fwSS-telnet-sess-curr, fwSS-telnet-sess-count, fwSS-telnet-auth-sess-max, fwSS-telnet-auth-sess-curr, fwSS-telnet-auth-sess-count, fwSS-telnet-accepted-sess, fwSS-telnet-rejected-sess, fwSS-telnet-auth-failures, fwSS-telnet-time-stamp, fwSS-telnet-is-alive, fwSS-rlogin-pid, fwSS-rlogin-proto, fwSS-rlogin-port, fwSS-rlogin-logical-port, fwSS-rlogin-max-avail-socket, fwSS-rlogin-socket-in-use-max, fwSS-rlogin-socket-in-use-curr, fwSS-rlogin-socket-in-use-count, fwSS-rlogin-sess-max, fwSS-rlogin-sess-curr, fwSS-rlogin-sess-count, fwSS-rlogin-auth-sess-max, fwSS-rlogin-auth-sess-curr, fwSS-rlogin-auth-sess-count, fwSS-rlogin-accepted-sess, fwSS-rlogin-rejected-sess, fwSS-rlogin-auth-failures, fwSS-rlogin-time-stamp, fwSS-rlogin-is-alive, fwSS-ufp-ops-ufp-sess-max, fwSS-ufp-ops-ufp-sess-curr, fwSS-ufp-ops-ufp-sess-count, fwSS-ufp-ops-ufp-rej-sess, fwSS-ufp-time-stamp, fwSS-ufp-is-alive, fwSS-smtp-pid, fwSS-smtp-proto, fwSS-smtp-port, fwSS-smtp-logical-port, fwSS-smtp-max-avail-socket, fwSS-smtp-socket-in-use-max, fwSS-smtp-socket-in-use-curr, fwSS-smtp-socket-in-use-count, fwSS-smtp-sess-max, fwSS-smtp-sess-curr, fwSS-smtp-sess-count, fwSS-smtp-auth-sess-max, fwSS-smtp-auth-sess-curr, fwSS-smtp-auth-sess-count, fwSS-smtp-accepted-sess, fwSS-smtp-rejected-sess, fwSS-smtp-auth-failures, fwSS-smtp-mail-max, fwSS-smtp-mail-curr, fwSS-smtp-mail-count, fwSS-smtp-outgoing-mail-max, fwSS-smtp-outgoing-mail-curr, fwSS-smtp-outgoing-mail-count, fwSS-smtp-max-mail-on-conn, fwSS-smtp-total-mails, fwSS-smtp-time-stamp, fwSS-smtp-is-alive, fwSS-smtp-blocked-cnt, fwSS-smtp-blocked-total, fwSS-smtp-scanned-total, fwSS-smtp-blocked-by-file-type, fwSS-smtp-blocked-by-size-limit, fwSS-smtp-blocked-by-archive-limit, fwSS-smtp-blocked-by-internal-error, fwSS-smtp-passed-cnt, fwSS-smtp-passed-by-file-type, fwSS-smtp-passed-by-size-limit, fwSS-smtp-passed-by-archive-limit, fwSS-smtp-passed-by-internal-error, fwSS-smtp-passed-total, fwSS-smtp-blocked-by-AV-settings, fwSS-smtp-passed-by-AV-settings, fwSS-POP3-pid, fwSS-POP3-proto, fwSS-POP3-port, fwSS-POP3-logical-port, fwSS-POP3-max-avail-socket, fwSS-POP3-socket-in-use-max, fwSS-POP3-socket-in-use-curr, fwSS-POP3-socket-in-use-count, fwSS-POP3-sess-max, fwSS-POP3-sess-curr, fwSS-POP3-sess-count, fwSS-POP3-auth-sess-max, fwSS-POP3-auth-sess-curr, fwSS-POP3-auth-sess-count, fwSS-POP3-accepted-sess, fwSS-POP3-rejected-sess, fwSS-POP3-auth-failures, fwSS-POP3-mail-max, fwSS-POP3-mail-curr, fwSS-POP3-mail-count, fwSS-POP3-outgoing-mail-max, fwSS-POP3-outgoing-mail-curr, fwSS-POP3-outgoing-mail-count, fwSS-POP3-max-mail-on-conn, fwSS-POP3-total-mails, fwSS-POP3-time-stamp, fwSS-POP3-is-alive, fwSS-POP3-blocked-cnt, fwSS-POP3-blocked-total, fwSS-POP3-scanned-total, fwSS-POP3-blocked-by-file-type, fwSS-POP3-blocked-by-size-limit, fwSS-POP3-blocked-by-archive-limit, fwSS-POP3-blocked-by-internal-error, fwSS-POP3-passed-cnt, fwSS-POP3-passed-by-file-type, fwSS-POP3-passed-by-size-limit, fwSS-POP3-passed-by-archive-limit, fwSS-POP3-passed-by-internal-error, fwSS-POP3-passed-total, fwSS-POP3-blocked-by-AV-settings, fwSS-POP3-passed-by-AV-settings, fwSS-total-blocked-by-av, fwSS-total-blocked, fwSS-total-scanned, fwSS-total-blocked-by-file-type, fwSS-total-blocked-by-size-limit, fwSS-total-blocked-by-archive-limit, fwSS-total-blocked-by-interal-error, fwSS-total-passed-by-av, fwSS-total-passed-by-file-type, fwSS-total-passed-by-size-limit, fwSS-total-passed-by-archive-limit, fwSS-total-passed-by-interal-error, fwSS-total-passed, fwSS-total-blocked-by-av-settings, fwSS-total-passed-by-av-settings, fwConnectionsStatConnectionsTcp, fwConnectionsStatConnectionsUdp, fwConnectionsStatConnectionsIcmp, fwConnectionsStatConnectionsOther, fwConnectionsStatConnections, fwConnectionsStatConnectionRate, fwHmem64-block-size, fwHmem64-requested-bytes, fwHmem64-initial-allocated-bytes, fwHmem64-initial-allocated-blocks, fwHmem64-initial-allocated-pools, fwHmem64-current-allocated-bytes, fwHmem64-current-allocated-blocks, fwHmem64-current-allocated-pools, fwHmem64-maximum-bytes, fwHmem64-maximum-pools, fwHmem64-bytes-used, fwHmem64-blocks-used, fwHmem64-bytes-unused, fwHmem64-blocks-unused, fwHmem64-bytes-peak, fwHmem64-blocks-peak, fwHmem64-bytes-internal-use, fwHmem64-number-of-items, fwHmem64-alloc-operations, fwHmem64-free-operations, fwHmem64-failed-alloc, fwHmem64-failed-free, fwModuleState, fwFilterName, fwFilterDate, fwAccepted, fwRejected, fwDropped, fwLogged, fwMajor, fwMinor, fwProduct, fwSICTrustState, fwProdName, fwVerMajor, fwVerMinor, fwKernelBuild, fwNetIfName, fwNetIfIPAddr, fwNetIfNetmask, fwNetIfFlags, fwNetIfPeerName, fwNetIfRemoteIp, fwNetIfTopology, fwNetIfProxyName, fwNetIfSlaves, fwNetIfPorts, fwNetIfIPV6Addr, fwNetIfIPV6AddrLen, fwLSConnOverall, fwLSConnOverallDesc, fwLSConnName, fwLSConnState, fwLSConnStateDesc, fwLSConnSendRate, fwLocalLoggingDesc, fwLocalLoggingStat, fwLocalLoggingWriteRate, fwLoggingHandlingRate, fwInstancesCPUInstanceName, fwInstancesCPUUsage, fwInstancesCPUTotal, fwEvent }
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about FW objects"
@@ -231,14 +238,14 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		::= { chkpntMIBGroups 4 }
 		
 	svnProductsGroup OBJECT-GROUP
-		OBJECTS { svnVersion, svnBuild, osName, osMajorVer, osMinorVer, osBuildNum, osSPmajor, osSPminor, osVersionLevel, memTotalVirtual, memActiveVirtual, memTotalReal, memActiveReal, memFreeReal, memSwapsSec, memDiskTransfers, procUsrTime, procSysTime, procIdleTime, procUsage, procQueue, procInterrupts, procNum, diskTime, diskQueue, diskPercent, diskFreeTotal, diskFreeAvail, diskTotal, memTotalVirtual64, memActiveVirtual64, memTotalReal64, memActiveReal64, memFreeReal64, memSwapsSec64, memDiskTransfers64, multiProcUserTime, multiProcSystemTime, multiProcIdleTime, multiProcUsage, multiProcRunQueue, multiProcInterrupts, multiDiskName, multiDiskSize, multiDiskUsed, multiDiskFreeTotalBytes, multiDiskFreeTotalPercent, multiDiskFreeAvailableBytes, multiDiskFreeAvailablePercent, raidVolumeID, raidVolumeType, numOfDisksOnRaid, raidVolumeMaxLBA, raidVolumeState, raidVolumeFlags, raidVolumeSize, raidDiskVolumeID, raidDiskID, raidDiskNumber, raidDiskVendor, raidDiskProductID, raidDiskRevision, raidDiskMaxLBA, raidDiskState, raidDiskFlags, raidDiskSyncState, raidDiskSize, tempertureSensorName, tempertureSensorValue, tempertureSensorUnit, tempertureSensorType, tempertureSensorStatus, fanSpeedSensorName, fanSpeedSensorValue, fanSpeedSensorUnit, fanSpeedSensorType, fanSpeedSensorStatus, voltageSensorName, voltageSensorValue, voltageSensorUnit, voltageSensorType, voltageSensorStatus, powerSupplyStatus, svnApplianceSerialNumber, svnApplianceManufacturer, svnApplianceProductName, svnApplianceSeriesString, svnRouteModDest, svnRouteModMask, svnRouteModIfIndex, svnRouteModGateway, svnRouteModIfName, svnRouteModAction, svnLogDStat, svnUpdatesInfoBuild, svnUpdatesInfoStatus, svnUpdatesInfoConnection, svnUpdatesInfoAvailablePackages, svnUpdatesInfoAvailableRecommended, svnUpdatesInfoAvailableHotfixes, updatesInstalledName, updatesInstalledType, updatesRecommendedName, updatesRecommendedType, updatesRecommendedStatus, vdName, vdType, ctxId, svnProdName, svnProdVerMajor, svnProdVerMinor, routingDest, routingMask, routingGatweway, routingIntrfName, svnSysTime, svnUTCTimeOffset, svnSysStartTime, svnSysUniqId, svnWebUIPort, checkPointUTM-1450, checkPointUTM-11050, checkPointUTM-12050, checkPointUTM-1130, checkPointUTM-1270, checkPointUTM-1570, checkPointUTM-11070, checkPointUTM-12070, checkPointUTM-13070, checkPointPower-15070, checkPointPower-19070, checkPointPower-111000, checkPointSmart-15, checkPointSmart-125, checkPointSmart-150, checkPointSmart-1150, checkPointIP150, checkPointIP280, checkPointIP290, checkPointIP390, checkPointIP560, checkPointIP690, checkPointIP1280, checkPointIP2450, checkPointUNIVERGEUnifiedWall1000, checkPointUNIVERGEUnifiedWall2000, checkPointUNIVERGEUnifiedWall4000, checkPointUNIVERGEUnifiedWall100, checkPointDLP-19571, checkPointDLP-12571, checkPointIPS-12076, checkPointIPS-15076, checkPointIPS-19076, checkPoint2200, checkPoint4200, checkPoint4400, checkPoint4600, checkPoint4800, checkPointTE250, checkPoint12200, checkPoint12400, checkPoint12600, checkPointTE1000, checkPoint13500, checkPoint21400, checkPoint21600, checkPoint21700, checkPointVMware, checkPointOpenServer, checkPointSmart-1205, checkPointSmart-1210, checkPointSmart-1225, checkPointSmart-13050, checkPointSmart-13150, checkPoint13800, checkPoint21800, checkPointTE250X, checkPointTE1000X, checkPointTE2000X, checkPointTE100X, checkPoint23500, checkPoint23800, checkPoint15400, checkPoint15600, checkPoint3200, checkPoint5200, checkPoint5400, checkPoint5600, checkPoint5800, checkPoint5900, checkPoint3100, checkPoint5100, checkPointSmart-1405, checkPointSmart-1410, checkPointSmart-5050, checkPointSmart-525, checkPointSmart-5150, checkPoint23900, checkPoint6500, checkPoint6800, checkPoint16000T, checkPoint26000, checkPointSmart-625, checkPoint16000, checkPoint26000T, checkPoint61000, checkPoint64000, checkPoint41000, checkPoint44000, checkPoint3600, checkPoint3600T, checkPoint6200B, checkPoint6200P, checkPoint6200T, checkPoint6600, checkPoint6900, checkPoint16600HS, checkPoint28600HS, checkPoint6700, checkPoint7000, checkPoint16200, checkPoint28000, checkPoint6400, checkPoint3800, checkPointMHO140, checkPointMHO170, checkPointMHO175, licensingID, licensingBladeGUIOrder, licensingBladeName, licensingState, licensingExpirationDate, licensingImpact, licensingBladeActive, licensingTotalQuota, licensingUsedQuota, licensingAssetAccountId, licensingAssetPackageDescription, licensingAssetContainerCK, licensingAssetCKSignature, licensingAssetContainerSKU, licensingAssetSupportLevel, licensingAssetSupportExpiration, licensingAssetActivationStatus, svnConnectivity, svnNetIfVsid, svnNetIfName, svnNetIfAddress, svnNetIfMask, svnNetIfMTU, svnNetIfState, svnNetIfMAC, svnNetIfDescription, svnNetIfOperState, svnNetIfRXBytes, svnNetIfRXDrops, svnNetIfRXErrors, svnNetIfRXPackets, svnNetIfTXBytes, svnNetIfTXDrops, svnNetIfTXErrors, svnNetIfTXPackets, vsRoutingDest, vsRoutingMask, vsRoutingGateway, vsRoutingIntrfName, vsRoutingVsId, svnStatCode, svnStatShortDescr, svnStatLongDescr, svnServicePack , checkPointSmart-6000-L , checkPointSmart-6000-XL , checkPointSmart-600-S , checkPointSmart-600-M }
+		OBJECTS { svnVersion, svnBuild, osName, osMajorVer, osMinorVer, osBuildNum, osSPmajor, osSPminor, osVersionLevel, memTotalVirtual, memActiveVirtual, memTotalReal, memActiveReal, memFreeReal, memSwapsSec, memDiskTransfers, procUsrTime, procSysTime, procIdleTime, procUsage, procQueue, procInterrupts, procNum, diskTime, diskQueue, diskPercent, diskFreeTotal, diskFreeAvail, diskTotal, memTotalVirtual64, memActiveVirtual64, memTotalReal64, memActiveReal64, memFreeReal64, memSwapsSec64, memDiskTransfers64, multiProcUserTime, multiProcSystemTime, multiProcIdleTime, multiProcUsage, multiProcRunQueue, multiProcInterrupts, multiDiskName, multiDiskSize, multiDiskUsed, multiDiskFreeTotalBytes, multiDiskFreeTotalPercent, multiDiskFreeAvailableBytes, multiDiskFreeAvailablePercent, raidVolumeID, raidVolumeType, numOfDisksOnRaid, raidVolumeMaxLBA, raidVolumeState, raidVolumeFlags, raidVolumeSize, raidDiskVolumeID, raidDiskID, raidDiskNumber, raidDiskVendor, raidDiskProductID, raidDiskRevision, raidDiskMaxLBA, raidDiskState, raidDiskFlags, raidDiskSyncState, raidDiskSize, tempertureSensorName, tempertureSensorValue, tempertureSensorUnit, tempertureSensorType, tempertureSensorStatus, fanSpeedSensorName, fanSpeedSensorValue, fanSpeedSensorUnit, fanSpeedSensorType, fanSpeedSensorStatus, voltageSensorName, voltageSensorValue, voltageSensorUnit, voltageSensorType, voltageSensorStatus, powerSupplyStatus, svnApplianceSerialNumber, svnApplianceManufacturer, svnApplianceProductName, svnApplianceSeriesString, svnRouteModDest, svnRouteModMask, svnRouteModIfIndex, svnRouteModGateway, svnRouteModIfName, svnRouteModAction, svnLogDStat, svnUpdatesInfoBuild, svnUpdatesInfoStatus, svnUpdatesInfoConnection, svnUpdatesInfoAvailablePackages, svnUpdatesInfoAvailableRecommended, svnUpdatesInfoAvailableHotfixes, updatesInstalledName, updatesInstalledType, updatesRecommendedName, updatesRecommendedType, updatesRecommendedStatus, vdName, vdType, ctxId, svnProdName, svnProdVerMajor, svnProdVerMinor, routingDest, routingMask, routingGatweway, routingIntrfName, svnSysTime, svnUTCTimeOffset, svnSysStartTime, svnSysUniqId, svnWebUIPort, arpTableSize, sysDescr, sysObjectID, checkPointUTM-1450, checkPointUTM-11050, checkPointUTM-12050, checkPointUTM-1130, checkPointUTM-1270, checkPointUTM-1570, checkPointUTM-11070, checkPointUTM-12070, checkPointUTM-13070, checkPointPower-15070, checkPointPower-19070, checkPointPower-111000, checkPointSmart-15, checkPointSmart-125, checkPointSmart-150, checkPointSmart-1150, checkPointIP150, checkPointIP280, checkPointIP290, checkPointIP390, checkPointIP560, checkPointIP690, checkPointIP1280, checkPointIP2450, checkPointUNIVERGEUnifiedWall1000, checkPointUNIVERGEUnifiedWall2000, checkPointUNIVERGEUnifiedWall4000, checkPointUNIVERGEUnifiedWall100, checkPointDLP-19571, checkPointDLP-12571, checkPointIPS-12076, checkPointIPS-15076, checkPointIPS-19076, checkPoint2200, checkPoint4200, checkPoint4400, checkPoint4600, checkPoint4800, checkPointTE250, checkPoint12200, checkPoint12400, checkPoint12600, checkPointTE1000, checkPoint13500, checkPoint21400, checkPoint21600, checkPoint21700, checkPointVMware, checkPointOpenServer, checkPointSmart-1205, checkPointSmart-1210, checkPointSmart-1225, checkPointSmart-13050, checkPointSmart-13150, checkPoint13800, checkPoint21800, checkPointTE250X, checkPointTE1000X, checkPointTE2000X, checkPointTE250XN, checkPointTE100X, checkPoint23500, checkPoint23800, checkPoint15400, checkPoint15600, checkPoint3200, checkPoint5200, checkPoint5400, checkPoint5600, checkPoint5800, checkPoint5900, checkPoint3100, checkPoint5100, checkPointSmart-1405, checkPointSmart-1410, checkPointSmart-5050, checkPointSmart-525, checkPointSmart-5150, checkPoint23900, checkPoint6500, checkPoint6800, checkPoint16000T, checkPoint26000, checkPointSmart-625, checkPoint16000, checkPoint26000T, checkPoint61000, checkPoint64000, checkPoint41000, checkPoint44000, checkPoint3600, checkPoint3600T, checkPoint6200B, checkPoint6200P, checkPoint6200T, checkPoint6600, checkPoint6900, checkPoint16600HS, checkPoint28600HS, checkPoint6700, checkPoint7000, checkPoint16200, checkPoint28000, checkPoint6400, checkPoint3800, checkPointMHO140, checkPointMHO170, checkPointMHO175, licensingID, licensingBladeGUIOrder, licensingBladeName, licensingState, licensingExpirationDate, licensingImpact, licensingBladeActive, licensingTotalQuota, licensingUsedQuota, licensingAssetAccountId, licensingAssetPackageDescription, licensingAssetContainerCK, licensingAssetCKSignature, licensingAssetContainerSKU, licensingAssetSupportLevel, licensingAssetSupportExpiration, licensingAssetActivationStatus, svnConnectivity, svnNetIfVsid, svnNetIfName, svnNetIfAddress, svnNetIfMask, svnNetIfMTU, svnNetIfState, svnNetIfMAC, svnNetIfDescription, svnNetIfOperState, svnNetIfRXBytes, svnNetIfRXDrops, svnNetIfRXErrors, svnNetIfRXPackets, svnNetIfTXBytes, svnNetIfTXDrops, svnNetIfTXErrors, svnNetIfTXPackets, vsRoutingDest, vsRoutingMask, vsRoutingGateway, vsRoutingIntrfName, vsRoutingVsId, svnStatCode, svnStatShortDescr, svnStatLongDescr, svnServicePack , checkPointSmart-6000-L , checkPointSmart-6000-XL , checkPointSmart-600-S , checkPointSmart-600-M , checkPointTE2000XN, checkPointQLS250, checkPointQLS450, checkPointQLS650, checkPointQLS800, checkPointMLS200, checkPointMLS400, checkPoint19200, checkPoint29100, checkPoint29200, checkPointSMB-1530, checkPointSMB-1550, checkPointSMB-1570, checkPointSMB-1570R, checkPointSMB-1590, checkPointSMB-1600, checkPointSMB-1800, checkPoint19100 , checkPoint9100, checkPoint9200, checkPoint9300, checkPoint9400, checkPoint9700, checkPoint9800}
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about SVN objects"
 		::= { chkpntMIBGroups 5 }
 		
 	mngmtProductsGroup OBJECT-GROUP
-		OBJECTS { mgProdName, mgVerMajor, mgVerMinor, mgBuildNumber, mgActiveStatus, mgFwmIsAlive, mgClientName, mgClientHost, mgClientDbLock, mgApplicationType, mgMgmtHAJournals, mgIsLicenseViolation, mgLicenseViolationMsg, mglsGWIP, mglsGWState, mglsGWLastLoginTime, mglsGWLogReceiveRate, mgStatCode, mgStatShortDescr, mgStatLongDescr }
+		OBJECTS { mgProdName, mgVerMajor, mgVerMinor, mgBuildNumber, mgActiveStatus, mgFwmIsAlive, mgICAStatus, mgClientName, mgClientHost, mgClientDbLock, mgApplicationType, mgMgmtHAJournals, mgIsLicenseViolation, mgLicenseViolationMsg, mglsGWIP, mglsGWState, mglsGWLastLoginTime, mglsGWLogReceiveRate, mgStatCode, mgStatShortDescr, mgStatLongDescr }
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about MNGMT objects"
@@ -266,7 +273,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		::= { chkpntMIBGroups 9 }
 		
 	vsxProductsGroup OBJECT-GROUP
-		OBJECTS { vsxVsSupported, vsxVsConfigured, vsxVsInstalled, vsxVsidConfigured, vsxAllVSsConnsSum, vsxStatusVRId, vsxStatusVsName, vsxStatusVsType, vsxStatusMainIP, vsxStatusPolicyName, vsxStatusVsPolicyType, vsxStatusSicTrustState, vsxStatusHAState, vsxStatusVSWeight, vsxStatusMemoryUsageVSName, vsxStatusMemoryUsage, vsxStatusMemoryUsageVSMaxMem, vsxStatusInterfaceVSName, vsxStatusInterfaceIfName, vsxStatusInterfaceAdminState, vsxStatusInterfaceOperState, vsxStatusInterfaceRxBytes, vsxStatusInterfaceTxBytes, vsxStatusInterfaceOverallBytes, vsxStatusInterfaceRxErrors, vsxStatusInterfaceTxErrors, vsxCountersVSId, vsxCountersConnNum, vsxCountersConnPeakNum, vsxCountersConnTableLimit, vsxCountersPackets, vsxCountersDroppedTotal, vsxCountersAcceptedTotal, vsxCountersRejectedTotal, vsxCountersBytesAcceptedTotal, vsxCountersBytesDroppedTotal, vsxCountersBytesRejectedTotal, vsxCountersLoggedTotal, vsxCountersIsDataValid, vsxCountersDropVSID, vsxCountersDropVsName, vsxCountersDropCount, raExternalIpAddr, raOfficeMode, raIkeOverTCP, raUseUDPEncap, raVisitorMode, raRouteTraffic, raCommunity, raTunnelEncAlgorithm, raTunnelAuthMethod, raLogonTime, tunnelPeerObjName, tunnelState, tunnelCommunity, tunnelNextHop, tunnelInterface, tunnelSourceIpAddr, tunnelLinkPriority, tunnelProbState, tunnelPeerType, tunnelType, permanentTunnelPeerObjName, permanentTunnelState, permanentTunnelCommunity, permanentTunnelNextHop, permanentTunnelInterface, permanentTunnelSourceIpAddr, permanentTunnelLinkPriority, permanentTunnelProbState, permanentTunnelPeerType, vsxTunnelsVSidName, vsxS2SIpsecTunnelsCounter, vsxVSStateChangedVSIdName, vsxVSStateChangedChangeOccurred }
+		OBJECTS { vsxVsSupported, vsxVsConfigured, vsxVsInstalled, vsxVsidConfigured, vsxAllVSsConnsSum, vsxStatusVRId, vsxStatusVsName, vsxStatusVsType, vsxStatusMainIP, vsxStatusPolicyName, vsxStatusVsPolicyType, vsxStatusSicTrustState, vsxStatusHAState, vsxStatusVSWeight, vsxStatusMemoryUsageVSName, vsxStatusMemoryUsage, vsxStatusMemoryUsageVSMaxMem, vsxStatusInterfaceVSName, vsxStatusInterfaceIfName, vsxStatusInterfaceAdminState, vsxStatusInterfaceOperState, vsxStatusInterfaceRxBytes, vsxStatusInterfaceTxBytes, vsxStatusInterfaceOverallBytes, vsxStatusInterfaceRxErrors, vsxStatusInterfaceTxErrors, vsxCountersVSId, vsxCountersConnNum, vsxCountersConnPeakNum, vsxCountersConnTableLimit, vsxCountersPackets, vsxCountersDroppedTotal, vsxCountersAcceptedTotal, vsxCountersRejectedTotal, vsxCountersBytesAcceptedTotal, vsxCountersBytesDroppedTotal, vsxCountersBytesRejectedTotal, vsxCountersLoggedTotal, vsxCountersIsDataValid, vsxCountersDropVSID, vsxCountersDropVsName, vsxCountersDropCount, raExternalIpAddr, raUserState, raOfficeMode, raIkeOverTCP, raUseUDPEncap, raVisitorMode, raRouteTraffic, raCommunity, raTunnelEncAlgorithm, raTunnelAuthMethod, raLogonTime, tunnelPeerObjName, tunnelState, tunnelCommunity, tunnelNextHop, tunnelInterface, tunnelSourceIpAddr, tunnelLinkPriority, tunnelProbState, tunnelPeerType, tunnelType, permanentTunnelPeerObjName, permanentTunnelState, permanentTunnelCommunity, permanentTunnelNextHop, permanentTunnelInterface, permanentTunnelSourceIpAddr, permanentTunnelLinkPriority, permanentTunnelProbState, permanentTunnelPeerType, vsxTunnelsVSidName, vsxS2SIpsecTunnelsCounter, vsxVSStateChangedVSIdName, vsxVSStateChangedChangeOccurred }
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about VSX objects"
@@ -322,10 +329,10 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		::= { chkpntMIBGroups 17 }
 		
 	identityAwarenessProductsGroup OBJECT-GROUP
-		OBJECTS { identityAwarenessProductName, identityAwarenessAuthUsers, identityAwarenessUnAuthUsers, identityAwarenessAuthUsersKerberos, identityAwarenessAuthMachKerberos, identityAwarenessAuthUsersPass, identityAwarenessAuthUsersADQuery, identityAwarenessAuthMachADQuery, identityAwarenessLoggedInAgent, identityAwarenessLoggedInCaptivePortal, identityAwarenessLoggedInADQuery, identityAwarenessAntiSpoffProtection, identityAwarenessSuccUserLoginKerberos, identityAwarenessSuccMachLoginKerberos, identityAwarenessSuccUserLoginPass, identityAwarenessSuccUserLoginADQuery, identityAwarenessSuccMachLoginADQuery, identityAwarenessUnSuccUserLoginKerberos, identityAwarenessUnSuccMachLoginKerberos, identityAwarenessUnSuccUserLoginPass, identityAwarenessSuccUserLDAP, identityAwarenessUnSuccUserLDAP, identityAwarenessDataTrans, identityAwarenessDistributedEnvTableGwName, identityAwarenessDistributedEnvTableDisconnections, identityAwarenessDistributedEnvTableBruteForceAtt, identityAwarenessDistributedEnvTableStatus, identityAwarenessDistributedEnvTableIsLocal, identityAwarenessADQueryStatusCurrStatus, identityAwarenessADQueryStatusDomainName, identityAwarenessADQueryStatusDomainIP, identityAwarenessADQueryStatusEvents, identityAwarenessRADIUSAccounting, identityAwarenessIdentityCollectorActiveDirectory, identityAwarenessIdentityCollectorCiscoISE, identityAwarenessTerminalServer, identityAwarenessRemoteAccess, identityAwarenessIdentityWebAPI, identityAwarenessStatus, identityAwarenessStatusShortDesc, identityAwarenessStatusLongDesc }
+		OBJECTS { identityAwarenessProductName, identityAwarenessAuthUsers, identityAwarenessUnAuthUsers, identityAwarenessAuthUsersKerberos, identityAwarenessAuthMachKerberos, identityAwarenessAuthUsersPass, identityAwarenessAuthUsersADQuery, identityAwarenessAuthMachADQuery, identityAwarenessLoggedInAgent, identityAwarenessLoggedInCaptivePortal, identityAwarenessLoggedInADQuery, identityAwarenessAntiSpoffProtection, identityAwarenessSuccUserLoginKerberos, identityAwarenessSuccMachLoginKerberos, identityAwarenessSuccUserLoginPass, identityAwarenessSuccUserLoginADQuery, identityAwarenessSuccMachLoginADQuery, identityAwarenessUnSuccUserLoginKerberos, identityAwarenessUnSuccMachLoginKerberos, identityAwarenessUnSuccUserLoginPass, identityAwarenessSuccUserLDAP, identityAwarenessUnSuccUserLDAP, identityAwarenessDataTrans, identityAwarenessDistributedEnvTableGwName, identityAwarenessDistributedEnvTableDisconnections, identityAwarenessDistributedEnvTableBruteForceAtt, identityAwarenessDistributedEnvTableStatus, identityAwarenessDistributedEnvTableIsLocal, identityAwarenessADQueryStatusCurrStatus, identityAwarenessADQueryStatusDomainName, identityAwarenessADQueryStatusDomainIP, identityAwarenessADQueryStatusEvents, identityAwarenessRADIUSAccounting, identityAwarenessIdentityCollectorActiveDirectory, identityAwarenessIdentityCollectorCiscoISE, identityAwarenessTerminalServer, identityAwarenessRemoteAccess, identityAwarenessIdentityWebAPI, identityAwarenessIdentityCollectorSourcesType, identityAwarenessIdentityCollectorSourcesName, identityAwarenessIdentityCollectorSourcesHost, identityAwarenessIdentityCollectorSourcesEventsRecieved, identityAwarenessIdentityCollectorSourcesStatus, identityAwarenessIdentityCollectorSourcesIDCIP, identityAwarenessIdentityCollectorSourcesTotalEvents, identityAwarenessIdentityCollectorStatusIDCIP, identityAwarenessIdentityCollectorStatusStatus, identityAwarenessStatus, identityAwarenessStatusShortDesc, identityAwarenessStatusLongDesc }
 		STATUS  current
 		DESCRIPTION
-				"A collection of managed objects that provide information about Identity Awarness objects"
+				"A collection of managed objects that provide information about Identity Awareness objects"
 		::= { chkpntMIBGroups 18 }
 		
 	applicationControlProductsGroup OBJECT-GROUP
@@ -364,7 +371,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		::= { chkpntMIBGroups 23 }
 		
 	asgProductsGroup OBJECT-GROUP
-		OBJECTS { asgProductName, asgVer, asgKernelVer, asgBuildNum, asgMaximumBladesPerChassis, asgActiveBladesBitmask, asgInstalledBladesBitmask, asgInstalled, asgSystemUp, asgEvent, asgStatusCode, asgStatShort, asgStatLong, asgSecureXLStatusBitmask, asgAttachedBladesBitmask, asgThroughput, asgConnectionRate, asgPacketRate, asgConcurrConn, asgAccelConnectionRate, asgNonAccelConnectionRate, asgAccelConcurrConn, asgNonAccelConcurrConn, asgLoad, asgAccelLoadAvg, asgAccelLoadMin, asgAccelLoadMax, asgInstancesLoadAvg, asgInstancesLoadMin, asgInstancesLoadMax, asgVpnThroughput, asgVpnConn, asgNatConnRate, asgNatConn, asgVsxCpu1MinAvg, asgStatName, asgAccelPath, asgMediumPath, asgFirewallPath, asgDropped, asgCountersBladeId, asgCountersThroughput, asgCountersConnRate, asgCountersPacketRate, asgCountersConcurrConnNum, asgCountersAccelLoadAverage, asgCountersAccelLoadMin, asgCountersAccelLoadMax, asgCountersInstanceLoadAverage, asgCountersInstanceLoadMin, asgCountersInstanceLoadMax, asgPeakCriteria, asgPeakName, asgPeakValue, asgPeakTimeStamp, asgPeakUnits, asgAcceptedBytesTotal, asgDroppedBytesTotal, asgRejectedTotal, asgIPv6Throughput, asgIPv6ConnectionRate, asgIPv6PacketRate, asgIPv6ConcurrConn, asgIPv6AccelConnectionRate, asgIPv6NonAccelConnectionRate, asgIPv6AccelConcurrConn, asgIPv6NonAccelConcurrConn, asgIPv6Load, asgIPv6AccelLoadAvg, asgIPv6AccelLoadMin, asgIPv6AccelLoadMax, asgIPv6InstancesLoadAvg, asgIPv6InstancesLoadMin, asgIPv6InstancesLoadMax, asgIPv6VpnThroughput, asgIPv6VpnConn, asgIPv6NatConnRate, asgIPv6NatConn, asgIPv6VsxCpu1MinAvg, asgIPv6StatName, asgIPv6AccelPath, asgIPv6MediumPath, asgIPv6FirewallPath, asgIPv6Dropped, asgIPv6CountersBladeId, asgIPv6CountersThroughput, asgIPv6CountersConnRate, asgIPv6CountersPacketRate, asgIPv6CountersConcurrConnNum, asgIPv6CountersAccelLoadAverage, asgIPv6CountersAccelLoadMin, asgIPv6CountersAccelLoadMax, asgIPv6CountersInstanceLoadAverage, asgIPv6CountersInstanceLoadMin, asgIPv6CountersInstanceLoadMax, asgIPv6PeakCriteria, asgIPv6PeakName, asgIPv6PeakValue, asgIPv6PeakTimeStamp, asgIPv6PeakUnits, asgIPv6AcceptedBytesTotalRate, asgIPv6DroppedBytesTotalRate, asgIPv6DroppedTotalRate, asgIPv6RulebaseBladeId, asgIPv6RulebaseDroppedTotal, asgIPv6RulebaseAcceptedTotal, asgIPv6RulebaseRejectedTotal, asgIPv6RulebaseBytesDroppedTotal, asgIPv6RulebaseBytesAcceptedTotal, asgIPv6RulebaseBytesRejectedTotal, asgSensorName, asgSensorLocation, asgSensorCurrValue, asgSensorMinValue, asgSensorMaxValue, asgSensorThreshold, asgSensorUnit, asgSensorIdentity, asgSensorStatus, asgResourceName, asgResourceLocation, asgResourceCurrValue, asgResourceThreshold, asgResourceUnit, asgResourceTotalVal, asgResourceTitle, asgProtocolName, asgProtocolConns, asgProtocolTotalPkts, asgProtocolTotalBytes, asgServiceName, asgServiceConns, asgServiceTotalPkts, asgServiceTotalBytes, asgNetIfName, asgNetIfIPv4Addr, asgNetIfIPv6Addr, asgNetIfMACAddr, asgNetIfInfo, asgNetIfState, asgNetIfSpeed, asgNetIfMTU, asgNetIfDuplex, asgNetIfRx, asgNetIfTx, asgProblemName, asgProblemStatus, asgProblemPriority, asgProblemVerified, asgProblemDescr, asgChassisMode, asgChassisHAMode, asgSyncToActive, asgSyncToStandby, asgSyncExceptionsID, asgSyncExceptionsSource, asgSyncExceptionsSourceMask, asgSyncExceptionsDestination, asgSyncExceptionsDestinationMask, asgSyncExceptionsIpProtocol, asgSyncExceptionsSync, asgSyncExceptionsDelay, asgChassisParamsID, asgChassisParamsStatus, asgChassisParamsGrade, asgChassisParamsMaxGrade, asgChassisParamsUniqueIP, asgSGMID, asgSGMStatus, asgSGMProcess, asgSGMPolicyTime, asgFactorName, asgFactorValue, asgPriorityPortName, asgPortPriority, asgCoreRowTitle, blade1, blade2, blade3, blade4, blade5, blade6, blade7, blade8, blade9, blade10, blade11, blade12, blade13, blade14, blade15, blade16, blade17, blade18, blade19, blade20, blade21, blade22, blade23, blade24, blade25, blade26, blade27, blade28, blade29, blade30, blade31, blade32, blade33, blade34, blade35, blade36, blade37, blade38, blade39, blade40, blade41, blade42, blade43, blade44, blade45, blade46, blade47, blade48, asgVslsSgmRatio, asgVslsSystemPrimaryChassis, asgVslsVsName, asgVslsVsPrimaryChassis, asgVslsVsActiveChassis, asgVslsVsHealth, asgVslsVsReason, asgVslsVsChassis1InterfacesUp, asgVslsVsChassis1InterfacesTotal, asgVslsVsChassis1FwksUp, asgVslsVsChassis1FwksTotal, asgVslsVsChassis2InterfacesUp, asgVslsVsChassis2InterfacesTotal, asgVslsVsChassis2FwksUp, asgVslsVsChassis2FwksTotal, asgVslsVsChassis3InterfacesUp, asgVslsVsChassis3InterfacesTotal, asgVslsVsChassis3FwksUp, asgVslsVsChassis3FwksTotal, asgVslsVsChassis4InterfacesUp, asgVslsVsChassis4InterfacesTotal, asgVslsVsChassis4FwksUp, asgVslsVsChassis4FwksTotal, asgVSXConnBladeID, asgVSXIPver, asgVSXConcurrentConns, asgVSXPeakConns, asgVSXConnLimit, asgVSXConnectionsNumberPerSystem, asgVSXMemBladeid, asgVSXOverallMem, asgVSXCoreUtilBladeid, asgVSXCoreUtilCPUID, asgVSXCoreUtilUsage, asgVSXRateBladeid, asgVSXRateValue, asgVSXPacketRatePerSystem, asgVSXThroughputBladeid, asgVSXThroughputValue, asgVSXThroughputPerSystem, asgVSXThroughputPerInterfaceBladeid, asgVSXThroughputPerInterfaceName, asgVSXThroughputPerInterfaceValue, asgVSXPerSystemThroughputPerInterfaceName, asgVSXPerSystemThroughputPerInterfaceValue, asgVSXConnectionRateBladeid, asgVSXConnectionRateValue, asgVSXConnectionRatePerSystem, asgVSXVirtualMemoryBladeid, asgVSXVirtualMemoryValue, asgDiagnosticTestName, asgDiagnosticLastRun, asgDiagnosticResult, asgDiagnosticComment, asgDiagSummary }
+		OBJECTS { asgProductName, asgVer, asgBuildNum, asgMaximumBladesPerChassis, asgActiveBladesBitmask, asgInstalledBladesBitmask, asgSystemUp, asgEvent, asgStatusCode, asgStatShort, asgStatLong, asgSecureXLStatusBitmask, asgAttachedBladesBitmask, asgThroughput, asgConnectionRate, asgPacketRate, asgConcurrConn, asgAccelConnectionRate, asgNonAccelConnectionRate, asgAccelConcurrConn, asgNonAccelConcurrConn, asgLoad, asgAccelLoadAvg, asgAccelLoadMin, asgAccelLoadMax, asgInstancesLoadAvg, asgInstancesLoadMin, asgInstancesLoadMax, asgVpnThroughput, asgVpnConn, asgNatConnRate, asgNatConn, asgVsxCpu1MinAvg, asgStatName, asgAccelPath, asgMediumPath, asgFirewallPath, asgDropped, asgCountersBladeId, asgCountersThroughput, asgCountersConnRate, asgCountersPacketRate, asgCountersConcurrConnNum, asgCountersAccelLoadAverage, asgCountersAccelLoadMin, asgCountersAccelLoadMax, asgCountersInstanceLoadAverage, asgCountersInstanceLoadMin, asgCountersInstanceLoadMax, asgPeakCriteria, asgPeakValue, asgPeakTimeStamp, asgPeakUnits, asgAcceptedBytesTotal, asgDroppedBytesTotal, asgRejectedTotal, asgIPv6Throughput, asgIPv6ConnectionRate, asgIPv6PacketRate, asgIPv6ConcurrConn, asgIPv6AccelConnectionRate, asgIPv6NonAccelConnectionRate, asgIPv6AccelConcurrConn, asgIPv6NonAccelConcurrConn, asgIPv6Load, asgIPv6AccelLoadAvg, asgIPv6AccelLoadMin, asgIPv6AccelLoadMax, asgIPv6InstancesLoadAvg, asgIPv6InstancesLoadMin, asgIPv6InstancesLoadMax, asgIPv6VpnThroughput, asgIPv6VpnConn, asgIPv6NatConnRate, asgIPv6NatConn, asgIPv6VsxCpu1MinAvg, asgIPv6StatName, asgIPv6AccelPath, asgIPv6MediumPath, asgIPv6FirewallPath, asgIPv6Dropped, asgIPv6CountersBladeId, asgIPv6CountersThroughput, asgIPv6CountersConnRate, asgIPv6CountersPacketRate, asgIPv6CountersConcurrConnNum, asgIPv6CountersAccelLoadAverage, asgIPv6CountersAccelLoadMin, asgIPv6CountersAccelLoadMax, asgIPv6CountersInstanceLoadAverage, asgIPv6CountersInstanceLoadMin, asgIPv6CountersInstanceLoadMax, asgIPv6PeakCriteria, asgIPv6PeakValue, asgIPv6PeakTimeStamp, asgIPv6PeakUnits, asgIPv6AcceptedBytesTotalRate, asgIPv6DroppedBytesTotalRate, asgIPv6DroppedTotalRate, asgIPv6RulebaseBladeId, asgIPv6RulebaseDroppedTotal, asgIPv6RulebaseAcceptedTotal, asgIPv6RulebaseRejectedTotal, asgIPv6RulebaseBytesDroppedTotal, asgIPv6RulebaseBytesAcceptedTotal, asgIPv6RulebaseBytesRejectedTotal, asgSensorName, asgSensorLocation, asgSensorCurrValue, asgSensorMinValue, asgSensorMaxValue, asgSensorThreshold, asgSensorUnit, asgSensorIdentity, asgSensorStatus, asgResourceName, asgResourceLocation, asgResourceCurrValue, asgResourceThreshold, asgResourceUnit, asgResourceTotalVal, asgResourceTitle, asgProtocolName, asgProtocolConns, asgProtocolTotalPkts, asgProtocolTotalBytes, asgServiceName, asgServiceConns, asgServiceTotalPkts, asgServiceTotalBytes, asgNetIfName, asgNetIfIPv4Addr, asgNetIfIPv6Addr, asgNetIfMACAddr, asgNetIfInfo, asgNetIfState, asgNetIfSpeed, asgNetIfMTU, asgNetIfDuplex, asgNetIfRx, asgNetIfTx, asgProblemName, asgProblemStatus, asgProblemPriority, asgProblemVerified, asgProblemDescr, asgChassisMode, asgChassisHAMode, asgSyncToActive, asgSyncToStandby, asgSyncExceptionsID, asgSyncExceptionsSource, asgSyncExceptionsSourceMask, asgSyncExceptionsDestination, asgSyncExceptionsDestinationMask, asgSyncExceptionsIpProtocol, asgSyncExceptionsSync, asgSyncExceptionsDelay, asgChassisParamsID, asgChassisParamsStatus, asgChassisParamsGrade, asgChassisParamsMaxGrade, asgChassisParamsUniqueIP, asgSGMID, asgSGMStatus, asgSGMProcess, asgSGMPolicyTime, asgFactorName, asgFactorValue, asgPriorityPortName, asgPortPriority, asgCoreRowTitle, blade1, blade2, blade3, blade4, blade5, blade6, blade7, blade8, blade9, blade10, blade11, blade12, blade13, blade14, blade15, blade16, blade17, blade18, blade19, blade20, blade21, blade22, blade23, blade24, blade25, blade26, blade27, blade28, blade29, blade30, blade31, blade32, blade33, blade34, blade35, blade36, blade37, blade38, blade39, blade40, blade41, blade42, blade43, blade44, blade45, blade46, blade47, blade48, asgVslsSgmRatio, asgVslsSystemPrimaryChassis, asgVslsVsName, asgVslsVsPrimaryChassis, asgVslsVsActiveChassis, asgVslsVsHealth, asgVslsVsReason, asgVslsVsChassis1InterfacesUp, asgVslsVsChassis1InterfacesTotal, asgVslsVsChassis1FwksUp, asgVslsVsChassis1FwksTotal, asgVslsVsChassis2InterfacesUp, asgVslsVsChassis2InterfacesTotal, asgVslsVsChassis2FwksUp, asgVslsVsChassis2FwksTotal, asgVslsVsChassis3InterfacesUp, asgVslsVsChassis3InterfacesTotal, asgVslsVsChassis3FwksUp, asgVslsVsChassis3FwksTotal, asgVslsVsChassis4InterfacesUp, asgVslsVsChassis4InterfacesTotal, asgVslsVsChassis4FwksUp, asgVslsVsChassis4FwksTotal, asgVSXConnBladeID, asgVSXIPver, asgVSXConcurrentConns, asgVSXPeakConns, asgVSXConnLimit, asgVSXConnectionsNumberPerSystem, asgVSXMemBladeid, asgVSXOverallMem, asgVSXCoreUtilBladeid, asgVSXCoreUtilCPUID, asgVSXCoreUtilUsage, asgVSXRateBladeid, asgVSXRateValue, asgVSXPacketRatePerSystem, asgVSXThroughputBladeid, asgVSXThroughputValue, asgVSXThroughputPerSystem, asgVSXThroughputPerInterfaceBladeid, asgVSXThroughputPerInterfaceName, asgVSXThroughputPerInterfaceValue, asgVSXPerSystemThroughputPerInterfaceName, asgVSXPerSystemThroughputPerInterfaceValue, asgVSXConnectionRateBladeid, asgVSXConnectionRateValue, asgVSXConnectionRatePerSystem, asgVSXVirtualMemoryBladeid, asgVSXVirtualMemoryValue, asgDiagnosticTestName, asgDiagnosticLastRun, asgDiagnosticResult, asgDiagnosticComment, asgDiagSummary }
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about ASG objects"
@@ -406,7 +413,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		::= { chkpntMIBGroups 29 }
 		
 	httpsInspectionProductsGroup OBJECT-GROUP
-		OBJECTS { httpsInspectionStatus, httpsInspectionStatusDescription, hsmEnabled, hsmEnabledDescription, hsmPartitionAccess, hsmPartitionAccessDescription, outboundStatus, outboundStatusDescription }
+		OBJECTS { httpsInspectionStatus, httpsInspectionStatusDescription, hsmEnabled, hsmEnabledDescription, hsmPartitionAccess, hsmPartitionAccessDescription, outboundStatus, outboundStatusDescription, tlsInspectionDeploymentState, tlsInspectionDeploymentSuccessRate, tlsInspectionDeploymentPredictedCpuUsage, tlsInspectionDeploymentRecommendation, tlsInspectionDeploymentProgress }
 		STATUS  current
 		DESCRIPTION
 				"A collection of managed objects that provide information about HTTPS Inspection objects"
@@ -419,6 +426,23 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 				"A collection of managed objects that provide information about MHO objects"
 		::= { chkpntMIBGroups 31 }     
     
+	zphProductsGroup OBJECT-GROUP
+		OBJECTS { zphStatusCode, zphStatusShortDesc, zphStatusLongDesc }
+		STATUS current
+		DESCRIPTION
+				"A collection of managed objects that provide information about Zero Phishing objects"
+		::= { chkpntMIBGroups 32 }
+    
+	
+	fwNotifications  NOTIFICATION-GROUP
+                      NOTIFICATIONS {
+                        fwTrap
+                      }
+                      STATUS  current
+                      DESCRIPTION
+                      "A collection of managed notifications that provide information about FW notifications"
+                      ::= { chkpntMIBNotifGroups 1 }
+	
 	--mho statuses:
 
 	mhoPortsStatus          OBJECT IDENTIFIER ::= { mho 1 }
@@ -1116,7 +1140,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			::= { httpsInspection 2 }
 	
 	hsmStatus OBJECT IDENTIFIER ::= { httpsInspection 3 }
-			
+
 	hsmEnabled OBJECT-TYPE
 			SYNTAX  DisplayString
 			MAX-ACCESS read-only
@@ -1164,7 +1188,49 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			DESCRIPTION
 				  "HTTPS inspection outbound status description"
 			::= { hsmStatus 6 }
-			  
+
+	tlsInspectionDeployment OBJECT IDENTIFIER ::= { httpsInspection 4 }
+
+	tlsInspectionDeploymentState OBJECT-TYPE
+			SYNTAX  DisplayString
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				  "TLS Inspection deployment state"
+			::= { tlsInspectionDeployment 1 }
+
+	tlsInspectionDeploymentSuccessRate OBJECT-TYPE
+			SYNTAX  Gauge32
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				  "TLS Inspection deployment success rate"
+			::= { tlsInspectionDeployment 2 }
+
+	tlsInspectionDeploymentPredictedCpuUsage OBJECT-TYPE
+			SYNTAX  Gauge32
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				  "TLS Inspection deployment predicted CPU usage"
+			::= { tlsInspectionDeployment 3 }
+
+	tlsInspectionDeploymentRecommendation OBJECT-TYPE
+			SYNTAX  DisplayString
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				  "TLS Inspection deployment recommendation"
+			::= { tlsInspectionDeployment 4 }
+
+	tlsInspectionDeploymentProgress OBJECT-TYPE
+			SYNTAX  Gauge32
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				  "TLS Inspection deployment progress"
+			::= { tlsInspectionDeployment 5 }
+
 	-- End httpsInspection statuses:
 
 	--VsecController statuses:
@@ -1244,7 +1310,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       vsecDataCenterIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { vsecDataCenterEntry 1 } 
@@ -1315,7 +1381,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       vsecGatewayIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { vsecEnforcingGatewayEntry 1 } 
@@ -1436,7 +1502,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       vsxStatusVSId OBJECT-TYPE
             SYNTAX  Integer32 (0..250)
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION
                     "Virtual System ID"
@@ -1539,8 +1605,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	                      }
 
       vsxStatusMemoryUsageVSId OBJECT-TYPE
-              SYNTAX  Integer32(0..250)
-              MAX-ACCESS not-accessible
+              SYNTAX  Integer32 (0..250)
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "Virtual System ID"
               ::= { vsxStatusMemoryUsageEntry 1 }
@@ -1599,7 +1665,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       vsxStatusInterfaceVSID OBJECT-TYPE
               SYNTAX  Integer32 (0..250)
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "Virtual-System ID"
               ::= { vsxStatusInterfacesEntry 1 }
@@ -2020,7 +2086,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       raInternalIpAddr OBJECT-TYPE
             SYNTAX  IpAddress
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current 
             DESCRIPTION "No description available"
             ::= { raUsersEntry 1 }   
@@ -2033,10 +2099,17 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             ::= { raUsersEntry 19 } 
             
       raUserState OBJECT-TYPE
-            SYNTAX  Integer32 
+            SYNTAX  INTEGER {
+                          active(3),
+                          destroy(4),
+                          idle(129),
+                          phase1(130),
+                          down(131),
+                          init(132)
+             		}
             MAX-ACCESS  read-write
             STATUS  current
-            DESCRIPTION "No description available"
+            DESCRIPTION "State of a Remote Access VPN user"
             ::= { raUsersEntry 20 }   
             
       raOfficeMode OBJECT-TYPE
@@ -2098,11 +2171,11 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       raTunnelAuthMethod OBJECT-TYPE
             SYNTAX  INTEGER {
-                          preshared-key(1),
-                          dss-signature(2),
-                          rsa-signature(3),
-                          rsa-encryption(4),
-                          rev-rsa-encryption(5),
+                          presharedKey(1),
+                          dssSignature(2),
+                          rsaSignature(3),
+                          rsaEncryption(4),
+                          revRsaEncryption(5),
                           xauth(129),
                           crack(130)
              		}
@@ -2163,7 +2236,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       tunnelPeerIpAddr OBJECT-TYPE
             SYNTAX  IpAddress
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { tunnelEntry 1 }   
@@ -2221,7 +2294,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             SYNTAX  INTEGER {
                           primary(0),
                           backup(1),
-                          on-demand(2)
+                          onDemand(2)
              		}
             MAX-ACCESS read-only
             STATUS  current
@@ -2304,7 +2377,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       permanentTunnelPeerIpAddr OBJECT-TYPE
             SYNTAX  IpAddress
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { permanentTunnelEntry 1 }   
@@ -2362,7 +2435,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             SYNTAX  INTEGER {
                           primary(0),
                           backup(1),
-                          on-demand(2)
+                          onDemand(2)
              		}
             MAX-ACCESS read-only
             STATUS  current
@@ -2498,6 +2571,14 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
                       "Product name"
               ::= { fw 10 }
 
+	  fwEvent OBJECT-TYPE
+              SYNTAX  DisplayString (SIZE (0..255))
+              MAX-ACCESS read-only
+              STATUS  current
+              DESCRIPTION
+                      "A string that contains the last SNMP Trap the Security Gateway sent via fw"
+              ::= { fw 11 }
+
 	  fwSICTrustState OBJECT-TYPE
               SYNTAX  Unsigned32
               MAX-ACCESS read-only
@@ -2511,6 +2592,15 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
                                             Unknown 4"
 
               ::= { fw 12 }
+			  
+      fwTrapPrefix		OBJECT IDENTIFIER ::= { fw 0 }
+
+	  fwTrap NOTIFICATION-TYPE
+			  OBJECTS	{ fwEvent }
+			  STATUS  current
+			  DESCRIPTION
+			  "FireWall-1 SNMP trap"
+			  ::= { fwTrapPrefix 1 }
 
       fwProdName OBJECT-TYPE
               SYNTAX  DisplayString (SIZE (0..255))
@@ -2607,7 +2697,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       fwIspIndex OBJECT-TYPE
             SYNTAX Unsigned32 
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current      
             DESCRIPTION "Index"
             ::= { fwIspEntry 1 }   
@@ -2697,7 +2787,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       fwIfIndex OBJECT-TYPE
             SYNTAX Unsigned32 
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current      
             DESCRIPTION "No description available"
             ::= { fwIfEntry 1 }   
@@ -2914,7 +3004,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwIfIndex64 OBJECT-TYPE
 		SYNTAX Unsigned32
-		MAX-ACCESS not-accessible
+		MAX-ACCESS read-only
 		STATUS  current
 		DESCRIPTION "No description available"
 		::= { fwIf64Entry 1 }
@@ -5687,7 +5777,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       fwNetIfIndex OBJECT-TYPE
             SYNTAX Unsigned32 
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { fwNetIfEntry 1 }   
@@ -5877,7 +5967,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       fwLSConnIndex OBJECT-TYPE
             SYNTAX  Unsigned32
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { fwLSConnEntry 1 }   
@@ -6044,7 +6134,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLAggrThroughputIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -6145,7 +6235,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLAggrNotificationsIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -6244,7 +6334,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLAggrDropsIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -6443,7 +6533,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLHostThroughputIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -6544,7 +6634,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLHostNotificationsIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -6872,7 +6962,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLHostInterfacesIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7095,7 +7185,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLHostGeneralIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7150,7 +7240,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLFalconsThroughputIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7251,7 +7341,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLFalconsNotificationsIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7350,7 +7440,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLFalconsDropsIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7579,7 +7669,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	
 	fwSXLFalconsInterfacesIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7812,7 +7902,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLFalconsMemoryIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -7953,7 +8043,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	fwSXLFalconsCpuIndex OBJECT-TYPE
 	SYNTAX Unsigned32
-	MAX-ACCESS not-accessible
+	MAX-ACCESS read-only
 	STATUS current
 	DESCRIPTION
                 "Dummy index. "
@@ -8293,6 +8383,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
      cpvAccelerator         OBJECT IDENTIFIER ::= { vpn 8 }
      cpvIKE                 OBJECT IDENTIFIER ::= { vpn 9 }
      cpvIPsec               OBJECT IDENTIFIER ::= { vpn 10 }
+     cpvTunnels             OBJECT IDENTIFIER ::= { vpn 12 }
      cpvStatistics          OBJECT IDENTIFIER ::= { cpvGeneral 1 }
      cpvErrors              OBJECT IDENTIFIER ::= { cpvGeneral 2 }
      cpvSaStatistics        OBJECT IDENTIFIER ::= { cpvIpsec 2 } 
@@ -9085,6 +9176,23 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 --	        	   "The current IP address of the peer (for DAIPs)"
 --	        ::= { cpvTnlMonEntry 3 } 
 
+     cpvTunnelsDownNum OBJECT-TYPE
+	        SYNTAX  Counter32
+	        MAX-ACCESS read-only
+	        STATUS  current
+	        DESCRIPTION
+	        	   "Number of down VPN tunnels"
+	        ::= { cpvTunnels 1 }
+
+     cpvTunnelsDownPeers OBJECT-TYPE
+	        SYNTAX  DisplayString
+	        MAX-ACCESS read-only
+	        STATUS  current
+	        DESCRIPTION
+	        	   "VPN peers with down tunnels"
+	        ::= { cpvTunnels 2 }  
+
+
 	  -- the FG status
 	  -- Overall statistics and state
 	
@@ -9203,7 +9311,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 	 fgIfIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { fgIfEntry 1 } 
@@ -9473,7 +9581,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 	 haIfIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { haIfEntry 1 } 
@@ -9621,7 +9729,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
      haClusterIpIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
 	      DESCRIPTION
 	      	"Cluster IP index"	
@@ -9694,7 +9802,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
      haClusterSyncIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
 	      DESCRIPTION
 	      	"Cluster sync index"	
@@ -9742,6 +9850,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	  svnUpdatesInfo OBJECT IDENTIFIER ::= { svn 20 }
 	  svnVsxInfo OBJECT IDENTIFIER ::= { svn 21 }
 	  arpTableInfo OBJECT IDENTIFIER ::= { svn 22 } 
+	  sysInfo OBJECT IDENTIFIER ::= { svn 23 }
+	  cellInfo OBJECT IDENTIFIER ::= { svn 25 }
 
      svnProdName OBJECT-TYPE
 	  		  SYNTAX  DisplayString (SIZE (0..255))
@@ -9843,7 +9953,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	       
 	  updatesInstalledIndex OBJECT-TYPE
 	  		 SYNTAX  Unsigned32
-			 MAX-ACCESS not-accessible
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { updatesInstalledEntry 1 }     
@@ -9893,7 +10003,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	       
 	  updatesRecommendedIndex OBJECT-TYPE
 	  		 SYNTAX  Unsigned32
-			 MAX-ACCESS not-accessible
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { updatesRecommendedEntry 1 }     
@@ -10027,6 +10137,22 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 					 "Appliance Series String"
 			  ::= { svnApplianceInfo 10 }
 			  
+	  svnApplianceIsWifi OBJECT-TYPE
+			  SYNTAX  DisplayString (SIZE (0..255))
+			  MAX-ACCESS read-only
+			  STATUS  current
+			  DESCRIPTION
+					 "Does the appliance support Wi-Fi (True or False)"
+			  ::= { svnApplianceInfo 11 }
+
+	  svnApplianceIsCellular OBJECT-TYPE
+			  SYNTAX  DisplayString (SIZE (0..255))
+			  MAX-ACCESS read-only
+			  STATUS  current
+			  DESCRIPTION
+					 "Does the appliance support cellular (True or False)"
+			  ::= { svnApplianceInfo 12 }
+
 	  memTotalVirtual OBJECT-TYPE
 			  SYNTAX  Unsigned32
 			  MAX-ACCESS read-only
@@ -10323,7 +10449,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	  multiProcIndex OBJECT-TYPE
 			  SYNTAX  Unsigned32
-			  MAX-ACCESS not-accessible
+			  MAX-ACCESS read-only
 			  STATUS  current
 			  DESCRIPTION "No description available"
 			  ::= { multiProcEntry 1 }  
@@ -10399,7 +10525,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	  multiDiskIndex OBJECT-TYPE
 			  SYNTAX  Unsigned32
-			  MAX-ACCESS not-accessible
+			  MAX-ACCESS read-only
 			  STATUS  current
 			  DESCRIPTION "No description available"
 			  ::= { multiDiskEntry 1 }  
@@ -10493,8 +10619,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  }
 			  
 	 raidVolumeIndex OBJECT-TYPE
-	  		  SYNTAX  Integer32 (0..100)
-			  MAX-ACCESS not-accessible
+	  		  SYNTAX  Integer32  (0..100)
+			  MAX-ACCESS read-only
 			  STATUS  current
 			  DESCRIPTION "No description available"
 	        ::= { raidVolumeEntry 1 }    
@@ -10605,8 +10731,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  }   
 			  
 	  raidDiskIndex OBJECT-TYPE
-	  		 SYNTAX  Integer32 (0..100)
-			 MAX-ACCESS not-accessible
+	  		 SYNTAX  Integer32  (0..100)
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
 	       ::= { raidDiskEntry 1 }   
@@ -10735,8 +10861,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  } 
 	       
 	  tempertureSensorIndex OBJECT-TYPE
-	  		 SYNTAX  Integer32 (0..100)
-			 MAX-ACCESS not-accessible
+	  		 SYNTAX  Integer32  (0..100)
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { tempertureSensorEntry 1 }     
@@ -10813,8 +10939,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  }  
 		       
 	  fanSpeedSensorIndex OBJECT-TYPE
-	  		 SYNTAX  Integer32 (0..100)
-			 MAX-ACCESS not-accessible
+	  		 SYNTAX  Integer32  (0..100)
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { fanSpeedSensorEntry 1 }     
@@ -10891,8 +11017,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  }  
 		       
 	  voltageSensorIndex OBJECT-TYPE
-	  		 SYNTAX  Integer32 (0..100)
-			 MAX-ACCESS not-accessible
+	  		 SYNTAX  Integer32  (0..100)
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { voltageSensorEntry 1 }     
@@ -10961,8 +11087,8 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  }  
 		       
 	  powerSupplyIndex OBJECT-TYPE
-	  		 SYNTAX  Integer32 (0..100)
-			 MAX-ACCESS not-accessible
+	  		 SYNTAX  Integer32  (0..100)
+			 MAX-ACCESS read-only
 			 STATUS  current
 			 DESCRIPTION "No description available"
     	     ::= { powerSupplyEntry 1 }     
@@ -11142,6 +11268,358 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
       		DESCRIPTION
 	        	   "count of arp table entries"
 	        ::= { arpTableInfo 1 }
+
+    sysDescr OBJECT-TYPE
+			SYNTAX  DisplayString
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				"system description"
+			::= { sysInfo 1 }
+
+    sysObjectID OBJECT-TYPE
+			SYNTAX  DisplayString
+			MAX-ACCESS read-only
+			STATUS  current
+			DESCRIPTION
+				"system Object ID"
+			::= { sysInfo 2 }
+
+	wlanInfo       OBJECT IDENTIFIER ::= { svn 24 }
+	wlanTable OBJECT-TYPE
+		  SYNTAX  SEQUENCE OF  WlanEntry
+		  MAX-ACCESS  not-accessible
+		  STATUS  current
+		  DESCRIPTION "A summary table with information about WLAN interfaces."
+		  ::= { wlanInfo 1 }
+
+	wlanEntry OBJECT-TYPE
+		  SYNTAX WlanEntry
+		  MAX-ACCESS  not-accessible
+		  STATUS  current
+		  DESCRIPTION "An object that represents a WLAN interface."
+		  INDEX   { wlanIndex }
+		  ::= { wlanTable 1 }
+
+	WlanEntry ::=
+		SEQUENCE {
+			wlanIndex
+				INTEGER,
+			wlanIfName
+				DisplayString,
+			wlanSsid
+				DisplayString,
+			wlanOpMode
+				DisplayString,
+			wlanFreq
+				DisplayString,
+			wlanChannel
+				INTEGER,
+			wlanMaxBitRate
+				DisplayString,
+			wlanTxPower
+				INTEGER,
+			wlanAuthMethod
+				DisplayString,
+			wlanKeyMgmt
+				DisplayString,
+			wlanConnectedDevs
+				INTEGER
+		}
+
+	wlanIndex OBJECT-TYPE
+		 SYNTAX  Integer32 (0..100)
+		 MAX-ACCESS not-accessible
+		 STATUS  current
+		 DESCRIPTION "An index of a WLAN interface in the summary table."
+		 ::= { wlanEntry 1 }
+
+	wlanIfName OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "WLAN interface name"
+	   ::= { wlanEntry 2 }
+
+	wlanSsid OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi SSID"
+	   ::= { wlanEntry 3 }
+
+	wlanOpMode OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi operation mode (WiFi-4, WiFi-5 or WiFi-6)"
+	   ::= { wlanEntry 4 }
+
+	wlanFreq OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi frequency"
+	   ::= { wlanEntry 5 }
+
+	wlanChannel OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi channel"
+	   ::= { wlanEntry 6 }
+
+	wlanMaxBitRate OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "WLAN maximum bit rate"
+	   ::= { wlanEntry 7 }
+
+	wlanTxPower OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "WLAN trsansmit power"
+	   ::= { wlanEntry 8 }
+
+	wlanAuthMethod OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi authentication method"
+	   ::= { wlanEntry 9 }
+
+	wlanKeyMgmt OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi key management"
+	   ::= { wlanEntry 10 }
+
+	wlanConnectedDevs OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "How many devices are connected to the Wi-Fi"
+	   ::= { wlanEntry 11 }
+
+	wifiStationTable OBJECT-TYPE
+		  SYNTAX  SEQUENCE OF  WifiStationEntry
+		  MAX-ACCESS  not-accessible
+		  STATUS  current
+		  DESCRIPTION "A summary table with information about all of the Wi-Fi connected stations."
+		  ::= { wlanInfo 2 }
+
+	wifiStationEntry OBJECT-TYPE
+		  SYNTAX WifiStationEntry
+		  MAX-ACCESS  not-accessible
+		  STATUS  current
+		  DESCRIPTION "An object that represents a Wi-Fi station."
+		  INDEX   { wlanIndex }
+		  ::= { wifiStationTable 1 }
+
+	WifiStationEntry ::=
+		SEQUENCE {
+			wifiStationIndex
+				INTEGER,
+			wifiStationSsid
+				DisplayString,
+			wifiStationMac
+				DisplayString,
+			wifiStationChannel
+				INTEGER,
+			wifiStationTxRate
+				DisplayString,
+			wifiStationRxRate
+				DisplayString,
+			wifiStationSignal
+				INTEGER,
+			wifiStationSignalStat
+				DisplayString
+		}
+
+	wifiStationIndex OBJECT-TYPE
+		 SYNTAX  Integer32 (0..100)
+		 MAX-ACCESS not-accessible
+		 STATUS  current
+		 DESCRIPTION "An index of a Wi-Fi station in the summary table."
+		 ::= { wifiStationEntry 1 }
+
+	wifiStationSsid OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Wi-Fi SSID the station is connected to"
+	   ::= { wifiStationEntry 2 }
+
+	wifiStationMac OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "MAC of the Wi-Fi station"
+	   ::= { wifiStationEntry 3 }
+
+	wifiStationChannel OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		  "Wi-Fi channel the station is connected to"
+	   ::= { wifiStationEntry 4 }
+
+	wifiStationTxRate OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Maximum TX-Rate of the Wi-Fi station in Mb/s"
+	   ::= { wifiStationEntry 5 }
+
+	wifiStationRxRate OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "Maximum RX-Rate of the Wi-Fi station in Mb/s"
+	   ::= { wifiStationEntry 6 }
+
+	wifiStationSignal OBJECT-TYPE
+		 SYNTAX  DisplayString (SIZE (0..255))
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "The signal strength of the Wi-Fi station"
+	   ::= { wifiStationEntry 7 }
+
+	wifiStationSignalStat OBJECT-TYPE
+		 SYNTAX  Integer32
+		 MAX-ACCESS read-only
+		 STATUS  current
+		 DESCRIPTION
+		   "The signal strength status of the Wi-Fi station"
+	   ::= { wifiStationEntry 8 }
+
+	cellModemInfo        OBJECT IDENTIFIER ::= { cellInfo	1 }
+
+	cellModemCarrPkg   OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "Carrier package of the modem"
+		::= { cellModemInfo 1 }
+
+	cellModemImei    OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "IMEI of the modem"
+		::= { cellModemInfo 2 }
+
+	cellModemActvSim     OBJECT-TYPE
+		SYNTAX  Integer32
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The number of the active SIM card of the modem (1 or 2)"
+		::= { cellModemInfo 3 }
+
+	cellModemOprtr     OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The operator name of the modem"
+		::= { cellModemInfo 4 }
+
+	cellModemTech     OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The technology the modedm uses (3G, 4G (LTE), 5G)"
+		::= { cellModemInfo 5 }
+
+	cellModemSignal     OBJECT-TYPE
+		SYNTAX  Integer32
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The signal strength of the modem"
+		::= { cellModemInfo 6 }
+
+	cellModemSignalStat     OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The signal status of the modem"
+		::= { cellModemInfo 7 }
+
+	cellModemTemp      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The temperature of the modem"
+		::= { cellModemInfo 8 }
+
+	cellModemTempStat      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The temperature status of the modem (Normal, High)"
+		::= { cellModemInfo 9 }
+
+	cellSimsInfo        OBJECT IDENTIFIER ::= { cellInfo	2 }
+
+	cellSim1Stat      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "Status of SIM 1"
+		::= { cellSimsInfo 1 }
+
+	cellSim2Stat      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "Status of SIM 2"
+		::= { cellSimsInfo 2 }
+
+	cellSim1Num      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "Number of SIM 1"
+		::= { cellSimsInfo 3 }
+
+	cellSim2Num      OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "Number of SIM 2"
+		::= { cellSimsInfo 4 }
+
+	cellSim1PhoneNum  OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The phone number of SIM 1"
+		::= { cellSimsInfo 5 }
+
+	cellSim2PhoneNum  	OBJECT-TYPE
+		SYNTAX  DisplayString (SIZE (0..255))
+		MAX-ACCESS read-only
+		STATUS  current
+		DESCRIPTION "The phone number of SIM 2"
+		::= { cellSimsInfo 6 }
 
 		-- Platforms
 	
@@ -11983,6 +12461,150 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	                   "Smart-1 600-M"
 	           ::= { supportedPlatforms 104 }
 
+	checkPointTE2000XN OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point TE2000XN"
+               ::= { supportedPlatforms 105 }
+
+	checkPointTE250XN OBJECT-TYPE
+        	   SYNTAX  DisplayString (SIZE (0..255))
+        	   MAX-ACCESS  read-only
+        	   STATUS  current
+        	   DESCRIPTION
+        	       "Check Point TE250XN"
+        	   ::= { supportedPlatforms 107 }
+
+	checkPointQLS250 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Quantum LightSpeed QLS250"
+	           ::= { supportedPlatforms 120 }
+
+	checkPointQLS450 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Quantum LightSpeed QLS450"
+	           ::= { supportedPlatforms 121 }
+
+	checkPointQLS650 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Quantum LightSpeed QLS650"
+	           ::= { supportedPlatforms 122 }
+
+	checkPointQLS800 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Quantum LightSpeed QLS800"
+	           ::= { supportedPlatforms 123 }
+
+	checkPointMLS200 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Maestro LightSpeed MLS200"
+	           ::= { supportedPlatforms 124 }
+
+	checkPointMLS400 OBJECT-TYPE
+	           SYNTAX  DisplayString (SIZE (0..255))
+	           MAX-ACCESS  read-only
+	           STATUS  current
+	           DESCRIPTION
+	                   "Maestro LightSpeed MLS400"
+	           ::= { supportedPlatforms 125 }
+
+        checkPoint19200 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 19200"
+               ::= { supportedPlatforms 126 }
+
+        checkPoint29100 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 29100"
+               ::= { supportedPlatforms 127 }
+
+        checkPoint29200 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 29200"
+               ::= { supportedPlatforms 128 }
+
+        checkPoint19100 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 19100"
+               ::= { supportedPlatforms 129 }
+
+		checkPoint9100 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9100"
+               ::= { supportedPlatforms 130 }
+
+        checkPoint9200 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9200"
+               ::= { supportedPlatforms 131 }
+
+        checkPoint9300 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9300"
+               ::= { supportedPlatforms 132 }
+
+        checkPoint9400 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9400"
+               ::= { supportedPlatforms 133 }
+
+        checkPoint9700 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9700"
+               ::= { supportedPlatforms 134 }
+
+        checkPoint9800 OBJECT-TYPE
+               SYNTAX  DisplayString (SIZE (0..255))
+               MAX-ACCESS  read-only
+               STATUS  current
+               DESCRIPTION
+                       "Check Point 9800"
+               ::= { supportedPlatforms 135 }
+			   
 	checkPointSMB-1530 OBJECT-TYPE
                SYNTAX  DisplayString (SIZE (0..255))
                MAX-ACCESS  read-only
@@ -12128,7 +12750,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
 	  licensingIndex OBJECT-TYPE
 			  SYNTAX  Unsigned32
-			  MAX-ACCESS not-accessible
+			  MAX-ACCESS read-only
 			  STATUS  current
 			  DESCRIPTION "No description available"
 			  ::= { licensingEntry 1 }  
@@ -12323,7 +12945,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       svnNetIfIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { svnNetIfTableEntry 1 }  
@@ -12480,7 +13102,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       vsRoutingIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { vsRoutingEntry 1 }  
@@ -12609,6 +13231,13 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  STATUS  current  
 			  DESCRIPTION "No description available"
 			  ::= { mngmt 7 } 
+
+	  mgICAStatus OBJECT-TYPE	  
+              SYNTAX  Integer32
+			  MAX-ACCESS  read-only
+			  STATUS  current  
+			  DESCRIPTION "ICA status"
+			  ::= { mngmt 8 } 
 			  
       mgMgmtHAJournals OBJECT-TYPE
       		  SYNTAX  DisplayString
@@ -12658,7 +13287,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       mgIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { mgConnectedClientsEntry 1 } 
@@ -12745,7 +13374,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       mglsGWIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { mgConnectedGatewaysEntry 1 } 
@@ -13228,7 +13857,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			  
       lsGWIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { lsConnectedGatewaysEntry 1 } 
@@ -13381,7 +14010,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 
       lsIndex OBJECT-TYPE
               SYNTAX  Unsigned32
-              MAX-ACCESS not-accessible
+              MAX-ACCESS read-only
               STATUS  current
               DESCRIPTION "No description available"
               ::= { lsConnectedClientsEntry 1 } 
@@ -14519,7 +15148,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviEngineIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current
 		              DESCRIPTION "No description available"
 		              ::= { aviEngineEntry 1 } 
@@ -14618,7 +15247,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviTopVirusesIndex OBJECT-TYPE
 				SYNTAX  Unsigned32
-		              	MAX-ACCESS not-accessible
+		              	MAX-ACCESS read-only
 		              	STATUS  current
 		              	DESCRIPTION
 		              	  	"Virus index"
@@ -14670,7 +15299,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviTopEverVirusesIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current
 		              DESCRIPTION "No description available"
 		              ::= { aviTopEverVirusesEntry 1 } 
@@ -14743,7 +15372,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviHTTPTopVirusesIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 		        ::= { aviHTTPTopVirusesEntry 1 } 		              
@@ -14817,7 +15446,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviFTPTopVirusesIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 			::= { aviFTPTopVirusesEntry 1 } 
@@ -14890,7 +15519,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviSMTPTopVirusesIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 			::= { aviSMTPTopVirusesEntry 1 } 
@@ -14962,7 +15591,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		aviPOP3TopVirusesIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 			::= { aviPOP3TopVirusesEntry 1 } 
@@ -15121,7 +15750,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		cpsemdCorrelationUnitIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 			::= { cpsemdCorrelationUnitEntry 1 } 
@@ -15258,7 +15887,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		cpseadJobIndex OBJECT-TYPE
 			SYNTAX  Unsigned32
-			MAX-ACCESS not-accessible
+			MAX-ACCESS read-only
 			STATUS  current
 			DESCRIPTION "No description available"
 			::= { cpseadJobsEntry 1 } 
@@ -15518,7 +16147,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		 ufTopBlockedCatIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current
 		              DESCRIPTION
 		              		  "Blocked Category index"
@@ -15982,7 +16611,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		voipDOSSipRateLimitingTableIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current 
 		              DESCRIPTION 
 		              		  "Rate Limiting Defense for Internal SIP Servers: Table Index"
@@ -16319,7 +16948,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		identityAwarenessDistributedEnvTableIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current 
 		              DESCRIPTION 
 		              		  "Distributed Environments: Table Index"
@@ -16404,7 +17033,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		identityAwarenessADQueryStatusTableIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS  read-only
 		              STATUS  current 
 		              DESCRIPTION 
 		              		  "AD Query Status: Table Index"
@@ -16499,14 +17128,165 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			STATUS  current 
 			DESCRIPTION
 				"Number of identities logged in with Identity Web API"
-			::= {identityAwareness 44 }  			
-	   
+			::= {identityAwareness 44 }
+		
+		identityAwarenessIdentityCollectorSourcesTable OBJECT-TYPE
+			SYNTAX  SEQUENCE OF IdentityAwarenessIdentityCollectorSourcesEntry
+		MAX-ACCESS  not-accessible
+		STATUS  current
+		DESCRIPTION
+			"Table for Identity Collector Sources"
+		::= {identityAwareness 53 }
+
+		identityAwarenessIdentityCollectorSourcesEntry OBJECT-TYPE
+	  		SYNTAX  IdentityAwarenessIdentityCollectorSourcesEntry
+	  		MAX-ACCESS  not-accessible
+	  		STATUS  current
+	  		DESCRIPTION "Represents an entry in the Identity Collector Sources table"
+	  		INDEX   { identityAwarenessIdentityCollectorSourcesTableIndex }
+	  		::= { identityAwarenessIdentityCollectorSourcesTable 1 }
+
+		IdentityAwarenessIdentityCollectorSourcesEntry ::=
+      		SEQUENCE {
+      			identityAwarenessIdentityCollectorSourcesTableIndex		
+		          			Unsigned32,  
+				identityAwarenessIdentityCollectorSourcesType		          			
+		          			DisplayString,
+ 				identityAwarenessIdentityCollectorSourcesName
+		          			DisplayString,
+ 				identityAwarenessIdentityCollectorSourcesHost
+		          			DisplayString,
+				identityAwarenessIdentityCollectorSourcesEventsRecieved
+		          			Unsigned32,         
+				identityAwarenessIdentityCollectorSourcesStatus
+		          			DisplayString,   
+				identityAwarenessIdentityCollectorSourcesIDCIP
+		          			DisplayString,         
+				identityAwarenessIdentityCollectorSourcesTotalEvents
+		          			Unsigned32         							
+		    }
+
+		identityAwarenessIdentityCollectorSourcesTableIndex OBJECT-TYPE
+		              SYNTAX  Unsigned32
+		              MAX-ACCESS  not-accessible
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Table Index"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 1 }
+
+		identityAwarenessIdentityCollectorSourcesType OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+							  "Identity Collector Sources: Type"
+					  ::= { identityAwarenessIdentityCollectorSourcesEntry 2 }
+
+		identityAwarenessIdentityCollectorSourcesName OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Name"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 3 } 	    
+		
+		identityAwarenessIdentityCollectorSourcesHost OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Host IP"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 4 } 	    							          			
+
+ 		identityAwarenessIdentityCollectorSourcesEventsRecieved OBJECT-TYPE
+		              SYNTAX  Unsigned32
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Status"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 5 }  
+					  
+		identityAwarenessIdentityCollectorSourcesStatus OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: IDC IP"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 6 }  
+					  
+		identityAwarenessIdentityCollectorSourcesIDCIP OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Events Recieved"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 7 }  
+					  
+		identityAwarenessIdentityCollectorSourcesTotalEvents OBJECT-TYPE
+		              SYNTAX  Unsigned32
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Sources: Total Events"
+		              ::= { identityAwarenessIdentityCollectorSourcesEntry 8 }	
+				
+		identityAwarenessIdentityCollectorStatusTable OBJECT-TYPE
+			SYNTAX  SEQUENCE OF IdentityAwarenessIdentityCollectorStatusEntry
+			MAX-ACCESS  not-accessible
+			STATUS  current
+			DESCRIPTION
+				"Table for Identity Collector Status"
+			::= {identityAwareness 55 }
+                                               
+											   
+		identityAwarenessIdentityCollectorStatusEntry OBJECT-TYPE
+	  		SYNTAX  IdentityAwarenessIdentityCollectorStatusEntry
+	  		MAX-ACCESS  not-accessible
+	  		STATUS  current
+	  		DESCRIPTION "Represents an entry in the Identity Collector Status table"
+	  		INDEX   { identityAwarenessIdentityCollectorStatusTableIndex }
+	  		::= { identityAwarenessIdentityCollectorStatusTable 1 }                                      
+		
+		IdentityAwarenessIdentityCollectorStatusEntry ::=
+				SEQUENCE {
+					identityAwarenessIdentityCollectorStatusTableIndex		
+								Unsigned32,  
+					identityAwarenessIdentityCollectorStatusIDCIP
+								DisplayString,   
+					identityAwarenessIdentityCollectorStatusStatus
+								DisplayString         					
+						}                  
+	         
+			identityAwarenessIdentityCollectorStatusTableIndex OBJECT-TYPE
+		              SYNTAX  Unsigned32
+		              MAX-ACCESS  not-accessible
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Status: Table Index"
+		              ::= { identityAwarenessIdentityCollectorStatusEntry 1 } 
+
+			identityAwarenessIdentityCollectorStatusIDCIP OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Status: IDC IP"
+		              ::= { identityAwarenessIdentityCollectorStatusEntry 2 }  
+
+			identityAwarenessIdentityCollectorStatusStatus OBJECT-TYPE
+		              SYNTAX  DisplayString
+		              MAX-ACCESS  read-only
+		              STATUS  current 
+		              DESCRIPTION 
+		              		  "Identity Collector Status: Status"
+		              ::= { identityAwarenessIdentityCollectorStatusEntry 3 }  
+
 	   identityAwarenessStatus OBJECT-TYPE
       		SYNTAX  Integer32
 			MAX-ACCESS read-only
 			STATUS  current 
 			DESCRIPTION
-				"Identity Awarness Status code"
+				"Identity Awareness Status code"
 			::= {identityAwareness 101 }
 			
 	   identityAwarenessStatusShortDesc OBJECT-TYPE
@@ -16514,7 +17294,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			MAX-ACCESS read-only
 			STATUS  current 
 			DESCRIPTION
-				"Identity Awarness Status - Short Description"
+				"Identity Awareness Status - Short Description"
 			::= {identityAwareness 102 }
 	
 	   identityAwarenessStatusLongDesc OBJECT-TYPE
@@ -16522,7 +17302,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 			MAX-ACCESS read-only
 			STATUS  current 
 			DESCRIPTION
-				"Identity Awarness Status  - Long Description"
+				"Identity Awareness Status  - Long Description"
 			::= {identityAwareness 103 }
        
        	--applicationControl statuses:
@@ -16674,7 +17454,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 	         
 		exchangeAgentsStatusTableIndex OBJECT-TYPE
 		              SYNTAX  Unsigned32
-		              MAX-ACCESS not-accessible
+		              MAX-ACCESS read-only
 		              STATUS  current 
 		              DESCRIPTION 
 		              		  "Exchange agents: Table Index"
@@ -17141,7 +17921,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       thresholdActiveEventsIndex OBJECT-TYPE
             SYNTAX  Unsigned32
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { thresholdActiveEventsEntry 1 }   
@@ -17236,7 +18016,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       thresholdDestinationIndex OBJECT-TYPE
             SYNTAX  Unsigned32
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { thresholdDestinationsEntry 1 }   
@@ -17313,7 +18093,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
               
       thresholdErrorIndex OBJECT-TYPE
             SYNTAX  Unsigned32
-            MAX-ACCESS not-accessible
+            MAX-ACCESS read-only
             STATUS  current
             DESCRIPTION "No description available"
             ::= { thresholdErrorsEntry 1 }   
@@ -17710,15 +18490,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 				 It means blade 2 is installed in chassis 1 and
 				 blade 1 and blade 2 are installed in chassis 2"
 			::= {asg 9 }
-			
-	asgInstalled OBJECT-TYPE
-		    SYNTAX  DisplayString
-			MAX-ACCESS  read-only
-			STATUS  current
-			DESCRIPTION
-				 "Date and time of ASG installation"
-			::= { asg 10 }
-    
+			    
 	asgSystemUp OBJECT-TYPE
 		    SYNTAX  DisplayString
 			MAX-ACCESS  read-only
@@ -18189,8 +18961,6 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
                     Unsigned32,
                 asgPeakCriteria
                     DisplayString,
-				asgPeakName
-                    DisplayString,
 				asgPeakValue
 					DisplayString,
 				asgPeakTimeStamp
@@ -18213,21 +18983,13 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             DESCRIPTION "No description available"
             ::= { asgPeaksEntry 2 }               
             
-    asgPeakName OBJECT-TYPE
-            SYNTAX  DisplayString
-            MAX-ACCESS  read-only
-            STATUS  current
-			DESCRIPTION
-					"Name of the peak statistics"
-            ::= { asgPeaksEntry 3 } 
-
 	asgPeakValue OBJECT-TYPE
             SYNTAX  DisplayString
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
 					"Peak value"
-            ::= { asgPeaksEntry 4 } 
+            ::= { asgPeaksEntry 3 } 
 
 	asgPeakTimeStamp OBJECT-TYPE
             SYNTAX  DisplayString
@@ -18235,7 +18997,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             STATUS  current
 			DESCRIPTION
 					"Peak timestamp"
-            ::= { asgPeaksEntry 5 } 
+            ::= { asgPeaksEntry 4 } 
 			
 	asgPeakUnits OBJECT-TYPE
             SYNTAX  DisplayString
@@ -18243,7 +19005,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             STATUS  current
 			DESCRIPTION
 					"Units"
-            ::= { asgPeaksEntry 6 } 
+            ::= { asgPeaksEntry 5 } 
 	
 	asgRulebase OBJECT IDENTIFIER ::= { asgIPv4PerformanceCounters 27 }	
 	
@@ -18775,8 +19537,6 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
                     Unsigned32,
                 asgIPv6PeakCriteria
                     DisplayString,
-				asgIPv6PeakName
-					DisplayString,                    
 				asgIPv6PeakValue
 					DisplayString,
 				asgIPv6PeakTimeStamp
@@ -18800,21 +19560,13 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 					"Name of the peak statistics"
             ::= { asgIPv6PeaksEntry 2 }               
             
-    asgIPv6PeakName OBJECT-TYPE
-            SYNTAX  DisplayString
-            MAX-ACCESS  read-only
-            STATUS  current
-			DESCRIPTION			
-					"Name of the peak statistics"
-            ::= { asgIPv6PeaksEntry 3 } 
-                            
 	asgIPv6PeakValue OBJECT-TYPE
             SYNTAX  DisplayString
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION			
 					"Peak value"
-            ::= { asgIPv6PeaksEntry 4 } 
+            ::= { asgIPv6PeaksEntry 3 } 
      
 	asgIPv6PeakTimeStamp OBJECT-TYPE
             SYNTAX  DisplayString
@@ -18822,7 +19574,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             STATUS  current
 			DESCRIPTION
 					"Peak timestamp"
-            ::= { asgIPv6PeaksEntry 5 } 
+            ::= { asgIPv6PeaksEntry 4 } 
 			
 	asgIPv6PeakUnits OBJECT-TYPE
             SYNTAX  DisplayString
@@ -18830,7 +19582,7 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             STATUS  current
 			DESCRIPTION
 					"Units"
-            ::= { asgIPv6PeaksEntry 6 } 
+            ::= { asgIPv6PeaksEntry 5 } 
 	
 	asgIPv6Rulebase OBJECT IDENTIFIER ::= { asgIPv6PerformanceCounters 27 }	
 	
@@ -19824,7 +20576,11 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-                "SGM Status"
+                "SGM Status: 
+				DOWN = 0, INIT = 1, STANDBY = 2 
+				READY = 3, ACTIVE = 4, DEAD = 10 
+				N/A = -1
+				"
             ::= { asgSGMEntry 3 }	
 
     asgSGMProcess OBJECT-TYPE
@@ -19966,101 +20722,101 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 				asgCoreRowTitle
                     DisplayString,
                 blade1
-                    DisplayString,
+                    Unsigned32,
                 blade2
-                    DisplayString,
+                    Unsigned32,
                 blade3
-                    DisplayString,
+                    Unsigned32,
                 blade4
-                    DisplayString,
+                    Unsigned32,
                 blade5
-                    DisplayString,
+                    Unsigned32,
                 blade6
-                    DisplayString,
+                    Unsigned32,
                 blade7
-                    DisplayString,
+                    Unsigned32,
                 blade8
-                    DisplayString,
+                    Unsigned32,
                 blade9
-                    DisplayString,
+                    Unsigned32,
                 blade10
-                    DisplayString,
+                    Unsigned32,
                 blade11
-                    DisplayString,
+                    Unsigned32,
                 blade12
-                    DisplayString,
+                    Unsigned32,
                 blade13
-                    DisplayString,
+                    Unsigned32,
                 blade14
-                    DisplayString,
+                    Unsigned32,
                 blade15
-                    DisplayString,
+                    Unsigned32,
                 blade16
-                    DisplayString,
+                    Unsigned32,
                 blade17
-                    DisplayString,
+                    Unsigned32,
                 blade18
-                    DisplayString,
+                    Unsigned32,
                 blade19
-                    DisplayString,
+                    Unsigned32,
                 blade20
-                    DisplayString,
+                    Unsigned32,
                 blade21
-                    DisplayString,
+                    Unsigned32,
                 blade22
-                    DisplayString,
+                    Unsigned32,
                 blade23
-                    DisplayString,
+                    Unsigned32,
                 blade24
-                    DisplayString,
+                    Unsigned32,
                 blade25
-                    DisplayString,
+                    Unsigned32,
                 blade26
-                    DisplayString,
+                    Unsigned32,
                 blade27
-                    DisplayString,
+                    Unsigned32,
                 blade28
-                    DisplayString,
+                    Unsigned32,
                 blade29
-                    DisplayString,
+                    Unsigned32,
                 blade30
-                    DisplayString,
+                    Unsigned32,
                 blade31
-                    DisplayString,
+                    Unsigned32,
                 blade32
-                    DisplayString,
+                    Unsigned32,
                 blade33
-                    DisplayString,
+                    Unsigned32,
                 blade34
-                    DisplayString,
+                    Unsigned32,
                 blade35
-                    DisplayString,
+                    Unsigned32,
                 blade36
-                    DisplayString,
+                    Unsigned32,
                 blade37
-                    DisplayString,
+                    Unsigned32,
                 blade38
-                    DisplayString,
+                    Unsigned32,
                 blade39
-                    DisplayString,
+                    Unsigned32,
                 blade40
-                    DisplayString,
+                    Unsigned32,
                 blade41
-                    DisplayString,
+                    Unsigned32,
                 blade42
-                    DisplayString,
+                    Unsigned32,
                 blade43
-                    DisplayString,
+                    Unsigned32,
                 blade44
-                    DisplayString,
+                    Unsigned32,
                 blade45
-                    DisplayString,
+                    Unsigned32,
                 blade46
-                    DisplayString,
+                    Unsigned32,
                 blade47
-                    DisplayString,
+                    Unsigned32,
                 blade48
-                    DisplayString
+                    Unsigned32
 	        }
               
     asgCoreIndex OBJECT-TYPE
@@ -20078,387 +20834,387 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
             ::= { asgCoresUtilEntry 2 } 		
 
 	blade1 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"1st blade"
+					"1st blade core utilization in %"
             ::= { asgCoresUtilEntry 3 }
 
 	blade2 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"2nd blade"
+					"2nd blade core utilization in %"
             ::= { asgCoresUtilEntry 4 } 
 			
 	blade3 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"3rd blade"
+					"3rd blade core utilization in %"
             ::= { asgCoresUtilEntry 5 } 
 	
 	blade4 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"4th blade"
+					"4th blade core utilization in %"
             ::= { asgCoresUtilEntry 6 } 
 			
 	blade5 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"5th blade"
+					"5th blade core utilization in %"
             ::= { asgCoresUtilEntry 7 } 
 			
 	blade6 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"6th blade"
+					"6th blade core utilization in %"
             ::= { asgCoresUtilEntry 8 } 
 
 	blade7 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"7th blade"
+					"7th blade core utilization in %"
             ::= { asgCoresUtilEntry 9 }
 
 	blade8 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"8th blade"
+					"8th blade core utilization in %"
             ::= { asgCoresUtilEntry 10 } 
 			
 	blade9 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"9th blade"
+					"9th blade core utilization in %"
             ::= { asgCoresUtilEntry 11 } 
 			
 	blade10 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"10th blade"
+					"10th blade core utilization in %"
             ::= { asgCoresUtilEntry 12 } 
 	
 	blade11 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"11th blade"
+					"11th blade core utilization in %"
             ::= { asgCoresUtilEntry 13 } 
 			
 	blade12 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"12ve blade"
+					"12ve blade core utilization in %"
             ::= { asgCoresUtilEntry 14 } 
 			
 	blade13 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"13th blade"
+					"13th blade core utilization in %"
             ::= { asgCoresUtilEntry 15 } 
 			
 	blade14 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"14th blade"
+					"14th blade core utilization in %"
             ::= { asgCoresUtilEntry 16 }
 
 	blade15 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"15th blade"
+					"15th blade core utilization in %"
             ::= { asgCoresUtilEntry 17 } 
 			
 	blade16 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"16th blade"
+					"16th blade core utilization in %"
             ::= { asgCoresUtilEntry 18 } 
 	
 	blade17 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"17th blade"
+					"17th blade core utilization in %"
             ::= { asgCoresUtilEntry 19 } 
 			
 	blade18 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"18th blade"
+					"18th blade core utilization in %"
             ::= { asgCoresUtilEntry 20 } 
 			
 	blade19 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"19th blade"
+					"19th blade core utilization in %"
             ::= { asgCoresUtilEntry 21 } 
 			
 	blade20 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"20th blade"
+					"20th blade core utilization in %"
             ::= { asgCoresUtilEntry 22 }
 
 	blade21 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"21st blade"
+					"21st blade core utilization in %"
             ::= { asgCoresUtilEntry 23 } 
 			
 	blade22 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"22nd blade"
+					"22nd blade core utilization in %"
             ::= { asgCoresUtilEntry 24 } 
 	
 	blade23 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"23rd blade"
+					"23rd blade core utilization in %"
             ::= { asgCoresUtilEntry 25 } 
 			
 	blade24 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"24th blade"
+					"24th blade core utilization in %"
             ::= { asgCoresUtilEntry 26 } 
 
 	blade25 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"25th blade"
+					"25th blade core utilization in %"
             ::= { asgCoresUtilEntry 27 } 
 
 	blade26 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"26th blade"
+					"26th blade core utilization in %"
             ::= { asgCoresUtilEntry 28 } 
 
 	blade27 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"27th blade"
+					"27th blade core utilization in %"
             ::= { asgCoresUtilEntry 29 }
 
 	blade28 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"28th blade"
+					"28th blade core utilization in %"
             ::= { asgCoresUtilEntry 30 } 
 
 	blade29 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"29th blade"
+					"29th blade core utilization in %"
             ::= { asgCoresUtilEntry 31 } 
 
 	blade30 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"30th blade"
+					"30th blade core utilization in %"
             ::= { asgCoresUtilEntry 32 } 
 
 	blade31 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"31th blade"
+					"31th blade core utilization in %"
             ::= { asgCoresUtilEntry 33 }
 
 	blade32 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"32th blade"
+					"32th blade core utilization in %"
             ::= { asgCoresUtilEntry 34 }
 
 	blade33 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"33th blade"
+					"33th blade core utilization in %"
             ::= { asgCoresUtilEntry 35 }
 
 	blade34 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"34th blade"
+					"34th blade core utilization in %"
             ::= { asgCoresUtilEntry 36 }
 
 	blade35 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"35th blade"
+					"35th blade core utilization in %"
             ::= { asgCoresUtilEntry 37 }
 
 	blade36 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"36th blade"
+					"36th blade core utilization in %"
             ::= { asgCoresUtilEntry 38 }
 
 	blade37 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"37th blade"
+					"37th blade core utilization in %"
             ::= { asgCoresUtilEntry 39 }
 
 	blade38 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"38th blade"
+					"38th blade core utilization in %"
             ::= { asgCoresUtilEntry 40 }
 
 	blade39 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"39th blade"
+					"39th blade core utilization in %"
             ::= { asgCoresUtilEntry 41 }
 
 	blade40 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"40th blade"
+					"40th blade core utilization in %"
             ::= { asgCoresUtilEntry 42 }
 
 	blade41 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"41th blade"
+					"41th blade core utilization in %"
             ::= { asgCoresUtilEntry 43 }
 
 	blade42 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"42th blade"
+					"42th blade core utilization in %"
             ::= { asgCoresUtilEntry 44 }
 
 	blade43 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"43th blade"
+					"43th blade core utilization in %"
             ::= { asgCoresUtilEntry 45 }
 
 	blade44 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"44th blade"
+					"44th blade core utilization in %"
             ::= { asgCoresUtilEntry 46 }
 
 	blade45 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"45th blade"
+					"45th blade core utilization in %"
             ::= { asgCoresUtilEntry 47 }
 
 	blade46 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"46th blade"
+					"46th blade core utilization in %"
             ::= { asgCoresUtilEntry 48 }
 
 	blade47 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"47th blade"
+					"47th blade core utilization in %"
             ::= { asgCoresUtilEntry 49 }
 
 	blade48 OBJECT-TYPE
-            SYNTAX  DisplayString
+            SYNTAX  Unsigned32
             MAX-ACCESS  read-only
             STATUS  current
 			DESCRIPTION
-					"48th blade"
+					"48th blade core utilization in %"
             ::= { asgCoresUtilEntry 50 }
 
 	--VSLS statuses:
@@ -21500,5 +22256,32 @@ CHECKPOINT-MIB DEFINITIONS ::= BEGIN
 		DESCRIPTION
 			"Threat Extraction Engine Version"
 		::= {threatExtraction 104 }  
+	
+	--zph statuses:
+	
+	zphStatusCode OBJECT-TYPE
+     		SYNTAX  DisplayString
+		MAX-ACCESS  read-only
+		STATUS  current 
+		DESCRIPTION
+			"Zero Phishing Status code"
+		::= {zph 101 }
+
+   	zphStatusShortDesc OBJECT-TYPE
+     		SYNTAX  DisplayString
+		MAX-ACCESS  read-only
+		STATUS  current 
+		DESCRIPTION
+			"Zero Phishing Status - Short Description"
+		::= {zph 102 }  
+
+   	zphStatusLongDesc OBJECT-TYPE
+     		SYNTAX  DisplayString
+		MAX-ACCESS  read-only
+		STATUS  current 
+		DESCRIPTION
+			"Zero Phishing Status - Long Description"
+		::= {zph 103 }  
+		
 
 END

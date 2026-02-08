@@ -55,7 +55,7 @@ class HTML_ImageMap_Area_Polygon extends HTML_ImageMap_Area
 			$flatpoints[] = $point[0];
 			$flatpoints[] = $point[1];
 		}
-		$coordstring = join(",",$flatpoints);
+		$coordstring = implode(",",$flatpoints);
 
 		return '<area '.$this->common_html().'shape="poly" coords="'.$coordstring.'" />';
 	}
@@ -190,7 +190,7 @@ class HTML_ImageMap_Area_Rectangle extends HTML_ImageMap_Area
 
 	function asHTML()
 	{
-		$coordstring = join(",",array($this->x1,$this->y1,$this->x2,$this->y2));
+		$coordstring = implode(",",array($this->x1,$this->y1,$this->x2,$this->y2));
 		return '<area '.$this->common_html().'shape="rect" coords="'.$coordstring.'" />';
 
 	}
@@ -212,7 +212,7 @@ class HTML_ImageMap_Area_Circle extends HTML_ImageMap_Area
 
 	function asHTML()
 	{
-		$coordstring = join(",",array($this->centx,$this->centy,$this->edgex,$this->edgey) );
+		$coordstring = implode(",",array($this->centx,$this->centy,$this->edgex,$this->edgey) );
 		return '<area '.$this->common_html().'shape="circle" coords="'.$coordstring.'" />';
 	}
 

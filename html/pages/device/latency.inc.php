@@ -99,7 +99,7 @@ if ($vars['view'] === "incoming" && safe_count($smokeping_files['incoming'][$dev
         $hostname = basename($host, ".rrd");
         [$hostname] = explode("~", $hostname);
         if ($config['smokeping']['suffix']) {
-            $hostname = $hostname . $config['smokeping']['suffix'];
+            $hostname .= $config['smokeping']['suffix'];
         }
         if ($config['smokeping']['split_char']) {
             $hostname = str_replace($config['smokeping']['split_char'], ".", $hostname);

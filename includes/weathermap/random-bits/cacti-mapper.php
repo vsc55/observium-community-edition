@@ -45,7 +45,7 @@ $data_template_id = db_fetch_cell("select id from data_template where name='".my
 $Interfaces_SQL = "select host.snmp_version,host.snmp_community,host.snmp_username,host.snmp_password,host.snmp_auth_protocol,host.snmp_priv_passphrase,host.snmp_priv_protocol,host.snmp_context,host.snmp_port,host.snmp_timeout,host.description, host.hostname, host.disabled, host_snmp_cache.* from host_snmp_cache,host where host_snmp_cache.host_id=host.id and (field_name='ifDescr' or field_name='ifName' or field_name='ifIP' or field_name='ifAlias') and host.disabled<>'on' and field_value<>'127.0.0.1' and field_value<>'0.0.0.0' and host.status=3 and host.snmp_version>0;";
 $queryrows = db_fetch_assoc($Interfaces_SQL);
 
-if( is_array($queryrows)  && sizeof($queryrows) > 0 )
+if( is_array($queryrows)  && count($queryrows) > 0 )
 {
 	foreach ($queryrows as $line) 
 	{
@@ -92,7 +92,7 @@ if(file_exists("mapper-cache.txt"))
 }
 print "$count netmasks in the cache.\n";
 
-print "Collected information on ".sizeof($interfaces)." interfaces and ".sizeof($hosts)." hosts.\n";
+print "Collected information on ".count($interfaces)." interfaces and ".count($hosts)." hosts.\n";
 
 $cleaned=0;
 foreach($interfaces as $key=>$int)
@@ -159,7 +159,7 @@ foreach($interfaces as $key=>$int)
 {
 	if(isset($int['netmask']))
 	{
-		fputs($fd,$key."\t".$int['netmask']."\n");
+		fwrite($fd,$key."\t".$int['netmask']."\n");
 		$count++;
 	}
 }
@@ -196,13 +196,13 @@ $linkid = 0;
 $lannodeid = 0;
 foreach ($networks as $network=>$members)
 {
-	if(sizeof($members)<2)
+	if(count($members)<2)
 	{
 		unset($networks[$network]);
 		$count++;
 	}
 	
-	if(sizeof($members)==2)
+	if(count($members)==2)
 	{
 		print "Create LINK between\n";
 		foreach($members as $int)
@@ -221,7 +221,7 @@ foreach ($networks as $network=>$members)
 		$link_config .=  "\n";
 	}
 	
-	if(sizeof($members)>2)
+	if(count($members)>2)
 	{
 		print "Create LAN NODE called $network and add LINKs from these NODEs to it:\n";
 		$x = rand(0,$width); $y = rand(0,$height);	
@@ -256,14 +256,14 @@ foreach ($nodes_seen as $h=>$c)
 }
 
 $fd = fopen("automap.cfg","w");
-fputs($fd,"HTMLSTYLE overlib\nBGCOLOR 92 92 92\nWIDTH $width\nHEIGHT $height\nFONTDEFINE 30 GillSans 8\n");
-fputs($fd,"FONTDEFINE 20 GillSans 10\nFONTDEFINE 10 GillSans 9\n");
-fputs($fd,"SCALE DEFAULT 0 0 255 0 0\nSCALE DEFAULT 0 10   32 32 32   0 0 255\nSCALE DEFAULT 10 40   0 0 255   0 255 0\nSCALE DEFAULT 40 55   0 255 0   255 255 0\nSCALE DEFAULT 55 100   240 240 0   255 0 0\n");
-fputs($fd,"\nSCALE cactiupdown 0 0.5 192 192 192 \nSCALE cactiupdown 0.5 1.5 255 0 0 \nSCALE cactiupdown 1.5 2.5 0 0 255 \nSCALE cactiupdown 2.5 3.5 0 255 0 \nSCALE cactiupdown 3.5 4.5 255 255 0 \n");
-fputs($fd,"\nLINK DEFAULT\nBWSTYLE angled\nBWLABEL bits\nBWFONT 30\nCOMMENTFONT 30\n\n");
-fputs($fd,"\nNODE DEFAULT\nLABELFONT 10\n\n");
-fputs($fd,$node_config);
-fputs($fd,$link_config);
+fwrite($fd,"HTMLSTYLE overlib\nBGCOLOR 92 92 92\nWIDTH $width\nHEIGHT $height\nFONTDEFINE 30 GillSans 8\n");
+fwrite($fd,"FONTDEFINE 20 GillSans 10\nFONTDEFINE 10 GillSans 9\n");
+fwrite($fd,"SCALE DEFAULT 0 0 255 0 0\nSCALE DEFAULT 0 10   32 32 32   0 0 255\nSCALE DEFAULT 10 40   0 0 255   0 255 0\nSCALE DEFAULT 40 55   0 255 0   255 255 0\nSCALE DEFAULT 55 100   240 240 0   255 0 0\n");
+fwrite($fd,"\nSCALE cactiupdown 0 0.5 192 192 192 \nSCALE cactiupdown 0.5 1.5 255 0 0 \nSCALE cactiupdown 1.5 2.5 0 0 255 \nSCALE cactiupdown 2.5 3.5 0 255 0 \nSCALE cactiupdown 3.5 4.5 255 255 0 \n");
+fwrite($fd,"\nLINK DEFAULT\nBWSTYLE angled\nBWLABEL bits\nBWFONT 30\nCOMMENTFONT 30\n\n");
+fwrite($fd,"\nNODE DEFAULT\nLABELFONT 10\n\n");
+fwrite($fd,$node_config);
+fwrite($fd,$link_config);
 fclose($fd);
 
 ///////////////////////////////////////////////////////////////

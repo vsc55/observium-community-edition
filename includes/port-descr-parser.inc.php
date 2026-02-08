@@ -19,7 +19,7 @@ function custom_port_parser($port) {
         return [];
     }
 
-    print_debug($port['ifAlias']);
+    print_debug("Port ifAlias parsing: '{$port['ifAlias']}'\n");
 
     //$types = ['core', 'peering', 'transit', 'cust', 'server', 'l2tp', 'service'];
     $types = array_keys($GLOBALS['config']['ports']['descr_groups']); // base (still configurable) interface groups
@@ -27,20 +27,23 @@ function custom_port_parser($port) {
         $types[] = strtolower(trim($custom_type));
     }
 
-    if (isset($GLOBALS['config']['port_descr_regexp'])) {
+    if (isset($GLOBALS['config']['ports']['descr_regexp'])) {
         $port_ifAlias = [];
         $params       = [ 'type', 'descr', 'circuit', 'speed', 'notes' ];
-        foreach ((array)$GLOBALS['config']['port_descr_regexp'] as $pattern) {
+        foreach ((array)$GLOBALS['config']['ports']['descr_regexp'] as $pattern) {
             if (preg_match($pattern, $port['ifAlias'], $matches)) {
                 foreach ($params as $param) {
                     if (!safe_empty($matches[$param])) {
-                        $port_ifAlias[$param] = $matches[$param];
+                        $port_ifAlias[$param] = trim($matches[$param]);
                     }
                 }
                 break;
             }
         }
-        if (isset($port_ifAlias['type'], $port_ifAlias['descr']) && in_array($port_ifAlias['type'], $types, TRUE)) {
+        if (isset($port_ifAlias['type'], $port_ifAlias['descr']) && in_array(strtolower($port_ifAlias['type']), $types, TRUE)) {
+            print_debug("Found by config pattern..\n");
+            print_debug_vars($port_ifAlias);
+
             return $port_ifAlias;
         }
     }
@@ -52,8 +55,9 @@ function custom_port_parser($port) {
 
     $port_ifAlias = [];
     // Munge and Validate type
-    $type = strtolower(trim($matches[1], " \t\n\r\0\x0B\\/\"'"));
-    if (!in_array($type, $types, TRUE)) {
+    $type = trim($matches[1], " \t\n\r\0\x0B\\/\"'");
+    if (!in_array(strtolower($type), $types, TRUE)) {
+        print_debug("Found, but type '$type' not configured in \$config['int_groups']..\n");
         return [];
     }
     $port_ifAlias['type'] = $type;
@@ -61,6 +65,7 @@ function custom_port_parser($port) {
     // Munge and Validate description
     $descr = trim($matches[2]);
     if (safe_empty($descr)) {
+        print_debug("Found, but descr empty..\n");
         return [];
     }
     $port_ifAlias['descr'] = $descr;
@@ -75,6 +80,7 @@ function custom_port_parser($port) {
         $port_ifAlias['notes'] = $matches[1];
     }
 
+    print_debug("Found by function pattern..\n");
     print_debug_vars($port_ifAlias);
 
     return $port_ifAlias;

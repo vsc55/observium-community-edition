@@ -40,7 +40,7 @@ E7AlarmType ::= TEXTUAL-CONVENTION
         equipOverheat(19),
         lossOfSignal(20),
         aggLinkDown(21),
-        erpsIsolatedNode(22),
+        eapsIsolatedNode(22),
         erpsRingPortDown(23),
         erpsRingDown(24),
         erpsSecondRingMaster(25),
@@ -207,27 +207,108 @@ E7AlarmType ::= TEXTUAL-CONVENTION
         ontDsSdber(186),
         ontRgConfigUnavailable(187),
         h248MgToMgcAssocDown(188),
-        ontFileUpdateInProgress(189),
+        fileUpdateInProgress(189),
         ont3pFileUpgradeInProgress(190),
         differentOnt3pFile(191),
         voiceHwInitFailure(192),
         switchCriticalEvent(193),
         voipDhcpFail(194),
+        improperConnectionOnStackingPort(195),
         potsCalibrationFailure(196),
         dcVbattFailure(197),
-        improperConnectionOnStackingPort(195),
         ontDyingGasp(200),
         lowRxOptPowerNe(201),
         highRxOptPowerNe(202),
+        lowRxOptPowerFe(203),
+        highRxOptPowerFe(204),
         lowTxOptPower(205),
         highTxOptPower(206),
+        lowLaserBias(207),
+        highLaserBias(208),
+        lowOptLaunchPower(209),
+        highOptLaunchPower(210),
+        lowOntTemperature(211),
+        highOntTemperature(212),
         xdslVectoringProvFailure(213),
         ontSelfTestFailed(214),
+        aggInterfaceDegraded(215),
         ontSipConfigUnavailable(216),
-		msgQueueOverflow(228),
-		voipMsgQueueOverflow(229),
-		ontYellowTemp(230),
-		ontRedTemp(231)
+        ponRogueDetected(217),
+        ontRogueDetected(218),
+        erpsIsolatedNode(219),
+        erpsLocalSf(220),
+        erpsRemoteSf(221),
+        erpsLocalMs(222),
+        erpsRemoteMs(223),
+        erpsLocalFs(224),
+        erpsRemoteFs(225),
+        erpsFopTo(226),
+        erpsFopPm(227),
+        msgQueueOverflow(228),
+        voipMsgQueueOverflow(229),
+        ontYellowTemp(230),
+        ontRedTemp(231),
+        missingOntImages(232),
+        unexpectedMessageSize(233),
+        tooManyLinkedOnts(234),
+        coefFileInProgress(235),
+        differentCoefFile(236),
+        igmpVersionMismatch(237),
+        dslConfigFileUpgrade(238),
+        differentDslConfigFile(239),
+
+        noDslConfigFile(240),
+        sipuaRegName(241),
+        sipuaRegReach(242),
+        sipuaRegConnect(243),
+        sipuaRegValidate(244),
+        sipuaRegAuth(245),
+        sipuaRegTimeout(246),
+        sipuaRegFail(247),
+        ffpDown(248),
+        ffpNoProtect(249),
+
+        fileserverUnavailable(250),
+        dcVbatt80VFailure(251),
+        dcVbattNegtive54VFailure(252),
+        dcVbattNegtive36VFailure(253),
+        vectoringFailure(254),
+        vccLinkFailure(255),
+        vectoringHardwareFailure(256),
+        vectoringServiceDegrade(257),
+        slvTargetDown(258),
+        vectoringSoftwareVersionMismatch(259),
+
+        ontPreloadInProgress(260),
+        cpePortProvFail(261),
+        cpeUplinkGroupProvFail(262),
+        cpeUplinkGroupLowRateDs(263),
+        cpeUplinkGroupLowRateUs(264),
+        cpeUplinkGroupLos(265),
+        cpePortLos(266),
+        mgmtgePortsDown(267),
+        mgmtgeGatewayNotReachable(268),
+        dyingGasp(269),
+
+        hg0Failure(270),
+        timingFirmwareMismatch(271),
+        timingFirmwareDownload(272),
+        timingFirmwareCorrupt(273),
+        ontFileServerNotProvisioned(274),
+        fantrayCapabilityInSufficient(275),
+        failureOnRemoteOntFile(276),
+        ontFileServerUnavailable(277),
+        ponBwOverSubscribedDs(278),
+        pseoverloadred(279),
+        remotePowerFailure(280),
+
+		ulpDown(282),
+        ulpNoProtect(283),
+
+        fallBackToLocalAuthen(285),
+		tacacsAuthUnreachable(286),
+		tacacsAccUnreachable(287),
+		poweredDown(288)
     }
 
 E7EventType ::= TEXTUAL-CONVENTION
@@ -344,8 +425,63 @@ E7EventType ::= TEXTUAL-CONVENTION
         ontFileRemoveFailed(107),
         ontUserReset(108),
         lldpDelete(109),
-        lldpUpdate(110)
-        ontAutoQuarantine(111)
+        lldpUpdate(110),
+        ontAutoQuarantine(111),
+        ontT1InbandLpbkStart(112),
+        ontT1InbandLpbkEnd(113),
+        license3rdPartyOntDelink(114),
+        coefFileTransInProgress(115),
+        coefFileTransSuccess(116),
+        coefFileTransHadErrors(117),
+        coefFileTransFailed(118),
+        coefFileApplyInProgress(119),
+        coefFileApplySuccess(120),
+        coefFileApplyHadErrors(121),
+        coefFileApplyFailed(122),
+        coefFileCancelInProgress(123),
+        coefFileCancelSuccess(124),
+        coefFileCancelHadErrors(125),
+        coefFileCancelFailed(126),
+        coefFileRemoveInProgress(127),
+        coefFileRemoveSuccess(128),
+        coefFileRemoveHadErrors(129),
+
+        coefFileRemoveFailed(130),
+        dslConfigRetrieveInProgress(131),
+        dslConfigRetrieveComplete(132),
+        dslConfigRetrieveCompleteWithErrors(133),
+        dslConfigRetrieveFailed(134),
+        dslConfigApplyInProgress(135),
+        dslConfigApplyComplete(136),
+        dslConfigApplyCompleteWithErrors(137),
+        dslConfigApplyFailed(138),
+        dslConfigCancelInProgress(139),
+
+        dslConfigCancelComplete(140),
+        dslConfigCancelCompleteWithErrors(141),
+        dslConfigCancelFailed(142),
+        dslConfigRemoveInProgress(143),
+        dslConfigRemoveComplete(144),
+        dslConfigRemoveCompleteWithErrors(145),
+        dslConfigRemoveFailed(146),
+        resettingVoipCard(147),
+        ffpSwitchover(148),
+        vectoringModeSwitched(149),
+
+        fallbackToNonVectoring(150),
+        ontFileInstallInProgress(151),
+        ontFileInstallComplete(152),
+        ontFileInstallCompleteWithErrors(153),
+        ontFileInstallFailed(154),
+        recoveredFromFallback(159),
+        failToMoveEthSvc(160),
+        dnxGponLifFailed(161),
+        nonvectoringcpearrived(162),
+        ulpSwitchover(163),
+        ontPortColorEnabled(164),
+        ontPortColorDisabled(165),
+        ontPortColorDisplay(166),
+        ontPortColorUndisplay(167)
     }
 
 E7SecurityType ::= TEXTUAL-CONVENTION
@@ -535,8 +671,8 @@ E7ObjectClass ::= TEXTUAL-CONVENTION
         mcastFilter(105),
         syslog(106),
         mvrVlan(107),
-        unused108(108),
-        unused109(109),
+        dhcpLease(108),
+        systemVlanMap(109),
         ethOamCfg(110),
         ethOamPmProfile(111),
         ethOamMeg(112),
@@ -547,19 +683,19 @@ E7ObjectClass ::= TEXTUAL-CONVENTION
         vlanIgmpProfile(117),
         h248MediaGwProfile(118),
         ontH248Svc(119),
-        unused120(120),
-        unused121(121),
-        unused122(122),
-        unused123(123),
-        unused124(124),
-        unused125(125),
-        unused126(126),
-        unused127(127),
-        unused128(128),
+        ethOamDiscRmtMep(120),
+        ethOamLbResults(121),
+        ethOamLtHistory(122),
+        ethOamLtResults(123),
+        ethOamMepStats(124),
+        ethOamMipStats(125),
+        ethOamFrameDelay(126),
+        ethOamFrameLoss(127),
+        ifVlanIgmpRtd(128),
         backplane10GePort(129),
-        unused130(130),
-        unused131(131),
-        unused132(132),
+        bkplLink(130),
+        sslPrivKey(131),
+        sslCert(132),
         l2cpRange(133),
         l2cpFilter(134),
         powerInput(135),
@@ -570,7 +706,7 @@ E7ObjectClass ::= TEXTUAL-CONVENTION
         lcH248Svc(140),
         lcSipSvc(141),
         lcTdmGwSvc(142),
-        unused143(143),
+        bkplGePort(143),
         vdslPortTemplate(144),
         vdslPortTemplateData(145),
         vdslPortTemplateMask(146),
@@ -582,38 +718,89 @@ E7ObjectClass ::= TEXTUAL-CONVENTION
         pppoeProf(152),
         dialPlan(153),
         dialPlanRule(154),
-        unused155(155),
-        unused156(156),
-        unused157(157),
+        vdslBpsc(155),
+        pppoeSession(156),
+        pppoeDiscStats(157),
         sipGwProf(158),
         ontMgcpSvc(159),
         mgcpMediaGwProf(160),
         ipPrecMap(161),
         avoCfg(162),
-        unused163(163),
-        unused164(164),
+        vdslPortEthPm(163),
+        vdslBondRtd(164),
         ontRg(165),
         ontFb(166),
         ontPonUsCos(167),
         macFilter(168),
         macFilterRule(169),
-        unused170(170),
-        unused171(171),
+        ontPhyPort(170),
+        ontMgmtSvc(171),
         ponUsCosProf(172),
         lcH248Gw(173),
         lcMgcpGw(174),
         ontRgMgmtProf(175),
-        unused176(176),
-        unused177(177),
-        unused178(178),
-        unused179(179),
-        unused180(180),
-        unused181(181),
-        unused182(182),
-        unused183(183),
-        unused184(184),
+        ethPortLocalLldp(176),
+        vdslDelt(177),
+        vdslDeltHlinReal(178),
+        vdslDeltHlinImag(179),
+
+        vdslDeltHlog(180),
+        vdslDeltQln(181),
+        vdslDeltSnr(182),
+        eapsTopoEntry(183),
+        ethPortRemoteLldp(184),
         vdslVectorGrp(185),
-        unused186(186)
+        ethPortLldpUnrecTlvs(186),
+        ontEthStatsRtd(187),
+        g8032Ring(188),
+        g8032RingPortCfg(189),
+
+        vdslSelt(190),
+        vdslSeltTFunc(191),
+        license(192),
+        mcastWhiteList(193),
+        mcastWhiteListRange(194),
+        singleLinkEthWhiteList(195),
+        ontEthWhiteList(196),
+        bondedLinkEthWhiteList(197),
+        eth40GePort(198),
+        ffpGroup(199),
+
+        ffpGroupActPort(200),
+        dot1xCfg(201),
+        dot1xAuthServer(202),
+        dot1xProf(203),
+        vlanIpHost(204),
+        dhcpSvcProf(205),
+        dot1xAcctServer(206),
+        dot1xStatsRtd(207),
+        vccPort(208),
+        mgmtGe(209),
+
+        cpePort(211),
+        cpeBondedUplink(212),
+        vdslBondUplinkRtd(213),
+        cpeBondedUplinkRtd(214),
+        cpePortEthPm(215),
+        dyingGasp(216),
+        vtuBpsc(217),
+        externOnt(218),
+        voicePolicyProf(219),
+
+        activation(220),
+        VcpMgmt(221),
+        vdslVector(222),
+        vdslVectorFallbackTmpltData(223),
+        vdslVectorFallbackTmpltMask(224),
+        powerDomain(225),
+        powerNode(226),
+
+        ulpGroup(233),
+
+        tacacsCfg(236),
+        tacacsAuthServer(237),
+        tacacsAcctServer(238)
+        
     }
 
 -- the following items are for the future E7-Calix MIB
@@ -623,7 +810,7 @@ E7AdminStatus ::= TEXTUAL-CONVENTION
     SYNTAX INTEGER {
         unknown(0),
         enabled(1),
-		alarmsuppress(2),
+        alarmsuppress(2),
         disabled(3)
     }
 
@@ -633,10 +820,10 @@ E7CardType ::= TEXTUAL-CONVENTION
     SYNTAX INTEGER {
         none(0),
         unknown(1),
-		agg(1012),              -- E5400 card
-		backplaneE5400(1013),
-		backplaneE7x2SlotChassis1RU(1014),
-		fantrayE5400(1015),
+        agg(1012),              -- E5400 card
+        backplaneE5400(1013),
+        backplaneE7x2SlotChassis1RU(1014),
+        fantrayE5400(1015),
         fantrayE7x2SlotChassis1RU(1016),
         gpon4(1017),
         activeEthernet(1018),   -- E5312 card
@@ -647,21 +834,49 @@ E7CardType ::= TEXTUAL-CONVENTION
         ge12(1023),
         scp(1026),
         ge24(1027),
+        ge32(1028),
         gpon4x(1029),
         ge24x(1030),
-        vdsl48c(1031),
+        vdsl48c(1031), -- VDSL combo card 
         vdsl48(1032),
+        e5Voip(1033),
         gpon4r2(1036),
         gpon8(1037),
         gpon8x(1038),
+        vdsl48Db(1039),
         e348c(1040),
         backplaneE348C(1041),
+        ex10gTestLc(1042),
+        e3Voip(1043),
+        scpPlus(1044),
         fantrayE7x2SlotChassis1RU2(1045),
-        vdsl48c(1046),
+        vdsl48d(1046), -- VDSL data only
+        e38g(1047),-- E3-8G
+        e38gIntf(1048), -- E3-8G Intferface
+        backplaneE38G(1049), -- E3-8G backplane
+        scp240g(1500), -- SCP2-40ge
+        ge4x(1501), -- 10GE4x
+        gpon16x(1502),
+        scp210g(1503),  -- SCP2-10ge
+        ngpon4(1504),
+        fantrayExLFta2(1510),
+        vdsl48cr2(1515), -- VDSL combo card r2
+        vdsl48r2(1516), -- VDSL overlay card r2
+        vdsl48dr2(1517), -- VDSL data only card r2
+        vcp192(1518), -- VCP 192 card
+        vcp384(1519), -- VCP 384 card
         fantrayE5Fta2(2000),
         e548c(2001),
         e548(2003),
-        backplaneE5(2005)
+        e548Db(2004),
+        backplaneE5(2005),
+        e348cr2Fiber(2006), --E3 VDSL-48C R2 Fiber
+        e348cr2Hybrid(2007), -- E3 VDSL-48C R2 Hybrid
+        e348or2Fiber(2008), --E3 VDSL-48O R2 Fiber
+        e348or2Hybrid(2009), -- E3 VDSL-48O R2 Hybrid
+        e3vcp192(2010),  -- E3 VCP192
+        e3vdsl48r2Voip(2011),
+        e3vdsl48r2Db(2012)
     }
 
 E7PowerLevel ::= TEXTUAL-CONVENTION
@@ -684,6 +899,85 @@ E7SnmpVers ::= TEXTUAL-CONVENTION
         v2c(2),
         v3(3)
     }
+
+E7SnmpMsgFilter ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "E7 snmp message filter(for trap destinations)"
+    SYNTAX INTEGER {
+        all(0),
+        event(1),
+        tca(2),
+        db(3),
+        alarm(4)
+    }
+
+E7OntType ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "E7 ONT types"
+    SYNTAX INTEGER {
+               none(0),
+               unknown(1)
+           }   
+           
+E7EtherType ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "E7 Ethernet types"
+    SYNTAX INTEGER {
+               invalid(0),
+               e8100(1),
+               e88a8(2),
+               e9100(3),
+               any(4),
+               ppoe(5),
+               arp(6),
+               ipv4(7),
+               ipv6(8)
+           }   
+           
+E7Pbit ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "E7 Pbit "
+    SYNTAX INTEGER {
+                invalid(0),
+                pbit(1),
+                promote(2),
+                useCosId(3),
+                useIfMap(4),
+                preserve(5),
+                useOuter(6)
+    }
+
+E7BondedInterfaceIndex ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "E7 DSL bonded interface index"
+    SYNTAX INTEGER (0..2237183)
+
+E7OperStatus ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "Operational status values"
+    SYNTAX INTEGER {
+        invalid(0),
+        enabled(1),
+        degraded(2),
+        systemdisabled(3)
+        userdisabled(4)
+    }
+
+E7XdslGrpOperStatus ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION "Xdsl group Operational status values"
+    SYNTAX INTEGER {
+        invalid(0),
+        up(1),
+        down(2),
+        test(3)
+        unknown(4)
+        dormant(5)
+        notpresent(6)
+        lowlayerdown(7)
+    }
+
+
 
 END
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,12 +8,13 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Entities;
+namespace Phpfastcache\Entities;
 
 /**
  * Class DriverStatistic
@@ -26,7 +28,7 @@ class DriverStatistic
     protected $info = '';
 
     /**
-     * @var string
+     * @var int
      */
     protected $size = 0;
 
@@ -41,19 +43,41 @@ class DriverStatistic
     protected $rawData;
 
     /**
-     * @return string|bool Return infos or false if no information available
+     * @return string Return info or false if no information available
      */
-    public function getInfo()
+    public function getInfo(): string
     {
         return $this->info;
     }
 
     /**
-     * @return int|bool Return size in octet or false if no information available
+     * @param string $info
+     * @return $this
      */
-    public function getSize()
+    public function setInfo(string $info): self
+    {
+        $this->info = $info;
+
+        return $this;
+    }
+
+    /**
+     * @return int Return size in octet or false if no information available
+     */
+    public function getSize(): int
     {
         return $this->size;
+    }
+
+    /**
+     * @param int $size
+     * @return $this
+     */
+    public function setSize(int $size)
+    {
+        $this->size = $size;
+
+        return $this;
     }
 
     /**
@@ -65,33 +89,10 @@ class DriverStatistic
     }
 
     /**
-     * @param $info
-     * @return $this
-     */
-    public function setInfo($info)
-    {
-        $this->info = ($info ?: '');
-
-        return $this;
-    }
-
-
-    /**
-     * @param int $size
-     * @return $this
-     */
-    public function setSize($size)
-    {
-        $this->size = ($size ?: 0);
-
-        return $this;
-    }
-
-    /**
      * @param mixed $data
      * @return $this
      */
-    public function setData($data)
+    public function setData($data): self
     {
         $this->data = ($data ?: '');
 
@@ -110,7 +111,7 @@ class DriverStatistic
      * @param mixed $raw
      * @return $this
      */
-    public function setRawData($raw)
+    public function setRawData($raw): self
     {
         $this->rawData = $raw;
 
@@ -120,13 +121,13 @@ class DriverStatistic
     /**
      * @return array
      */
-    public function getPublicDesc()
+    public function getPublicDesc(): array
     {
         return [
-          'Info' => 'Cache Information',
-          'Size' => 'Cache Size',
-          'Data' => 'Cache items keys',
-          'RawData' => 'Cache raw data',
+            'Info' => 'Cache Information',
+            'Size' => 'Cache Size',
+            'Data' => 'Cache items keys',
+            'RawData' => 'Cache raw data',
         ];
     }
 }

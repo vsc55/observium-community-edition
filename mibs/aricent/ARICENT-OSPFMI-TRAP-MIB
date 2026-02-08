@@ -1,7 +1,5 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsstdmiostrp.mib,v 1.2 2012/09/07 09:52:06 siva Exp $
-
 ARICENT-OSPFMI-TRAP-MIB DEFINITIONS ::= BEGIN
 
     IMPORTS

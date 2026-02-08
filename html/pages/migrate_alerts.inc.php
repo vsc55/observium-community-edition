@@ -81,10 +81,10 @@ foreach ($checkers as $alert) {
         //print_vars(array_diff_key($legacy, $entities));
         //echo count($add) .' to add, '.count($remove).' to remove. <br />';
 
-        $changed = count($add) + count($remote);
+        $changed = safe_count($add) + safe_count($remote);
 
-        $result   = count($data);
-        $existing = count(get_alert_entities($alert['alert_test_id']));
+        $result   = safe_count($data);
+        $existing = safe_count(get_alert_entities($alert['alert_test_id']));
 
         echo '<div class="row">';
         echo '<div class="col-md-6">';
@@ -97,7 +97,7 @@ foreach ($checkers as $alert) {
             echo('<table class="table table-condensed-more table-striped" style="margin-bottom: 0px;">');
 
             // Loop the associations which link this alert to this device
-            foreach ($alert['assocs'] as $assoc_id => $assoc) {
+            foreach ($alert['assocs'] as $assoc) {
 
                 echo('<tr>');
                 echo('<td style="width: 50%">');
@@ -146,9 +146,9 @@ foreach ($checkers as $alert) {
 
         echo '</div>';
 
-        $c_exist  = count($existing_entities);
-        $c_legacy = count($legacy);
-        $c_new    = count($entities);
+        $c_exist  = safe_count($existing_entities);
+        $c_legacy = safe_count($legacy);
+        $c_new    = safe_count($entities);
 
         //echo '<table class="table table-bordered"><tr><th>Database</th><td>'.count($existing_entities).'</td><th>Legacy Rules</th><td>'.count($legacy).'</td><th>New Ruleset</th><td>'.count($entities).'</td></tr></table>';
 

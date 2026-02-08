@@ -1,4 +1,4 @@
--- ArubaOS 8.11.2.0_87947
+-- ArubaOS 8.12.0.4_91755
 -- vim:set ts=4 sw=4:
 ARUBA-TC DEFINITIONS ::= BEGIN
 
@@ -248,7 +248,7 @@ ArubaSubAuthenticationMethods ::= TEXTUAL-CONVENTION
 ArubaEncryptionType ::= TEXTUAL-CONVENTION
 	STATUS		current
 	DESCRIPTION
-  		" Encryption Method."
+  		" Encryption Type."
 	SYNTAX       INTEGER {
 		 				none(0),
 		 				static-wep(1),
@@ -271,7 +271,8 @@ ArubaEncryptionType ::= TEXTUAL-CONVENTION
                         wpa3-cnsa(18),
                         owe-aes(20),
                         wpa3-sae-aes(21),
-                        wpa3-aes-gcmp-256(22)
+                        wpa3-aes-gcmp-256(22),
+                        wpa3-aes-ccm-128(23) 
 					  }
      
 ArubaUserForwardMode ::= TEXTUAL-CONVENTION
@@ -347,7 +348,7 @@ ArubaStationType ::= TEXTUAL-CONVENTION
 ArubaEncryptionMethods ::= TEXTUAL-CONVENTION
 	STATUS		current
 	DESCRIPTION
-  		" Represents the Actions in an ACL rule."
+  		" Encryption Methods. "
     SYNTAX      BITS{
 						disabled(0),
 						static-wep(1),

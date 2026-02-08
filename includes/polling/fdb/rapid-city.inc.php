@@ -63,7 +63,7 @@ if (snmp_status()) {
         $entries = snmpwalk_cache_twopart_oid($device, 'rcBridgeSpbmMacCVlanId', $entries, 'RAPID-CITY', NULL, OBS_SNMP_ALL_TABLE);
         print_debug_vars($entries);
 
-        foreach ($entries as $isid => $data1) {
+        foreach ($entries as $data1) {
             foreach ($data1 as $mac => $entry) {
 
                 // Make sure the ifIndex is actually valid

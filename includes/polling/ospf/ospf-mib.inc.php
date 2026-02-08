@@ -432,7 +432,7 @@ foreach ($ospf_nbrs_poll as $ospf_nbr_index => $ospf_nbr_poll) {
         //  $insert['port_id'] = current($ids);
         //}
 
-        if ($nbr_port_id = port_id_by_subnet_ipv4($device['device_id'], $ospf_nbr_poll['ospfNbrIpAddr'])) {
+        if ($nbr_port_id = get_port_id_by_subnet_ipv4($device['device_id'], $ospf_nbr_poll['ospfNbrIpAddr'])) {
             $insert['port_id'] = $nbr_port_id;
         }
 

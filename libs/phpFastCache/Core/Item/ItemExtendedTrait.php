@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,42 +8,42 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Core\Item;
+namespace Phpfastcache\Core\Item;
 
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\EventManager;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheLogicException;
+use Countable;
+use DateTime;
+use DateTimeInterface;
+use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException, PhpfastcacheInvalidArgumentTypeException, PhpfastcacheLogicException};
+use Phpfastcache\Util\ClassNamespaceResolverTrait;
+
 
 /**
  * Class ItemExtendedTrait
  * @package phpFastCache\Core\Item
- * @property \DateTimeInterface $expirationDate Expiration date of the item
- * @property \DateTimeInterface $creationDate Creation date of the item
- * @property \DateTimeInterface $modificationDate Modification date of the item
+ * @property DateTimeInterface $expirationDate Expiration date of the item
+ * @property DateTimeInterface $creationDate Creation date of the item
+ * @property DateTimeInterface $modificationDate Modification date of the item
  * @property mixed $data Data of the item
  * @property bool $fetched Fetch flag status
- * @property array $tags The tags array
- * @property array $removedTags The removed tags array
+ * @property string $key The item key
  */
 trait ItemExtendedTrait
 {
+    use ClassNamespaceResolverTrait;
+    use TaggableCacheItemTrait;
+
     /********************
      *
      * PSR-6 Extended Methods
      *
      *******************/
-
-    /**
-     * @var EventManager
-     */
-    protected $eventManager;
-
 
     /**
      * @var ExtendedCacheItemPoolInterface
@@ -55,17 +56,41 @@ trait ItemExtendedTrait
     protected $encodedKey;
 
     /**
+     * Item constructor.
+     * @param ExtendedCacheItemPoolInterface $driver
+     * @param $key
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    public function __construct(ExtendedCacheItemPoolInterface $driver, $key)
+    {
+        if (\is_string($key)) {
+            $this->key = $key;
+            $this->driver = $driver;
+            if($driver->getConfig()->isUseStaticItemCaching()){
+                $this->driver->setItem($this);
+            }
+            $this->expirationDate = new DateTime();
+            if ($this->driver->getConfig()->isItemDetailedDate()) {
+                $this->creationDate = new DateTime();
+                $this->modificationDate = new DateTime();
+            }
+        } else {
+            throw new PhpfastcacheInvalidArgumentTypeException('string', $key);
+        }
+    }
+
+    /**
      * @return string
      */
-    public function getEncodedKey()
+    public function getEncodedKey(): string
     {
         if (!$this->encodedKey) {
-            $keyHashFunction = $this->driver->getConfigOption('defaultKeyHashFunction');
+            $keyHashFunction = $this->driver->getConfig()->getDefaultKeyHashFunction();
 
             if ($keyHashFunction) {
                 $this->encodedKey = $keyHashFunction($this->getKey());
             } else {
-                $this->encodedKey = md5($this->getKey());
+                $this->encodedKey = $this->getKey();
             }
         }
 
@@ -73,17 +98,9 @@ trait ItemExtendedTrait
     }
 
     /**
-     * @return mixed
+     * @return DateTimeInterface
      */
-    public function getUncommittedData()
-    {
-        return $this->data;
-    }
-
-    /**
-     * @return \DateTimeInterface
-     */
-    public function getExpirationDate()
+    public function getExpirationDate(): DateTimeInterface
     {
         return $this->expirationDate;
     }
@@ -91,104 +108,147 @@ trait ItemExtendedTrait
     /**
      * Alias of expireAt() with forced $expiration param
      *
-     * @param \DateTimeInterface $expiration
+     * @param DateTimeInterface $expiration
      *   The point in time after which the item MUST be considered expired.
      *   If null is passed explicitly, a default value MAY be used. If none is set,
      *   the value should be stored permanently or for as long as the
      *   implementation allows.
      *
-     * @return static
+     * @return ExtendedCacheItemInterface
      *   The called object.
      */
-    public function setExpirationDate(\DateTimeInterface $expiration)
+    public function setExpirationDate(DateTimeInterface $expiration): ExtendedCacheItemInterface
     {
         return $this->expiresAt($expiration);
     }
 
     /**
-     * @return \DateTimeInterface
-     * @throws phpFastCacheLogicException
+     * @return DateTimeInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function getCreationDate()
+    public function getCreationDate(): DateTimeInterface
     {
-        if ($this->driver->getConfig()[ 'itemDetailedDate' ]) {
+        if ($this->driver->getConfig()->isItemDetailedDate()) {
             return $this->creationDate;
-        } else {
-            throw new phpFastCacheLogicException('Cannot access to the creation date when the "itemDetailedDate" configuration is disabled.');
         }
+
+        throw new PhpfastcacheLogicException('Cannot access to the creation date when the "itemDetailedDate" configuration is disabled.');
     }
 
     /**
-     * @param \DateTimeInterface $date
-     * @return $this
-     * @throws phpFastCacheLogicException
+     * @param DateTimeInterface $date
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function setCreationDate(\DateTimeInterface $date)
+    public function setCreationDate(DateTimeInterface $date): ExtendedCacheItemInterface
     {
-        if ($this->driver->getConfig()[ 'itemDetailedDate' ]) {
+        if ($this->driver->getConfig()->isItemDetailedDate()) {
             $this->creationDate = $date;
             return $this;
-        } else {
-            throw new phpFastCacheLogicException('Cannot access to the creation date when the "itemDetailedDate" configuration is disabled.');
         }
+
+        throw new PhpfastcacheLogicException('Cannot access to the creation date when the "itemDetailedDate" configuration is disabled.');
     }
 
     /**
-     * @return \DateTimeInterface
-     * @throws phpFastCacheLogicException
+     * @return DateTimeInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function getModificationDate()
+    public function getModificationDate(): DateTimeInterface
     {
-        if ($this->driver->getConfig()[ 'itemDetailedDate' ]) {
+        if ($this->driver->getConfig()->isItemDetailedDate()) {
             return $this->modificationDate;
-        } else {
-            throw new phpFastCacheLogicException('Cannot access to the modification date when the "itemDetailedDate" configuration is disabled.');
         }
+
+        throw new PhpfastcacheLogicException('Cannot access to the modification date when the "itemDetailedDate" configuration is disabled.');
     }
 
     /**
-     * @param \DateTimeInterface $date
-     * @return $this
-     * @throws phpFastCacheLogicException
+     * @param DateTimeInterface $date
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheLogicException
      */
-    public function setModificationDate(\DateTimeInterface $date)
+    public function setModificationDate(DateTimeInterface $date): ExtendedCacheItemInterface
     {
-        if ($this->driver->getConfig()[ 'itemDetailedDate' ]) {
+        if ($this->driver->getConfig()->isItemDetailedDate()) {
             $this->modificationDate = $date;
             return $this;
-        } else {
-            throw new phpFastCacheLogicException('Cannot access to the modification date when the "itemDetailedDate" configuration is disabled.');
         }
+
+        throw new PhpfastcacheLogicException('Cannot access to the modification date when the "itemDetailedDate" configuration is disabled.');
     }
 
     /**
      * @return int
      */
-    public function getTtl()
+    public function getTtl(): int
     {
-        return max(0, $this->expirationDate->getTimestamp() - time());
+        return \max(0, $this->expirationDate->getTimestamp() - \time());
     }
 
     /**
      * @return bool
      */
-    public function isExpired()
+    public function isExpired(): bool
     {
-        return $this->expirationDate->getTimestamp() < (new \DateTime())->getTimestamp();
+        return $this->expirationDate->getTimestamp() < (new DateTime())->getTimestamp();
     }
 
     /**
-     * @param int $step
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @return bool
      */
-    public function increment($step = 1)
+    public function isNull(): bool
     {
-        if (is_int($step)) {
+        return $this->data === null;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        return empty($this->data);
+    }
+
+    /**
+     * Return the data length:
+     * Either the string length if it's a string (binary mode)
+     * # or the number of element (count) if it's an array
+     * # or the number returned by count() if it's an object implementing \Countable interface
+     * # -1 for anything else
+     * @return int
+     */
+    public function getLength(): int
+    {
+        switch (\gettype($this->data)) {
+            case 'array':
+            case 'object':
+                if (\is_array($this->data) || $this->data instanceof Countable) {
+                    return \count($this->data);
+                }
+                break;
+
+            case 'string':
+                return \strlen($this->data);
+                break;
+        }
+
+        return -1;
+    }
+
+
+    /**
+     * @param int $step
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    public function increment($step = 1): ExtendedCacheItemInterface
+    {
+        if (\is_int($step)) {
             $this->fetched = true;
             $this->data += $step;
         } else {
-            throw new phpFastCacheInvalidArgumentException('$step must be numeric.');
+            throw new PhpfastcacheInvalidArgumentException('$step must be numeric.');
         }
 
         return $this;
@@ -196,16 +256,16 @@ trait ItemExtendedTrait
 
     /**
      * @param int $step
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function decrement($step = 1)
+    public function decrement($step = 1): ExtendedCacheItemInterface
     {
-        if (is_int($step)) {
+        if (\is_int($step)) {
             $this->fetched = true;
             $this->data -= $step;
         } else {
-            throw new phpFastCacheInvalidArgumentException('$step must be numeric.');
+            throw new PhpfastcacheInvalidArgumentException('$step must be numeric.');
         }
 
         return $this;
@@ -213,17 +273,19 @@ trait ItemExtendedTrait
 
     /**
      * @param array|string $data
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function append($data)
+    public function append($data): ExtendedCacheItemInterface
     {
-        if (is_array($this->data)) {
+        if (\is_array($this->data)) {
             $this->data[] = $data;
-        } else if (is_string($data)) {
-            $this->data .= (string)$data;
         } else {
-            throw new phpFastCacheInvalidArgumentException('$data must be either array nor string.');
+            if (\is_string($data)) {
+                $this->data .= (string)$data;
+            } else {
+                throw new PhpfastcacheInvalidArgumentException('$data must be either array nor string.');
+            }
         }
 
         return $this;
@@ -232,63 +294,18 @@ trait ItemExtendedTrait
 
     /**
      * @param array|string $data
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function prepend($data)
+    public function prepend($data): ExtendedCacheItemInterface
     {
-        if (is_array($this->data)) {
-            array_unshift($this->data, $data);
-        } else if (is_string($data)) {
-            $this->data = (string)$data . $this->data;
+        if (\is_array($this->data)) {
+            \array_unshift($this->data, $data);
         } else {
-            throw new phpFastCacheInvalidArgumentException('$data must be either array nor string.');
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param $tagName
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    public function addTag($tagName)
-    {
-        if (is_string($tagName)) {
-            $this->tags = array_unique(array_merge($this->tags, [$tagName]));
-
-            return $this;
-        } else {
-            throw new phpFastCacheInvalidArgumentException('$tagName must be a string');
-        }
-    }
-
-    /**
-     * @param array $tagNames
-     * @return $this
-     */
-    public function addTags(array $tagNames)
-    {
-        foreach ($tagNames as $tagName) {
-            $this->addTag($tagName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param array $tags
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    public function setTags(array $tags)
-    {
-        if (count($tags)) {
-            if (array_filter($tags, 'is_string')) {
-                $this->tags = $tags;
+            if (\is_string($data)) {
+                $this->data = (string)$data . $this->data;
             } else {
-                throw new phpFastCacheInvalidArgumentException('$tagName must be an array of string');
+                throw new PhpfastcacheInvalidArgumentException('$data must be either array nor string.');
             }
         }
 
@@ -296,110 +313,56 @@ trait ItemExtendedTrait
     }
 
     /**
-     * @return array
-     */
-    public function getTags()
-    {
-        return $this->tags;
-    }
-
-    /**
-     * @param string $separator
-     * @return string
-     */
-    public function getTagsAsString($separator = ', ')
-    {
-        return implode($separator, $this->tags);
-    }
-
-    /**
-     * @param $tagName
-     * @return $this
-     */
-    public function removeTag($tagName)
-    {
-        if (($key = array_search($tagName, $this->tags)) !== false) {
-            unset($this->tags[ $key ]);
-            $this->removedTags[] = $tagName;
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param array $tagNames
-     * @return $this
-     */
-    public function removeTags(array $tagNames)
-    {
-        foreach ($tagNames as $tagName) {
-            $this->removeTag($tagName);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function getRemovedTags()
-    {
-        return array_diff($this->removedTags, $this->tags);
-    }
-
-    /**
      * Return the data as a well-formatted string.
      * Any scalar value will be casted to an array
-     * @param int $option json_encode() options
-     * @param int $depth json_encode() depth
+     * @param int $option \json_encode() options
+     * @param int $depth \json_encode() depth
      * @return string
      */
-    public function getDataAsJsonString($option = 0, $depth = 512)
+    public function getDataAsJsonString(int $option = 0, int $depth = 512): string
     {
         $data = $this->get();
 
-        if (is_object($data) || is_array($data)) {
-            $data = json_encode($data, $option, $depth);
+        if (\is_object($data) || \is_array($data)) {
+            $data = \json_encode($data, $option, $depth);
         } else {
-            $data = json_encode([$data], $option, $depth);
+            $data = \json_encode([$data], $option, $depth);
         }
 
-        return json_encode($data, $option, $depth);
+        return \json_encode($data, $option, $depth);
     }
 
     /**
      * Implements \JsonSerializable interface
      * @return mixed
      */
+    #[\ReturnTypeWillChange] // PHP 8.1 compatibility
     public function jsonSerialize()
     {
         return $this->get();
     }
 
-
     /**
-     * Set the EventManager instance
-     *
-     * @param EventManager $em
-     * @return $this
+     * @param ExtendedCacheItemPoolInterface $driverPool
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function setEventManager(EventManager $em)
+    public function doesItemBelongToThatDriverBackend(ExtendedCacheItemPoolInterface $driverPool): bool
     {
-        $this->eventManager = $em;
-
-        return $this;
+        return $driverPool->getClassNamespace() === $this->getClassNamespace();
     }
 
-
     /**
-     * Prevent recursions for Debug (php 5.6+)
      * @return array
+     * @todo Is it still useful ??
+     *
+     * Prevent recursions for Debug (php 5.6+)
      */
     final public function __debugInfo()
     {
-        $info = get_object_vars($this);
-        $info[ 'driver' ] = 'object(' . get_class($info[ 'driver' ]) . ')';
+        $info = \get_object_vars($this);
+        $info['driver'] = 'object(' . \get_class($info['driver']) . ')';
 
-        return (array)$info;
+        return $info;
     }
 }

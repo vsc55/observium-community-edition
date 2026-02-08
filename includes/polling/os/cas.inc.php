@@ -18,10 +18,9 @@
 // BLUECOAT-CAS-MIB::casAvEngineVersion.0 = STRING: 8.2.5.17
 // BLUECOAT-CAS-MIB::casAvPatternVersion.0 = STRING: 160119 210400.6788010
 
-$av = snmp_get($device, 'casAvVendorName.0', '-Osqv', 'BLUECOAT-CAS-MIB');
-if (!empty($av)) {
-    $eng      = snmp_get($device, 'casAvEngineVersion.0', '-Osqv', 'BLUECOAT-CAS-MIB');
-    $pat      = snmp_get($device, 'casAvPatternVersion.0', '-Osqv', 'BLUECOAT-CAS-MIB');
+if ($av = snmp_get_oid($device, 'casAvVendorName.0', 'BLUECOAT-CAS-MIB')) {
+    $eng      = snmp_get_oid($device, 'casAvEngineVersion.0', 'BLUECOAT-CAS-MIB');
+    $pat      = snmp_get_oid($device, 'casAvPatternVersion.0', 'BLUECOAT-CAS-MIB');
     $features = "$av-$eng ($pat)";
 }
 
@@ -29,9 +28,8 @@ if (preg_match('/Blue Coat (?<hw>\S+), Version: (?<version>[\d\.\-]+)/', $poll_d
     $hardware = $matches['hw'];
     $version  = $matches['version'];
 } else {
-    [$hardware] = explode(',', $poll_device['sysDescr']);
-    $hardware = trim($hardware);
-    $version  = snmp_get($device, 'casInstalledFirmwareVersion.0', '-Osqv', 'BLUECOAT-CAS-MIB');
+    $hardware = trim(explode(',', $poll_device['sysDescr'])[0]);
+    $version  = snmp_get_oid($device, 'casInstalledFirmwareVersion.0', 'BLUECOAT-CAS-MIB');
 }
 
 // EOF

@@ -93,7 +93,7 @@ foreach ($rrd_list as $rrd) {
 
     $RRAs = ['ave' => '', 'min' => '_min', 'max' => '_max'];
 
-    foreach ($RRAs as $label => $rra) {
+    foreach ($RRAs as $rra) {
         $rrd_options .= " CDEF:inB" . $i . $rra . "=in" . $i . $rra . ",$multiplier,* ";
         $rrd_options .= " CDEF:outB" . $i . $rra . "=out" . $i . $rra . ",$multiplier,*";
         $rrd_options .= " CDEF:outB" . $i . $rra . "_neg=outB" . $i . $rra . ",-1,*";

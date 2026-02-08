@@ -43,7 +43,7 @@ if (snmp_status()) {
     print_debug_vars($vlan_oids);
 
     $vlan_rows = [];
-    foreach ($vlan_oids as $index => $entry) {
+    foreach ($vlan_oids as $entry) {
         $vlan_num = $entry['hwL2IfPVID'];
         $ifIndex  = $entry['hwL2IfPortIfIndex'];
 

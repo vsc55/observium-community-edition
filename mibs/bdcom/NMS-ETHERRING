@@ -59,7 +59,7 @@ IMPORTS
                NMSEtherRingEntry ::=
                    SEQUENCE {
                        index
-                           INTEGER (0..32),
+                           INTEGER ,
                        type
                            TypeOfType,
                        status

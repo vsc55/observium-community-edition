@@ -12,17 +12,27 @@
 
 echo("Juniper Firewall Counters");
 
+// jnxFirewallCounterTable
+// Index: jnxFWCounterFilterName.jnxFWCounterName.jnxFWCounterType
 
-$fws = [];
-$fws = snmpwalk_cache_threepart_oid($device, "jnxFWCounterDisplayType", $fws, "JUNIPER-FIREWALL-MIB");
-if (count($fws)) {
+// JUNIPER-FIREWALL-MIB::jnxFWCounterDisplayType."MacOS_vlan_102"."30__Fileserver_1_150".counter = INTEGER: counter(2)
+// JUNIPER-FIREWALL-MIB::jnxFWCounterDisplayType."__default_arp_policer__"."__default_arp_policer__".policer = INTEGER: policer(3)
+$fws = snmpwalk_cache_threepart_oid($device, "jnxFWCounterDisplayType", [], "JUNIPER-FIREWALL-MIB");
+if (!safe_empty($fws)) {
     $oid = 'jnxFWCounterDisplayType';
 }
 
 $array = [];
-
 foreach ($fws as $filter => $counters) {
+    // Check graphs firewall ignore filters
+    if (entity_descr_check($filter, 'graphs.fw', FALSE)) {
+        continue;
+    }
     foreach ($counters as $counter => $types) {
+        // Check graphs firewall ignore filters
+        if (entity_descr_check($counter, 'graphs.fw', FALSE)) {
+            continue;
+        }
         foreach ($types as $type => $data) {
             $array[$filter][$counter][$type] = 1;
         }

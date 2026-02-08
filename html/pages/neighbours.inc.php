@@ -60,7 +60,6 @@ $form['row'][0]['device'] = [
     'name'   => 'Device',
     'width'  => '100%',
     'value'  => $vars['device'],
-    'groups' => [ '', 'UP', 'DOWN', 'DISABLED' ], // This is optgroup order for values (if required)
     'values' => $form_items['devices']
 ];
 $form['row'][0]['protocol'] = [
@@ -90,7 +89,6 @@ $form['row'][0]['remote'] = [
     'name'   => 'Remote Host',
     'width'  => '100%',
     'value'  => $vars['remote'],
-    //'groups' => [ '', 'UP', 'DOWN', 'DISABLED' ], // This is optgroup order for values (if required)
     'values' => $form_items['remote']
 ];
 $form['row'][0]['known'] = [

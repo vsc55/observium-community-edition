@@ -10,6 +10,8 @@
  *
  */
 
+global $definitions;
+
 // Secure Write Actions
 if (!$securewrite) {
     return;
@@ -134,13 +136,14 @@ switch ($vars['action']) {
 if (!$readwrite) { // Only valid forms from level 10 users
     return;
 }
+
 switch ($vars['action']) {
 
     case 'contact_add':
 
         // Only proceed if the contact_method is valid in our transports array
-        if (is_array($config['transports'][$vars['contact_method']])) {
-            foreach ($config['transports'][$vars['contact_method']]['parameters'] as $section => $parameters) {
+        if (is_array($definitions['transports'][$vars['contact_method']])) {
+            foreach ($definitions['transports'][$vars['contact_method']]['parameters'] as $parameters) {
                 foreach ($parameters as $parameter => $param_data) {
                     if (isset($vars['contact_' . $vars['contact_method'] . '_' . $parameter])) {
 
@@ -177,7 +180,9 @@ switch ($vars['action']) {
             $update_state['contact_descr'] = $vars['contact_descr'];
         }
 
-        $data = $config['transports'][$contact['contact_method']];
+        $data = $definitions['transports'][$contact['contact_method']];
+
+
         if (!safe_count($data['parameters']['global'])) {
             // Temporary until we separate "global" out.
             $data['parameters']['global'] = [];

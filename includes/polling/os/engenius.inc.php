@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -13,7 +12,7 @@
 
 ///////////// Senao Access Points (tested with ECB-9500)
 
-// Yes, that's the Kenel version.
+// Yes, that's the Kernel version.
 $kenelversion = snmp_get($device, 'entKenelVersion.0', '-OQv', 'SENAO-ENTERPRISE-INDOOR-AP-CB-MIB');
 
 if ($kenelversion) {

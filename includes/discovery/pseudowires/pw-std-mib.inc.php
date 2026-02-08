@@ -72,9 +72,9 @@ foreach ($pws as $pw_id => $pw) {
     // pwName.10001 = V_AKN_POP001....................
     // pwDescr.10001 = ................................
     // pwRemoteIfString.10001 = ................................
-    $pw['pwName']           = rtrim($pw['pwName'], ". \t\n\r\0\x0B");
-    $pw['pwDescr']          = rtrim($pw['pwDescr'], ". \t\n\r\0\x0B");
-    $pw['pwRemoteIfString'] = rtrim($pw['pwRemoteIfString'], ". \t\n\r\0\x0B");
+    $pw['pwName']           = snmp_fix_string($pw['pwName'], "descr");
+    $pw['pwDescr']          = snmp_fix_string($pw['pwDescr'], "descr");
+    $pw['pwRemoteIfString'] = snmp_fix_string($pw['pwRemoteIfString'], "label");
 
     $if_id = dbFetchCell('SELECT `port_id` FROM `ports` WHERE (`ifDescr` = ? OR `ifName` = ?) AND `device_id` = ? LIMIT 1;', [$pw['pwName'], $pw['pwName'], $device['device_id']]);
     if (!is_numeric($if_id) && strpos($pw['pwName'], '_')) {

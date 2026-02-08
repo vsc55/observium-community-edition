@@ -25,7 +25,7 @@ foreach ($devices as $device)
     // OID supported, so will be discovered as CPU table, excluding the old one. Rename RRD to keep data in Processor 1.
     rename_rrd($device, 'processor-fgSysCpuUsage-0.rrd', 'processor-fgProcessorTable-fgProcessorUsage.1.rrd');
     echo ('.');
-   
+
     // Force rediscovery of processors, to actually use the new table
     force_discovery($device, array('processors'));
   } else {

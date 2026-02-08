@@ -1,27 +1,8 @@
 <?php
 
-//define('OBS_DEBUG', 2);
+// Test-specific setup (bootstrap.php handles common setup)
+// Load any specific includes needed for this test suite
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
-
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/definitions.inc.php');
-include(__DIR__ . '/../includes/functions.inc.php');
-if (is_file(__DIR__ . '/data/config.php')) {
-    include(__DIR__ . '/data/config.php'); // I.e. for API keys
-}
-
-/**
- * @backupGlobals disabled
- */
 class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
 {
   /**
@@ -32,7 +13,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, parse_email($string));
   }
 
-  public function providerEmail()
+  public static function providerEmail()
   {
     return array(
         array('test@example.com',     array('test@example.com' => NULL)),
@@ -62,70 +43,95 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     );
   }
 
-  /**
-   * @dataProvider providerSiToScale
-   * @group numbers
-   */
-  public function testSiToScale($units, $precision, $result)
-  {
-    $this->assertSame($result, si_to_scale($units, $precision));
-  }
-
-  public function providerSiToScale()
-  {
-    $results = array(
-      array('yocto',  5, 1.0E-29),
-      array('zepto', -6, 1.0E-21),
-      array('atto',   9, 1.0E-27),
-      array('femto',  8, 1.0E-23),
-      array('pico',   0, 1.0E-12),
-      array('nano',  -7, 1.0E-9),
-      array('micro',  4, 1.0E-10),
-      array('milli',  7, 1.0E-10),
-      array('deci',   0, 0.1),
-      array('units',  3, 0.001),
-      array('deca',   0, 10),
-      array('kilo',   2, 10),
-      array('mega',  -2, 1000000),
-      array('giga',  -1, 1000000000),
-      array('tera',  -4, 1000000000000),
-      array('peta',   4, 100000000000),
-      array('exa',   -3, 1000000000000000000),
-      array('zetta',  1, 1.0E+20),
-      array('yotta',  7, 100000000000000000),
-      array('',      -6, 1),
-      array('test',   6, 1.0E-6),
-      array('0',     -3, 1),
-      array('5',      2, 1000),
-      array('-1',     1, 0.01),
-    );
-    return $results;
-  }
-
-  /**
-   * @dataProvider providerSiToScaleValue
-   * @group numbers
-   */
-  public function testSiToScaleValue($value, $scale, $result)
-  {
-    if (method_exists($this, 'assertEqualsWithDelta')) {
-      $this->assertEqualsWithDelta($result, $value * si_to_scale($scale), 0.00001);
-    } else {
-      $this->assertSame($result, $value * si_to_scale($scale));
+    /**
+     * @dataProvider providerSiToScale
+     * @group numbers
+     */
+    public function testSiToScale($units, $precision, $result) {
+        $this->assertSame($result, si_to_scale($units, $precision));
     }
-  }
 
-  public function providerSiToScaleValue()
-  {
-    return array(
-      array('330',  '-2', 3.3),
-      array('1194', '-2', 11.94),
-      array('928',  NULL, 928),
-      array('9',     '1', 90),
-      array('22',    '0', 22),
-      array('1194', 'milli', 1.194),
-    );
-  }
+    public static function providerSiToScale() {
+        return [
+            [ 'yocto',  5, 1.0E-29 ],
+            [ 'zepto', -6, 1.0E-21 ],
+            [ 'atto',   9, 1.0E-27 ],
+            [ 'femto',  8, 1.0E-23 ],
+            [ 'pico',   0, 1.0E-12 ],
+            [ 'nano',  -7, 1.0E-9 ],
+            [ 'micro',  4, 1.0E-10 ],
+            [ 'milli',  7, 1.0E-10 ],
+            [ 'deci',   0, 0.1 ],
+            [ 'units',  3, 0.001 ],
+            [ 'deca',   0, 10 ],
+            [ 'kilo',   2, 10 ],
+            [ 'mega',  -2, 1000000 ],
+            [ 'giga',  -1, 1000000000 ],
+            [ 'tera',  -4, 1000000000000 ],
+            [ 'peta',   4, 100000000000 ],
+            [ 'exa',   -3, 1000000000000000000 ],
+            [ 'zetta',  1, 1.0E+20 ],
+            [ 'yotta',  7, 100000000000000000 ],
+            [ '',      -6, 1 ],
+            [ 'test',   6, 1.0E-6 ],
+            [ '0',     -3, 1 ],
+            [ '5',      2, 1000 ],
+            [ '-1',     1, 0.01 ],
+
+            // incorrect binary prefix
+            [ 'tebi',  -1, 1099511627776 ],
+        ];
+    }
+
+    /**
+     * @dataProvider providerSiToScaleValue
+     * @group numbers
+     */
+    public function testSiToScaleValue($value, $scale, $result) {
+        if (method_exists($this, 'assertEqualsWithDelta')) {
+            $this->assertEqualsWithDelta($result, $value * si_to_scale($scale), 0.00001);
+        } else {
+            $this->assertSame($result, $value * si_to_scale($scale));
+        }
+    }
+
+    public static function providerSiToScaleValue() {
+        return [
+            [ '330',  '-2', 3.3 ],
+            [ '1194', '-2', 11.94 ],
+            [ '928',  NULL, 928 ],
+            [ '9',     '1', 90 ],
+            [ '22',    '0', 22 ],
+            [ '1194', 'milli', 1.194 ],
+        ];
+    }
+
+    /**
+     * @dataProvider providerBiToScale
+     * @group numbers
+     */
+    public function testBiToScale($units, $result) {
+        $this->assertSame($result, bi_to_scale($units));
+    }
+
+    public static function providerBiToScale() {
+        return [
+            [ 'kibi', 1024 ],
+            [ 'mebi', 1048576 ],
+            [ 'gibi', 1073741824 ],
+            [ 'tebi', 1099511627776 ],
+            [ 'pebi', 1125899906842624 ],
+            [ 'exbi', 1152921504606846976 ],
+            [ 'zebi', 1.1805916207174113E+21 ],
+            [ 'yobi', 1.2089258196146292E+24 ],
+            [ '',     1 ],
+
+            [ 'test', 1 ],
+            [ '0',    1 ],
+            [ '5',    32 ],
+            [ '-1',   0 ],
+        ];
+    }
 
   /**
    * @dataProvider providerFloatCompare
@@ -136,97 +142,97 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, float_cmp($a, $b, $epsilon));
   }
 
-  public function providerFloatCompare()
+  public static function providerFloatCompare()
   {
     return array(
-      // numeric tests
-      array('330', '-2', NULL,  1), // $a > $b
-      array('1',    '2', 0.1,  -1), // $a < $b
-      array(-1,      -2, 0.1,   1), // $a > $b
-      array(-1.1,  -1.4, 0.5,   0), // $a == $b
-      array(-1.1,  -1.4, -0.5,  0), // $a == $b
-      array((double)0, (double)70, 0.1, -1), // $a < $b and $a == 0
-      array((double)70, (double)0, 0.1,  1), // $a > $b and $b == 0
-      array((int)0.001, (double)0, NULL, 0), // $a == $b
-      array(0.001,    0.000999999,  0.00001,  0), // $a == $b
-      array(-0.001,  -0.000999999,  0.00001,  0), // $a == $b
-      array(-0.001,  -0.000899999,  0.00001, -1), // $a < $b
-      //array('-0.00000001', 0.00000002, NULL,  0), // $a == $b, FIXME, FALSE
-      //array(0.00000002, '-0.00000001', NULL,  0), // $a == $b, FIXME, FALSE
-      array(0.2, '-0.000000000001', NULL,  1), // $a == $b
-      array(0.99999999, 1.00000002, NULL,  0), // $a == $b
-      array(0.001,   -0.000999999,  NULL,  1), // $a > $b
-      array(-0.000999999,   0.001,  NULL, -1), // $a < $b
-      array(3672,   3888,           0.05,  0), // big numbers, greater epsilon
-      array(3888,   3672,           0.05,  0), // big numbers, greater epsilon
-      array(4000,   4810,            0.1,  0), // big numbers, greater epsilon
-      array(4000,   4000.01,        NULL,  0), // big numbers
+        // numeric tests
+        array('330', '-2', NULL,  1), // $a > $b
+        array('1',    '2', 0.1,  -1), // $a < $b
+        array(-1,      -2, 0.1,   1), // $a > $b
+        array(-1.1,  -1.4, 0.5,   0), // $a == $b
+        array(-1.1,  -1.4, -0.5,  0), // $a == $b
+        array( 0.0,  70.0,  0.1, -1), // $a < $b and $a == 0
+        array(70.0,   0.0,  0.1,  1), // $a > $b and $b == 0
+        array(   0,   0.0, NULL,  0), // $a == $b
+        array(0.001,    0.000999999,  0.00001,  0), // $a == $b
+        array(-0.001,  -0.000999999,  0.00001,  0), // $a == $b
+        array(-0.001,  -0.000899999,  0.00001, -1), // $a < $b
+        //array('-0.00000001', 0.00000002, NULL,  0), // $a == $b, FIXME, FALSE
+        //array(0.00000002, '-0.00000001', NULL,  0), // $a == $b, FIXME, FALSE
+        array(0.2, '-0.000000000001', NULL,  1), // $a == $b
+        array(0.99999999, 1.00000002, NULL,  0), // $a == $b
+        array(0.001,   -0.000999999,  NULL,  1), // $a > $b
+        array(-0.000999999,   0.001,  NULL, -1), // $a < $b
+        array(3672,   3888,           0.05,  0), // big numbers, greater epsilon
+        array(3888,   3672,           0.05,  0), // big numbers, greater epsilon
+        array(4000,   4810,            0.1,  0), // big numbers, greater epsilon
+        array(4000,   4000.01,        NULL,  0), // big numbers
 
-      /* Regular large numbers */
-      array(1000000,      1000001,  NULL,  0),
-      array(1000001,      1000000,  NULL,  0),
-      array(10000,          10001,  NULL, -1),
-      array(10001,          10000,  NULL,  1),
-      /* Negative large numbers */
-      array(-1000000,    -1000001,  NULL,  0),
-      array(-1000001,    -1000000,  NULL,  0),
-      array(-10000,        -10001,  NULL,  1),
-      array(-10001,        -10000,  NULL, -1),
-      /* Numbers around 1 */
-      array(1.0000001,  1.0000002,  NULL,  0),
-      array(1.0000002,  1.0000001,  NULL,  0),
-      array(1.0002,        1.0001,  NULL,  1),
-      array(1.0001,        1.0002,  NULL, -1),
-      /* Numbers around -1 */
-      array(-1.0000001,-1.0000002,  NULL,  0),
-      array(-1.0000002,-1.0000001,  NULL,  0),
-      array(-1.0002,      -1.0001,  NULL, -1),
-      array(-1.0001,      -1.0002,  NULL,  1),
-      /* Numbers between 1 and 0 */
-      array(0.000000001000001,   0.000000001000002,  NULL,  0),
-      array(0.000000001000002,   0.000000001000001,  NULL,  0),
-      array(0.000000000001002,   0.000000000001001,  NULL,  1),
-      array(0.000000000001001,   0.000000000001002,  NULL, -1),
-      /* Numbers between -1 and 0 */
-      array(-0.000000001000001, -0.000000001000002,  NULL,  0),
-      array(-0.000000001000002, -0.000000001000001,  NULL,  0),
-      array(-0.000000000001002, -0.000000000001001,  NULL, -1),
-      array(-0.000000000001001, -0.000000000001002,  NULL,  1),
-      /* Comparisons involving zero */
-      array(0.0,              0.0,  NULL,  0),
-      array(0.0,             -0.0,  NULL,  0),
-      array(-0.0,            -0.0,  NULL,  0),
-      array(0.00000001,       0.0,  NULL,  1),
-      array(0.0,       0.00000001,  NULL, -1),
-      array(-0.00000001,      0.0,  NULL, -1),
-      array(0.0,      -0.00000001,  NULL,  1),
+        /* Regular large numbers */
+        array(1000000,      1000001,  NULL,  0),
+        array(1000001,      1000000,  NULL,  0),
+        array(10000,          10001,  NULL, -1),
+        array(10001,          10000,  NULL,  1),
+        /* Negative large numbers */
+        array(-1000000,    -1000001,  NULL,  0),
+        array(-1000001,    -1000000,  NULL,  0),
+        array(-10000,        -10001,  NULL,  1),
+        array(-10001,        -10000,  NULL, -1),
+        /* Numbers around 1 */
+        array(1.0000001,  1.0000002,  NULL,  0),
+        array(1.0000002,  1.0000001,  NULL,  0),
+        array(1.0002,        1.0001,  NULL,  1),
+        array(1.0001,        1.0002,  NULL, -1),
+        /* Numbers around -1 */
+        array(-1.0000001,-1.0000002,  NULL,  0),
+        array(-1.0000002,-1.0000001,  NULL,  0),
+        array(-1.0002,      -1.0001,  NULL, -1),
+        array(-1.0001,      -1.0002,  NULL,  1),
+        /* Numbers between 1 and 0 */
+        array(0.000000001000001,   0.000000001000002,  NULL,  0),
+        array(0.000000001000002,   0.000000001000001,  NULL,  0),
+        array(0.000000000001002,   0.000000000001001,  NULL,  1),
+        array(0.000000000001001,   0.000000000001002,  NULL, -1),
+        /* Numbers between -1 and 0 */
+        array(-0.000000001000001, -0.000000001000002,  NULL,  0),
+        array(-0.000000001000002, -0.000000001000001,  NULL,  0),
+        array(-0.000000000001002, -0.000000000001001,  NULL, -1),
+        array(-0.000000000001001, -0.000000000001002,  NULL,  1),
+        /* Comparisons involving zero */
+        array(0.0,              0.0,  NULL,  0),
+        array(0.0,             -0.0,  NULL,  0),
+        array(-0.0,            -0.0,  NULL,  0),
+        array(0.00000001,       0.0,  NULL,  1),
+        array(0.0,       0.00000001,  NULL, -1),
+        array(-0.00000001,      0.0,  NULL, -1),
+        array(0.0,      -0.00000001,  NULL,  1),
 
-      array(0.0,     1.0E-10,        0.1,  0),
-      array(1.0E-10,     0.0,        0.1,  0),
-      array(1.0E-10,     0.0, 0.00000001,  1),
-      array(0.0,     1.0E-10, 0.00000001, -1),
+        array(0.0,     1.0E-10,        0.1,  0),
+        array(1.0E-10,     0.0,        0.1,  0),
+        array(1.0E-10,     0.0, 0.00000001,  1),
+        array(0.0,     1.0E-10, 0.00000001, -1),
 
-      array(0.0,    -1.0E-10,        0.1,  0),
-      array(-1.0E-10,    0.0,        0.1,  0),
-      array(-1.0E-10,    0.0, 0.00000001, -1),
-      array(0.0,    -1.0E-10, 0.00000001,  1),
-      /* Comparisons of numbers on opposite sides of 0 */
-      array(1.000000001, -1.0,  NULL,  1),
-      array(-1.0,   1.0000001,  NULL, -1),
-      array(-1.000000001, 1.0,  NULL, -1),
-      array(1.0, -1.000000001,  NULL,  1),
-      /* Comparisons involving extreme values (overflow potential) */
-      array(PHP_INT_MAX,  PHP_INT_MAX,  NULL,  0),
-      array(PHP_INT_MAX, -PHP_INT_MAX,  NULL,  1),
-      array(-PHP_INT_MAX, PHP_INT_MAX,  NULL, -1),
-      array(PHP_INT_MAX,  PHP_INT_MAX / 2, NULL,  1),
-      array(PHP_INT_MAX, -PHP_INT_MAX / 2, NULL,  1),
-      array(-PHP_INT_MAX, PHP_INT_MAX / 2, NULL, -1),
+        array(0.0,    -1.0E-10,        0.1,  0),
+        array(-1.0E-10,    0.0,        0.1,  0),
+        array(-1.0E-10,    0.0, 0.00000001, -1),
+        array(0.0,    -1.0E-10, 0.00000001,  1),
+        /* Comparisons of numbers on opposite sides of 0 */
+        array(1.000000001, -1.0,  NULL,  1),
+        array(-1.0,   1.0000001,  NULL, -1),
+        array(-1.000000001, 1.0,  NULL, -1),
+        array(1.0, -1.000000001,  NULL,  1),
+        /* Comparisons involving extreme values (overflow potential) */
+        array(PHP_INT_MAX,  PHP_INT_MAX,  NULL,  0),
+        array(PHP_INT_MAX, -PHP_INT_MAX,  NULL,  1),
+        array(-PHP_INT_MAX, PHP_INT_MAX,  NULL, -1),
+        array(PHP_INT_MAX,  PHP_INT_MAX / 2, NULL,  1),
+        array(PHP_INT_MAX, -PHP_INT_MAX / 2, NULL,  1),
+        array(-PHP_INT_MAX, PHP_INT_MAX / 2, NULL, -1),
 
-      // other tests
-      array('test',       'milli', 1.194,  1),
-      array(array('NULL'),    '0',  0.01,  1),
-      array(array('NULL'), array('NULL'), NULL, 0),
+        // other tests
+        array('test',       'milli', 1.194,  1),
+        array(array('NULL'),    '0',  0.01,  1),
+        array(array('NULL'), array('NULL'), NULL, 0),
     );
   }
 
@@ -238,7 +244,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, int_add($a, $b));
     }
 
-    public function providerIntAdd() {
+    public static function providerIntAdd() {
         // $a = "18446742978492891134"; $b = "0"; $sum = gmp_add($a, $b); echo gmp_strval($sum) . "\n"; // Result: 18446742978492891134
         // $a = "18446742978492891134"; $b = "0"; $sum = $a + $b; printf("%.0f\n", $sum);               // Result: 18446742978492891136
         // Accurate math
@@ -267,7 +273,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, int_sub($a, $b));
     }
 
-    public function providerIntSub() {
+    public static function providerIntSub() {
         // Accurate math
         return [
             array( '18446742978492891134', '0',  '18446742978492891134'),
@@ -298,7 +304,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function providerFloatDiv() {
+    public static function providerFloatDiv() {
         // Accurate math
         return [
             [ '18446742978492891134', '0',  0 ],
@@ -330,7 +336,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function providerFloatPow() {
+    public static function providerFloatPow() {
         // Accurate math
         return [
             [ '18446742978492891134', '0',  1.0 ],
@@ -363,7 +369,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, hex2float($hex));
     }
 
-    public function providerHexToFloat()
+    public static function providerHexToFloat()
     {
         // Accurate math
         $array = [
@@ -384,7 +390,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, ieeeint2float($int));
     }
 
-    public function providerIeeeIntToFloat()
+    public static function providerIeeeIntToFloat()
     {
         $array = [
 
@@ -408,7 +414,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, is_hex_string($string));
   }
 
-  public function providerIsHexString()
+  public static function providerIsHexString()
   {
     $results = array(
       array('49 6E 70 75 74 20 31 00 ', TRUE),
@@ -430,7 +436,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, str2hex($string));
   }
 
-  public function providerStr2Hex()
+  public static function providerStr2Hex()
   {
     $results = array(
       array(' ',              '20'),
@@ -452,7 +458,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, match_oid_num($oid, $needle));
   }
 
-  public function providerMatchOidNum()
+  public static function providerMatchOidNum()
   {
     return [
       # true
@@ -493,246 +499,6 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
   }
 
   /**
-  * @dataProvider providerBgpASNumber
-  * @group bgp
-  */
-  public function testBgpASdot($asplain, $asdot, $private)
-  {
-    $this->assertSame(bgp_asplain_to_asdot($asplain), $asdot);
-    $this->assertSame(bgp_asplain_to_asdot($asdot),   $asdot);
-  }
-
-  /**
-  * @dataProvider providerBgpASNumber
-  * @group bgp
-  */
-  public function testBgpASplain($asplain, $asdot, $private)
-  {
-    $this->assertSame(bgp_asdot_to_asplain($asdot),   $asplain);
-    $this->assertSame(bgp_asdot_to_asplain($asplain), $asplain);
-  }
-
-  /**
-  * @dataProvider providerBgpASNumber
-  * @group bgp
-  */
-  public function testBgpASprivate($asplain, $asdot, $private)
-  {
-    $this->assertSame(is_bgp_as_private($asdot),   $private);
-    $this->assertSame(is_bgp_as_private($asplain), $private);
-  }
-
-  public function providerBgpASNumber()
-  {
-    return array(
-      //         ASplain, ASdot, Private?
-      /* 16bit */
-      array(         '0',           '0', FALSE),
-      array(     '64511',       '64511', FALSE),
-      array(     '64512',       '64512', TRUE),
-      array(     '65534',       '65534', TRUE),
-      array(     '65535',       '65535', TRUE), // This AS not
-      /* 32bit */
-      array(     '65536',         '1.0', FALSE),
-      array(    '327700',        '5.20', FALSE),
-      array('4199999999', '64086.59903', FALSE),
-      array('4200000000', '64086.59904', TRUE),
-      array('4294967294', '65535.65534', TRUE),
-      array('4294967295', '65535.65535', TRUE),
-    );
-  }
-
-  /**
-  * @dataProvider providerParseBgpPeerIndex
-  * @group bgp
-  */
-  public function testParseBgpPeerIndex($mib, $index, $result)
-  {
-    $peer = array();
-    parse_bgp_peer_index($peer, $index, $mib);
-    $this->assertSame($result, $peer);
-  }
-
-  public function providerParseBgpPeerIndex()
-  {
-    $results = array(
-      // IPv4
-      array('BGP4-V2-MIB-JUNIPER', '0.1.203.153.47.15.1.203.153.47.207',
-            array('jnxBgpM2PeerRoutingInstance' => '0',
-                  'jnxBgpM2PeerLocalAddrType'   => 'ipv4',
-                  'jnxBgpM2PeerLocalAddr'       => '203.153.47.15',
-                  'jnxBgpM2PeerRemoteAddrType'  => 'ipv4',
-                  'jnxBgpM2PeerRemoteAddr'      => '203.153.47.207')),
-      array('BGP4-V2-MIB-JUNIPER', '47.1.0.0.0.0.1.10.241.224.142',
-            array('jnxBgpM2PeerRoutingInstance' => '47',
-                  'jnxBgpM2PeerLocalAddrType'   => 'ipv4',
-                  'jnxBgpM2PeerLocalAddr'       => '0.0.0.0',
-                  'jnxBgpM2PeerRemoteAddrType'  => 'ipv4',
-                  'jnxBgpM2PeerRemoteAddr'      => '10.241.224.142')),
-      // IPv6
-      array('BGP4-V2-MIB-JUNIPER', '0.2.32.1.4.112.0.20.0.101.0.0.0.0.0.0.0.2.2.32.1.4.112.0.20.0.101.0.0.0.0.0.0.0.1',
-            array('jnxBgpM2PeerRoutingInstance' => '0',
-                  'jnxBgpM2PeerLocalAddrType'   => 'ipv6',
-                  'jnxBgpM2PeerLocalAddr'       => '2001:0470:0014:0065:0000:0000:0000:0002',
-                  'jnxBgpM2PeerRemoteAddrType'  => 'ipv6',
-                  'jnxBgpM2PeerRemoteAddr'      => '2001:0470:0014:0065:0000:0000:0000:0001')),
-      // Wrong data
-      //array('4a7d343dd',              FALSE),
-    );
-    return $results;
-  }
-
-  /**
-  * @dataProvider providerStateStringToNumeric
-  * @group states
-  */
-  public function testStateStringToNumeric($type, $value, $result)
-  {
-    $this->assertSame($result, state_string_to_numeric($type, $value)); // old without mib
-  }
-
-  public function providerStateStringToNumeric() {
-    $results = array(
-      array('mge-status-state',           'No',              2),
-      array('mge-status-state',           'no',              2),
-      array('mge-status-state',           'Banana',      FALSE),
-      array('inexistent-status-state',    'Vanilla',     FALSE),
-      array('radlan-hwenvironment-state', 'notFunctioning',  6),
-      array('radlan-hwenvironment-state', 'notFunctioning ', 6),
-      array('cisco-envmon-state',         'warning',         2),
-      array('cisco-envmon-state',         'war ning',    FALSE),
-      array('powernet-sync-state',        'inSync',          1),
-      array('power-ethernet-mib-pse-state', 'off',           2),
-      // Numeric value
-      array('cisco-envmon-state',         '2',               2),
-      array('cisco-envmon-state',          2,                2),
-      array('cisco-envmon-state',         '2.34',        FALSE),
-      array('cisco-envmon-state',          10,           FALSE),
-    );
-    return $results;
-  }
-
-  /**
-   * @dataProvider providerStateStringToNumeric2
-   * @group states
-   */
-  public function testStateStringToNumeric2($type, $mib, $value, $result)
-  {
-    $this->assertSame($result, state_string_to_numeric($type, $value, $mib));
-  }
-
-  public function providerStateStringToNumeric2() {
-    $results = array(
-      // String statuses
-      array('status', 'QSAN-SNMP-MIB', 'Checking (0%)',   2), // warning
-      array('status', 'QSAN-SNMP-MIB', 'Online',          1), // ok
-      array('status', 'QSAN-SNMP-MIB', 'ajhbxsjshab',     3), // alert
-    );
-    return $results;
-  }
-
-  /**
-  * @dataProvider providerGetStateArray
-  * @group states
-  */
-  public function testGetStateArray($type, $value, $poller, $result)
-  {
-    $this->assertSame($result, get_state_array($type, $value, '', NULL, $poller)); // old without know mib
-  }
-
-  public function providerGetStateArray()
-  {
-    $results = array(
-      array('mge-status-state',           'No',             'snmp', array('value' => 2, 'name' => 'no', 'event' => 'ok', 'mib' => 'MG-SNMP-UPS-MIB')),
-      array('mge-status-state',           'no',             'snmp', array('value' => 2, 'name' => 'no', 'event' => 'ok', 'mib' => 'MG-SNMP-UPS-MIB')),
-      array('mge-status-state',           'Banana',         'snmp', array('value' => FALSE)),
-      array('inexistent-status-state',    'Vanilla',        'snmp', array('value' => FALSE)),
-      array('radlan-hwenvironment-state', 'notFunctioning', 'snmp', array('value' => 6, 'name' => 'notFunctioning', 'event' => 'exclude', 'mib' => 'RADLAN-HWENVIROMENT')),
-      array('radlan-hwenvironment-state', 'notFunctioning ','snmp', array('value' => 6, 'name' => 'notFunctioning', 'event' => 'exclude', 'mib' => 'RADLAN-HWENVIROMENT')),
-      array('cisco-envmon-state',         'warning',        'snmp', array('value' => 2, 'name' => 'warning', 'event' => 'warning', 'mib' => 'CISCO-ENVMON-MIB')),
-      array('cisco-envmon-state',         'war ning',       'snmp', array('value' => FALSE)),
-      array('powernet-sync-state',        'inSync',         'snmp', array('value' => 1, 'name' => 'inSync', 'event' => 'ok', 'mib' => 'PowerNet-MIB')),
-      array('power-ethernet-mib-pse-state', 'off',          'snmp', array('value' => 2, 'name' => 'off', 'event' => 'ignore', 'mib' => 'POWER-ETHERNET-MIB')),
-      // Numeric value
-      array('cisco-envmon-state',         '2',              'snmp', array('value' => 2, 'name' => 'warning', 'event' => 'warning', 'mib' => 'CISCO-ENVMON-MIB')),
-      array('cisco-envmon-state',          2,               'snmp', array('value' => 2, 'name' => 'warning', 'event' => 'warning', 'mib' => 'CISCO-ENVMON-MIB')),
-      array('cisco-envmon-state',         '2.34',           'snmp', array('value' => FALSE)),
-      array('cisco-envmon-state',          10,              'snmp', array('value' => FALSE)),
-      // agent, ipmi
-      array('unix-agent-state',           'warn',          'agent', array('value' => 2, 'name' => 'warn', 'event' => 'warning', 'mib' => '')),
-      array('unix-agent-state',           0,               'agent', array('value' => 0, 'name' => 'fail', 'event' => 'alert',   'mib' => '')),
-    );
-    return $results;
-  }
-
-  /**
-  * @dataProvider providerGetStateArray2
-  * @group states
-  */
-  public function testGetStateArray2($type, $value, $event_value, $mib, $result)
-  {
-    $this->assertSame($result, get_state_array($type, $value, $mib, $event_value));
-  }
-
-  public function providerGetStateArray2()
-  {
-    $mib = 'PowerNet-MIB';
-    $results = array(
-      array('emsInputContactStatusInputContactState', 'contactClosedEMS', 'normallyClosedEMS',   '', array('value' => 1, 'name' => 'contactClosedEMS', 'event' => 'ok',    'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState', 'contactClosedEMS',   'normallyOpenEMS',   '', array('value' => 1, 'name' => 'contactClosedEMS', 'event' => 'alert', 'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState',   'contactOpenEMS', 'normallyClosedEMS',   '', array('value' => 2, 'name' => 'contactOpenEMS',   'event' => 'alert', 'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState',   'contactOpenEMS',   'normallyOpenEMS',   '', array('value' => 2, 'name' => 'contactOpenEMS',   'event' => 'ok',    'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState', 'contactClosedEMS', 'normallyClosedEMS', $mib, array('value' => 1, 'name' => 'contactClosedEMS', 'event' => 'ok',    'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState', 'contactClosedEMS',   'normallyOpenEMS', $mib, array('value' => 1, 'name' => 'contactClosedEMS', 'event' => 'alert', 'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState',   'contactOpenEMS', 'normallyClosedEMS', $mib, array('value' => 2, 'name' => 'contactOpenEMS',   'event' => 'alert', 'mib' => 'PowerNet-MIB')),
-      array('emsInputContactStatusInputContactState',   'contactOpenEMS',   'normallyOpenEMS', $mib, array('value' => 2, 'name' => 'contactOpenEMS',   'event' => 'ok',    'mib' => 'PowerNet-MIB')),
-
-    );
-    // String statuses
-    $mib = 'QSAN-SNMP-MIB';
-    $results[] = [ 'status',   'Checking (0%)',   NULL, $mib, [ 'value' => 2, 'name' => 'Checking (0%)', 'event' => 'warning', 'mib' => 'QSAN-SNMP-MIB' ] ];
-    return $results;
-  }
-
-  /**
-  * @dataProvider providerGetBitsStateArray
-  * @group states_bits
-  */
-  /* WiP
-  public function testGetBitsStateArray($hex, $mib, $object, $result)
-  {
-    $this->assertSame($result, get_bits_state_array($hex, $mib, $object));
-  }
-
-  public function providerGetBitsStateArray()
-  {
-    $results = array(
-      array('40 00', 'CISCO-STACK-MIB', 'portAdditionalOperStatus', [ 1 => 'connected' ]), // CISCO-STACK-MIB::portAdditionalOperStatus.1.1 = BITS: 40 00 connected(1)
-    );
-    return $results;
-  }
-  */
-
-  /**
-  * @dataProvider providerGetBitsStateArray2
-  * @group states_bits
-  */
-  /* WiP
-  public function testGetBitsStateArray2($hex, $def, $result)
-  {
-    $this->assertSame($result, get_bits_state_array($hex, NULL, NULL, $def));
-  }
-
-  public function providerGetBitsStateArray2()
-  {
-    $results = array(
-      array('40 00', [], [ 1 => 'connected' ]), // CISCO-STACK-MIB::portAdditionalOperStatus.1.1 = BITS: 40 00 connected(1)
-    );
-    return $results;
-  }
-  */
-
-  /**
   * @dataProvider providerPriorityStringToNumeric
   */
   public function testPriorityStringToNumeric($value, $result)
@@ -740,7 +506,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, priority_string_to_numeric($value));
   }
 
-  public function providerPriorityStringToNumeric()
+  public static function providerPriorityStringToNumeric()
   {
     $results = array(
       // Named value
@@ -782,7 +548,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     //}
   }
 
-  public function providerArrayMergeIndexed()
+  public static function providerArrayMergeIndexed()
   {
     $results = array(
       array( // Simple 2 array test with NULL
@@ -847,568 +613,332 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     return $results;
   }
 
-  /**
-   * @dataProvider providerHex2IP
-   * @group ip
-   */
-  public function testHex2IP($string, $result)
-  {
-    $this->assertSame($result, hex2ip($string));
-  }
+    /**
+     * @dataProvider providerArrayMergeMap
+     * @group array
+     */
+    public function testArrayMergeMap($result, $array1, $array2, $map, $diff = []) {
 
-  public function providerHex2IP()
-  {
-    $results = array(
-      // IPv4
-      array('C1 9C 5A 26',  '193.156.90.38'),
-      array('4a7d343d',     '74.125.52.61'),
-      array('207d343d',     '32.125.52.61'),
-      // cisco IPv4
-      array('54 2E 68 02 FF FF FF FF ', '84.46.104.2'),
-      array('90 7F 8A ',    '144.127.138.0'), // should be '90 7F 8A 00 '
-      // IPv4 (converted to snmp string)
-      array('J}4=',         '74.125.52.61'),
-      array('J}4:',         '74.125.52.58'),
-      // with newline
-      array('
-^KL=', '94.75.76.61'),
-      // with first space char (possible for OBS_SNMP_CONCAT)
-      array(' ^KL=',        '94.75.76.61'),
-      array('  KL=',        '32.75.76.61'),
-      array('    ',         '32.32.32.32'),
-      // hex string
-      array('31 38 35 2E 31 39 2E 31 30 30 2E 31 32 ', '185.19.100.12'),
-      // IPv6
-      array('20 01 07 F8 00 12 00 01 00 00 00 00 00 05 02 72',  '2001:07f8:0012:0001:0000:0000:0005:0272'),
-      array('20:01:07:F8:00:12:00:01:00:00:00:00:00:05:02:72',  '2001:07f8:0012:0001:0000:0000:0005:0272'),
-      array('200107f8001200010000000000050272',                 '2001:07f8:0012:0001:0000:0000:0005:0272'),
-      // IPv6z
-      //array('20 01 07 F8 00 12 00 01 00 00 00 00 00 05 02 72',  '2001:07f8:0012:0001:0000:0000:0005:0272'),
-      array('2a:02:a0:10:80:03:00:00:00:00:00:00:00:00:00:01%503316482',  '2a02:a010:8003:0000:0000:0000:0000:0001'),
-      //array('200107f8001200010000000000050272',                 '2001:07f8:0012:0001:0000:0000:0005:0272'),
-      // Wrong data
-      array('4a7d343dd',                        '4a7d343dd'),
-      array('200107f800120001000000000005027',  '200107f800120001000000000005027'),
-      array('193.156.90.38',                    '193.156.90.38'),
-      array('Simple String',                    'Simple String'),
-      array('',  ''),
-      array(FALSE,  FALSE),
-    );
-    return $results;
-  }
+        $this->assertSame($result, array_merge_map($array1, $array2, $map));
+        $this->assertSame($diff, $array2);
+    }
 
-  /**
-   * @dataProvider providerIp2Hex
-   * @group ip
-   */
-  public function testIp2Hex($string, $separator, $result)
-  {
-    $this->assertSame($result, ip2hex($string, $separator));
-  }
+    public static function providerArrayMergeMap() {
+        $results = [];
 
-  public function providerIp2Hex()
-  {
-    $results = array(
-      // IPv4
-      array('193.156.90.38', ' ', 'c1 9c 5a 26'),
-      array('74.125.52.61',  ' ', '4a 7d 34 3d'),
-      array('74.125.52.61',   '', '4a7d343d'),
-      // IPv6
-      array('2001:07f8:0012:0001:0000:0000:0005:0272', ' ', '20 01 07 f8 00 12 00 01 00 00 00 00 00 05 02 72'),
-      array('2001:7f8:12:1::5:0272',                   ' ', '20 01 07 f8 00 12 00 01 00 00 00 00 00 05 02 72'),
-      array('2001:7f8:12:1::5:0272',                    '', '200107f8001200010000000000050272'),
-      // Wrong data
-      array('4a7d343dd',                       NULL, '4a7d343dd'),
-      array('200107f800120001000000000005027', NULL, '200107f800120001000000000005027'),
-      array('300.156.90.38',                   NULL, '300.156.90.38'),
-      array('Simple String',                   NULL, 'Simple String'),
-      array('',    NULL, ''),
-      array(FALSE, NULL, FALSE),
-    );
-    return $results;
-  }
+        $map = [
+            'entPhysicalSerialNum'   => 'jnxContentsSerialNo',
+            'entPhysicalHardwareRev' => 'jnxContentsRevision',
+            'entPhysicalModelName'   => 'jnxContentsPartNo',
+        ];
 
-  /**
-   * @dataProvider providerGetIpVersion
-   * @group ip
-   */
-  public function testGetIpVersion($string, $result)
-  {
-    $this->assertSame($result, get_ip_version($string));
-  }
+        $array1 = [
+            1 =>  [
+                'entPhysicalDescr'        => 'Juniper MX304 Edge Router',
+                'entPhysicalVendorType'   => 'jnxChassisMX304',
+                'entPhysicalContainedIn'  => '0',
+                'entPhysicalClass'        => 'chassis',
+                'entPhysicalParentRelPos' => '0',
+                'entPhysicalName'         => 'JNP304-CHAS',
+                'entPhysicalHardwareRev'  => '',
+                'entPhysicalFirmwareRev'  => '',
+                'entPhysicalSoftwareRev'  => '23.4R2-S3.9',
+                'entPhysicalSerialNum'    => 'HA288',
+                'entPhysicalMfgName'      => 'Juniper Networks',
+                'entPhysicalModelName'    => '750-123404',
+                'entPhysicalIsFRU'        => 'false',
+            ],
+            21 => [
+                'entPhysicalDescr'        => 'Fan Tray 1',
+                'entPhysicalVendorType'   => 'jnxFan',
+                'entPhysicalContainedIn'  => '1',
+                'entPhysicalClass'        => 'fan',
+                'entPhysicalParentRelPos' => '1',
+                'entPhysicalName'         => 'JNP-FAN-2RU',
+                'entPhysicalHardwareRev'  => 'REV 08',
+                'entPhysicalFirmwareRev'  => '',
+                'entPhysicalSoftwareRev'  => '23.4R2-S3.9',
+                'entPhysicalSerialNum'    => 'S/N BCFJ0620',
+                'entPhysicalMfgName'      => 'Juniper Networks',
+                'entPhysicalModelName'    => '760-126744',
+                'entPhysicalIsFRU'        => 'false',
+            ],
+            23 => [
+                'entPhysicalDescr'        => 'FPC: FPC-BUILTIN @ 0/*/*',
+                'entPhysicalVendorType'   => 'jnxFPC',
+                'entPhysicalContainedIn'  => '1',
+                'entPhysicalClass'        => 'container',
+                'entPhysicalParentRelPos' => '0',
+                'entPhysicalName'         => '',
+                'entPhysicalHardwareRev'  => '',
+                'entPhysicalFirmwareRev'  => 'JUNOS 23.4R2-S3.10-EVO Linux (none) 5.2.60-yocto-standard-g07c4386 #1 SMP PREEMPT Mon Apr 15 13',
+                'entPhysicalSoftwareRev'  => '23.4R2-S3.9',
+                'entPhysicalSerialNum'    => 'BUILTIN',
+                'entPhysicalMfgName'      => 'Juniper Networks',
+                'entPhysicalModelName'    => 'BUILTIN',
+                'entPhysicalIsFRU'        => 'true',
+            ],
+        ];
 
-  public function providerGetIpVersion()
-  {
-    $results = array(
-      // IPv4
-      array('193.156.90.38',    4),
-      array('32.125.52.61',     4),
-      array('127.0.0.1',        4),
-      array('0.0.0.0',          4),
-      array('255.255.255.255',  4),
-      // IPv6
-      array('ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',  6),
-      array('2001:07f8:0012:0001:0000:0000:0005:0272',  6),
-      array('2001:7f8:12:1::5:0272',                    6),
-      array('::1',                                      6),
-      array('::',                                       6),
-      array('::ffff:192.0.2.128',                       6), // IPv4 mapped to IPv6
-      array('2002:c000:0204::',                         6), // 6to4 address 192.0.2.4
-      // Wrong data
-      array('4a7d343dd',              FALSE),
-      array('my.domain.name',         FALSE),
-      array('256.156.90.38',          FALSE),
-      array('1.1.1.1.1',              FALSE),
-      array('2001:7f8:12:1::5:0272f', FALSE),
-      array('gggg:7f8:12:1::5:272f',  FALSE),
-      //array('2002::',                 FALSE), // 6to4 address, must be full
-      array('',                       FALSE),
-      array(FALSE,                    FALSE),
-      // IP with mask also wrong!
-      array('193.156.90.38/32',           FALSE),
-      array('2001:7f8:12:1::5:0272/128',  FALSE),
-    );
-    return $results;
-  }
+        $array2 = [
+            '1.1.0.0' => [
+                'jnxContentsContainerIndex'   => '1',
+                'jnxContentsL1Index'          => '1',
+                'jnxContentsL2Index'          => '0',
+                'jnxContentsL3Index'          => '0',
+                'jnxContentsType'             => 'jnxChassisMX304',
+                'jnxContentsDescr'            => 'midplane',
+                'jnxContentsSerialNo'         => 'S/N BCFH6322',
+                'jnxContentsRevision'         => 'REV 41',
+                'jnxContentsInstalled'        => '0:00:00.00',
+                'jnxContentsPartNo'           => '750-123404',
+                'jnxContentsChassisId'        => 'singleChassis',
+                'jnxContentsChassisDescr'     => 'Single Chassis',
+                'jnxContentsChassisCleiCode'  => 'INMKP00CRB',
+                'jnxContentsModel'            => 'JNP304-CHAS',
+            ],
+            '4.2.1.0' => [
+                'jnxContentsContainerIndex'   => '4',
+                'jnxContentsL1Index'          => '2',
+                'jnxContentsL2Index'          => '1',
+                'jnxContentsL3Index'          => '0',
+                'jnxContentsType'             => 'jnxFan',
+                'jnxContentsDescr'            => 'Fan Tray 1 Fan 0',
+                'jnxContentsSerialNo'         => 'S/N BCFJ0620',
+                'jnxContentsRevision'         => 'REV 08',
+                'jnxContentsInstalled'        => '0:00:00.00',
+                'jnxContentsPartNo'           => '760-126744',
+                'jnxContentsChassisId'        => 'singleChassis',
+                'jnxContentsChassisDescr'     => 'Single Chassis',
+                'jnxContentsChassisCleiCode'  => 'INCPAL6AAB',
+                'jnxContentsModel'            => 'JNP-FAN-2RU',
 
-  /**
-  * @dataProvider providerParseNetwork
-  * @group ip
-  */
-  public function testParseNetwork($network, $result)
-  {
-    $test = parse_network($network);
-    if (is_array($test))   { ksort($test); }
-    unset($test['address_binary'], $test['network_start_binary'], $test['network_end_binary']);
-    if (is_array($result)) { ksort($result); }
-    $this->assertSame($result, $test);
-  }
+                'jnxFruContentsIndex'         => '4',
+                'jnxFruL1Index'               => '2',
+                'jnxFruL2Index'               => '1',
+                'jnxFruL3Index'               => '0',
+                'jnxFruName'                  => 'Fan Tray 1 Fan 0',
+                'jnxFruType'                  => 'fan',
+                'jnxFruSlot'                  => '1',
+                'jnxFruState'                 => 'online',
+                'jnxFruTemp'                  => '0',
+                'jnxFruOfflineReason'         => 'none',
+                'jnxFruLastPowerOff'          => '0:00:00.00',
+                'jnxFruLastPowerOn'           => '0:00:00.00',
+                'jnxFruPowerUpTime'           => '283118852',
+                'jnxFruChassisId'             => 'singleChassis',
+                'jnxFruChassisDescr'          => 'Single Chassis',
+                'jnxFruPsdAssignment'         => '0',
+            ],
+            '7.1.0.0' => [
+                'jnxContentsContainerIndex'   => '7',
+                'jnxContentsL1Index'          => '1',
+                'jnxContentsL2Index'          => '0',
+                'jnxContentsL3Index'          => '0',
+                'jnxContentsType'             => 'jnxFPC',
+                'jnxContentsDescr'            => 'FPC: FPC-BUILTIN @ 0/*/*',
+                'jnxContentsSerialNo'         => 'BUILTIN',
+                'jnxContentsRevision'         => '',
+                'jnxContentsInstalled'        => '0:00:00.00',
+                'jnxContentsPartNo'           => 'BUILTIN',
+                'jnxContentsChassisId'        => 'singleChassis',
+                'jnxContentsChassisDescr'     => 'Single Chassis',
+                'jnxContentsChassisCleiCode'  => '',
+                'jnxContentsModel'            => '',
 
-  public function providerParseNetwork()
-  {
-    $array = array();
+                'jnxFruContentsIndex'         => '7',
+                'jnxFruL1Index'               => '1',
+                'jnxFruL2Index'               => '0',
+                'jnxFruL3Index'               => '0',
+                'jnxFruName'                  => 'FPC: FPC-BUILTIN @ 0/*/*',
+                'jnxFruType'                  => 'flexiblePicConcentrator',
+                'jnxFruSlot'                  => '0',
+                'jnxFruState'                 => 'online',
+                'jnxFruTemp'                  => '33',
+                'jnxFruOfflineReason'         => 'none',
+                'jnxFruLastPowerOff'          => '0:00:00.00',
+                'jnxFruLastPowerOn'           => '0:00:00.00',
+                'jnxFruPowerUpTime'           => '283115637',
+                'jnxFruChassisId'             => 'singleChassis',
+                'jnxFruChassisDescr'          => 'Single Chassis',
+                'jnxFruPsdAssignment'         => '0',
+            ],
+        ];
 
-    // Valid IPv4
-    $array[] = array('10.0.0.0/8',   array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.0.0.0', 'prefix' => '8',
-                                           'network_start' => '10.0.0.0', 'network_end' => '10.255.255.255', 'network' => '10.0.0.0/8'));
-    $array[] = array('10.0.0.0/255.255.255.0', array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.0.0.0', 'prefix' => '24',
-                                           'network_start' => '10.0.0.0', 'network_end' => '10.0.0.255', 'network' => '10.0.0.0/24'));
-    $array[] = array('10.12.0.3/8',  array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '8',
-                                           'network_start' => '10.0.0.0', 'network_end' => '10.255.255.255', 'network' => '10.0.0.0/8'));
-    $array[] = array('10.12.0.3/255.0.0.0', array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '8',
-                                           'network_start' => '10.0.0.0', 'network_end' => '10.255.255.255', 'network' => '10.0.0.0/8'));
-    // Inverse mask
-    $array[] = array('10.12.0.3/0.0.0.255', array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '24',
-                                           'network_start' => '10.12.0.0', 'network_end' => '10.12.0.255', 'network' => '10.12.0.0/24'));
-    $array[] = array('10.12.0.3',    array('query_type' => 'single', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '32',
-                                           'network_start' => '10.12.0.3', 'network_end' => '10.12.0.3', 'network' => '10.12.0.3/32'));
-    $array[] = array('10.12.0.3/32', array('query_type' => 'single', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '32',
-                                           'network_start' => '10.12.0.3', 'network_end' => '10.12.0.3', 'network' => '10.12.0.3/32'));
-    $array[] = array('10.12.0.3/0', array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12.0.3', 'prefix' => '0',
-                                           'network_start' => '0.0.0.0', 'network_end' => '255.255.255.255', 'network' => '0.0.0.0/0'));
-    $array[] = array('0.0.0.0/0',   array('query_type' => 'network', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '0.0.0.0', 'prefix' => '0',
-                                           'network_start' => '0.0.0.0', 'network_end' => '255.255.255.255', 'network' => '0.0.0.0/0'));
-    $array[] = array('*.12.0.3',     array('query_type' => 'like', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '*.12.0.3'));
-    $array[] = array('10.?.?.3',     array('query_type' => 'like', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.?.?.3'));
-    $array[] = array('10.12',        array('query_type' => '%like%', 'ip_version' => 4, 'ip_type' => 'ipv4',
-                                           'address' => '10.12'));
-    // Valid IPv6
-    $array[] = array('1762:0:0:0:0:B03:1:AF18/99', array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:0:0:0:0:B03:1:AF18', 'prefix' => '99',
-                                           'network_start' => '1762:0:0:0:0:b03:0:0', 'network_end' => '1762:0:0:0:0:b03:1fff:ffff', 'network' => '1762:0:0:0:0:b03:0:0/99'));
-    $array[] = array('1762:0:0:0:0:b03:0:0/99',    array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:0:0:0:0:b03:0:0', 'prefix' => '99',
-                                           'network_start' => '1762:0:0:0:0:b03:0:0', 'network_end' => '1762:0:0:0:0:b03:1fff:ffff', 'network' => '1762:0:0:0:0:b03:0:0/99'));
-    $array[] = array('1762:0:0:0:0:B03:1:AF18',    array('query_type' => 'single', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:0:0:0:0:B03:1:AF18', 'prefix' => '128',
-                                           'network_start' => '1762:0:0:0:0:B03:1:AF18', 'network_end' => '1762:0:0:0:0:B03:1:AF18', 'network' => '1762:0:0:0:0:B03:1:AF18/128'));
-    $array[] = array('::ffff:192.0.2.47/127', array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '::ffff:192.0.2.47', 'prefix' => '127',
-                                           'network_start' => '0:0:0:0:0:ffff:c000:22e', 'network_end' => '0:0:0:0:0:ffff:c000:22f', 'network' => '0:0:0:0:0:ffff:c000:22e/127'));
-    //$array[] = array('2001:0002:6c::430/48', array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-    //                                       'address' => '::ffff:192.0.2.47', 'prefix' => '48',
-    //                                       'network_start' => '0:0:0:0:0:ffff:c000:22e', 'network_end' => '0:0:0:0:0:ffff:c000:22f', 'network' => '0:0:0:0:0:ffff:c000:22e/48'));
-    $array[] = array('1762:0:0:0:0:B03:1:AF18/128', array('query_type' => 'single', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:0:0:0:0:B03:1:AF18', 'prefix' => '128',
-                                           'network_start' => '1762:0:0:0:0:B03:1:AF18', 'network_end' => '1762:0:0:0:0:B03:1:AF18', 'network' => '1762:0:0:0:0:B03:1:AF18/128'));
-    $array[] = array('1762:0:0:0:0:B03:1:AF18/0', array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:0:0:0:0:B03:1:AF18', 'prefix' => '0',
-                                           'network_start' => '0:0:0:0:0:0:0:0', 'network_end' => 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', 'network' => '0:0:0:0:0:0:0:0/0'));
-    $array[] = array('::/0',               array('query_type' => 'network', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '::', 'prefix' => '0',
-                                           'network_start' => '0:0:0:0:0:0:0:0', 'network_end' => 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', 'network' => '0:0:0:0:0:0:0:0/0'));
-    $array[] = array('1762::*:AF18',       array('query_type' => 'like', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762::*:AF18'));
-    $array[] = array('?::B03:1:AF18',      array('query_type' => 'like', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '?::B03:1:AF18'));
-    $array[] = array('1762:b03',           array('query_type' => '%like%', 'ip_version' => 6, 'ip_type' => 'ipv6',
-                                           'address' => '1762:b03'));
+        $result     = [];
+        $result[1]  = $array1[1];
+        $result[21] = array_merge($array1[21], $array2['4.2.1.0']);
+        $result[23] = array_merge($array1[23], $array2['7.1.0.0']);
 
-    return $array;
-  }
+        $results[]  = [ $result, $array1, $array2, $map, [ '1.1.0.0' => $array2['1.1.0.0'] ] ];
+        return $results;
+    }
 
     /**
-    * @dataProvider providerGetIpType
-    * @group ip
-    */
-    public function testGetIpType($ip, $result) {
-        $this->assertSame($result, get_ip_type($ip));
+     * @dataProvider providerStringQuoted
+     * @group string
+     */
+    public function testStringQuoted($string, $result, $quote = NULL) {
+        if ($quote === NULL) {
+            // Default, common
+            $this->assertSame($result, is_string_quoted($string));
+        } else {
+            // Optional quote select
+            $this->assertSame($result, is_string_quoted($string, $quote));
+        }
     }
-    
-    public function providerGetIpType() {
+    public static function providerStringQuoted() {
+        return array(
+            array('\"sdfslfkm s\'fdsf" a;lm aamjn ',          FALSE),
+            array('sdfslfkm s\'fdsf" a;lm aamjn \"',          FALSE),
+            array('sdfslfkm s\'fdsf" a;lm aamjn ',            FALSE),
+            array('"sdfslfkm s\'fdsf" a;lm aamjn "',          TRUE),
+            array('"\"sdfslfkm s\'fdsf" a;lm aamjn \""',      TRUE),
+            array('"""sdfslfkm s\'fdsf" a;lm aamjn """',      TRUE),
+            array('"""sdfslfkm s\'fdsf" a;lm aamjn """"""""', TRUE),
+            array('"""""""sdfslfkm s\'fdsf" a;lm aamjn """',  TRUE),
+            // escaped quotes
+            array('\"Mike Stupalov\" <mike@observium.org>',   FALSE),
+            array('\"sdfslfkm s\'fdsf" a;lm aamjn \"',        TRUE, '\"'),
+            array("\'\"sdfslfkm s\'fdsf\" a;lm aamjn \"\'",    TRUE, "\'"),
+            //array('  \'\"sdfslfkm s\'fdsf" a;lm aamjn \"\' ', TRUE), // I forgot why it's TRUE
+            array('\"Avenue Léon, België \"',                 TRUE, '\"'),
+            // utf-8
+            array('Avenue Léon, België ',                     FALSE),
+            array('"Avenue Léon, België "',                   TRUE),
+            array('"Винни пух и все-все-все "',               TRUE),
+            // multilined
+            array('"  \'\"\"sdfslfkm s\'fdsf"
+                  a;lm aamjn \"\"\' "',                       TRUE),
+            array('  \'\"\"sdfslfkm s\'fdsf"
+                  a;lm aamjn \"\"\' ',                        FALSE),
+            // not allowed quote char (always false)
+            array('`sdfslfkm s\'fdsf" a;lm aamjn `',          FALSE, '`'),
+            // not string
+            array(NULL,                     FALSE),
+            array(TRUE,                     FALSE),
+            array(1,                        FALSE),
+            array([],                       FALSE),
+        );
+    }
+
+    /**
+    * @dataProvider providerStringSimilar
+    * @group string
+    */
+    public function testStringSimilar($result, $string1, $string2) {
+        $this->assertSame($result, str_similar($string1, $string2));
+        $this->assertSame($result, str_similar($string2, $string1));
+    }
+
+    public static function providerStringSimilar() {
         return [
-            [ '0.0.0.0',                  'unspecified' ],
-            [ '::',                       'unspecified' ],
-            [ '10.255.255.255/32',        'private' ], // Do not set /31 and /32 as broadcast!
-            [ '10.255.255.255/31',        'private' ], // Do not set /31 and /32 as broadcast!
-            [ '10.255.255.255/8',         'broadcast' ],
-            [ '127.0.0.1',                'loopback' ],
-            [ '::1',                      'loopback' ],
-            [ '0:0:0:0:0:0:0:1/128',      'loopback' ],
-            [ '10.12.0.3',                'private' ],
-            [ '172.16.1.1',               'private' ],
-            [ '192.168.0.3',              'private' ],
-            [ 'fdf8:f53b:82e4::53',       'private' ],
-            [ '100.80.76.30',             'cgnat' ],
-            [ '100.105.0.49',             'cgnat' ],
-            [ '0:0:0:0:0:ffff:c000:22f',  'ipv4mapped' ],
-            [ '::ffff:192.0.2.47',        'ipv4mapped' ],
-            [ '77.222.50.30',             'unicast' ],
-            [ '2a02:408:7722:5030::5030', 'unicast' ],
-            [ '169.254.2.47',             'link-local' ],
-            [ 'fe80::200:5aee:feaa:20a2', 'link-local' ],
-            [ '2001:0000:4136:e378:8000:63bf:3fff:fdd2', 'teredo' ],
-            [ '198.18.0.1',               'benchmark' ],
-            [ '2001:0002:0:6C::430',      'benchmark' ],
-            [ '2001:10:240:ab::a',        'orchid' ],
-            [ '1:0002:6c::430',           'reserved' ],
-            [ 'ff02::1:ff8b:4d51/0',      'multicast' ],
+            [ 'Intel Xeon E5430 @ 2.66GH', '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH' ],
+            [ 'Intel Xeon E5430 @',        '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66G' ],
+            [ 'ControlPlane',              'ControlPlane_03', 'ControlPlane_02' ],
+            [ 'Network Processor',         'Network Processor CPU8', 'Network Processor CPU31' ],
+            [ '',                          'Network Processor CPU8', 'Supervisor Card CPU' ],
         ];
     }
 
-  /**
-  * @dataProvider providerMatchNetwork
-  * @group ip
-  */
-  public function testMatchNetwork($result, $ip, $nets, $first = FALSE)
-  {
-    $this->assertSame($result, match_network($ip, $nets, $first));
-  }
+    /**
+    * @dataProvider providerFindSimilar
+    * @group string
+    */
+    public function testFindSimilar($result, $result_flip, $array) {
+        shuffle($array); // Randomize array for more natural test
 
-  public function providerMatchNetwork()
-  {
-    $nets1 = array('127.0.0.0/8', '192.168.0.0/16', '10.0.0.0/8', '172.16.0.0/12', '!172.16.6.7/32');
-    $nets2 = array('fe80::/16', '!fe80:ffff:0:ffff:1:144:52:0/112', '192.168.0.0/16', '172.16.0.0/12', '!172.16.6.7/32');
-    $nets3 = array('fe80::/16', 'fe80:ffff:0:ffff:1:144:52:0/112', '!fe80:ffff:0:ffff:1:144:52:0/112');
-    $nets4 = array('172.16.0.0/12', '!172.16.6.7');
-    $nets5 = array('fe80::/16', '!FE80:FFFF:0:FFFF:1:144:52:38');
-    $nets6 = "I'm a stupid";
-    $nets7 = array('::ffff/96', '2001:0002:6c::/48');
-    $nets8 = array("10.11.1.0/24",  "10.11.2.0/24",  "10.11.11.0/24", "10.11.12.0/24", "10.11.21.0/24", "10.11.22.0/24",
-                   "10.11.30.0/23", "10.11.32.0/24", "10.11.33.0/24", "10.11.34.0/24", "10.11.41.0/24", "10.11.42.0/24",
-                   "10.11.43.0/24", "10.11.51.0/24", "10.11.52.0/24", "10.11.53.0/24", "10.11.61.0/24", "10.11.62.0/24");
+        $this->assertSame($result,      find_similar($array));
+        $this->assertSame($result_flip, find_similar($array, TRUE));
+    }
 
-    return array(
-      // Only IPv4 nets
-      array(TRUE,  '127.0.0.1',  $nets1),
-      array(FALSE, '1.1.1.1',    $nets1),       // not in ranges
-      array(TRUE,  '172.16.6.6', $nets1),
-      array(FALSE, '172.16.6.7', $nets1),       // excluded net
-      array(TRUE,  '172.16.6.7', $nets1, TRUE), // excluded, but first match
-      array(FALSE, '256.16.6.1', $nets1),       // wrong IP
-      // Both IPv4 and IPv6
-      array(FALSE, '1.1.1.1',    $nets2),
-      array(TRUE,  '172.16.6.6', $nets2),
-      array(TRUE,  'FE80:FFFF:0:FFFF:129:144:52:38', $nets2),
-      array(FALSE, 'FE81:FFFF:0:FFFF:129:144:52:38', $nets2), // not in ranges
-      array(FALSE, 'FE80:FFFF:0:FFFF:1:144:52:38',   $nets2), // excluded net
-      // Only IPv6 nets
-      array(FALSE, '1.1.1.1',    $nets3),
-      array(FALSE, '172.16.6.6', $nets3),
-      array(TRUE,  'FE80:FFFF:0:FFFF:129:144:52:38', $nets3),
-      //array(TRUE,  '2001:0002:0:6c::430',            $nets7),
-      array(FALSE, 'FE81:FFFF:0:FFFF:129:144:52:38', $nets3),
-      array(FALSE, 'FE80:FFFF:0:FFFF:1:144:52:38',   $nets3),
-      array(TRUE,  'FE80:FFFF:0:FFFF:1:144:52:38',   $nets3, TRUE), // excluded, but first match
-      // IPv4 net without mask
-      array(TRUE,  '172.16.6.6', $nets4),
-      array(FALSE, '172.16.6.7', $nets4),       // excluded net
-      // IPv6 net without mask
-      array(TRUE,  'FE80:FFFF:0:FFFF:129:144:52:38', $nets5),
-      array(FALSE, 'FE81:FFFF:0:FFFF:129:144:52:38', $nets5),
-      array(FALSE, 'FE80:FFFF:0:FFFF:1:144:52:38',   $nets5),
-      array(TRUE,  'FE80:FFFF:0:FFFF:1:144:52:38',   $nets5, TRUE), // excluded, but first match
-      // IPv6 IPv4 mapped
-      array(TRUE,  '::ffff:192.0.2.47', $nets7),
-      // Are you stupid? YES :)
-      array(FALSE, '172.16.6.6', $nets6),
-      array(FALSE, 'FE80:FFFF:0:FFFF:129:144:52:38', $nets6),
-      // Issues test
-      array(FALSE, '10.52.25.254', $nets8),
-      array(TRUE,  '10.52.25.254',  [ '!217.66.159.18' ]),
-      array(FALSE, '217.66.159.18', [ '!217.66.159.18' ]),
-      array(TRUE,  '217.66.159.18', [ '217.66.159.18' ]),
-    );
-  }
+    public static function providerFindSimilar() {
+        $array1 = [ '0/0/0 Intel Xeon E5430 @ 2.66GHz', '0/1/0 Intel Xeon E5430 @ 2.66GHz', '0/10/0 Intel Xeon E5430 @ 2.66GHz',
+                    'Supervisor Card CPU',
+                    'Network Processor CPU8', 'Network Processor CPU31' ];
+        $array2 = [ '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH', '0/10/0 Intel Xeon E5430 @ 2.66G' ];
+        $array3 = [ 'Slot 1 BR-MLX-10Gx8-X [1]', 'Slot 2 BR-MLX-10Gx8-X [1]',
+                    'Slot 4 BR-MLX-1GFx24-X [1]',
+                    'Slot 5 BR-MLX-MR2-X [1]', 'Slot 6 BR-MLX-MR2-X [1]' ];
+        $array4 = [ 'ControlPlane_03', 'ControlPlane_01', 'ControlPlane_02' ];
+        $array5 = [ 'Core 1', 'Core 2', 'Core 3', 'Core 4', 'Core 5', 'Core 6', 'Core 7', 'Core 8', 'Core 9', 'Core 10', 'Core 11', 'Core 12' ];
 
-  /**
-   * @dataProvider providerStringQuoted
-   * @group string
-   */
-  /* WIP
-  public function testStringQuoted($string, $result)
-  {
-    $this->assertSame($result, is_string_quoted($string));
-  }
-
-  public function providerStringQuoted()
-  {
-    return array(
-      array('\"sdfslfkm s\'fdsf" a;lm aamjn ',          FALSE),
-      array('sdfslfkm s\'fdsf" a;lm aamjn \"',          FALSE),
-      array('sdfslfkm s\'fdsf" a;lm aamjn ',            FALSE),
-      array('\"sdfslfkm s\'fdsf" a;lm aamjn \"',        TRUE),
-      array('"sdfslfkm s\'fdsf" a;lm aamjn "',          TRUE),
-      array('"\"sdfslfkm s\'fdsf" a;lm aamjn \""',      TRUE),
-      array('\'\"sdfslfkm s\'fdsf" a;lm aamjn \"\'',    TRUE),
-      array('  \'\"sdfslfkm s\'fdsf" a;lm aamjn \"\' ', TRUE),
-      array('"""sdfslfkm s\'fdsf" a;lm aamjn """',      TRUE),
-      array('"""sdfslfkm s\'fdsf" a;lm aamjn """"""""', TRUE),
-      array('"""""""sdfslfkm s\'fdsf" a;lm aamjn """',  TRUE),
-      // escaped quotes
-      array('\"Mike Stupalov\" <mike@observium.org>',   FALSE),
-      // utf-8
-      array('Avenue Léon, België ',                     FALSE),
-      array('\"Avenue Léon, België \"',                 TRUE),
-      array('"Винни пух и все-все-все "',               TRUE),
-      // multilined
-      array('  \'\"\"sdfslfkm s\'fdsf"
-            a;lm aamjn \"\"\' ',                        TRUE),
-    );
-  }
-  */
-
-  /**
-  * @dataProvider providerStringTransform
-  * @group string
-  */
-  public function testStringTransform($result, $string, $transformations)
-  {
-    $this->assertSame($result, string_transform($string, $transformations));
-  }
-
-  public function providerStringTransform()
-  {
-    $results = array(
-      // Append
-      array('Bananarama',     'Banana',          array(
-                                                   array('action' => 'append', 'string' => 'rama')
-                                                 )),
-      array('Bananarama',     'Banana',          array(
-                                                   array('action' => 'append', 'string' => 'ra'),
-                                                   array('action' => 'append', 'string' => 'ma')
-                                                 )),
-      // Prepend
-      array('Benga boys',     'boys',            array(
-                                                   array('action' => 'prepend', 'string' => 'Benga ')
-                                                 )),
-      // Replace
-      array('Observium',      'ObserverNMS',     array(
-                                                   array('action' => 'replace', 'from' => 'erNMS', 'to' => 'ium')
-                                                 )),
-      array('ObserverNMS',    'ObserverNMS',     array(
-                                                   array('action' => 'replace', 'from' => 'ernms', 'to' => 'ium')
-                                                 )),
-      // Case Insensitive Replace
-      array('Observium',      'ObserverNMS',     array(
-                                                   array('action' => 'ireplace', 'from' => 'erNMS', 'to' => 'ium')
-                                                 )),
-      array('Observium',      'ObserverNMS',     array(
-                                                   array('action' => 'ireplace', 'from' => 'ernms', 'to' => 'ium')
-                                                 )),
-      // Regex Replace
-      array('1.46.82', 'CS141-SNMP V1.46.82 161207', array(
-                                                   array('action' => 'regex_replace', 'from' => '/CS1\d1\-SNMP V(\d\S+).*/', 'to' => '$1')
-                                                 )),
-      // Regex Replace
-      array('1.46.82', 'CS141-SNMP V1.46.82 161207', array(
-                                                   array('action' => 'preg_replace', 'from' => '/CS1\d1\-SNMP V(\d\S+).*/', 'to' => '$1')
-                                                 )),
-      // Regex Replace (missed delimiters)
-      array('1.46.82', 'CS141-SNMP V1.46.82 161207', array(
-                                                   array('action' => 'preg_replace', 'from' => 'CS1\d1\-SNMP V(\d\S+).*', 'to' => '$1')
-      )),
-      // Regex Replace (to empty)
-      array('', 'FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF', array(
-                                                   array('action' => 'preg_replace', 'from' => '/^FF( FF)*$/', 'to' => '')
-      )),
-      // Regex Replace (not match)
-      array('CS141-SNMP', 'CS141-SNMP',          array(
-                                                   array('action' => 'preg_replace', 'from' => '/CS1\d1\-SNMP V(\d\S+).*/', 'to' => '$1')
-                                                 )),
-      // Trim
-      array('OOObservium',    'oooOOObserviumo', array(
-                                                   array('action' => 'trim', 'characters' => 'o')
-                                                 )),
-      // LTrim
-      array('OOObserviumo',   'oooOOObserviumo', array(
-                                                   array('action' => 'ltrim', 'characters' => 'o')
-                                                 )),
-      // RTrim
-      array('oooOOObservium', 'oooOOObserviumo', array(
-                                                   array('action' => 'rtrim', 'characters' => 'o')
-                                                 )),
-      // MAP
-      array('oooOOObserviumo', 'oooOOObservium', array(
-                                                   array('action' => 'map', 'map' => [ 'oooOOObservium' => 'oooOOObserviumo' ])
-      )),
-      array('oooOOO', 'oooOOO', array(
-        array('action' => 'map', 'map' => [ 'oooOOObservium' => 'oooOOObserviumo' ])
-      )),
-      // MAp by regex
-      array('oooOOObserviumo', 'ooo3748yhrfnhnd3', array(
-        array('action' => 'map_match', 'map' => [ '/^ooo/' => 'oooOOObserviumo' ])
-      )),
-      array('ooo3748yhrfnhnd3', 'ooo3748yhrfnhnd3', array(
-        array('action' => 'map_match', 'map' => [ '/^xoo/' => 'oooOOObserviumo' ])
-      )),
-
-      // Timeticks
-      array(15462419, '178:23:06:59.03', array(
-                                                   array('action' => 'timeticks')
-                                                 )),
-
-      // BGP 32bit ASdot
-      array('327700', '5.20', array(
-                                                   array('action' => 'asdot')
-                                                 )),
-
-      // Explode (defaults - delimiter: " ", index: first)
-      array('1.6', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode')
-                                                 )),
-      array('1.6', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => ' ', 'index' => 'first')
-                                                 )),
-      array('1.6', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => ' ', 'index' => 0)
-                                                 )),
-      array('13120415', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => ' ', 'index' => 'end')
-                                                 )),
-      array('Build', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => ' ', 'index' => 1)
-                                                 )),
-      array('6 Build 13120415', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => '.', 'index' => 1)
-                                                 )),
-      // (unknown index)
-      array('1.6 Build 13120415', '1.6 Build 13120415', array(
-                                                   array('action' => 'explode', 'delimiter' => '.', 'index' => 10)
-                                                 )),
-
-
-      // Single action with less array nesting
-      array('1.46.82', 'CS141-SNMP V1.46.82 161207', array('action' => 'preg_replace', 'from' => '/CS1\d1\-SNMP V(\d\S+).*/', 'to' => '$1')),
-      array('327700', '5.20',                        array('action' => 'asdot')),
-
-      // Combinations, to be done in exact order, including no-ops
-      array('Observium',      'oooOOOKikkero',   array(
-                                                   array('action' => 'trim', 'characters' => 'o'),
-                                                   array('action' => 'ltrim', 'characters' => 'O'),
-                                                   array('action' => 'rtrim', 'characters' => 'F'),
-                                                   array('action' => 'replace', 'from' => 'Kikker', 'to' => 'ObserverNMS'),
-                                                   array('action' => 'replace', 'from' => 'erNMS', 'to' => 'ium')
-                                                 )),
-    );
-    return $results;
-  }
-
-  /**
-  * @dataProvider providerStringSimilar
-  * @group string
-  */
-  public function testStringSimilar($result, $string1, $string2)
-  {
-    $this->assertSame($result, str_similar($string1, $string2));
-    $this->assertSame($result, str_similar($string2, $string1));
-  }
-
-  public function providerStringSimilar()
-  {
-    return array(
-      array('Intel Xeon E5430 @ 2.66GH', '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH'),
-      array('Intel Xeon E5430 @',        '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66G'),
-      array('Network Processor',         'Network Processor CPU8', 'Network Processor CPU31'),
-      array('',                          'Network Processor CPU8', 'Supervisor Card CPU'),
-    );
-  }
-
-  /**
-  * @dataProvider providerFindSimilar
-  * @group string
-  */
-  public function testFindSimilar($result, $result_flip, $array)
-  {
-    shuffle($array); // Randomize array for more natural test
-
-    $this->assertSame($result,      find_similar($array));
-    $this->assertSame($result_flip, find_similar($array, TRUE));
-  }
-
-  public function providerFindSimilar()
-  {
-    $array1 = ['0/0/0 Intel Xeon E5430 @ 2.66GHz', '0/1/0 Intel Xeon E5430 @ 2.66GHz', '0/10/0 Intel Xeon E5430 @ 2.66GHz',
-               'Supervisor Card CPU',
-               'Network Processor CPU8', 'Network Processor CPU31'];
-    $array2 = ['0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH', '0/10/0 Intel Xeon E5430 @ 2.66G'];
-    $array3 = ['Slot 1 BR-MLX-10Gx8-X [1]', 'Slot 2 BR-MLX-10Gx8-X [1]',
-               'Slot 4 BR-MLX-1GFx24-X [1]',
-               'Slot 5 BR-MLX-MR2-X [1]', 'Slot 6 BR-MLX-MR2-X [1]'];
-
-    return array(
-      array(['Intel Xeon E5430 @ 2.66GHz' => ['0/0/0 Intel Xeon E5430 @ 2.66GHz', '0/1/0 Intel Xeon E5430 @ 2.66GHz', '0/10/0 Intel Xeon E5430 @ 2.66GHz'],
-             'Network Processor'          => ['Network Processor CPU8', 'Network Processor CPU31'],
-             'Supervisor Card CPU'        => ['Supervisor Card CPU']
+        return [
+            [
+                [
+                    'Intel Xeon E5430 @ 2.66GHz' => [ '0/0/0 Intel Xeon E5430 @ 2.66GHz', '0/1/0 Intel Xeon E5430 @ 2.66GHz', '0/10/0 Intel Xeon E5430 @ 2.66GHz' ],
+                    'Network Processor'          => [ 'Network Processor CPU8', 'Network Processor CPU31' ],
+                    'Supervisor Card CPU'        => [ 'Supervisor Card CPU' ]
+                ],
+                [
+                    '0/0/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
+                    '0/1/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
+                    '0/10/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
+                    'Network Processor CPU8' => 'Network Processor',
+                    'Network Processor CPU31' => 'Network Processor',
+                    'Supervisor Card CPU' => 'Supervisor Card CPU'
+                ],
+                $array1
             ],
-            ['0/0/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
-             '0/1/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
-             '0/10/0 Intel Xeon E5430 @ 2.66GHz' => 'Intel Xeon E5430 @ 2.66GHz',
-             'Network Processor CPU8' => 'Network Processor',
-             'Network Processor CPU31' => 'Network Processor',
-             'Supervisor Card CPU' => 'Supervisor Card CPU'
+            [
+                [
+                    'Intel Xeon E5430 @ 2.66GH' => [ '0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH', '0/10/0 Intel Xeon E5430 @ 2.66G' ]
+                ],
+                [
+                    '0/0/0 Intel Xeon E5430 @ 2.66GH' => 'Intel Xeon E5430 @ 2.66GH',
+                    '0/1/0 Intel Xeon E5430 @ 2.66GH' => 'Intel Xeon E5430 @ 2.66GH',
+                    '0/10/0 Intel Xeon E5430 @ 2.66G' => 'Intel Xeon E5430 @ 2.66GH'
+                ],
+                $array2
             ],
-            $array1),
-      array(['Intel Xeon E5430 @ 2.66GH' => ['0/0/0 Intel Xeon E5430 @ 2.66GH', '0/1/0 Intel Xeon E5430 @ 2.66GH', '0/10/0 Intel Xeon E5430 @ 2.66G']],
-            ['0/0/0 Intel Xeon E5430 @ 2.66GH' => 'Intel Xeon E5430 @ 2.66GH',
-             '0/1/0 Intel Xeon E5430 @ 2.66GH' => 'Intel Xeon E5430 @ 2.66GH',
-             '0/10/0 Intel Xeon E5430 @ 2.66G' => 'Intel Xeon E5430 @ 2.66GH'
+            [
+                [
+                    'Slot BR-MLX-10Gx8-X [1]'    => [ 'Slot 1 BR-MLX-10Gx8-X [1]', 'Slot 2 BR-MLX-10Gx8-X [1]' ],
+                    'Slot 4 BR-MLX-1GFx24-X [1]' => [ 'Slot 4 BR-MLX-1GFx24-X [1]' ],
+                    'Slot BR-MLX-MR2-X [1]'      => [ 'Slot 5 BR-MLX-MR2-X [1]', 'Slot 6 BR-MLX-MR2-X [1]' ]
+                ],
+                [
+                    'Slot 1 BR-MLX-10Gx8-X [1]'  => 'Slot BR-MLX-10Gx8-X [1]',
+                    'Slot 2 BR-MLX-10Gx8-X [1]'  => 'Slot BR-MLX-10Gx8-X [1]',
+                    'Slot 4 BR-MLX-1GFx24-X [1]' => 'Slot 4 BR-MLX-1GFx24-X [1]',
+                    'Slot 5 BR-MLX-MR2-X [1]'    => 'Slot BR-MLX-MR2-X [1]',
+                    'Slot 6 BR-MLX-MR2-X [1]'    => 'Slot BR-MLX-MR2-X [1]'
+                ],
+                $array3
             ],
-            $array2),
-      array(['Slot BR-MLX-10Gx8-X [1]'    => ['Slot 1 BR-MLX-10Gx8-X [1]', 'Slot 2 BR-MLX-10Gx8-X [1]'],
-             'Slot 4 BR-MLX-1GFx24-X [1]' => ['Slot 4 BR-MLX-1GFx24-X [1]'],
-             'Slot BR-MLX-MR2-X [1]'      => ['Slot 5 BR-MLX-MR2-X [1]', 'Slot 6 BR-MLX-MR2-X [1]']
+            [
+                [
+                    'ControlPlane'    => [ 'ControlPlane_01', 'ControlPlane_02', 'ControlPlane_03' ],
+                ],
+                [
+                    'ControlPlane_01'  => 'ControlPlane',
+                    'ControlPlane_02'  => 'ControlPlane',
+                    'ControlPlane_03'  => 'ControlPlane',
+                ],
+                $array4
             ],
-            ['Slot 1 BR-MLX-10Gx8-X [1]'  => 'Slot BR-MLX-10Gx8-X [1]',
-             'Slot 2 BR-MLX-10Gx8-X [1]'  => 'Slot BR-MLX-10Gx8-X [1]',
-             'Slot 4 BR-MLX-1GFx24-X [1]' => 'Slot 4 BR-MLX-1GFx24-X [1]',
-             'Slot 5 BR-MLX-MR2-X [1]'    => 'Slot BR-MLX-MR2-X [1]',
-             'Slot 6 BR-MLX-MR2-X [1]'    => 'Slot BR-MLX-MR2-X [1]'
+            [
+                [
+                    'Core'    => [ 'Core 1', 'Core 2', 'Core 3', 'Core 4', 'Core 5', 'Core 6', 'Core 7', 'Core 8', 'Core 9', 'Core 10', 'Core 11', 'Core 12' ],
+                ],
+                [
+                    'Core 1'  => 'Core',
+                    'Core 2'  => 'Core',
+                    'Core 3'  => 'Core',
+                    'Core 4'  => 'Core',
+                    'Core 5'  => 'Core',
+                    'Core 6'  => 'Core',
+                    'Core 7'  => 'Core',
+                    'Core 8'  => 'Core',
+                    'Core 9'  => 'Core',
+                    'Core 10' => 'Core',
+                    'Core 11' => 'Core',
+                    'Core 12' => 'Core'
+                ],
+                $array5
             ],
-            $array3),
-    );
-  }
+        ];
+    }
 
     /**
     * @dataProvider providerIsPingable
@@ -1430,7 +960,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, $ping);
     }
 
-    public function providerIsPingable() {
+    public static function providerIsPingable() {
         $array = [
             [ 'localhost',             TRUE ],
             [ '127.0.0.1',             TRUE ],
@@ -1466,7 +996,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, calculate_mempool_properties($scale, $used, $total, $free, $perc));
   }
 
-  public function providerCalculateMempoolProperties()
+  public static function providerCalculateMempoolProperties()
   {
     $results = array(
       array(  1, 123456789, 234567890, NULL, NULL, array('used' => 123456789,  'total' => 234567890,   'free' => 111111101,  'perc' => 52.63, 'units' => 1,   'scale' => 1,   'valid' => TRUE)), // Used + Total known
@@ -1509,7 +1039,7 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, calculate_mempool_properties($scale, $used, $total, $free, $perc, $options));
   }
 
-  public function providerCalculateMempoolPropertiesScale()
+  public static function providerCalculateMempoolPropertiesScale()
   {
     $scale1 = array('scale_total' => 1024);
     $scale2 = array('scale_used'  => 2048);
@@ -1526,112 +1056,6 @@ class IncludesFunctionsTest extends \PHPUnit\Framework\TestCase
     );
     return $results;
   }
-
-    /**
-     * @dataProvider providerGetGeolocation
-     * @group geo
-     */
-    public function testGetGeolocation($address, $result, $api = 'geocodefarm', $geo_db = [], $dns_only = FALSE)
-    {
-        if ($api === 'geocodefarm' || $api === 'openstreetmap' ||
-            !empty($GLOBALS['config']['geo_api'][$api]['key'])) {
-            $GLOBALS['config']['geocoding']['dns'] = $dns_only;
-            $GLOBALS['config']['geocoding']['api'] = $api;
-
-            $test = get_geolocation($address, $geo_db, $dns_only);
-            unset($test['location_updated'], $test['location_status']);
-            $this->assertSame($result, $test);
-        }
-    }
-
-    public function providerGetGeolocation()
-    {
-        $array = [];
-
-        // DNS LOC (reverse)
-        $location = 'qwerty';
-        $api = 'openstreetmap';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.7749289, 'location_lon' => -122.4194178,
-                    'location_city' => 'San Francisco', 'location_county' => 'Unknown', 'location_state' => 'California', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api, [ 'hostname' => 'loc-degree.observium.dev' ], TRUE ]; // reverse, dns only
-        $api = 'geocodefarm';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.7749289, 'location_lon' => -122.4194178,
-                    'location_city' => 'Mission District', 'location_county' => 'San Francisco', 'location_state' => 'CA', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api, [ 'hostname' => 'loc-degree.observium.dev' ], TRUE ]; // reverse, dns only
-        $api = 'yandex';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.7749289, 'location_lon' => -122.4194178,
-                    'location_country' => 'United States', 'location_state' => 'California', 'location_county' => 'San Francisco', 'location_city' => 'SoMa' ];
-        $array[] = [ $location, $result, $api, [ 'hostname' => 'loc-degree.observium.dev' ], TRUE ]; // reverse, dns only
-        $api = 'mapquest';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.7749289, 'location_lon' => -122.4194178,
-                    'location_city' => 'San Francisco', 'location_county' => 'San Francisco', 'location_state' => 'CA', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api, [ 'hostname' => 'loc-degree.observium.dev' ], TRUE ]; // reverse, dns only
-        $api = 'bing';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.7749289, 'location_lon' => -122.4194178,
-                    'location_city' => 'Mission District', 'location_county' => 'San Francisco', 'location_state' => 'California', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api, [ 'hostname' => 'loc-degree.observium.dev' ], TRUE ]; // reverse, dns only
-
-        // Location (reverse)
-        $location = 'Some location [47.616380;-122.341673]';
-        $api = 'openstreetmap';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 47.61638, 'location_lon' => -122.341673,
-                    'location_city' => 'Seattle', 'location_county' => 'King', 'location_state' => 'Washington', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api ];
-        $location = 'Some location|\'47.616380\'|\'-122.341673\'';
-        $api = 'openstreetmap';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 47.61638, 'location_lon' => -122.341673,
-                    'location_city' => 'Seattle', 'location_county' => 'King', 'location_state' => 'Washington', 'location_country' => 'United States' ];
-        $array[] = [ $location, $result, $api ];
-
-        // First request (forward)
-        $location = 'Badenerstrasse 569, Zurich, Switzerland';
-        $api = 'openstreetmap';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 47.3832766, 'location_lon' => 8.4955511,
-                    'location_city' => 'Zurich', 'location_county' => 'District Zurich', 'location_state' => 'Zurich', 'location_country' => 'Switzerland' ];
-        $array[] = [ $location, $result, $api ];
-        $location = 'Nikhef, Amsterdam, NL';
-        $api = 'yandex';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lon' => 4.892557, 'location_lat' => 52.373057,
-                    'location_country' => 'Netherlands', 'location_state' => 'North Holland', 'location_county' => 'North Holland', 'location_city' => 'Amsterdam' ];
-        $array[] = [ $location, $result, $api ];
-        $location = 'Korea_Seoul';
-        $api = 'mapquest';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.55886, 'location_lon' => 126.99989,
-                    'location_city' => 'Seoul', 'location_county' => 'South Korea', 'location_state' => 'Unknown', 'location_country' => 'South Korea' ];
-        $array[] = [ $location, $result, $api ];
-
-        // Second request (forward)
-        $location = 'ZRH2, Badenerstrasse 569, Zurich, Switzerland';
-        $api = 'openstreetmap';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 47.3832766, 'location_lon' => 8.4955511,
-                    'location_city' => 'Zurich', 'location_county' => 'District Zurich', 'location_state' => 'Zurich', 'location_country' => 'Switzerland' ];
-        $array[] = [ $location, $result, $api ];
-        $location = 'Rack: NK-76 - Nikhef, Amsterdam, NL';
-        $api = 'yandex';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lon' => 4.892557, 'location_lat' => 52.373057,
-                    'location_country' => 'Netherlands', 'location_state' => 'North Holland', 'location_county' => 'North Holland', 'location_city' => 'Amsterdam' ];
-        $array[] = [ $location, $result, $api ];
-        $location = 'Korea_Seoul';
-        $api = 'bing';
-        $result = [ 'location' => $location, 'location_geoapi' => $api,
-                    'location_lat' => 37.5682945, 'location_lon' => 126.9977875,
-                    'location_city' => 'Seoul', 'location_county' => 'Unknown', 'location_state' => 'Seoul', 'location_country' => 'South Korea' ];
-        $array[] = [ $location, $result, $api ];
-
-        return $array;
-    }
 
     /**
      * @group sql

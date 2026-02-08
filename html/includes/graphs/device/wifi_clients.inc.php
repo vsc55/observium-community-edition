@@ -14,6 +14,7 @@
 
 $radio1 = get_rrd_path($device, "wificlients-radio1.rrd");
 $radio2 = get_rrd_path($device, "wificlients-radio2.rrd");
+$controller = get_rrd_path($device, "aruba-controller.rrd");
 
 if (rrd_is_file($radio1, TRUE)) {
     $radio2_exists = rrd_is_file($radio2, TRUE);
@@ -31,6 +32,12 @@ if (rrd_is_file($radio1, TRUE)) {
         $rrd_list[1]['colour']   = 'CC0000';
         //$rrd_list[1]['areacolour'] = 'CDEB8B';
     }
+} elseif (rrd_is_file($controller, TRUE)) {
+    $rrd_list[0]['filename']   = $controller;
+    $rrd_list[0]['descr']      = 'Clients';
+    $rrd_list[0]['ds']         = 'NUMCLIENTS';
+    $rrd_list[0]['colour']     = '008C00';
+    $rrd_list[0]['areacolour'] = 'CDEB8B';
 }
 
 //$colours   = "mixed";

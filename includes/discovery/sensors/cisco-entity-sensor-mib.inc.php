@@ -117,7 +117,7 @@ foreach ($entity_array as $index => $entry) {
         // Set description based on measured entity if it exists
         if (is_numeric($entry['entSensorMeasuredEntity']) && $entry['entSensorMeasuredEntity']) {
 
-            if ($entity_array[$entry['entSensorMeasuredEntity']]['entPhysicalClass'] == 'chassis') {
+            if ($entity_array[$entry['entSensorMeasuredEntity']]['entPhysicalClass'] === 'chassis') {
 
                 // Skip Chassis parents
 
@@ -172,12 +172,14 @@ foreach ($entity_array as $index => $entry) {
 
         // Returning blatantly broken value. IGNORE.
         if ($value == "-32768" || $value == "-127") {
+            print_debug("Sensor skipped by broken value.");
             $ok = FALSE;
         } elseif (safe_empty($descr)) {
             // Empty description. Lots of these on Nexus and Cisco APIC
             $i[$type]++;
             $descr = 'Sensor ' . $i[$type];
             if ($value == 0) {
+                print_debug("Sensor skipped by empty description and zero value.");
                 $ok = FALSE;
             }
         }
@@ -216,6 +218,33 @@ foreach ($entity_array as $index => $entry) {
                             $descr .= ' Transceiver Transmit Power';
                             break;
                     }
+                }
+
+                // Checks by port entity array
+                // See: https://jira.observium.org/browse/OBS-4954
+                if (isset($port['entPhysicalIndex'], $entity_array[$port['entPhysicalIndex']]) &&
+                    str_contains($entity_array[$port['entPhysicalIndex']]['entPhysicalDescr'], ' UTP,')) {
+                    // entPhysicalDescr.847355804 = 1000BASE-T SFP (NEBS 3), UTP, 100m
+                    // entPhysicalVendorType.847355804 = cevSFP10GSR
+                    // entPhysicalContainedIn.847355804 = 847250123
+                    //
+                    // entPhysicalClass.847355804 = module
+                    // entPhysicalParentRelPos.847355804 = 0
+                    // entPhysicalName.847355804 = GigabitEthernet104/0/0/16
+                    // entPhysicalHardwareRev.847355804 = V02
+                    // entPhysicalFirmwareRev.847355804 =
+                    // entPhysicalSoftwareRev.847355804 =
+                    // entPhysicalSerialNum.847355804 = MTC203606EG
+                    // entPhysicalMfgName.847355804 = CISCO-METHODE
+                    // entPhysicalModelName.847355804 = SFP-GE-T
+                    // entPhysicalAlias.847355804 = ASSTAL
+                    // entPhysicalAssetID.847355804 = ASSTID-1
+                    // entPhysicalIsFRU.847355804 = true
+
+                    // This is incorrectly reported VendorType, UTP not possible for DOM sensors
+                    print_debug_vars($entity_array[$port['entPhysicalIndex']]);
+                    print_debug("Sensor skipped for Port entity by incorrect reported VendorType.");
+                    $ok = FALSE;
                 }
             }
 
@@ -286,7 +315,7 @@ foreach ($entity_array as $index => $entry) {
             $scale = si_to_scale($entry['entSensorScale'], $precision);
 
             // Check thresholds for this entry
-            foreach ($t_entity_array[$index] as $t_index => $t_entry) {
+            foreach ($t_entity_array[$index] as $t_entry) {
                 if ($t_entry['entSensorThresholdValue'] == "-32768") {
                     continue;
                 }
@@ -493,6 +522,8 @@ foreach ($entity_array as $index => $entry) {
                 $limits['limit_low'] == 0 && $limits['limit_low_warn'] == 0) {
                 unset($limits['limit_high'], $limits['limit_high_warn'], $limits['limit_low'], $limits['limit_low_warn']);
                 if (!($type === 'dbm' || $port['ifOperStatus'] === 'up')) {
+
+                    print_debug("Sensor skipped for Port entity by all thresholds is zero.");
                     $ok = FALSE;
                 }
             }

@@ -63,9 +63,12 @@ if (!safe_empty($hrStorage)) {
 
         }
 
-        // Another 'hack' for isilon devices with very big array size
-        if ($descr === '/ifs' && is_device_mib($device, 'ISILON-MIB')) {
+        if ($device['os'] === 'onefs' && $descr === '/ifs') {
+        //if ($descr === '/ifs' && is_device_mib($device, 'ISILON-MIB')) {
+            // Another 'hack' for isilon devices with very big array size
             // Remove from polling by HOST-RESOURCES-MIB
+            continue;
+        } elseif ($device['os'] === 'ocnos' && str_starts_with($descr, '/etc/')) {
             continue;
         }
 

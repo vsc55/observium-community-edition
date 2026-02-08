@@ -1,13 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- /*****************************************************************
---  *                                                               *
---  * $RCSfile: fsdhclient.mib,v $
---  *                                                               *
---  * $Id: fsdhclient.mib,v 1.16 2014/06/24 11:36:00 siva Exp $    *
---  *                                                               *
---  *                                                               *
---  ****************************************************************/
 	ARICENT-DHCP-CLIENT-MIB DEFINITIONS ::= BEGIN
  
 	IMPORTS
@@ -48,7 +40,7 @@ dhcpClientConfigEntry OBJECT-TYPE
 	MAX-ACCESS not-accessible  
 	STATUS current  
 	DESCRIPTION  
-		"Entries of the dhcpClientConfigTable"
+		"This object specifies the entries of the dhcpClientConfigTable."
 	INDEX {dhcpClientConfigIfIndex}
 	::=  { dhcpClientConfigTable 1 } 
 
@@ -66,7 +58,7 @@ dhcpClientConfigIfIndex OBJECT-TYPE
 	MAX-ACCESS not-accessible
 	STATUS current  
 	DESCRIPTION  
-	"Index of one entry in dhcpClientConfigTable"  
+	"This object specifies the index of one entry in dhcpClientConfigTable."  
 	::=  { dhcpClientConfigEntry 1 }  
  
 dhcpClientRenew OBJECT-TYPE
@@ -82,7 +74,7 @@ dhcpClientRenew OBJECT-TYPE
          When this object is set,Client will send DHCP Renew Request 
          message provided client is in BOUND/RENEW/REBIND state.
          The Object can be set to the value 'notset' only through 
-         Protocol operation"
+         Protocol operation."
 		DEFVAL    { 2 }
 	::= { dhcpClientConfigEntry 2 }
 
@@ -99,7 +91,7 @@ dhcpClientRebind OBJECT-TYPE
          When this object is set,Client will send DHCP Rebind Request 
          message provided client is in BOUND/RENEW/REBIND state.
          The Object can be set to the value 'notset' only through 
-         Protocol operation"
+         Protocol operation."
 	DEFVAL    { 2 }
 	::= { dhcpClientConfigEntry 3 }
 
@@ -116,7 +108,7 @@ dhcpClientInform OBJECT-TYPE
          DHCP server.When this object is set,Client will send DHCP 
          Inform message provided client in BOUND state. The Object 
          can be set to the value 'notset' only through  Protocol 
-         operation"
+         operation."
 	DEFVAL    { 2 }
 	::= { dhcpClientConfigEntry 4 }
 
@@ -133,7 +125,7 @@ dhcpClientRelease OBJECT-TYPE
          DHCP server pool.When this object is set,Client will send 
          DHCP RELEASE message provided client is in BOUND/RENEW/
          REBIND state.The Object can be set to the value 'notset' 
-         only through Protocol operation"
+         only through Protocol operation."
 	DEFVAL    { 2 }
 	::= { dhcpClientConfigEntry 5 }
 
@@ -290,7 +282,7 @@ dhcpClientCounterEntry OBJECT-TYPE
 	MAX-ACCESS not-accessible  
 	STATUS current  
 	DESCRIPTION  
-		"Entries of the dhcpClientCounterTable"
+		"This object specifies the entries of the dhcpClientCounterTable."
 	INDEX {dhcpClientIfIndex}
 	::=  { dhcpClientCounterTable 1 }  
 
@@ -326,7 +318,7 @@ dhcpClientIfIndex OBJECT-TYPE
 	MAX-ACCESS	not-accessible
 	STATUS		current  
 	DESCRIPTION  
-		"Index of one entry in dhcpClientCounterTable"  
+		"This object specifies the index of one entry in dhcpClientCounterTable."  
 		::=  { dhcpClientCounterEntry 1 }  
  
 dhcpClientCountDiscovers OBJECT-TYPE 
@@ -388,8 +380,8 @@ dhcpCountAcksInReqState OBJECT-TYPE
 	 MAX-ACCESS	read-only 
 	 STATUS		current 
 	 DESCRIPTION 
-		 "The number of DHCPACK (option 53 with value 5) packets 
-		 recieved in the S_REQUESTING state" 
+		 "This object specifies the number of DHCPACK (option 53 with value 5) packets 
+		 recieved in the S_REQUESTING state." 
 	 ::= { dhcpClientCounterEntry 8 } 
 					  
 dhcpCountNacksInReqState OBJECT-TYPE 
@@ -397,8 +389,8 @@ dhcpCountNacksInReqState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPNACK (option 53 with value 6) packets 
-		recieved in the S_REQUESTING state" 
+		"This object specifies the number of DHCPNACK (option 53 with value 6) packets 
+		recieved in the S_REQUESTING state." 
 	::= { dhcpClientCounterEntry 9 } 
              
 dhcpCountAcksInRenewState OBJECT-TYPE 
@@ -406,8 +398,8 @@ dhcpCountAcksInRenewState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPACK (option 53 with value 5) packets 
-		recieved in the S_RENEWING state" 
+		"This object specifies the number of DHCPACK (option 53 with value 5) packets 
+		recieved in the S_RENEWING state." 
 	::= { dhcpClientCounterEntry 10 } 
              
 dhcpCountNacksInRenewState OBJECT-TYPE 
@@ -415,8 +407,8 @@ dhcpCountNacksInRenewState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPNACK (option 53 with value 6) packets 
-		recieved in the S_RENEWING state" 
+		"This object specifies the number of DHCPNACK (option 53 with value 6) packets 
+		recieved in the S_RENEWING state." 
 	::= { dhcpClientCounterEntry 11 } 
 
 dhcpCountAcksInRebindState OBJECT-TYPE 
@@ -424,8 +416,8 @@ dhcpCountAcksInRebindState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPACK (option 53 with value 5) packets 
-		recieved in the S_REBINDING state" 
+		"This object specifies the number of DHCPACK (option 53 with value 5) packets 
+		recieved in the S_REBINDING state." 
 	::= { dhcpClientCounterEntry 12 } 
              
 dhcpCountNacksInRebindState OBJECT-TYPE 
@@ -433,8 +425,8 @@ dhcpCountNacksInRebindState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPNACK (option 53 with value 6) packets 
-		recieved in the S_REBINDING state" 
+		"This object specifies the number of DHCPNACK (option 53 with value 6) packets 
+		recieved in the S_REBINDING state." 
 	::= { dhcpClientCounterEntry 13 } 
 
 dhcpCountAcksInRebootState OBJECT-TYPE 
@@ -442,8 +434,8 @@ dhcpCountAcksInRebootState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPACK (option 53 with value 5) packets 
-		recieved in the S_REBOOTING state" 
+		"This object specifies the number of DHCPACK (option 53 with value 5) packets 
+		recieved in the S_REBOOTING state." 
 	::= { dhcpClientCounterEntry 14 } 
              
 dhcpCountNacksInRebootState OBJECT-TYPE 
@@ -451,8 +443,8 @@ dhcpCountNacksInRebootState OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of DHCPNACK (option 53 with value 6) packets 
-		recieved in the S_REBOOTING state" 
+		"This object specifies the number of DHCPNACK (option 53 with value 6) packets 
+		recieved in the S_REBOOTING state." 
 	::= { dhcpClientCounterEntry 15 } 
 
 dhcpCountErrorInHeader OBJECT-TYPE 
@@ -460,8 +452,8 @@ dhcpCountErrorInHeader OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of packet errors reiceved in the DHCP Client 
-		Header" 
+		"This object specifies the number of packet errors reiceved in the DHCP Client 
+		Header." 
 	::= { dhcpClientCounterEntry 16 } 
              
 dhcpCountErrorInXid OBJECT-TYPE 
@@ -469,7 +461,7 @@ dhcpCountErrorInXid OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of packet recieved which mismatches in Xid" 
+		"This object specifies the number of packet recieved which mismatches in Xid." 
 		::= { dhcpClientCounterEntry 17 } 
              
 dhcpCountErrorInOptions OBJECT-TYPE 
@@ -477,7 +469,7 @@ dhcpCountErrorInOptions OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The number of packet recieved which has error in options" 
+		"This object specifies the number of packet recieved which has error in options." 
 		::= { dhcpClientCounterEntry 18 } 
 
 dhcpClientIpAddress OBJECT-TYPE 
@@ -485,7 +477,7 @@ dhcpClientIpAddress OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The negotiated IP Address of particular interface " 
+		"This object specifies the negotiated IP Address of particular interface." 
 		::= { dhcpClientCounterEntry 19 } 
             
 dhcpClientLeaseTime OBJECT-TYPE 
@@ -493,7 +485,7 @@ dhcpClientLeaseTime OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"The negotiated Lease time of particular interface " 
+		"This object specifies the negotiated Lease time of particular interface." 
 		::= { dhcpClientCounterEntry 20 } 
            
 dhcpClientCounterReset OBJECT-TYPE 
@@ -518,7 +510,7 @@ dhcpClientRemainLeaseTime OBJECT-TYPE
 	MAX-ACCESS	read-only 
 	STATUS		current 
 	DESCRIPTION 
-		"It gets the remaining lease time of the particular interface " 
+		"This object is used to get the remaining lease time of the particular interface." 
 		::= { dhcpClientCounterEntry 22 }
 
 dhcpClientFastAccess OBJECT-TYPE
@@ -537,7 +529,7 @@ dhcpClientFastAccess OBJECT-TYPE
 		timeout is 5 seconds and for the null state timeout is 1 second.
 		If the mode is disabled, default value for discovery timeout and null state
 		timeout will be 15 seconds and 180 seconds respectively. The timeout values
-		cannot be changed under disable mode"
+		cannot be changed under disable mode."
 	DEFVAL       { disable }
 		::= { dhcpClientConfig 4 }
 
@@ -546,7 +538,7 @@ dhcpClientFastAccessDiscoverTimeOut   OBJECT-TYPE
 	MAX-ACCESS	read-write
 	STATUS		current
 	DESCRIPTION
-		"Time to wait between discovery messages which is sent by DHCP client in seconds"
+		"This object specifies the time to wait between discovery messages which is sent by DHCP client in seconds."
 	DEFVAL      { 15 }
 		::= { dhcpClientConfig 5 }
 
@@ -555,8 +547,8 @@ dhcpClientFastAccessNullStateTimeOut  OBJECT-TYPE
 	MAX-ACCESS  read-write
 	STATUS      current
 	DESCRIPTION
-		"Time to wait to go idle/null state after four unsuccessful DHCP client 
-		discovery messages in seconds"
+		"This object specifies the time to wait to go idle/null state after four unsuccessful DHCP client 
+		discovery messages in seconds."
 	DEFVAL      { 180 }
 		::= {dhcpClientConfig 6 }
 
@@ -565,7 +557,7 @@ dhcpClientFastAccessArpCheckTimeOut  OBJECT-TYPE
         MAX-ACCESS  read-write
         STATUS      current
         DESCRIPTION
-                "Retransmission time out between ARP messages which is sent by DHCP client in seconds"
+                "This object specifies the retransmission time out between ARP messages which is sent by DHCP client in seconds."
         DEFVAL      { 20 }
                 ::= {dhcpClientConfig 7 }
 

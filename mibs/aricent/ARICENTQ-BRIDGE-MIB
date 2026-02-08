@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved
 
--- $Id: fsmsvlan.mib,v 1.11 2016/02/18 09:47:31 siva Exp $
-
 ARICENTQ-BRIDGE-MIB DEFINITIONS ::= BEGIN
 
 -- -------------------------------------------------------------
@@ -24,12 +22,21 @@ IMPORTS
         FROM RMON2-MIB;
 
 fsQBridgeMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "201906240000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION
         "The VLAN Bridge MIB module for managing Virtual Bridged
         Local Area Networks, with multiple instance capability."
+
+    REVISION "201906240000Z"
+    DESCRIPTION
+        "Added fsDot1qVlanStaticPortStatusTable, fsDot1qPvidStatic 
+        and fsDot1qPortAcceptableFrameTypesStatic objects supporting 
+        the export of static (vs dynamic) settings for these 
+        attributes. fsDot1qVlanStaticOwner defined to expose 
+        application responsible for VLAN creation and deletion."
+
     REVISION "201209050000Z"
     DESCRIPTION
         "The VLAN Bridge MIB module for managing Virtual Bridged
@@ -1262,7 +1269,9 @@ FsDot1qVlanStaticEntry ::=
         fsDot1qVlanStaticName
             SnmpAdminString,
         fsDot1qVlanStaticRowStatus
-            RowStatus
+            RowStatus,
+        fsDot1qVlanStaticOwner
+            INTEGER
     }
 
 fsDot1qVlanStaticName OBJECT-TYPE
@@ -1303,6 +1312,23 @@ fsDot1qVlanStaticRowStatus OBJECT-TYPE
               the Vlan status."
     ::= { fsDot1qVlanStaticEntry 2 }
 
+fsDot1qVlanStaticOwner OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    vlan(1),
+                    autoAttach(2)
+                }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "Identifies the application that is responsible for
+        creation and deletion of the VLAN.
+
+          'vlan' - VLAN created and deleted through normal 
+                   VLAN application operation.
+          'autoAttach' - VLAN created and deleted through
+                         auto-attach operation."
+
+    ::= { fsDot1qVlanStaticEntry 3 }
 
 fsDot1qVlanStaticPortConfigTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF FsDot1qVlanStaticPortConfigEntry
@@ -1354,7 +1380,6 @@ fsDot1qVlanStaticPort OBJECT-TYPE
     REFERENCE
         "IEEE 802.1Q/D11 Section 12.10.2.1"
     ::= { fsDot1qVlanStaticPortConfigEntry 1 }
-
 
 fsDot1qNextFreeLocalVlanIndexTable OBJECT-TYPE
    SYNTAX       SEQUENCE OF FsDot1qNextFreeLocalVlanIndexEntry
@@ -1439,7 +1464,11 @@ FsDot1qPortVlanEntry ::=
         fsDot1qPortGvrpLastPduOrigin
             MacAddress,
         fsDot1qPortRestrictedVlanRegistration
-            TruthValue
+            TruthValue,
+        fsDot1qPvidStatic
+            VlanIndex,
+        fsDot1qPortAcceptableFrameTypesStatic
+            INTEGER
     }
 
 fsDot1qPvid OBJECT-TYPE
@@ -1515,7 +1544,7 @@ fsDot1qPortGvrpStatus OBJECT-TYPE
         Registrar state machines on this port. A transition
         from disabled(2) to enabled(1) will cause a reset of all
         GVRP state machines on this port."
-    DEFVAL      { disabled }
+    DEFVAL      { enabled }
     ::= { fsDot1qPortVlanEntry 4 }
 
 fsDot1qPortGvrpFailedRegistrations OBJECT-TYPE
@@ -1551,6 +1580,56 @@ fsDot1qPortRestrictedVlanRegistration OBJECT-TYPE
         "IEEE 802.1u clause 11.2.3.2.3, 12.10.1.7."
     DEFVAL      { false }
     ::= { fsDot1qPortVlanEntry 7 }
+
+fsDot1qPvidStatic OBJECT-TYPE
+    SYNTAX      VlanIndex
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The PVID, the VLAN ID assigned to untagged frames or
+        Priority-Tagged frames received on this port. 
+
+        This object represents the static PVID value. When
+        the value is different than the fsDot1qPvid value,
+        a dynamic setting is currently applied."
+
+    REFERENCE
+        "IEEE 802.1Q/D11 Section 12.10.1.1"
+    DEFVAL { 1 }
+    ::= { fsDot1qPortVlanEntry 8 }
+
+fsDot1qPortAcceptableFrameTypesStatic OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    admitAll(1),
+                    admitOnlyVlanTagged(2),
+                    admitOnlyUntaggedAndPriorityTagged(3)
+                }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "When this is admitOnlyVlanTagged(2), the device will
+        discard untagged frames or Priority-Tagged frames
+        received on this port. When admitAll(1), untagged
+        frames or Priority-Tagged frames received on this port
+        will be accepted and assigned to the PVID for this port.
+
+        When this is admitOnlyUntaggedAndPriorityTagged the device 
+        will receive only untagged and priority tagged frames on 
+        this port.
+
+        This control does not affect VLAN independent BPDU
+        frames, such as GVRP and STP. It does affect VLAN
+        dependent BPDU frames, such as GMRP.
+
+        This object represents the static Acceptable Frame
+        Types value. When the value is different than the 
+        value of the fsDot1qPortAcceptableFrameTypes 
+        object, a dynamic setting is currently applied."
+
+    REFERENCE
+        "IEEE 802.1Q/D11 Section 12.10.1.3"
+    DEFVAL { admitAll }
+    ::= { fsDot1qPortVlanEntry 9 }
 
 -- -------------------------------------------------------------
 -- Per port VLAN Statistics Table
@@ -1887,6 +1966,51 @@ fsDot1qConstraintTypeDefault OBJECT-TYPE
         fsDot1qLearningConstraintsTable. The types are as defined
         for fsDot1qConstraintType."
     ::= { fsDot1qConstraintDefaultEntry 2 }
+
+fsDot1qVlanStaticPortStatusTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF FsDot1qVlanStaticPortStatusEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "A table containing static status information of tagged, 
+        untagged and forbidden ports for each VLAN. This table 
+        maintains context ID as one more index to support Multiple 
+        Instance."
+    ::= { fsDot1qVlan 12 }
+
+fsDot1qVlanStaticPortStatusEntry OBJECT-TYPE
+    SYNTAX      FsDot1qVlanStaticPortStatusEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "Static status information about a port detailing whether 
+        it is a tagged, untagged or a forbidden VLAN member."
+    INDEX { fsDot1qVlanContextId, fsDot1qVlanIndex, fsDot1qTpPort }
+    ::= { fsDot1qVlanStaticPortStatusTable 1 }
+
+FsDot1qVlanStaticPortStatusEntry ::=
+    SEQUENCE {
+        fsDot1qVlanStaticPortStatus
+            INTEGER
+    }
+
+fsDot1qVlanStaticPortStatus OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    tagged(1),
+                    untagged(2),
+                    forbidden(3)
+                }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "Indicates whether the port is a tagged, untagged or a
+        forbidden member this VLAN.
+
+          'tagged'    - port is a tagged VLAN member.
+          'untagged'  - port is a untagged VLAN member.
+          'forbidden' - port is a forbidden VLAN member."
+
+    ::= { fsDot1qVlanStaticPortStatusEntry 1 }
 
 -- -------------------------------------------------------------
 -- fsDot1vProtocol group

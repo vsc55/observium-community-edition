@@ -1,11 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmparp.mib,v 1.5 2015/09/13 09:21:51 siva Exp $
-
--- ARP Proprietary MI MIB.
-
--- The MIB contains the table used to configure ARP functionaly.
-
  ARICENT-MIARP-MIB DEFINITIONS ::= BEGIN
 
  IMPORTS

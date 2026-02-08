@@ -21,7 +21,7 @@ if ($agent_data['raspberrypi'] != ':') {
 
     $rpi_sensors = explode("\n", $agent_data['raspberrypi']);
 
-    foreach ($rpi_sensors as $item => $rpi_sensor) {
+    foreach ($rpi_sensors as $rpi_sensor) {
         $rpi_sensor = trim($rpi_sensor);
 
         if (!empty($rpi_sensor)) {

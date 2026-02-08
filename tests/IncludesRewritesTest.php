@@ -3,21 +3,6 @@
 // Import from CVS
 require(__DIR__ . '/data/CsvFileIterator.php');
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
-
-// Base observium includes
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-include(__DIR__ . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/functions.inc.php');
-
 // for generate provider data, uncomment this and run:
 // php tests/IncludesRewritesTest.php
 
@@ -62,7 +47,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, rewrite_entity_name($string));
   }
 
-  public function providerRewriteEntityNameCsv()
+  public static function providerRewriteEntityNameCsv()
   {
     return new CsvFileIterator(__DIR__ . '/data/providerRewriteEntityName.csv');
   }
@@ -76,7 +61,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, rewrite_entity_name($string));
   }
 
-  public function providerRewriteEntityName()
+  public static function providerRewriteEntityName()
   {
     return array(
       array('GenuineIntel Intel Celeron M processor .50GHz, 1496 MHz', 'Intel Celeron M processor .50GHz, 1496 MHz'),
@@ -93,7 +78,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, rewrite_vendor($string));
   }
 
-  public function providerRewriteVendor()
+  public static function providerRewriteVendor()
   {
     return array(
       // Simple rewrites
@@ -169,7 +154,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals($result, trim_quotes($string));
   }
 
-  public function providerTrimQuotes()
+  public static function providerTrimQuotes()
   {
     return array(
       array('\"sdfslfkm s\'fdsf" a;lm aamjn ',          '"sdfslfkm s\'fdsf" a;lm aamjn'),
@@ -206,7 +191,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals($result, country_from_code($string));
   }
 
-  public function providerCountryFromCode()
+  public static function providerCountryFromCode()
   {
     return array(
       array('gb',                 'United Kingdom'),
@@ -233,7 +218,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals($result, get_model_param($device, 'hardware'));
   }
 
-  public function providerRewriteDefinitionHardware()
+  public static function providerRewriteDefinitionHardware()
   {
     return array(
       array('calix', '.1.3.6.1.4.1.6321.1.2.2.5.3', 'E7-2'),
@@ -252,7 +237,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals($result, array_key_replace($array, $string));
   }
 
-  public function providerArrayKeyReplace()
+  public static function providerArrayKeyReplace()
   {
     $rewrite_array = array(
       'other' => 'Other',
@@ -275,62 +260,58 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     );
   }
 
-  /**
-   * @dataProvider providerArrayStrReplace
-   * @group replace
-   */
-  public function testArrayStrReplace($string, $array, $result)
-  {
-    $this->assertEquals($result, array_str_replace($array, $string));
-  }
+    /**
+     * @dataProvider providerArrayStrReplace
+     * @group replace
+     */
+    public function testArrayStrReplace($string, $array, $result) {
+        $this->assertEquals($result, array_str_replace($array, $string));
+    }
 
-  public function providerArrayStrReplace()
-  {
-    $rewrite_array = array(
-      'ether' => 'Ether',
-      'gig'   => 'Gig',
-      'fast'  => 'Fast',
-      'ten'   => 'Ten',
-    );
+    public static function providerArrayStrReplace() {
+        $rewrite_array = [
+            'ether' => 'Ether',
+            'gig'   => 'Gig',
+            'fast'  => 'Fast',
+            'ten'   => 'Ten',
+        ];
 
-    return array(
-      // empty/not exist pattern
-      array('Some Text', array(),                           'Some Text'),
-      array('Some Text', array('bleh' => 'REPLACE_STRING'), 'Some Text'),
+        return [
+            // empty/not exist pattern
+            array('Some Text', [],                           'Some Text'),
+            array('Some Text', [ 'bleh' => 'REPLACE_STRING' ], 'Some Text'),
 
-      // real tests
-      array('Some gigabit ethernet', $rewrite_array,        'Some Gigabit Ethernet'),
-      array('Some gIgabit ETHERNET', $rewrite_array,        'Some Gigabit EtherNET'),
-      array('fastethernet',          $rewrite_array,        'FastEthernet'),
-    );
-  }
+            // real tests
+            array('Some gigabit ethernet', $rewrite_array,        'Some Gigabit Ethernet'),
+            array('Some gIgabit ETHERNET', $rewrite_array,        'Some Gigabit EtherNET'),
+            array('fastethernet',          $rewrite_array,        'FastEthernet'),
+        ];
+    }
 
-  /**
-   * @dataProvider providerArrayStrReplace2
-   * @group replace
-   */
-  public function testArrayStrReplace2($string, $array, $result)
-  {
-    $this->assertEquals($result, array_str_replace($array, $string, TRUE));
-  }
+    /**
+     * @dataProvider providerArrayStrReplaceCase
+     * @group replace
+     */
+    public function testArrayStrReplaceCase($string, $array, $result) {
+        $this->assertEquals($result, array_str_replace($array, $string, TRUE));
+    }
 
-  public function providerArrayStrReplace2()
-  {
-    // Case Sensitive test
-    $rewrite_array = array(
-      'ether' => 'Ether',
-      'gig'   => 'Gig',
-      'fast'  => 'Fast',
-      'ten'   => 'Ten',
-    );
+    public static function providerArrayStrReplaceCase() {
+        // Case Sensitive test
+        $rewrite_array = [
+            'ether' => 'Ether',
+            'gig'   => 'Gig',
+            'fast'  => 'Fast',
+            'ten'   => 'Ten',
+        ];
 
-    return array(
-      // real tests
-      array('Some gigabit ethernet', $rewrite_array,        'Some Gigabit Ethernet'),
-      array('Some gIgabit ETHERNET', $rewrite_array,        'Some gIgabit ETHERNET'),
-      array('fastethernet',          $rewrite_array,        'FastEthernet'),
-    );
-  }
+        return [
+            // real tests
+            array('Some gigabit ethernet', $rewrite_array,        'Some Gigabit Ethernet'),
+            array('Some gIgabit ETHERNET', $rewrite_array,        'Some gIgabit ETHERNET'),
+            array('fastethernet',          $rewrite_array,        'FastEthernet'),
+        ];
+    }
 
   /**
    * @dataProvider providerArrayPregReplace
@@ -341,7 +322,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals($result, array_preg_replace($array, $string));
   }
 
-  public function providerArrayPregReplace()
+  public static function providerArrayPregReplace()
   {
     $rewrite_regexp = array(
       '/Nortel .* Module - /i' => '%TEST1%',
@@ -363,69 +344,386 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
     );
   }
 
-  /**
-   * @dataProvider providerArrayTagReplace
-   * @group replace
-   */
-  public function testArrayTagReplace($string, $array, $result)
-  {
-    $this->assertEquals($result, array_tag_replace($array, $string));
-  }
+    /**
+     * @dataProvider providerArrayTagReplace
+     * @group tags
+     */
+    public function testArrayTagReplace($string, $array, $result) {
+        $this->assertEquals($result, array_tag_replace($array, $string));
+    }
 
-  public function providerArrayTagReplace()
-  {
-    // recursive from array
-    $rfrom = array(
-      'somekey' => array(
-        'somekey3' => 'port-%INDEX%-%index%.rrd',
-        'somekey4' => 'port-%descr%-%index%-% %.rrd',
-      ),
-      'somekey2' => 'port-%descr%-%index%-%.rrd',
-      'perf-pollermodule-%index%.rrd',
-      // Must be keep as is
-      'bool' => TRUE,
-      'int' => 293847,
-      'null' => NULL
-    );
-    $rto = array(
-      'somekey' => array(
-        'somekey3' => 'port--0.rrd',
-        'somekey4' => 'port--0-% %.rrd',
-      ),
-      'somekey2' => 'port--0-%.rrd',
-      'perf-pollermodule-0.rrd',
-      'bool' => TRUE,
-      'int' => 293847,
-      'null' => NULL
-    );
+    public static function providerArrayTagReplace() {
+        // recursive from array
+        $array_from = [
+            'somekey' => [
+                'somekey3' => 'port-%INDEX%-%index%.rrd',
+                'somekey4' => 'port-%descr%-%index%-% %.rrd',
+            ],
+            'somekey2' => 'port-%descr%-%index%-%.rrd',
+            'perf-pollermodule-%index%.rrd',
 
-    return array(
-      // empty/not exist keys
-      array('%some_key%',                            array(),                                     ''),
-      array('http://some_url/%some_url%/some_url',   array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/some_url'),
-      // duplicate keys
-      array('http://some_url/%some_url%/%some_url%', array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/REPLACE_STRING'),
-      // multiple keys
-      array('http://some_url/%some1%/%some2%',       array('some1' => '1111', 'some2' => '2222'), 'http://some_url/1111/2222'),
-      // real test
-      array('perf-pollermodule-%index%.rrd',         array('index' => 0), 'perf-pollermodule-0.rrd'),
-      array('port-%descr%-%index%.rrd',              array('index' => 0), 'port--0.rrd'),
+            // Must be keep as is
+            'bool' => TRUE,
+            'int' => 293847,
+            'null' => NULL
+        ];
+        $array_to = [
+            'somekey' => [
+                'somekey3' => 'port-%INDEX%-0.rrd',
+                'somekey4' => 'port-%descr%-0-% %.rrd',
+            ],
+            'somekey2' => 'port-%descr%-0-%.rrd',
+            'perf-pollermodule-0.rrd',
+            'bool' => TRUE,
+            'int' => 293847,
+            'null' => NULL
+        ];
 
-      array('%url%%routing_key%',                    array('url' => 'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/', 'routing_key' => 'everyone'),
-                                                     'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/everyone'),
+        $array_test = [ 'test' => 'test1', 'test2' => [ 'test2', 'test3' => 'test3' ] ];
 
-      // Tags is case-sensitive!
-      array('port-%INDEX%-%index%.rrd',              array('index' => 0), 'port--0.rrd'),
-      array(1000000000,                              array('index' => 0), '1000000000'), // integer to string
-      // Keep not tagged percent signs
-      array('port-%descr%-%index%-%.rrd',            array('index' => 0), 'port--0-%.rrd'),
-      array('port-%descr%-%index%-%%.rrd',           array('index' => 0), 'port--0-%%.rrd'),
-      array('port-%descr%-%index%-% %.rrd',          array('index' => 0), 'port--0-% %.rrd'),
+        // NOTE. Fake url ;)
+        $msurl = 'https://default7b2a28yuwwywuueyg11f52ecfde5.f2.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1f76t7t7d8734ry8h34hr38ry29923ej29dj9de/' .
+                 '?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M';
 
-      // recursive arrays with string
-      array($rfrom,                                  array('index' => 0), $rto),
-    );
-  }
+        return array(
+            // empty/not exist keys
+            array('%some_key%',                            array(),                                     '%some_key%'),
+            array('http://some_url/%some_url%/some_url',   array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/some_url'),
+            // duplicate keys
+            array('http://some_url/%some_url%/%some_url%', array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/REPLACE_STRING'),
+            // multiple keys
+            array('http://some_url/%some1%/%some2%',       array('some1' => '1111', 'some2' => '2222'), 'http://some_url/1111/2222'),
+            // real test
+            array('perf-pollermodule-%index%.rrd',         array('index' => 0), 'perf-pollermodule-0.rrd'),
+            array('port-%descr%-%index%.rrd',              array('index' => 0), 'port-%descr%-0.rrd'),
+
+            // URLs
+            [
+                '%url%%routing_key%',
+                [ 'url' => 'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/', 'routing_key' => 'everyone' ],
+                'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/everyone'
+            ],
+            // URL with % chars, should be keep same
+            [
+                '%url%',
+                [ 'url' => $msurl, 'random_key' => '8ue3h8dh8udh' ],
+                $msurl
+            ],
+            [
+                '%url%/%7F%2F/%random_key%',
+                [ 'url' => $msurl, 'random_key' => '8ue3h8dh8udh' ],
+                $msurl . '/%7F%2F/8ue3h8dh8udh'
+            ],
+            // Tags is case-sensitive!
+            array('port-%INDEX%-%index%.rrd',              array('index' => 0), 'port-%INDEX%-0.rrd'),
+            array(1000000000,                              array('index' => 0), '1000000000'), // integer to string
+            // Keep not tagged percent signs
+            array('port-%descr%-%index%-%.rrd',            array('index' => 0), 'port-%descr%-0-%.rrd'),
+            array('port-%descr%-%index%-%%.rrd',           array('index' => 0), 'port-%descr%-0-%%.rrd'),
+            array('port-%descr%-%index%-% %.rrd',          array('index' => 0), 'port-%descr%-0-% %.rrd'),
+
+            // recursive arrays with string
+            array($array_from,                             array('index' => 0), $array_to),
+
+            // tag entries is array
+            [ '%custom_details%', [ 'custom_details' => $array_test ], $array_test ],
+            [ '%custom_details%  ', [ 'custom_details' => $array_test ], '%custom_details%  ' ],
+        );
+    }
+
+    /**
+     * @dataProvider providerArrayTagReplaceClean
+     * @group tags
+     */
+    public function testArrayTagReplaceClean($string, $array, $result) {
+        $this->assertEquals($result, array_tag_replace_clean($array, $string));
+    }
+
+    public static function providerArrayTagReplaceClean() {
+        // recursive from array
+        $array_from = [
+            'somekey' => [
+                'somekey3' => 'port-%INDEX%-%index%.rrd',
+                'somekey4' => 'port-%descr%-%index%-% %.rrd',
+            ],
+            'somekey2' => 'port-%descr%-%index%-%.rrd',
+            'perf-pollermodule-%index%.rrd',
+
+            // Must be keep as is
+            'bool' => TRUE,
+            'int' => 293847,
+            'null' => NULL
+        ];
+        $array_to = [
+            'somekey' => [
+                'somekey3' => 'port--0.rrd',
+                'somekey4' => 'port--0-% %.rrd',
+            ],
+            'somekey2' => 'port--0-%.rrd',
+            'perf-pollermodule-0.rrd',
+            'bool' => TRUE,
+            'int' => 293847,
+            'null' => NULL
+        ];
+
+        $array_test = [ 'test' => 'test1', 'test2' => [ 'test2', 'test3' => 'test3' ] ];
+
+        // NOTE. Fake url ;)
+        $msurl = 'https://default7b2a28yuwwywuueyg11f52ecfde5.f2.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1f76t7t7d8734ry8h34hr38ry29923ej29dj9de/' .
+                 '?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M';
+
+        return array(
+            // empty/not exist keys
+            array('%some_key%',                            array(),                                     ''),
+            array('http://some_url/%some_url%/some_url',   array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/some_url'),
+            // duplicate keys
+            array('http://some_url/%some_url%/%some_url%', array('some_url' => 'REPLACE_STRING'),       'http://some_url/REPLACE_STRING/REPLACE_STRING'),
+            // multiple keys
+            array('http://some_url/%some1%/%some2%',       array('some1' => '1111', 'some2' => '2222'), 'http://some_url/1111/2222'),
+            // real test
+            array('perf-pollermodule-%index%.rrd',         array('index' => 0), 'perf-pollermodule-0.rrd'),
+            array('port-%descr%-%index%.rrd',              array('index' => 0), 'port--0.rrd'),
+
+            // URLs
+            [
+                '%url%%routing_key%',
+                [ 'url' => 'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/', 'routing_key' => 'everyone' ],
+                'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/everyone'
+            ],
+            // URL with % chars, should be keep same
+            [
+                '%url%',
+                [ 'url' => $msurl, 'random_key' => '8ue3h8dh8udh' ],
+                $msurl
+            ],
+            /* this test still false positive, while original string contains %
+            [
+                '%url%/%7F%2F/%random_key%',
+                [ 'url' => $msurl, 'random_key' => '8ue3h8dh8udh' ],
+                $msurl . '/%7F%2F/8ue3h8dh8udh'
+            ],
+            */
+
+            // Tags is case-sensitive!
+            array('port-%INDEX%-%index%.rrd',              array('index' => 0), 'port--0.rrd'),
+            array(1000000000,                              array('index' => 0), '1000000000'), // integer to string
+            // Keep not tagged percent signs
+            array('port-%descr%-%index%-%.rrd',            array('index' => 0), 'port--0-%.rrd'),
+            array('port-%descr%-%index%-%%.rrd',           array('index' => 0), 'port--0-%%.rrd'),
+            array('port-%descr%-%index%-% %.rrd',          array('index' => 0), 'port--0-% %.rrd'),
+
+            // recursive arrays with string
+            array($array_from,                             array('index' => 0), $array_to),
+
+            // tag entries is array
+            [ '%custom_details%', [ 'custom_details' => $array_test ], $array_test ],
+            [ '%custom_details%  ', [ 'custom_details' => $array_test ], '  ' ],
+        );
+    }
+
+    /**
+     * @dataProvider providerArrayTagReplaceJson
+     * @group tags
+     */
+    public function testArrayTagReplaceJson($string, $array, $result) {
+        $this->assertEquals($result, array_tag_replace($array, $string));
+    }
+
+    public static function providerArrayTagReplaceJson() {
+
+        $tags = [
+            'contact_id' => '21',
+            'contact_descr' => 'Test WH JSON',
+            'contact_method' => 'webhook-json',
+            'contact_endpoint' => '{"url":"http://qwerty.test/request","json":"{\\r\\n    \\"ALERT_STATE\\": \\"%ALERT_STATE%\\",\\r\\n    \\"ALERT_STATE_NAME\\": \\"%ALERT_STATE_NAME%\\",\\r\\n    \\"ALERT_EMOJI\\": \\"%ALERT_EMOJI%\\",\\r\\n    \\"ALERT_EMOJI_NAME\\": \\"%ALERT_EMOJI_NAME%\\",\\r\\n    \\"ALERT_STATUS\\": \\"%ALERT_STATUS%\\",\\r\\n    \\"ALERT_STATUS_CUSTOM\\": \\"%ALERT_STATUS_CUSTOM%\\",\\r\\n    \\"ALERT_SEVERITY\\": \\"%ALERT_SEVERITY%\\",\\r\\n    \\"ALERT_COLOR\\": \\"#%ALERT_COLOR%\\",\\r\\n    \\"ALERT_URL\\": \\"%ALERT_URL%\\",\\r\\n    \\"ALERT_UNIXTIME\\": \\"%ALERT_UNIXTIME%\\",\\r\\n    \\"ALERT_TIMESTAMP\\": \\"%ALERT_TIMESTAMP%\\",\\r\\n    \\"ALERT_TIMESTAMP_RFC2822\\": \\"%ALERT_TIMESTAMP_RFC2822%\\",\\r\\n    \\"ALERT_TIMESTAMP_RFC3339\\": \\"%ALERT_TIMESTAMP_RFC3339%\\",\\r\\n    \\"ALERT_ID\\": \\"%ALERT_ID%\\",\\r\\n    \\"ALERT_MESSAGE\\": \\"%ALERT_MESSAGE%\\",\\r\\n    \\"CONDITIONS\\": \\"%CONDITIONS%\\",\\r\\n    \\"METRICS\\": \\"%METRICS%\\",\\r\\n    \\"DURATION\\": \\"%DURATION%\\",\\r\\n    \\"ENTITY_URL\\": \\"%ENTITY_URL%\\",\\r\\n    \\"ENTITY_LINK\\": \\"%ENTITY_LINK%\\",\\r\\n    \\"ENTITY_NAME\\": \\"%ENTITY_NAME%\\",\\r\\n    \\"ENTITY_ID\\": \\"%ENTITY_ID%\\",\\r\\n    \\"ENTITY_TYPE\\": \\"%ENTITY_TYPE%\\",\\r\\n    \\"ENTITY_DESCRIPTION\\": \\"%ENTITY_DESCRIPTION%\\",\\r\\n    \\"DEVICE_HOSTNAME\\": \\"%DEVICE_HOSTNAME%\\",\\r\\n    \\"DEVICE_SYSNAME\\": \\"%DEVICE_SYSNAME%\\",\\r\\n    \\"DEVICE_DESCRIPTION\\": \\"%DEVICE_DESCRIPTION%\\",\\r\\n    \\"DEVICE_ID\\": \\"%DEVICE_ID%\\",\\r\\n    \\"DEVICE_URL\\": \\"%DEVICE_URL%\\",\\r\\n    \\"DEVICE_LINK\\": \\"%DEVICE_LINK%\\",\\r\\n    \\"DEVICE_HARDWARE\\": \\"%DEVICE_HARDWARE%\\",\\r\\n   \\"DEVICE_OS\\": \\"%DEVICE_OS%\\",\\r\\n    \\"DEVICE_TYPE\\": \\"%DEVICE_TYPE%\\",\\r\\n    \\"DEVICE_LOCATION\\": \\"%DEVICE_LOCATION%\\",\\r\\n    \\"DEVICE_UPTIME\\": \\"%DEVICE_UPTIME%\\",\\r\\n    \\"DEVICE_REBOOTED\\": \\"%DEVICE_REBOOTED%\\",\\r\\n    \\"TITLE\\": \\"%TITLE%\\"\\r\\n}","url1":"","token":"test_token"}',
+            'contact_disabled' => '0',
+            'contact_disabled_until' => NULL,
+            'contact_message_custom' => '0',
+            'contact_message_template' => NULL,
+            'url' => 'http://qwerty.test/request',
+            'json' => '{
+    "ALERT_STATE": "%ALERT_STATE%",
+    "ALERT_STATE_NAME": "%ALERT_STATE_NAME%",
+    "ALERT_EMOJI": "%ALERT_EMOJI%",
+    "ALERT_EMOJI_NAME": "%ALERT_EMOJI_NAME%",
+    "ALERT_STATUS": "%ALERT_STATUS%",
+    "ALERT_STATUS_CUSTOM": "%ALERT_STATUS_CUSTOM%",
+    "ALERT_SEVERITY": "%ALERT_SEVERITY%",
+    "ALERT_COLOR": "#%ALERT_COLOR%",
+    "ALERT_URL": "%ALERT_URL%",
+    "ALERT_UNIXTIME": "%ALERT_UNIXTIME%",
+    "ALERT_TIMESTAMP": "%ALERT_TIMESTAMP%",
+    "ALERT_TIMESTAMP_RFC2822": "%ALERT_TIMESTAMP_RFC2822%",
+    "ALERT_TIMESTAMP_RFC3339": "%ALERT_TIMESTAMP_RFC3339%",
+    "ALERT_ID": "%ALERT_ID%",
+    "ALERT_MESSAGE": "%ALERT_MESSAGE%",
+    "CONDITIONS": "%CONDITIONS%",
+    "METRICS": "%METRICS%",
+    "DURATION": "%DURATION%",
+    "ENTITY_URL": "%ENTITY_URL%",
+    "ENTITY_LINK": "%ENTITY_LINK%",
+    "ENTITY_NAME": "%ENTITY_NAME%",
+    "ENTITY_ID": "%ENTITY_ID%",
+    "ENTITY_TYPE": "%ENTITY_TYPE%",
+    "ENTITY_DESCRIPTION": "%ENTITY_DESCRIPTION%",
+    "DEVICE_HOSTNAME": "%DEVICE_HOSTNAME%",
+    "DEVICE_SYSNAME": "%DEVICE_SYSNAME%",
+    "DEVICE_DESCRIPTION": "%DEVICE_DESCRIPTION%",
+    "DEVICE_ID": "%DEVICE_ID%",
+    "DEVICE_URL": "%DEVICE_URL%",
+    "DEVICE_LINK": "%DEVICE_LINK%",
+    "DEVICE_HARDWARE": "%DEVICE_HARDWARE%",
+    "DEVICE_OS": "%DEVICE_OS%",
+    "DEVICE_TYPE": "%DEVICE_TYPE%",
+    "DEVICE_LOCATION": "%DEVICE_LOCATION%",
+    "DEVICE_UPTIME": "%DEVICE_UPTIME%",
+    "DEVICE_REBOOTED": "%DEVICE_REBOOTED%",
+    "TITLE": "%TITLE%"
+}',
+            'url1' => '',
+            'token' => 'test_token',
+            'message' => NULL,
+            'ALERT_STATE' => 'ALERT',
+            'ALERT_STATE_NAME' => 'ALARM',
+            'ALERT_EMOJI' => '&#x1F525;',
+            'ALERT_EMOJI_NAME' => 'fire',
+            'ALERT_STATUS' => '0',
+            'ALERT_STATUS_CUSTOM' => '100',
+            'ALERT_SEVERITY' => 'Critical',
+            'ALERT_COLOR' => 'D94640',
+            'ALERT_URL' => 'https://observium.test/device/device=344/tab=alert/alert_entry=9827/',
+            'ALERT_UNIXTIME' => 1753880879,
+            'ALERT_TIMESTAMP' => '2025-07-30 13:07:59 +00:00',
+            'ALERT_TIMESTAMP_RFC2822' => 'Wed, 30 Jul 2025 13:07:59 +0000',
+            'ALERT_TIMESTAMP_RFC3339' => '2025-07-30T13:07:59+00:00',
+            'ALERT_ID' => '9827',
+            'ALERT_MESSAGE' => 'up/down',
+            'CONDITIONS' => 'device_status equals 0 (0)',
+            'METRICS' => 'device_status = 0',
+            'DURATION' => '4m 29s (2020-09-19 19:22:35)',
+            'ENTITY_URL' => 'https://observium.test/device/device=344/',
+            'ENTITY_LINK' => '<a href=\\"https://observium.test/device/device=344/\\" class=\\"entity-popup red\\" data-eid=\\"344\\" data-etype=\\"device\\">cyberpower-pdu</a>',
+            'ENTITY_NAME' => 'cyberpower-pdu.test',
+            'ENTITY_ID' => '344',
+            'ENTITY_TYPE' => 'device',
+            'ENTITY_DESCRIPTION' => NULL,
+            'DEVICE_HOSTNAME' => 'cyberpower-pdu.test',
+            'DEVICE_SYSNAME' => 'pdu41003',
+            'DEVICE_DESCRIPTION' => NULL,
+            'DEVICE_ID' => '344',
+            'DEVICE_URL' => 'https://observium.test/device/device=344/',
+            'DEVICE_LINK' => '<a href=\\"https://observium.test/device/device=344/\\" class=\\"entity-popup red\\" data-eid=\\"344\\" data-etype=\\"device\\">cyberpower-pdu.test</a>',
+            'DEVICE_HARDWARE' => 'PDU41003',
+            'DEVICE_OS' => 'CyberPower PDU 1.1.0',
+            'DEVICE_TYPE' => 'power',
+            'DEVICE_LOCATION' => 'Server Room',
+            'DEVICE_UPTIME' => 'Down (PING) 4m 29s',
+            'DEVICE_REBOOTED' => '2020-09-19 12:23:53',
+            'TITLE' => 'ALERT: [cyberpower-pdu.test] [device] up/down',
+            'ENTITY_GRAPH_URL' => 'https://observium.test/graph.php?type=device_ping&amp;device=344',
+            'BASE_URL' => 'https://observium.dev/',
+            'ICON_URL' => 'https://observium.dev/images/observium-icon.png',
+        ];
+
+        $result = '{
+    "ALERT_STATE": "ALERT",
+    "ALERT_STATE_NAME": "ALARM",
+    "ALERT_EMOJI": "&#x1F525;",
+    "ALERT_EMOJI_NAME": "fire",
+    "ALERT_STATUS": "0",
+    "ALERT_STATUS_CUSTOM": "100",
+    "ALERT_SEVERITY": "Critical",
+    "ALERT_COLOR": "#D94640",
+    "ALERT_URL": "https://observium.test/device/device=344/tab=alert/alert_entry=9827/",
+    "ALERT_UNIXTIME": "1753880879",
+    "ALERT_TIMESTAMP": "2025-07-30 13:07:59 +00:00",
+    "ALERT_TIMESTAMP_RFC2822": "Wed, 30 Jul 2025 13:07:59 +0000",
+    "ALERT_TIMESTAMP_RFC3339": "2025-07-30T13:07:59+00:00",
+    "ALERT_ID": "9827",
+    "ALERT_MESSAGE": "up/down",
+    "CONDITIONS": "device_status equals 0 (0)",
+    "METRICS": "device_status = 0",
+    "DURATION": "4m 29s (2020-09-19 19:22:35)",
+    "ENTITY_URL": "https://observium.test/device/device=344/",
+    "ENTITY_LINK": "<a href=\\"https://observium.test/device/device=344/\\" class=\\"entity-popup red\\" data-eid=\\"344\\" data-etype=\\"device\\">cyberpower-pdu</a>",
+    "ENTITY_NAME": "cyberpower-pdu.test",
+    "ENTITY_ID": "344",
+    "ENTITY_TYPE": "device",
+    "ENTITY_DESCRIPTION": "",
+    "DEVICE_HOSTNAME": "cyberpower-pdu.test",
+    "DEVICE_SYSNAME": "pdu41003",
+    "DEVICE_DESCRIPTION": "",
+    "DEVICE_ID": "344",
+    "DEVICE_URL": "https://observium.test/device/device=344/",
+    "DEVICE_LINK": "<a href=\\"https://observium.test/device/device=344/\\" class=\\"entity-popup red\\" data-eid=\\"344\\" data-etype=\\"device\\">cyberpower-pdu.test</a>",
+    "DEVICE_HARDWARE": "PDU41003",
+    "DEVICE_OS": "CyberPower PDU 1.1.0",
+    "DEVICE_TYPE": "power",
+    "DEVICE_LOCATION": "Server Room",
+    "DEVICE_UPTIME": "Down (PING) 4m 29s",
+    "DEVICE_REBOOTED": "2020-09-19 12:23:53",
+    "TITLE": "ALERT: [cyberpower-pdu.test] [device] up/down"
+}';
+
+        return [
+            [ '%json%', $tags, $result ]
+        ];
+    }
+
+    /**
+     * @dataProvider providerArrayTagReplaceEncode
+     * @group tags
+     */
+    public function testArrayTagReplaceEncode($string, $array, $result) {
+        $this->assertEquals($result, array_tag_replace_encode($array, $string));
+    }
+
+    public static function providerArrayTagReplaceEncode() {
+        // NOTE. Fake url ;)
+        $msurl = 'https://default7b2a28yuwwywuueyg11f52ecfde5.f2.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1f76t7t7d8734ry8h34hr38ry29923ej29dj9de/' .
+                 '?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&';
+        $vourl = 'https://alert.victorops.com/integrations/generic/20131114/alert/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/';
+
+        return [
+            [ '%url%%routing_key%',   [ 'url' => $msurl, 'encode' => 'foo @+%/', 'routing_key' => 'sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+              $msurl . 'sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+            [ '%url%%%routing_key%%', [ 'url' => $msurl, 'encode' => 'foo @+%/', 'routing_key' => 'sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+              $msurl . 'sig%3DlM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+            [ '%url%/%encode%',       [ 'url' => $vourl, 'encode' => 'foo @+%/', 'routing_key' => 'sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+              $vourl . '/foo @+%/' ],
+            [ '%url%/%%encode%%',     [ 'url' => $vourl, 'encode' => 'foo @+%/', 'routing_key' => 'sig=lM5R7lqe5pJUqgbT34H1_MIKJHUYB5xlbd2DGUpZWF8M' ],
+              $vourl . '/foo%20%40%2B%25%2F' ],
+        ];
+    }
+
+    /**
+     * @dataProvider providerArrayTagReplaceScope
+     * @group tags
+     */
+    public function testArrayTagReplaceScope($string, $array, $result, $tag_scope, $remove_unused = FALSE) {
+        if ($remove_unused) {
+            $this->assertEquals($result, array_tag_replace_clean($array, $string, $tag_scope));
+        } else {
+            $this->assertEquals($result, array_tag_replace($array, $string, $tag_scope));
+        }
+    }
+
+    public static function providerArrayTagReplaceScope() {
+        return [
+            // %
+            [ 'text-%descr%-%index%-%%.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-%descr%-0-%%.rrd',       '%' ],
+            [ 'text-%descr%-%index%-%%.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text--0-%%.rrd',              '%', TRUE ],
+            // @
+            [ 'text-@descr@-@index@-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-@descr@-0-@@.rrd',       '@' ],
+            [ 'text-@descr@-@index@-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text--0-@@.rrd',              '@', TRUE ],
+            [ 'text-%descr%-@index@-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-%descr%-0-@@.rrd',       '@' ],
+            [ 'text-%descr%-@index@-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-%descr%-0-@@.rrd',       '@', TRUE ],
+            [ 'text-@descr@-%index%-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-@descr@-%index%-@@.rrd', '@' ],
+            [ 'text-@descr@-%index%-@@.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text--%index%-@@.rrd',        '@', TRUE ],
+            [ 'text-%descr%-%index%-%%.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-%descr%-%index%-%%.rrd', '@' ],
+            [ 'text-%descr%-%index%-%%.rrd',           [ 'index' => 0, 'test_tag' => 'qwerty' ], 'text-%descr%-%index%-%%.rrd', '@', TRUE ],
+        ];
+    }
 
     /**
      * @dataProvider providerProcessPortLabel
@@ -502,7 +800,7 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals($result, $test_array);
     }
 
-    public function providerProcessPortLabel() {
+    public static function providerProcessPortLabel() {
 
         return [
       array('ios',          array('ifDescr' => 'GigabitEthernet0/1', 'ifName' => 'Gi0/1', 'ifAlias' => 'Po1#2'),
@@ -598,8 +896,8 @@ class IncludesRewritesTest extends \PHPUnit\Framework\TestCase
                             array('port_label' => 'en0', 'port_label_num' => '0', 'port_label_base' => 'en', 'port_label_short' => 'en0')),
       array('cisco-altiga', array('ifDescr' => 'DEC 21143A PCI Fast Ethernet', 'ifName' => '', 'ifAlias' => ''), // ++ ifIndex
                             array('port_label' => 'Fast Ethernet5', 'port_label_num' => '5', 'port_label_base' => 'Fast Ethernet', 'port_label_short' => 'Fa5')),
-      array('deltaups',     array('ifDescr' => 'eth0............', 'ifName' => '', 'ifAlias' => ''),
-                            array('port_label' => 'eth0', 'port_label_num' => '0', 'port_label_base' => 'eth', 'port_label_short' => 'eth0')),
+      // array('deltaups',     array('ifDescr' => 'eth0............', 'ifName' => '', 'ifAlias' => ''), // moved to ports polling clean in r13811
+      //                       array('port_label' => 'eth0', 'port_label_num' => '0', 'port_label_base' => 'eth', 'port_label_short' => 'eth0')),
       array('netapp',       array('ifDescr' => 'e0a'),
                             array('port_label' => 'e0a', 'port_label_num' => '0a', 'port_label_base' => 'e', 'port_label_short' => 'e0a')),
       array('netapp',       array('ifDescr' => 'vega-01:MGMT_PORT_ONLY e0M'),

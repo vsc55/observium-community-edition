@@ -16,7 +16,7 @@ if ($_SESSION['userlevel'] < 9) {
     return;
 }
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 if (isset($vars['submit']) && $vars['submit'] === "add_alertlog_rule") {
     $message = '<h4>Adding alert checker</h4> ';

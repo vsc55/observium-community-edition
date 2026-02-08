@@ -14,15 +14,20 @@ IMPORTS
             FROM SNMPv2-TC;
 
 cnEeeMib MODULE-IDENTITY
-    LAST-UPDATED "202104190000Z"     -- Apr 19, 2021
+    LAST-UPDATED "202309070000Z"     -- September 7, 2023
     ORGANIZATION "Cambium Networks, Inc."
     CONTACT-INFO "cambiumnetworks.com"
     DESCRIPTION
         "This MIB module contains objects related to the energy efficient ethernet support."
 
+    REVISION "202309070000Z"     -- September 7, 2023
+    DESCRIPTION
+        "Add system-level EEE setting."
+
     REVISION "202104190000Z"     -- Apr 19, 2021
     DESCRIPTION
         "Initial version."
+
     ::= { enterprises 17713 24 8 }
 
 cnEeeObjects  OBJECT IDENTIFIER ::= { cnEeeMib 0 }
@@ -85,5 +90,22 @@ cnEeeLpAbilities OBJECT-TYPE
        DESCRIPTION
                "This object uniquely defines the eee link-partner auto-negotiation abilities"
        ::= { cnEeePortEntry 4 }
+
+cnEeeDeviceStatus OBJECT-TYPE
+       SYNTAX      INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+       MAX-ACCESS  read-write
+       STATUS      current
+       DESCRIPTION
+           "Controls EEE status at the device level. When
+           'disabled(2)', individual port EEE settings are
+           ignored and EEE is operationally disabled on all
+           ports. When 'enabled(1)', the individual port EEE
+           settings determine the operational EEE status for
+           the port."
+
+       ::= { cnEeeObjects 2 }
 
 END

@@ -1,15 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- /*****************************************************************
---  *                                                               *
---  * $RCSfile: fsping.mib,v $
---  *                                                               *
---  * $Date: 2014/11/03 12:29:41 $                                  *
---  *                                                               *
---  * $Revision: 1.7 $                                              *
---  *                                                               *
---  ****************************************************************/
-
 ARICENT-PING-MIB DEFINITIONS ::= BEGIN 
  
  IMPORTS 
@@ -19,12 +9,18 @@ ARICENT-PING-MIB DEFINITIONS ::= BEGIN
     RowStatus  FROM SNMPv2-TC; 
 
 fsPingMIB MODULE-IDENTITY
-     LAST-UPDATED "201209050000Z"
+     LAST-UPDATED "202201250000Z"
      ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
      CONTACT-INFO "support@aricent.com"
      DESCRIPTION " This mib is for Ping module"
+
+     REVISION "202201250000Z"
+     DESCRIPTION "Added limited continuous ping
+                 support for Web usage."
+
      REVISION "201209050000Z"
      DESCRIPTION " This mib is for Ping module"
+
 ::= { enterprises futuresoftware(2076) 106} 
 
 fsPingMIBObjects OBJECT IDENTIFIER ::= { fsPingMIB 1 }
@@ -36,7 +32,7 @@ fsPingTable	  OBJECT-TYPE
      MAX-ACCESS  not-accessible
      STATUS  current
      DESCRIPTION
-	  "This entity's IP Ping  Table"
+	    "This object specifies an entity's IP Ping Table."
      ::= { fsPingMIBObjects 1 }
 
 fsPingEntry	  OBJECT-TYPE
@@ -44,9 +40,9 @@ fsPingEntry	  OBJECT-TYPE
      MAX-ACCESS  not-accessible
      STATUS  current
      DESCRIPTION
-	 "Contains the information about a particular IP ping
+	    "This object specifies the information about a particular IP ping
 	  Instance.Objects in this table can not be updated when
-          the PingStatus is in progress"
+        the PingStatus is in progress."
      INDEX	{ fsPingIndex }
      ::= { fsPingTable 1 }
 
@@ -64,7 +60,8 @@ SEQUENCE {
      fsPingMinTime	  Integer32,
      fsPingSuccesses	  Counter32,
      fsPingEntryStatus    RowStatus,
-     fsPingHostName       OCTET STRING
+     fsPingHostName       OCTET STRING,
+     fsPingContInterval   Integer32
 }
 
 fsPingIndex         OBJECT-TYPE
@@ -72,7 +69,7 @@ fsPingIndex         OBJECT-TYPE
      MAX-ACCESS  not-accessible
      STATUS      current
      DESCRIPTION
-        "Unique value that identifies the Ping Entry"
+        "This object specifies an unique value that identifies the Ping Entry."
      ::= { fsPingEntry 1 }
 
 fsPingDest	    OBJECT-TYPE
@@ -80,7 +77,7 @@ fsPingDest	    OBJECT-TYPE
      MAX-ACCESS  read-create
      STATUS      current
      DESCRIPTION
-        "The IP address of the node to be pinged."
+        "This object specifies the IP address of the node to be pinged."
      ::= { fsPingEntry 2 }
 
 fsPingTimeout	    OBJECT-TYPE
@@ -88,7 +85,7 @@ fsPingTimeout	    OBJECT-TYPE
      MAX-ACCESS  read-create
      STATUS      current
      DESCRIPTION
-	"The time in seconds after which the entity waiting
+	    "This object specifies the time in seconds after which the entity waiting
 	 for the ping response times out."
      DEFVAL { 1 }
      ::= { fsPingEntry 3 }
@@ -98,7 +95,7 @@ fsPingTries	    OBJECT-TYPE
      MAX-ACCESS  read-create
      STATUS      current
      DESCRIPTION
-	 "The number of times the given node address is to be
+	    "This object specifies the number of times the given node address is to be
 	  pinged."
      DEFVAL { 3 }
      ::= { fsPingEntry 4 }
@@ -108,7 +105,7 @@ fsPingDataSize    OBJECT-TYPE
      MAX-ACCESS  read-create
      STATUS      current
      DESCRIPTION
-	  "The size of the data portion of the PING PDU in bytes"
+	    "This object specifies the size of the data portion of the PING PDU in bytes."
      DEFVAL { 64 }
      ::= { fsPingEntry 5 }
 
@@ -121,7 +118,7 @@ fsPingStatus	    OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-        "The current status of the Ping Entry"
+        "This object specifies the current status of the Ping Entry."
      ::= { fsPingEntry 6 }
 
 fsPingSendCount OBJECT-TYPE
@@ -129,7 +126,7 @@ fsPingSendCount OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-	 "Total number of packets sent to destination."
+	    "This object specifies the total number of packets sent to destination."
      ::= { fsPingEntry 7 }
 
 fsPingAverageTime	  OBJECT-TYPE
@@ -137,7 +134,7 @@ fsPingAverageTime	  OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-	 "The average value of the round trip time in milli seconds
+	    "This object specifies the average value of the round trip time in milli seconds
 	 to this destination."
      ::= { fsPingEntry 8 }
 
@@ -146,7 +143,7 @@ fsPingMaxTime	 OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-	"The maximum value of the round trip time in milli seconds
+	    "This object specifies the maximum value of the round trip time in milli seconds
 	 to this destination."
      ::= { fsPingEntry 9 }
 
@@ -155,7 +152,7 @@ fsPingMinTime	  OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-	"The minimum value of the round trip time in milli seconds
+	     "This object specifies the minimum value of the round trip time in milli seconds
           to this destination."
      ::= { fsPingEntry 10 }
      
@@ -164,7 +161,7 @@ fsPingSuccesses OBJECT-TYPE
      MAX-ACCESS  read-only
      STATUS      current
      DESCRIPTION
-	  "The number of ping responses received."
+	    "This object specifies the number of ping responses received."
      ::= { fsPingEntry 11 }
 
 fsPingEntryStatus OBJECT-TYPE
@@ -172,12 +169,12 @@ fsPingEntryStatus OBJECT-TYPE
      MAX-ACCESS  read-create
      STATUS      current
      DESCRIPTION
-          "The status of this table entry.  Once the entry status is
+          "This object specifies the status of this table entry. Once the entry status is
            set to active, the associate entry cannot be modified until
            the sequence completes (PingStatus is completed).Management
            station created the Ping Entries should take care of 
            deletion. Entry Can be made active only if PingDestination is
-           configured"
+           configured."
 
      ::= { fsPingEntry 12 }
 
@@ -189,5 +186,20 @@ fsPingHostName OBJECT-TYPE
       "This object specifies the DNS host name 
       used to send echo requests."
      ::= { fsPingEntry 13 }
+
+fsPingContInterval OBJECT-TYPE
+     SYNTAX      Integer32 (0..3600)
+     MAX-ACCESS  read-create
+     STATUS      current
+     DESCRIPTION
+         "Specifies the interval for continuous ping operations.
+         A value of 0 indicates that continuous ping generation 
+         is not enabled. Other values indicate that continuous 
+         ping is enabled and that a new ping attempt (based on 
+         other entry settings) will be initiated periodically 
+         per the current interval value."
+
+     DEFVAL { 0 }
+     ::= { fsPingEntry 14 }
 
 END

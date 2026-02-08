@@ -6,12 +6,14 @@
  *
  * @package        observium
  * @subpackage     poller
- * @copyright  (C) 2006-2013 Adam Armstrong, (C) 2013-2023 Observium Limited
+ * @copyright  (C) Adam Armstrong
  *
  */
 
 // Init to avoid PHP warnings
+$pkgs       = [];
 $pkgs_id    = [];
+$pkgs_db    = [];
 $pkgs_db_id = [];
 
 // RPM
@@ -20,20 +22,9 @@ if (!safe_empty($agent_data['rpm'])) {
     // Build array of existing packages
     $manager = "rpm";
 
-    foreach (dbFetchRows("SELECT * FROM `packages` WHERE `device_id` = ?", [$device['device_id']]) as $pkg_db) {
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['id']     = $pkg_db['pkg_id'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['status'] = $pkg_db['status'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['size']   = $pkg_db['size'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['text']                                                                         = $pkg_db['manager'] . "-" . $pkg_db['name'] . "-" . $pkg_db['arch'] . "-" . $pkg_db['version'] . "-" . $pkg_db['build'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['manager']                                                                      = $pkg_db['manager'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['name']                                                                         = $pkg_db['name'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['arch']                                                                         = $pkg_db['arch'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['version']                                                                      = $pkg_db['version'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['build']                                                                        = $pkg_db['build'];
-    }
-
     foreach (explode("\n", $agent_data['rpm']) as $package) {
-        [$name, $pversion, $build, $arch, $size] = explode(" ", $package);
+        [ $name, $pversion, $build, $arch, $size ] = explode(" ", $package);
+
         $pkgs[$manager][$name][$arch][$pversion][$build]['manager'] = $manager;
         $pkgs[$manager][$name][$arch][$pversion][$build]['name']    = $name;
         $pkgs[$manager][$name][$arch][$pversion][$build]['arch']    = $arch;
@@ -41,8 +32,9 @@ if (!safe_empty($agent_data['rpm'])) {
         $pkgs[$manager][$name][$arch][$pversion][$build]['build']   = $build;
         $pkgs[$manager][$name][$arch][$pversion][$build]['size']    = $size;
         $pkgs[$manager][$name][$arch][$pversion][$build]['status']  = '1';
-        $text                                                       = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
-        $pkgs_id[]                                                  = $pkgs[$manager][$name][$arch][$pversion][$build];
+
+        $text      = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
+        $pkgs_id[] = $pkgs[$manager][$name][$arch][$pversion][$build];
     }
 }
 
@@ -52,21 +44,11 @@ if (!safe_empty($agent_data['dpkg'])) {
     // Build array of existing packages
     $manager = "deb";
 
-    foreach (dbFetchRows("SELECT * FROM `packages` WHERE `device_id` = ?", [$device['device_id']]) as $pkg_db) {
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['id']     = $pkg_db['pkg_id'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['status'] = $pkg_db['status'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['size']   = $pkg_db['size'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['text']                                                                         = $pkg_db['manager'] . "-" . $pkg_db['name'] . "-" . $pkg_db['arch'] . "-" . $pkg_db['version'] . "-" . $pkg_db['build'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['manager']                                                                      = $pkg_db['manager'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['name']                                                                         = $pkg_db['name'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['arch']                                                                         = $pkg_db['arch'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['version']                                                                      = $pkg_db['version'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['build']                                                                        = $pkg_db['build'];
-    }
-
     foreach (explode("\n", $agent_data['dpkg']) as $package) {
-        [$name, $pversion, $arch, $size] = explode(" ", $package);
-        $build                                                      = "";
+        [ $name, $pversion, $arch, $size ] = explode(" ", $package);
+        $build                             = ""; // ?
+        $arch                              = trim($arch, '-');
+
         $pkgs[$manager][$name][$arch][$pversion][$build]['manager'] = $manager;
         $pkgs[$manager][$name][$arch][$pversion][$build]['name']    = $name;
         $pkgs[$manager][$name][$arch][$pversion][$build]['arch']    = $arch;
@@ -74,32 +56,23 @@ if (!safe_empty($agent_data['dpkg'])) {
         $pkgs[$manager][$name][$arch][$pversion][$build]['build']   = $build;
         $pkgs[$manager][$name][$arch][$pversion][$build]['size']    = (int)$size * 1024;
         $pkgs[$manager][$name][$arch][$pversion][$build]['status']  = '1';
-        $text                                                       = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
-        $pkgs_id[]                                                  = $pkgs[$manager][$name][$arch][$pversion][$build];
+
+        $text      = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
+        $pkgs_id[] = $pkgs[$manager][$name][$arch][$pversion][$build];
     }
 }
 
 // ebuild
 if (!safe_empty($agent_data['ebuild'])) {
-    echo("\nebuild Packages: ");
+    echo("\nEbuild Packages: ");
     // Build array of existing packages
     $manager = "ebuild";
 
-    foreach (dbFetchRows("SELECT * FROM `packages` WHERE `device_id` = ?", [$device['device_id']]) as $pkg_db) {
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['id']     = $pkg_db['pkg_id'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['status'] = $pkg_db['status'];
-        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['size']   = $pkg_db['size'];
-	    $pkgs_db_id[$pkg_db['pkg_id']]['text']                                                                         = $pkg_db['manager'] . "-" . $pkg_db['name'] . "-" . $pkg_db['arch'] . "-" . $pkg_db['version'] . "-" . $pkg_db['build'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['manager']                                                                      = $pkg_db['manager'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['name']                                                                         = $pkg_db['name'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['arch']                                                                         = $pkg_db['arch'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['version']                                                                      = $pkg_db['version'];
-        $pkgs_db_id[$pkg_db['pkg_id']]['build']                                                                        = $pkg_db['build'];
-    }
-
     foreach (explode("\n", $agent_data['ebuild']) as $package) {
-        [$name, $pversion, $arch, $size] = explode(" ", $package);
-        $build                                                      = "";
+        [ $name, $pversion, $arch, $size ] = explode(" ", $package);
+        $build                             = "";
+        $arch                              = trim($arch, '-');
+
         $pkgs[$manager][$name][$arch][$pversion][$build]['manager'] = $manager;
         $pkgs[$manager][$name][$arch][$pversion][$build]['name']    = $name;
         $pkgs[$manager][$name][$arch][$pversion][$build]['arch']    = $arch;
@@ -107,8 +80,24 @@ if (!safe_empty($agent_data['ebuild'])) {
         $pkgs[$manager][$name][$arch][$pversion][$build]['build']   = $build;
         $pkgs[$manager][$name][$arch][$pversion][$build]['size']    = (int)$size * 1024;
         $pkgs[$manager][$name][$arch][$pversion][$build]['status']  = '1';
-        $text                                                       = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
-        $pkgs_id[]                                                  = $pkgs[$manager][$name][$arch][$pversion][$build];
+
+        $text      = $manager . "-" . $name . "-" . $arch . "-" . $pversion . "-" . $build;
+        $pkgs_id[] = $pkgs[$manager][$name][$arch][$pversion][$build];
+    }
+}
+
+if (!safe_empty($pkgs)) {
+    foreach (dbFetchRows("SELECT * FROM `packages` WHERE `device_id` = ?", [ $device['device_id'] ]) as $pkg_db) {
+        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['id']     = $pkg_db['pkg_id'];
+        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['status'] = $pkg_db['status'];
+        $pkgs_db[$pkg_db['manager']][$pkg_db['name']][$pkg_db['arch']][$pkg_db['version']][$pkg_db['build']]['size']   = $pkg_db['size'];
+
+        $pkgs_db_id[$pkg_db['pkg_id']]['text']    = $pkg_db['manager'] . "-" . $pkg_db['name'] . "-" . $pkg_db['arch'] . "-" . $pkg_db['version'] . "-" . $pkg_db['build'];
+        $pkgs_db_id[$pkg_db['pkg_id']]['manager'] = $pkg_db['manager'];
+        $pkgs_db_id[$pkg_db['pkg_id']]['name']    = $pkg_db['name'];
+        $pkgs_db_id[$pkg_db['pkg_id']]['arch']    = $pkg_db['arch'];
+        $pkgs_db_id[$pkg_db['pkg_id']]['version'] = $pkg_db['version'];
+        $pkgs_db_id[$pkg_db['pkg_id']]['build']   = $pkg_db['build'];
     }
 }
 
@@ -183,7 +172,7 @@ if (!empty($pkg_multi_update)) {
 
 // Packages
 if (!safe_empty($pkgs_db_id)) {
-    foreach ($pkgs_db_id as $id => $pkg) {
+    foreach ($pkgs_db_id as $pkg) {
         //dbDelete('packages', "`pkg_id` =  ?", array( $id ));
         echo("-" . $pkg['text']);
         log_event('Package removed: ' . $pkg['name'] . ' ' . $pkg['arch'] . ' ' . $pkg['version'] . ($pkg['build'] != '' ? "-" . $pkg['build'] : ''), $device, 'package');

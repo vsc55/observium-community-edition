@@ -1,7 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsm1ad.mib,v 1.11 2013/12/05 12:47:19 siva Exp $
-
 ARICENT-MIDOT1AD-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS

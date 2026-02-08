@@ -49,7 +49,7 @@ if (isset($total) && $total == TRUE) {
     }
 }
 
-foreach ($files as $id => $file) {
+foreach ($files as $file) {
     $hostname = str_replace(['app-shoutcast-' . $app['app_id'] . '-', '.rrd'], '', $file);
     [$host, $port] = explode('_', $hostname, 2);
     $graphs = [

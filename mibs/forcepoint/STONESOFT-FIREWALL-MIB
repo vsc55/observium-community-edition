@@ -18,10 +18,19 @@ IMPORTS
         FROM STONESOFT-SMI-MIB;
 
 stonesoftFirewallMibModule MODULE-IDENTITY
-      LAST-UPDATED      "201406230000Z"
-      ORGANIZATION      "Stonesoft Corporation"
-      CONTACT-INFO      "email: support@stonesoft.com"
-      DESCRIPTION       "MIB for Stonesoft's Firewall products"
+      LAST-UPDATED      "202011180000Z"
+      ORGANIZATION      "Forcepoint LLC"
+      CONTACT-INFO      "email: mib.stonesoft@forcepoint.com"
+      DESCRIPTION       "MIB for Forcepoint NGFW"
+
+      REVISION          "202011180000Z"
+      DESCRIPTION       "Added fwMemBytesSReclaimable and fwMemBytesAvailable"
+      REVISION          "201706190000Z"
+      DESCRIPTION       "Description update"
+      REVISION          "201608170000Z"
+      DESCRIPTION       "Object description update"
+      REVISION	        "201605060000Z"
+      DESCRIPTION       "Company information update"
       REVISION	        "201406230000Z"
       DESCRIPTION       "Changed syntax of non-monotonic 64bit counters to CounterBasedGauge64"
       REVISION          "201202010000Z"
@@ -137,7 +146,7 @@ fwIfStatsEntry OBJECT-TYPE
               SYNTAX        FwIfStatsEntry
               MAX-ACCESS    not-accessible
               STATUS        current
-              DESCRIPTION   "Row for a interface"
+              DESCRIPTION   "Row for an interface"
               INDEX         { fwIfStatsIndex }
               ::= { fwIfStatsTable 1 }
 
@@ -205,7 +214,7 @@ fwIfAccountedPkts OBJECT-TYPE
               MAX-ACCESS    read-only
               STATUS        current
               DESCRIPTION
-                  "Number of logged packets by firewall rules"
+                  "Number of accounted packets by firewall rules"
               ::= { fwIfStatsEntry 6 }
 
 fwIfRejectedPkts OBJECT-TYPE
@@ -357,7 +366,7 @@ fwCpuNice   OBJECT-TYPE
               MAX-ACCESS    read-only
               STATUS        current
               DESCRIPTION   "The percentage of time the CPU has spent running
-                             users' proccess that have been niced"
+                             users' processes that have been niced"
               ::= { fwCpuStatsEntry 6 }
 
 fwCpuIdle   OBJECT-TYPE
@@ -466,7 +475,21 @@ fwMemBytesCached OBJECT-TYPE
               DESCRIPTION "Amount of memory used as cache"
               ::= { fwMemoryInfo 8 }
 
+fwMemBytesSReclaimable OBJECT-TYPE
+              SYNTAX      CounterBasedGauge64
+              UNITS       "bytes"
+              MAX-ACCESS  read-only
+              STATUS      current
+              DESCRIPTION "Amount of reclaimable Slab memory "
+              ::= { fwMemoryInfo 9 }
 
+fwMemBytesAvailable OBJECT-TYPE
+              SYNTAX      CounterBasedGauge64
+              UNITS       "bytes"
+              MAX-ACCESS  read-only
+              STATUS      current
+              DESCRIPTION "Amount of memory available"
+              ::= { fwMemoryInfo 10 }
 
 -- disk(s) statistics
 
@@ -952,6 +975,7 @@ firewallHardwareGroup   OBJECT-GROUP
                   fwSwapBytesTotal, fwSwapBytesUsed, fwSwapBytesUnused,
                   fwMemBytesTotal, fwMemBytesUsed, fwMemBytesUnused,
                   fwMemBytesBuffers, fwMemBytesCached,
+                  fwMemBytesAvailable, fwMemBytesSReclaimable,
                   fwPartitionDevName, fwMountPointName,
                   fwPartitionSize, fwPartitionUsed, fwPartitionAvail }
       STATUS    current

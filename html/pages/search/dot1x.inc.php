@@ -31,7 +31,6 @@
               'width'  => '100%',
               'grid'   => 3,
               'value'  => $vars['device_id'],
-              'groups' => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
               'values' => $form_items['devices']];
             //Search by field
             $form['row'][0]['searchby'] = [

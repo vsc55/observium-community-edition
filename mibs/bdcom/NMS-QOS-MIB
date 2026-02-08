@@ -57,7 +57,7 @@ qos	MODULE-IDENTITY
 
 --  policyMap  Table       
 policyMapTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF policyMapEntry
+		SYNTAX		SEQUENCE OF PolicyMapEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"A list of policyMapEntry entries. 
@@ -65,7 +65,7 @@ policyMapTable	OBJECT-TYPE
 		::= { qos 1 }
 
 		policyMapEntry	OBJECT-TYPE
-				SYNTAX		policyMapEntry
+				SYNTAX		PolicyMapEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"An entry containing rule Classify and rule action information.A no-existing 
@@ -73,7 +73,7 @@ policyMapTable	OBJECT-TYPE
 				INDEX		{ policyMapName }
 				::= { policyMapTable 1 }
 
-		policyMapEntry	::= SEQUENCE {
+		PolicyMapEntry	::= SEQUENCE {
 							policyMapName				DisplayString,
 							policyMapcreate				DisplayString, 
 							policyMapdelete             TruthValue,
@@ -140,6 +140,7 @@ policyMapTable	OBJECT-TYPE
 		--								in this table. A rule created by being set this object to 'create'. When
 		--								'active' is set, the system will validate the rule. Before a rule can be 
 		--									deleted or modify, (by setting this object to 'delete' or 'modify')"
+		--						 	 it must be first unreferenced from all associated lines.(when 'active-applied' is set, a rule cann't be deleted or modified)."
 		--					::= { dsQosRuleEntry 13 }   
 		classifyIpv4AclDel		OBJECT-TYPE
 						SYNTAX		TruthValue
@@ -432,7 +433,7 @@ policyMapTable	OBJECT-TYPE
 
 --  policyMapApplyTable  Table       
 policyMapApplyTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF policyMapApplyEntry
+		SYNTAX		SEQUENCE OF PolicyMapApplyEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"A list of policyMapApplyEntry entries. 
@@ -440,14 +441,14 @@ policyMapApplyTable	OBJECT-TYPE
 		::= { qos 2 }
 
 		policyMapApplyEntry	OBJECT-TYPE
-				SYNTAX		policyMapApplyEntry
+				SYNTAX		PolicyMapApplyEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"An entry containing a qos(Quality of Service) policyMap applyed on a port."
 				INDEX		{ portIndex }
 				::= { policyMapApplyTable 1 }
 
-		policyMapApplyEntry	::= SEQUENCE {
+		PolicyMapApplyEntry	::= SEQUENCE {
 							portIndex				Integer32,
 							policyName				DisplayString, 
 							policyApplyCancel       Integer32,
@@ -482,21 +483,21 @@ policyMapApplyTable	OBJECT-TYPE
  
 --  globalCosMapTable  Table       
 globalCosMapTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF globalCosMapEntry
+		SYNTAX		SEQUENCE OF GlobalCosMapEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"Global cos map Table."
 		::= { qos 3 }
 
 		globalCosMapEntry	OBJECT-TYPE
-				SYNTAX		globalCosMapEntry
+				SYNTAX		GlobalCosMapEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"An entry containing a cos and queue."
 				INDEX		{ globalCosMapCos }
 				::= { globalCosMapTable 1 }
 
-		globalCosMapEntry	::= SEQUENCE {
+		GlobalCosMapEntry	::= SEQUENCE {
 							globalCosMapCos				Integer32,
 							globalCosMapQueue			Integer32 
 					}
@@ -517,21 +518,21 @@ globalCosMapTable	OBJECT-TYPE
 
 --  portCosMapTable  Table       
 portCosMapTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF portCosMapEntry
+		SYNTAX		SEQUENCE OF PortCosMapEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"Port cos map Table."
 		::= { qos 4 }
 
 		portCosMapEntry	OBJECT-TYPE
-				SYNTAX		portCosMapEntry
+				SYNTAX		PortCosMapEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"An entry containing a port, cos and queue."
 				INDEX		{ portPortIndex }
 				::= { portCosMapTable 1 }
 
-		portCosMapEntry	::= SEQUENCE {
+		PortCosMapEntry	::= SEQUENCE {
 							portPortIndex			Integer32,
 							portCosMapCos			Integer32,  
 							portCosMapQueue			Integer32
@@ -576,21 +577,21 @@ schedulerPolicy	OBJECT-TYPE
 
  --  wrrBandwidthTable  Table       
 wrrBandwidthTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF wrrBandwidthEntry
+		SYNTAX		SEQUENCE OF WrrBandwidthEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"The weight for each queue,used in both WRR(in packet) and DRR(in kbytes) mode."
 		::= { qos 6 }
 
 		wrrBandwidthEntry	OBJECT-TYPE
-				SYNTAX		wrrBandwidthEntry
+				SYNTAX		WrrBandwidthEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"The weight for each queue."
 				INDEX		{ queue }
 				::= { wrrBandwidthTable 1 }
 
-		wrrBandwidthEntry	::= SEQUENCE {
+		WrrBandwidthEntry	::= SEQUENCE {
 							queue						Integer32,
 							maxBandwidthWeight			Integer32,  
 							bandwidthWeight				Integer32
@@ -618,21 +619,21 @@ wrrBandwidthTable	OBJECT-TYPE
  
  --  portRateControlTable  Table       
 portRateControlTable	OBJECT-TYPE
-		SYNTAX		SEQUENCE OF portRateControlEntry
+		SYNTAX		SEQUENCE OF PortRateControlEntry
 		MAX-ACCESS	not-accessible
 		STATUS		current
 		DESCRIPTION	"Port ratelimit Table."
 		::= { qos 7 }
 
 		portRateControlEntry	OBJECT-TYPE
-				SYNTAX		portRateControlEntry
+				SYNTAX		PortRateControlEntry
 				MAX-ACCESS	not-accessible
 				STATUS		current
 				DESCRIPTION	"Each entry contains the ratelimit(both ingress and egress) for a port."
 				INDEX		{ portRateIndex }
 				::= { portRateControlTable 1 }
 
-		portRateControlEntry	::= SEQUENCE {
+		PortRateControlEntry	::= SEQUENCE {
 			    portRateIndex			Integer32,
 			    portIngressType			Integer32,  
 			    portEgressType			Integer32,

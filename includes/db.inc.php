@@ -31,6 +31,36 @@ if (@function_exists('mysqli_connect')) {
     exit(2);
 }
 
+// Include database cache functions
+require($config['install_dir'] . '/includes/db/cache.inc.php');
+
+/**
+ * Check if database operations should be skipped (e.g., in unit tests)
+ *
+ * @return bool TRUE if database should be skipped
+ */
+function db_skip() {
+    if (defined('OBS_DB_SKIP')) {
+        return OBS_DB_SKIP;
+    }
+
+    // Skip DB connect on PHPunit tests (while not set OBS_DB_SKIP)
+    return defined('__PHPUNIT_PHAR__');
+}
+
+/**
+ * Get current DB Size
+ *
+ * @param string $db_name Database name
+ * @return string DB size in bytes
+ */
+// TESTME needs unit testing
+function dbSize($db_name = NULL) {
+    $db_name = $db_name ?? $GLOBALS['config']['db_name'];
+
+    return dbFetchCell('SELECT SUM(`data_length` + `index_length`) AS `size` FROM `information_schema`.`tables` WHERE `table_schema` = ?;', [ $db_name ]);
+}
+
 /**
  * Provides server status information
  *
@@ -115,7 +145,7 @@ function dbSetVariable($var, $value, $scope = 'SESSION') {
 }
 
 /**
- * Provides table index list
+ * Provides a table index list
  *
  * @param string $table      Table name
  * @param string $index_name Index name (if empty get all indexes)
@@ -142,10 +172,10 @@ function dbShowIndexes($table, $index_name = NULL) {
 }
 
 /**
- * Provides table column list
+ * Provides a table column list
  *
  * @param string $table       Table name
- * @param string $column_name Column name (if empty get all indexes)
+ * @param string $column_name Column name (if empty gets all columns)
  *
  * @return array Array with a column list
  */
@@ -170,11 +200,38 @@ function dbShowColumns($table, $column_name = NULL) {
 }
 
 /**
- * Get next Auto Increment value for main table ID
+ * Provides list of available tables.
+ *
+ * @param string $column_name Tables that contain this column name (if empty gets all tables)
+ *
+ * @return array Tables list
+ */
+function dbShowTables($column_name = NULL) {
+    // SELECT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE COLUMN_NAME = 'device_id' AND TABLE_SCHEMA = 'observium';
+    // or:
+    // 	1.	Get the list of tables with SHOW TABLES
+    // 	2.	For each table, run SHOW COLUMNS FROM table_name
+    // 	3.	Check if the column exists.
+    $all_tables = dbFetchColumnNg('SHOW TABLES');
+    if (empty($column_name)) {
+        return $all_tables;
+    }
+
+    $tables = [];
+    foreach($all_tables as $table) {
+        if (dbShowColumns($table, $column_name)) {
+            $tables[] = $table;
+        }
+    }
+    return $tables;
+}
+
+/**
+ * Get the next Auto Increment value for main table ID
  *
  * @param string $table Table name
  *
- * @return integer Next auti increment id
+ * @return integer Next auto increment id
  */
 function dbShowNextID($table) {
     $table = dbEscape($table);
@@ -261,8 +318,9 @@ function dbQuery($sql, $parameters = [], $print_query = FALSE) {
     }
 
     if ($debug > 0) {
+        $error_msg = '';
         if ($result === FALSE && (error_reporting() & 1)) {
-            $error_msg = 'Error in query: (' . dbError() . ') ' . dbErrorNo();
+            $error_msg = dbErrorNo() . ' - ' . dbError();
             $debug_msg .= PHP_EOL . 'SQL ERROR[%r' . $error_msg . '%n]';
         }
         if ($debug > 1 && $warnings = dbWarnings()) {
@@ -276,13 +334,26 @@ function dbQuery($sql, $parameters = [], $print_query = FALSE) {
             }
             // After query debug output for cli
             print_message($debug_msg, 'console', FALSE);
-        } else {
-            print_error($error_msg);
+        } elseif ($error_msg) {
+            print_error("Failed dbQuery($error_msg)");
         }
     }
 
     if ($result === FALSE && isset($GLOBALS['config']['db']['debug']) && $GLOBALS['config']['db']['debug']) {
-        logfile('db.log', 'Failed dbQuery (#' . dbErrorNo() . ' - ' . dbError() . '), Query: ' . $fullSql);
+        // Visual error message for some critical errors
+        $errno     = dbErrorNo();
+        $error_msg = $errno . ' - ' . dbError();
+        if (!$debug && in_array($errno, [ 3, 14, 1114, 1927, 2006 ])) {
+            // Critical DB errors:
+            //    3 - Error writing file '/var/tmp/MYfd=104' (OS errno 28 - No space left on device)
+            //   14 - Can't change size of file (OS errno 28 - No space left on device)
+            // 1114 - The table '/var/tmp/#sql5c4af_912_b' is full
+            // 1927 - Connection was killed
+            // 2006 - MySQL server has gone away
+            print_error("Failed dbQuery($error_msg)");
+            //print_box("Failed dbQuery($error_msg)", 'error', 'admin');
+        }
+        logfile('db.log', 'Failed dbQuery (#' . $errno . ' - ' . dbError() . '), Query: ' . $fullSql);
     }
 
     return $result;
@@ -687,6 +758,13 @@ function dbProcessMulti($table, $print_query = FALSE) {
         $clean = TRUE;
     }
 
+    // Multi replace
+    if (isset($cache_db[$table]['replace'])) {
+        dbReplaceMulti($cache_db[$table]['replace'], $table, NULL, $print_query);
+
+        $clean = TRUE;
+    }
+
     // Clean
     if ($clean) {
         unset($cache_db[$table]);
@@ -708,6 +786,55 @@ function dbExist($table, $where = NULL, $parameters = [], $print_query = FALSE) 
     return (bool)$return;
 }
 
+function dbApproxCount($table, $where = NULL, $parameters = [], $print_query = FALSE) {
+    $sql = 'FROM `' . $table . '`';
+    if ($where) {
+        // Remove WHERE clause at the beginning and ; at end
+        $where = preg_replace([ '/^\s*WHERE\s+/i', '/\s*;\s*$/' ], '', $where);
+        $sql   .= ' WHERE ' . $where;
+    }
+
+    $query_count        = 'SELECT COUNT(*) ' . $sql;
+    $query_count_approx = 'EXPLAIN SELECT * ' . $sql; // Fast approximate count
+
+    dbSetVariable('MAX_EXECUTION_TIME', 500); // Set 0.5 sec maximum query execution time
+    // Exactly count, but it's very SLOW on huge tables
+    $count = dbFetchCell($query_count, $parameters, $print_query);
+    $errno = dbErrorNo();
+    //print_message('Error in query: (' . dbError() . ') ' . dbErrorNo());
+    dbSetVariable('MAX_EXECUTION_TIME', 0); // Reset maximum query execution time
+    //r($count);
+
+    if (!is_numeric($count)) {
+
+        // Error in query: (Query execution was interrupted, maximum statement execution time exceeded) 3024
+        // Error in query: (Query execution was interrupted) 1317
+        // MariaDB:
+        // Error 1969: Query execution was interrupted (max_statement_time exceeded)
+        // Error 4192: Slave log event execution was interrupted (slave_max_statement_time exceeded)
+        if (in_array($errno, [ 1317, 1969, 3024, 4192 ])) { // DB timeout error codes
+            // Approximate count correctly around 100-80%
+            dbQuery('ANALYZE TABLE `' . $table . '`;'); // Update INFORMATION_SCHEMA for more correctly count
+
+            $tmp = dbFetchRow($query_count_approx, $parameters, $print_query);
+            //print_vars($tmp);
+
+            if ($print_query) {
+                print_message("The $table entries count shown below are an estimate due to SQL query performance limitations. There may be many fewer results than indicated.", "info");
+            } else {
+                print_debug("The $table entries count shown below are an estimate due to SQL query performance limitations. There may be many fewer results than indicated.");
+            }
+
+            // This float value does not matter, just to make it clear that this number is approximate
+            return (float)$tmp['rows'];
+        }
+
+        print_debug("The $table entries count cannot be received by unknown reason. DB error number in query: $errno.");
+    }
+
+    return $count;
+}
+
 function dbDelete($table, $where = NULL, $parameters = [], $print_query = FALSE) {
     $sql = 'DELETE FROM `' . $table . '`';
     if ($where) {
@@ -727,6 +854,181 @@ function dbDelete($table, $where = NULL, $parameters = [], $print_query = FALSE)
     $GLOBALS['db_stats']['delete']++;
 
     return $return;
+}
+
+/**
+ * Performs a MySQL REPLACE operation on a table with the provided data.
+ * REPLACE works like INSERT, but if a duplicate key is encountered, the old row is deleted first.
+ * Unlike INSERT ... ON DUPLICATE KEY UPDATE, this completely replaces the row rather than updating specific fields.
+ *
+ * @param array  $data        Associative array of column => value pairs to insert/replace
+ * @param string $table       Name of the table to perform the operation on
+ * @param bool   $print_query Whether to print the generated query for debugging (default: FALSE)
+ * 
+ * @return mixed Returns the last insert ID if successful, FALSE on failure
+ *               For REPLACE operations, the ID may change if a row was replaced
+ * 
+ * @example
+ * // Replace a row in the users table
+ * $data = ['id' => 123, 'name' => 'John', 'email' => 'john@example.com'];
+ * $result = dbReplace($data, 'users');
+ * 
+ * // Alternative parameter order (table first) - will be auto-corrected
+ * $result = dbReplace('users', $data);
+ */
+function dbReplace($data, $table, $print_query = FALSE) {
+    global $fullSql;
+    
+    // The following block swaps the parameters if they were given in the wrong order.
+    // It allows the method to work for those that would rather it (or expect it to)
+    // follow closer with SQL convention: REPLACE INTO the TABLE this DATA
+    if (is_string($data) && is_array($table)) {
+        $tmp   = $data;
+        $data  = $table;
+        $table = $tmp;
+        print_debug('Parameters passed to dbReplace() were in reverse order.');
+    }
+    
+    // Build REPLACE INTO query  
+    $sql = 'REPLACE INTO `' . $table . '` (`' . implode('`,`', array_keys($data)) . '`)  VALUES (' . implode(',', dbPlaceHolders($data)) . ')';
+    
+    $time_start = microtime(TRUE);
+    //dbBeginTransaction();
+    $result = dbQuery($sql, $data, $print_query);
+    
+    if ($result) {
+        // This should return true if replace succeeded, but no ID was generated
+        $id = dbLastID();
+        //dbCommitTransaction();
+    } else {
+        //dbRollbackTransaction();
+        $id = FALSE;
+    }
+    
+    // Update database statistics
+    $GLOBALS['db_stats']['insert_sec'] += elapsed_time($time_start, 8);
+    $GLOBALS['db_stats']['insert']++;
+    
+    return $id;
+}
+
+/**
+ * Performs a MySQL REPLACE operation on multiple rows with the provided data.
+ * REPLACE works like INSERT, but if a duplicate key is encountered, the old row is deleted first.
+ * This is more efficient than multiple single REPLACE calls when inserting/replacing many rows.
+ *
+ * @param array  $data        Array of associative arrays, each containing column => value pairs
+ *                           Can also be a single associative array (will be converted to multi-array)
+ * @param string $table       Name of the table to perform the operation on
+ * @param array  $columns     Optional: specific columns to include (default: auto-detect from first row)
+ * @param bool   $print_query Whether to print the generated query for debugging (default: FALSE)
+ * 
+ * @return mixed Returns the last insert ID if successful, FALSE on failure
+ *               For REPLACE operations with multiple rows, only the last insert ID is returned
+ * 
+ * @example
+ * // Replace multiple rows in the users table
+ * $data = [
+ *     ['id' => 123, 'name' => 'John', 'email' => 'john@example.com'],
+ *     ['id' => 124, 'name' => 'Jane', 'email' => 'jane@example.com']
+ * ];
+ * $result = dbReplaceMulti($data, 'users');
+ * 
+ * // Replace with specific columns only
+ * $result = dbReplaceMulti($data, 'users', ['id', 'name']);
+ * 
+ * // Alternative parameter order (table first) - will be auto-corrected
+ * $result = dbReplaceMulti('users', $data);
+ */
+function dbReplaceMulti($data, $table, $columns = NULL, $print_query = FALSE) {
+    global $fullSql;
+    
+    // The following block swaps the parameters if they were given in the wrong order.
+    // It allows the method to work for those that would rather it (or expect it to)
+    // follow closer with SQL convention: REPLACE INTO the TABLE this DATA
+    if (is_string($data) && is_array($table)) {
+        $tmp   = $data;
+        $data  = $table;
+        $table = $tmp;
+        print_debug('Parameters passed to dbReplaceMulti() were in reverse order.');
+    }
+    
+    // Detect if data is multiarray
+    $first_data = reset($data);
+    if (!is_array($first_data)) {
+        $first_data = $data;
+        $data       = [ $data ];
+    }
+    
+    if (safe_empty($data)) {
+        print_debug("Passed empty data array to dbReplaceMulti().");
+        return FALSE;
+    }
+    
+    // Columns, if not passed, use keys from a first element
+    if (empty($columns)) {
+        $columns = array_keys($first_data);
+    }
+    
+    $values = [];
+    // Multiarray data
+    foreach ($data as $entry) {
+        $entry = dbPrepareData($entry); // Escape data
+        
+        // Keep the same columns order as in the first entry
+        $entries = [];
+        foreach ($columns as $column) {
+            $entries[$column] = $entry[$column];
+        }
+        
+        $values[] = '(' . implode(',', $entries) . ')';
+    }
+    
+    $sql = 'REPLACE INTO `' . $table . '` (`' . implode('`,`', $columns) . '`)  VALUES ' . implode(',', $values);
+    
+    $time_start = microtime(TRUE);
+    //dbBeginTransaction();
+    if ($result = dbQuery($sql, NULL, $print_query)) {
+        // This should return true if replace succeeded, but no ID was generated
+        $id = dbLastID();
+        //dbCommitTransaction();
+    } else {
+        //dbRollbackTransaction();
+        $id = FALSE;
+    }
+    
+    $GLOBALS['db_stats']['insert_sec'] += elapsed_time($time_start, 8);
+    $GLOBALS['db_stats']['insert']++;
+    
+    return $id;
+}
+
+/**
+ * Caches a row for bulk REPLACE operation. This row will be processed later when the cache is flushed.
+ * This function is used for performance optimization when doing many replace operations.
+ *
+ * @param array  $row    Associative array of column => value pairs for a single row
+ * @param string $table  Name of the table 
+ * @param string $id_key Optional: ID key for validation (should not be present for new rows)
+ * 
+ * @return void This function does not return a value, it caches data for later processing
+ * 
+ * @example
+ * // Cache multiple rows for bulk replace
+ * dbReplaceRowMulti(['id' => 123, 'name' => 'John'], 'users');
+ * dbReplaceRowMulti(['id' => 124, 'name' => 'Jane'], 'users');
+ * // Later, the cached rows will be processed in bulk
+ */
+function dbReplaceRowMulti($row, $table, $id_key = NULL) {
+    global $cache_db;
+    
+    if (is_string($id_key) && isset($row[$id_key])) {
+        print_error("Incorrect replace db table '$table' entry passed (not should be have ID '$id_key' cell).");
+        print_debug_vars($row);
+    } else {
+        // No validations here - cache the row for bulk replace operation
+        $cache_db[$table]['replace'][] = $row;
+    }
 }
 
 /*
@@ -798,9 +1100,10 @@ function dbPrepareData($data) {
             if (count($value) === 1) {
                 $value  = array_shift($value);
                 $value  = dbEscape($value);
+                //print_debug("DEBUG: dbPrepareData() -> $key:");
                 // Probably we use this only for pass NULL,
                 // but currently allow to pass any other values and quote if space found
-                if (preg_match('/\s+/', $value)) {
+                if (!is_db_function($value) && preg_match('/\s+/', $value)) {
                     $value = "'" . $value . "'";
                 }
             } else {
@@ -876,6 +1179,94 @@ function db_config() {
             $config['db_port'] = $port;
         }
     }
+}
+
+/**
+ * Returns a string with backslashes before characters that need to be escaped.
+ * Characters encoded are NUL (ASCII 0), \n, \r, \, ', ", and ctrl-Z.
+ *
+ * @param string $string String to add slashes to
+ * @return string
+ */
+function db_real_escape_string($string) {
+    $replace = [
+        "\\"   => "\\\\",
+        "\x00" => "\\0",
+        "\n"   => "\\n",
+        "\r"   => "\\r",
+        "'"    => "\'",
+        '"'    => '\"',
+        "\x1a" => "\\Z"
+    ];
+    return strtr($string, $replace);
+}
+
+function is_db_function($value): bool {
+    if (!is_string($value) || str_contains($value, ';')) {
+        // prevent sql injection
+        return FALSE;
+    }
+
+    // INTERVAL Expressions:
+    // (NOW() - INTERVAL 1 DAY)
+    // NOW() + INTERVAL 1 SECONDS
+    // CURTIME() + 0
+    // CURDATE() + 0
+    // UNIX_TIMESTAMP() + 3600
+    if (preg_match('/^\(?(NOW|CURDATE|CURTIME|UNIX_TIMESTAMP)\(\) +[\-\+] +(INTERVAL +(\d+) +[A-Z]+|\d+)\)?$/', $value)) {
+        return TRUE;
+    }
+
+    // Match only actual MySQL/MariaDB functions
+    return preg_match('/^\s*(?<func>[A-Z][A-Z0-9_]{0,31})\(.*\)\s*$/', $value, $matches) &&
+           in_array($matches['func'], OBS_DB_FUNCTIONS, TRUE);
+}
+
+/**
+ * Quotes and optionally escapes a value for safe usage in SQL queries.
+ *
+ * - Arrays are not supported and will trigger a debug warning.
+ * - Numeric mode allows returning integers without quotes (with a special case for "0").
+ * - Empty values are returned as empty quoted strings ('').
+ * - MySQL/MariaDB function calls (FUNC(...)) are detected and returned unquoted.
+ * - All other values are safely escaped and wrapped in single quotes.
+ *
+ * @param mixed $value   Input value to quote.
+ * @param bool  $escape  Whether to escape the value using dbEscape(). Default TRUE.
+ * @param bool  $numeric Whether to treat the value as numeric and skip quoting if possible.
+ *
+ * @return string Quoted, escaped, or raw SQL-safe value.
+ */
+function db_quote_string($value, $escape = TRUE, $numeric = FALSE) {
+    if (is_array($value)) {
+        // FIXME. recurcive call ?
+        print_debug("ERROR: db_quote_string() passed array value. Not should be happened in normal case.");
+        print_debug_vars($value);
+    }
+
+    if ($numeric && is_intnum($value)) {
+        if ($value === '0' || $value === 0) {
+            // Added zero string exception, for prevent incorrect compare varchar/text
+            return "'0'";
+        }
+        // Numeric value, do not quote
+        return (string)$value;
+    }
+
+    if (safe_empty($value)) {
+        return "''";
+    }
+
+    if (is_db_function($value)) {
+        // Detect function call (FUNC(...)), covers MariaDB and MySQL
+        return $value;
+    }
+
+    if ($escape) {
+        $value = dbEscape($value);
+    }
+    // Strings, like timestamp: 2024-09-16 09:25:00
+    return "'$value'";
 }
 
 /**
@@ -1060,7 +1451,8 @@ function generate_query_valuesxxx($value, $column, $condition = NULL, $options =
  *                              =, !=, NOT, NULL, NOT NULL, REGEXP, NOT REGEXP
  *                              LIKE (and variants %LIKE%, %LIKE, LIKE%)
  * @param array  $options     leading_and - Add leading AND to result query,
- *                            ifnull      - Add IFNULL(column, '')
+ *                            ifnull      - Add IFNULL(column, ''),
+ *                            noescape    - force do not escape (default escaping)
  *
  * @return string             Generated query
  */
@@ -1078,6 +1470,7 @@ function generate_query_values($value, $column, $condition = NULL, $options = []
     // Options
     $leading_and = in_array('leading_and', (array)$options, TRUE);
     $ifnull      = in_array('ifnull', (array)$options, TRUE);
+    $escape      = !in_array('noescape', (array)$options, TRUE);
 
     $search  = [ '%', '_' ];
     $replace = [ '\%', '\_' ];
@@ -1108,7 +1501,9 @@ function generate_query_values($value, $column, $condition = NULL, $options = []
                 if ($v === '') {
                     $values[] = "COALESCE($column, '')" . $cond . "''";
                 } else {
-                    $v        = dbEscape($v); // Escape BEFORE replace!
+                    if ($escape) {
+                        $v    = dbEscape($v); // Escape BEFORE replace!
+                    }
                     $v        = str_replace($search, $replace, $v);
                     $v        = str_replace('LIKE', $v, $condition);
                     $values[] = $column . $cond . "'" . $v . "'";
@@ -1135,7 +1530,8 @@ function generate_query_values($value, $column, $condition = NULL, $options = []
             }
 
             foreach ($value as $v) {
-                $values[] = $column . $cond . "'" . dbEscape($v) . "'"; // FIXME. not sure about escape, but need fixate!
+                // FIXME. not sure about escape, but need fixate!
+                $values[] = $column . $cond . db_quote_string($v, $escape);
             }
             $values = array_unique($values); // Removes duplicate values
             if (count($values)) {
@@ -1163,14 +1559,14 @@ function generate_query_values($value, $column, $condition = NULL, $options = []
         case '>=':
         case '<':
         case '<=':
-            $num   = str_starts_with($condition, '<') ? min($value) : max($value);
-            $value = array_shift($value);
-            if (is_numeric($num)) {
-                // Numeric compare
-                $where = $column . " $condition " . $num;
+            $number = str_starts_with($condition, '<') ? min($value) : max($value); // get number from array
+            $value  = array_shift($value);
+            if (is_numeric($number)) {
+                // Numeric compare, without escape
+                $where = $column . " $condition " . $number;
             } elseif (!empty($value) && !str_contains($value, ';')) {
                 // Strings, like timestamp: 2024-09-16 09:25:00
-                $where = $column . " $condition '" . dbEscape($value) . "'";
+                $where = $column . " $condition " . db_quote_string($value, $escape);
             } else {
                 // Empty values
                 $where = $negative ? '1' : '0';
@@ -1186,7 +1582,7 @@ function generate_query_values($value, $column, $condition = NULL, $options = []
                     $add_null = TRUE; // Add check NULL values at end
                     $values[] = "''";
                 } else {
-                    $values[] = is_intnum($v) ? $v : "'" . dbEscape($v) . "'";
+                    $values[] = db_quote_string($v, $escape, TRUE); // int numbers unquoted (except zero)
                 }
             }
             $count = count($values);
@@ -1275,36 +1671,48 @@ function generate_query_sort($columns, $sort_order = '', $default_type = NULL) {
     return '';
 }
 
-/**
- * Get sort order key from vars: ASC, DESC, ''
- *
- * @param array $vars
- * @param bool $invert
- *
- * @return string
- */
+// CLEANME: remove when all replaced
 function get_sort_order(&$vars = [], $invert = FALSE) {
-    switch ($vars['sort_order']) {
-        case 'desc':
-            $sort_neg = 'ASC';
-            return $invert ? 'ASC' : 'DESC';
-        case 'reset':
-            unset($vars['sort'], $vars['sort_order']);
-            return '';
-        default:
-            $sort_neg = 'DESC';
-            return $invert ? 'DESC' : 'ASC';
+    return query_sort_order($vars, $invert);
+}
+
+/**
+ * Determine SQL sort order string based on $vars['sort_order'].
+ *
+ * Behaviour:
+ *   - 'desc'  → 'DESC' (or 'ASC' if inverted)
+ *   - 'asc'   → 'ASC'  (or 'DESC' if inverted)
+ *   - 'reset' → removes sort parameters and returns empty string
+ *   - missing or unsupported → default 'ASC' (or 'DESC' if inverted)
+ *
+ * @param array $vars    Request variables, passed by reference.
+ * @param bool  $invert  If true, returned direction is flipped.
+ *
+ * @return string One of: 'ASC', 'DESC', ''.
+ */
+function query_sort_order(&$vars = [], $invert = FALSE) {
+    $dir = strtolower($vars['sort_order'] ?? '');
+
+    if ($dir === 'desc') {
+        return $invert ? 'ASC' : 'DESC';
     }
+
+    if ($dir === 'reset') {
+        unset($vars['sort'], $vars['sort_order']);
+        return '';
+    }
+
+    // Default: ascending
+    return $invert ? 'DESC' : 'ASC';
 }
 
 function generate_query_limit(&$vars, $total = 0) {
     if (!isset($vars['pageno'])) {
         pagination($vars, $total, TRUE); // Get default pagesize/pageno
     }
-    $start    = $vars['pagesize'] * $vars['pageno'] - $vars['pagesize'];
-    $pagesize = $vars['pagesize'];
+    $start = $vars['pagesize'] * $vars['pageno'] - $vars['pagesize'];
 
-    return " LIMIT $start,$pagesize";
+    return " LIMIT $start," . $vars['pagesize'];
 }
 
 /**

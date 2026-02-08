@@ -31,7 +31,7 @@ $inventory[$index] = [
 discover_inventory($device, $index, $inventory[$index], $mib);
 
 // Blades
-foreach ($oids as $tmp => $entry) {
+foreach ($oids as $entry) {
     if ($entry['cpqRackServerBladeEntry'] == "0") {
         continue;
     }

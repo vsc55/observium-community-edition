@@ -12,24 +12,44 @@
 
 if (str_contains($poll_device['sysDescr'], 'olive')) {
     $hardware = 'Olive';
-} elseif (preg_match('/^Juniper Networks, Inc\. ([a-z]+ )?(?<hw>[\w-][^,]+), kernel JUNOS (?<version>[^, ]+)/i', $poll_device['sysDescr'], $matches)) {
-    //Juniper Networks, Inc. qfx5100-48s-6q Ethernet Switch, kernel JUNOS 13.2X51-D38, Build date: 2015-06-12 02:19:10 UTC Copyright (c) 1996-2015 Juniper Networks, Inc.
-    //Juniper Networks, Inc. ex2200-48t-4g Ethernet Switch, kernel JUNOS 12.3R3.4, Build date: 2013-06-14 02:21:01 UTC Copyright (c) 1996-2013 Juniper Networks, Inc.
-    //Juniper Networks, Inc. acx4000 internet router, kernel JUNOS 12.3X52-D10.4, Build date: 2013-08-19 23:31:40 UTC Copyright (c) 1996-2013 Juniper Networks, Inc.
-    //Juniper Networks, Inc. ex4200-48t internet router, kernel JUNOS 11.3R2.4 #0: 2011-09-29 07:21:04 UTC builder@dagmath.juniper.net:/volume/build/junos/11.3/release/11.3R2.4/obj-powerpc/bsd/kernels/JUNIPER-EX/kernel Build date: 2011-09-29 06:44:19 UTC C
-    //Juniper Networks, Inc. DELL J-EX4200-24T internet router, kernel JUNOS 12.1R2.9 #0: 2012-05-31 09:24:31 UTC builder@greteth:/volume/build/junos/12.1/release/12.1R2.9/obj-powerpc/junos/bsd/kernels/JUNIPER-EX/kernel Build date: 2012-05-31 11:29:38 UTC
+} elseif (preg_match('/^Juniper Networks, Inc\. ([a-z]+ )?(?<hw>\w.+?), kernel JUNOS (?<version>[^, ]+)/i', $poll_device['sysDescr'], $matches)) {
+    // Juniper Networks, Inc. qfx5100-48s-6q Ethernet Switch, kernel JUNOS 13.2X51-D38, Build date: 2015-06-12 02:19:10 UTC Copyright (c) 1996-2015 Juniper Networks, Inc.
+    // Juniper Networks, Inc. ex2200-48t-4g Ethernet Switch, kernel JUNOS 12.3R3.4, Build date: 2013-06-14 02:21:01 UTC Copyright (c) 1996-2013 Juniper Networks, Inc.
+    // Juniper Networks, Inc. acx4000 internet router, kernel JUNOS 12.3X52-D10.4, Build date: 2013-08-19 23:31:40 UTC Copyright (c) 1996-2013 Juniper Networks, Inc.
+    // Juniper Networks, Inc. ex4200-48t internet router, kernel JUNOS 11.3R2.4 #0: 2011-09-29 07:21:04 UTC builder@dagmath.juniper.net:/volume/build/junos/11.3/release/11.3R2.4/obj-powerpc/bsd/kernels/JUNIPER-EX/kernel Build date: 2011-09-29 06:44:19 UTC C
+    // Juniper Networks, Inc. DELL J-EX4200-24T internet router, kernel JUNOS 12.1R2.9 #0: 2012-05-31 09:24:31 UTC builder@greteth:/volume/build/junos/12.1/release/12.1R2.9/obj-powerpc/junos/bsd/kernels/JUNIPER-EX/kernel Build date: 2012-05-31 11:29:38 UTC
+    // Juniper Networks, Inc. ptx10001-36mr internet router, JUNOS 22.4R1.11-EVO, Build date: 2022-12-20 08:56:54 UTC Copyright (c) 1996-2022 Juniper Networks, Inc.
 
-    [$hardware, $features] = explode(' ', $matches['hw'], 2);
+    if (str_contains($matches['hw'], '] ')) {
+        // Juniper Networks, Inc. JNP204 [MX204] internet router, kernel JUNOS 22.2R3.15, Build date: 2023-03-22 15:50:12 UTC Copyright (c) 1996-2023 Juniper Networks, Inc.
+        [ $hardware, $features ] = explode('] ', $matches['hw'], 2);
+        $hardware = explode('[', $hardware)[1];
+    } else {
+        [ $hardware, $features ] = explode(' ', $matches['hw'], 2);
+    }
     $hardware = strtoupper($hardware);
     $features = ucwords($features);
     $version  = $matches['version'];
 }
 
-if (empty($hardware)) {
-    $hw = snmp_get_oid($device, 'jnxBoxDescr.0', 'JUNIPER-MIB');
-    if (preg_match('/^([a-z]+ )?(?<hw>[\w\ -]+)/i', $hw, $matches)) {
-        //Juniper SRX100H2 Internet Router
-        [$hardware, $features] = explode(' ', $matches['hw'], 2);
+if (empty($hardware) &&
+    $hw = snmp_get_oid($device, 'jnxBoxDescr.0', 'JUNIPER-MIB')) {
+    if (str_contains($hw, '] ')) {
+        // Juniper JNP204 [MX204] Edge Router
+        // JNP10001-36MR-K [PTX10001-36MR-K]
+        if (preg_match('/ \[(?<hardware>\S+?)\]( (?<features>\w.+))?/', $hw, $matches)) {
+            $hardware = $matches['hardware'];
+            if ($matches['features']) {
+                $features = $matches['features'];
+            }
+        } else {
+            // Old compat
+            [ $hardware, $features ] = explode('] ', $hw, 2);
+            $hardware = explode('[', $hardware)[1];
+        }
+    } elseif (preg_match('/^([a-z]+ )?(?<hw>[\w\ -]+)/i', $hw, $matches)) {
+        // Juniper SRX100H2 Internet Router
+        [ $hardware, $features ] = explode(' ', $matches['hw'], 2);
         //$hardware = strtoupper($hardware);
         $features = ucwords($features);
     } else {
@@ -59,10 +79,12 @@ if ((empty($hardware) || str_icontains_array($hardware, 'Virtual')) &&
     }
 }
 
-if (empty($version)) {
-    $jun_ver = snmp_get_oid($device, 'hrSWInstalledName.2', 'HOST-RESOURCES-MIB');
-    if (preg_match('/^[^\[]+\[(?<version>[^]]+)\]/', $jun_ver, $matches)) {
-        //JUNOS Software Release [12.1X46-D30.2]
+if (empty($version) &&
+    $jun_ver = snmp_get_oid($device, 'hrSWInstalledName.2', 'HOST-RESOURCES-MIB')) {
+
+    if (preg_match('/\[(?<version>\d\S+?)\]/', $jun_ver, $matches)) {
+        // JUNOS Software Release [12.1X46-D30.2]
+        // JUNOS Base OS Software Suite [22.2R3.15]
         $version = $matches['version'];
     }
 }

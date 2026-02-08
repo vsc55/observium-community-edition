@@ -28,7 +28,7 @@ foreach (['logicalInterfaceNumericId', 'logicalInterfaceCurrNode', 'logicalInter
     }
 }
 
-foreach ($oid_data as $index => $entry) {
+foreach ($oid_data as $entry) {
     if (isset($nodes[$entry['logicalInterfaceCurrNode']])) {
         $ifDescr = $nodes[$entry['logicalInterfaceCurrNode']] . ':' . $entry['logicalInterfaceCurrPort'];
         if ($port_id = get_port_id_by_ifDescr($device, $ifDescr)) {

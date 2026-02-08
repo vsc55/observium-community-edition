@@ -1,12 +1,6 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved
 
--- $Id: fsmppvrst.mib,v 1.20 2016/05/11 11:39:37 siva Exp $
-
 Aricent-MIPVRST-MIB DEFINITIONS ::= BEGIN
-
--- -------------------------------------------------
--- Proprietary MIB for Per VLAN Rapid Spanning Tree Protocol
--- -------------------------------------------------
 
 IMPORTS
                        
@@ -120,7 +114,12 @@ FsMIFuturePvrstEntry ::=
            fsMIPvrstGlobalBpduGuard
               Integer32,
            fsMIPvrstForceProtocolVersion
-              Integer32
+              Integer32,
+	   fsMIPvrstFlushInterval
+	      Timeout,
+	   fsMIPvrstPathCostType
+	      INTEGER   
+
     }
 
 fsMIFuturePvrstContextId OBJECT-TYPE
@@ -401,6 +400,44 @@ fsMIPvrstForceProtocolVersion OBJECT-TYPE
    DEFVAL { rstp }
    ::= { fsMIFuturePvrstEntry 17 }
 
+fsMIPvrstFlushInterval OBJECT-TYPE
+    SYNTAX      Timeout (0..500)
+    UNITS       "centi-seconds"
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+         "This object specifies the time value, measured in units of hundredths
+          of a second, controls the number of flush indications
+          invoked from STP module per instance basis.
+
+          If set to zero, then normal port and vlan based flushing
+          will take place in PVRST (for backward compatibility, which will
+                  be retained as default value).
+
+          If set to non-zero, then port based flushing will be done.
+
+          This scale would help to adjust the timer value,
+          based on the deployment scenario."
+
+    DEFVAL {0}
+    ::= { fsMIFuturePvrstEntry 18 }
+
+fsMIPvrstPathCostType OBJECT-TYPE
+SYNTAX      INTEGER {
+               stp8021d1998(1),
+               stp8021t2001(2)
+            }
+   MAX-ACCESS  read-write 
+   STATUS      current
+   DESCRIPTION
+         "The version of the Spanning Tree default Path Costs that
+         are to be used by this Bridge.  A value of 8021d1998(1)
+         uses the 16-bit default Path Costs from IEEE Std. 802.1D-1998.
+         A value of stp8021t2001(2) uses the 32-bit default Path
+         Costs from IEEE Std. 802.1t."
+     
+   DEFVAL { stp8021t2001 }
+   ::= { fsMIFuturePvrstEntry 19 } 
    
 -- -------------------------------------
 -- fsMIFuturePvrstTable - End
@@ -478,8 +515,17 @@ FsMIFuturePvrstPortEntry ::=
         fsMIPvrstPortPVIDInconsistentState
            TruthValue,
         fsMIPvrstPortBpduGuardAction
-         Integer32
-
+         Integer32,
+        fsMIPvrstPortRcvInfoWhileExpCount
+         Counter32,
+        fsMIPvrstPortRcvInfoWhileExpTimeStamp
+         TimeTicks,
+        fsMIPvrstPortImpStateOccurCount
+         Counter32,
+        fsMIPvrstPortImpStateOccurTimeStamp
+         TimeTicks,
+        fsMIPvrstPortErrorRecovery
+         Timeout
     }
 
 fsMIPvrstPort OBJECT-TYPE
@@ -692,16 +738,10 @@ fsMIPvrstPortLoopInconsistentState   OBJECT-TYPE
 	MAX-ACCESS  read-only 
 	STATUS      current 
 	DESCRIPTION 
-		"This object specifies a Boolean value set when the non-
-designated port on expiry of received information while timer 
-		transitions to Designated/Discarding state when the 
-superior BPDU's are not received with the 
-		loop guard feature being enabled on that port. 
-		A value of TRUE, indicates that the state of this port is 
-moved into an loop-inconsistent 
-		state. A value of FALSE, indicates that this port is not 
-moved into an loop-inconsistent 
-		state " 
+	       "This object specifies a Boolean value set when the non-designated port on which loop-guard is enabled, tries to transition
+		to Designated/Forwarding due to the expiry of Receive info while timer when bpdus are not received.
+		A value of TRUE, indicates that the state of this port is moved into an loop-inconsistent state.
+	        A value of FALSE, indicates that this port is not moved into an loop-inconsistent state " 
 	DEFVAL { false } 
 	::= { fsMIFuturePvrstPortEntry 17 } 
 
@@ -808,8 +848,8 @@ the tagged PVRST BPDU on its
 
 fsMIPvrstPortBpduGuardAction OBJECT-TYPE
    SYNTAX     INTEGER    {
-            disable-discarding (1),
-            admin-down (2)
+            disableDiscarding (1),
+            adminDown (2)
     }
     MAX-ACCESS  read-write
     STATUS      current
@@ -836,6 +876,57 @@ fsMIPvrstPortBpduGuardAction OBJECT-TYPE
 
     DEFVAL { 1 }
     ::= { fsMIFuturePvrstPortEntry 25 }
+
+
+fsMIPvrstPortRcvInfoWhileExpCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of times the info was received while timer is 
+        expired on this port."
+   ::= { fsMIFuturePvrstPortEntry 26 }
+
+fsMIPvrstPortRcvInfoWhileExpTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the info
+	 was received while timer is expired on this port last time."
+   ::= { fsMIFuturePvrstPortEntry 27 }
+
+fsMIPvrstPortImpStateOccurCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of times the impossible state has occurred on this port."
+   ::= { fsMIFuturePvrstPortEntry 28 }
+
+fsMIPvrstPortImpStateOccurTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the impossible 
+	 state has occurred on this port last time."
+   ::= { fsMIFuturePvrstPortEntry 29 }
+
+fsMIPvrstPortErrorRecovery OBJECT-TYPE
+   SYNTAX      Timeout (3000..6553500)
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+   "This object specifies the amount of time to bring the interface out of the
+   error-disabled (err-disabled) state.
+   The range is from 30 to 65535 seconds."
+   DEFVAL {30000}
+      ::= { fsMIFuturePvrstPortEntry 30 }
+
 -- -------------------------------------
 -- fsMIFuturePvrstPortTable - End
 -- -------------------------------------
@@ -902,7 +993,14 @@ FsMIPvrstInstBridgeEntry ::=
       fsMIPvrstInstRootHelloTime 
             Timeout,
       fsMIPvrstInstRootForwardDelay
-            Timeout
+            Timeout,
+      fsMIPvrstInstOldDesignatedRoot
+            BridgeId,
+      fsMIPvrstInstFlushIndicationThreshold
+          Integer32,
+      fsMIPvrstInstTotalFlushCount
+          Counter32
+
    }
 
 fsMIPvrstInstVlanId OBJECT-TYPE
@@ -1096,6 +1194,54 @@ fsMIPvrstInstRootForwardDelay OBJECT-TYPE
       "This object specifies the Forward Delay of the Root Bridge."
    ::= { fsMIPvrstInstBridgeEntry 19 }
 
+fsMIPvrstInstOldDesignatedRoot OBJECT-TYPE
+       SYNTAX  BridgeId
+       MAX-ACCESS  read-only
+       STATUS  current
+       DESCRIPTION
+               "This object specifies the bridge identifier of the old
+root of the spanning
+               tree instance as determined by the Spanning Tree Protocol
+               as executed by this node."
+       ::= { fsMIPvrstInstBridgeEntry 20 }
+
+ fsMIPvrstInstFlushIndicationThreshold OBJECT-TYPE
+    SYNTAX      Integer32 (0..65535)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "This object specifies the number of flush indications to go before
+        timer method triggers. (i.e) The number of flush indications
+        to trigger the FlushInterval Timer.
+
+        This value can be configurable only when fsMIPvrstFlushInterval
+        is other than default value.
+
+        When the value is retained as default value and flush interval
+        is being configured other than default value(0), then
+        vlan based flushing will happen.
+
+        When this value is non-default and the flush interval is being
+        configured other than default value(0), then the port and vlan
+        based flushing will happen until the actual flush indication
+        reaches the threshold. Once the threshold is reached, timer
+        will be started and during timer expiry instance based
+        flushing will happen. "
+
+    DEFVAL {0}
+    ::= { fsMIPvrstInstBridgeEntry 21 }
+
+fsMIPvrstInstTotalFlushCount OBJECT-TYPE
+    SYNTAX      Counter32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        " This object specifies the number of times flush is being triggered from
+        the STP stack in vlan level."
+
+ ::= { fsMIPvrstInstBridgeEntry 22 }
+
+
 
 -- -----------------------------------------------------------------
 -- Future Pvrst Common Spanning Tree Port Table     
@@ -1186,7 +1332,38 @@ FsMIPvrstInstPortEntry ::=
        fsMIPvrstInstPortHoldTime
 	    Timeout,
        fsMIPvrstInstPortAdminPathCost
-           Integer32
+           Integer32,
+       fsMIPvrstInstPortOldPortState
+           INTEGER,
+       fsMIPvrstInstPortLoopInconsistentState
+           TruthValue,
+       fsMIPvrstInstPortRootInconsistentState
+           TruthValue,
+       fsMIPvrstInstPortTCDetectedCount
+            Counter32,
+       fsMIPvrstInstPortTCReceivedCount
+            Counter32,
+       fsMIPvrstInstPortTCDetectedTimeStamp
+           TimeTicks,
+       fsMIPvrstInstPortTCReceivedTimeStamp
+           TimeTicks,
+        fsMIPvrstInstPortProposalPktsSent
+         Counter32,
+        fsMIPvrstInstPortProposalPktsRcvd
+         Counter32,
+        fsMIPvrstInstPortProposalPktSentTimeStamp
+         TimeTicks,
+        fsMIPvrstInstPortProposalPktRcvdTimeStamp
+         TimeTicks,
+        fsMIPvrstInstPortAgreementPktSent
+         Counter32,
+        fsMIPvrstInstPortAgreementPktRcvd
+         Counter32,
+        fsMIPvrstInstPortAgreementPktSentTimeStamp
+         TimeTicks,
+        fsMIPvrstInstPortAgreementPktRcvdTimeStamp
+         TimeTicks
+
 }
 
 fsMIPvrstInstPortIndex OBJECT-TYPE
@@ -1586,6 +1763,162 @@ the contribution
 
      ::= { fsMIPvrstInstPortEntry 32 }
 
+fsMIPvrstInstPortOldPortState  OBJECT-TYPE
+   SYNTAX      INTEGER {
+                  disabled (1),
+                  discarding (2),
+                  learning (4),
+                  forwarding (5)
+               }
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the previous state of the port."
+     ::= { fsMIPvrstInstPortEntry 33 }
+
+fsMIPvrstInstPortLoopInconsistentState  OBJECT-TYPE
+        SYNTAX      TruthValue
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+                "This object specifies a Boolean value set when the non-
+designated port on expiry of received information while timer
+                transitions to Designated/Discarding state when the
+superior BPDU's are not received with the
+                loop guard feature being enabled on that port.
+                A value of TRUE, indicates that the state of this port is
+moved into an loop-inconsistent
+                state. A value of FALSE, indicates that this port is not
+moved into an loop-inconsistent
+                state "
+        DEFVAL { false }
+
+     ::= { fsMIPvrstInstPortEntry 34 }
+
+fsMIPvrstInstPortRootInconsistentState OBJECT-TYPE
+      SYNTAX      TruthValue
+      MAX-ACCESS  read-only
+      STATUS      current
+      DESCRIPTION
+          "This object specifies a Boolean value set when the designated
+port receives a superior BPDU trying to transition itself
+            to the Root Port.
+            A value of TRUE, indicates that the state of this port is moved into an root-inconsistent
+            state. A value of FALSE, indicates that this port is not moved into an root-inconsistent
+            state."
+         DEFVAL { false }
+
+     ::= { fsMIPvrstInstPortEntry 35 }
+
+fsMIPvrstInstPortTCDetectedCount  OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the number of topology changes detected on this port."
+   ::= { fsMIPvrstInstPortEntry 36 }
+
+fsMIPvrstInstPortTCReceivedCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of topology change messages received on this port."
+   ::= { fsMIPvrstInstPortEntry 37 }
+
+fsMIPvrstInstPortTCDetectedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the 
+	 topology change is detected on this port last time."
+   ::= { fsMIPvrstInstPortEntry 38 }
+
+fsMIPvrstInstPortTCReceivedTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which the 
+	topology change message received on this port last time."
+   ::= { fsMIPvrstInstPortEntry 39 }
+
+
+fsMIPvrstInstPortProposalPktsSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of proposal packets sent by this port."
+   ::= { fsMIPvrstInstPortEntry 40 }
+
+fsMIPvrstInstPortProposalPktsRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of proposal packets received on this port."
+   ::= { fsMIPvrstInstPortEntry 41 }
+
+fsMIPvrstInstPortProposalPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which 
+	proposal packet sent by this port last time."
+   ::= { fsMIPvrstInstPortEntry 42 }
+
+fsMIPvrstInstPortProposalPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+        "This object specifies the time stamp(in hundredths of a second) at which 
+	 proposal packet received on this port last time."
+   ::= { fsMIPvrstInstPortEntry 43 }
+
+fsMIPvrstInstPortAgreementPktSent OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of agreement packets sent by this port."
+   ::= { fsMIPvrstInstPortEntry 44 }
+
+fsMIPvrstInstPortAgreementPktRcvd OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the number of agreement packets received on this port."
+   ::= { fsMIPvrstInstPortEntry 45 }
+
+fsMIPvrstInstPortAgreementPktSentTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which 
+	 agreement packet was sent by this port last time."
+   ::= { fsMIPvrstInstPortEntry 46 }
+
+fsMIPvrstInstPortAgreementPktRcvdTimeStamp OBJECT-TYPE
+   SYNTAX      TimeTicks
+   UNITS       "centi-seconds"
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+	"This object specifies the time stamp(in hundredths of a second) at which 
+         agreement packet was received on this port last time."
+   ::= { fsMIPvrstInstPortEntry 47 }
+
 -- TRAP MIB BEGIN
 
 fsMIFsPvrstSetGlobalTrapOption OBJECT-TYPE
@@ -1846,7 +2179,8 @@ protocol up or
         OBJECTS {
             fsMIPvrstBrgAddress,
             fsMIPvrstContextName,
-            fsMIPvrstInstDesignatedRoot
+            fsMIPvrstInstDesignatedRoot,
+            fsMIPvrstInstOldDesignatedRoot
                 }
         STATUS             current
         DESCRIPTION
@@ -1914,6 +2248,51 @@ fsMIPvrstHwFailureTrap NOTIFICATION-TYPE
 invoked from the protocol
           to program the hardware port state fails."
    ::= { fsMIPvrstTraps 8 }
+
+fsMIPvrstLoopIncStateChange NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIPvrstBrgAddress,
+                    fsMIPvrstInstPortLoopInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+	"This object specifies the generation of trap when the port has 
+	 been moved to the loop inconsistent state."
+::= { fsMIPvrstTraps 9 }
+
+fsMIPvrstBpduIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIPvrstBrgAddress,
+                    fsMIPvrstPortBpduInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "This object specifies the generation of trap when the port
+	  state goes to BPDU inconsistent state."
+::= { fsMIPvrstTraps 10 }
+
+fsMIPvrstRootIncStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIPvrstBrgAddress,
+                    fsMIPvrstInstPortRootInconsistentState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "This object specifies the generation of trap when the port
+	  state goes to root inconsistent state. "
+::= { fsMIPvrstTraps 11 }
+
+fsMIPvrstPortStateChange  NOTIFICATION-TYPE
+         OBJECTS {
+                    fsMIPvrstBrgAddress,
+                    fsMIPvrstInstPortState,
+                    fsMIPvrstInstPortOldPortState
+                 }
+         STATUS             current
+         DESCRIPTION
+         "This object specifies the generation of trap when the current 
+	  state of the port has been changed."
+::= { fsMIPvrstTraps 12 }
 
 -- TRAP MIB END
 

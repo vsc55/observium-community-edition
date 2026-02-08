@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -27,12 +26,12 @@
 #F5-BIGIP-SYSTEM-MIB::sysModuleAllocationProvisionLevel."ltm" = INTEGER: nominal(3)
 #F5-BIGIP-SYSTEM-MIB::sysModuleAllocationProvisionLevel."psm" = INTEGER: none(1)
 
-$version = snmp_get($device, 'sysProductVersion.0', '-OQv', 'F5-BIGIP-SYSTEM-MIB');
-$version .= ' Build ' . snmp_get($device, 'sysProductBuild.0', '-OQv', 'F5-BIGIP-SYSTEM-MIB');
-$version .= ' ' . snmp_get($device, 'sysProductEdition.0', '-OQv', 'F5-BIGIP-SYSTEM-MIB');
-
+if ($version = snmp_get_oid($device, 'sysProductVersion.0', 'F5-BIGIP-SYSTEM-MIB')) {
+    $version .= ' Build ' . snmp_get_oid($device, 'sysProductBuild.0', 'F5-BIGIP-SYSTEM-MIB');
+    $version .= ' ' . snmp_get_oid($device, 'sysProductEdition.0', 'F5-BIGIP-SYSTEM-MIB');
+}
 $slot_serials = snmpwalk_cache_oid($device, 'sysChassisSlotSerialNumber', [], 'F5-BIGIP-SYSTEM-MIB');
-foreach ($slot_serials as $tmp => $slot) {
+foreach ($slot_serials as $slot) {
     if ($slot['sysChassisSlotSerialNumber']) {
         $serial .= ',' . $slot['sysChassisSlotSerialNumber'];
     }

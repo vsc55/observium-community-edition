@@ -45,7 +45,8 @@ $config_variable['php_memory_limit_min'] = [
     'section'    => $section,
     'subsection' => 'PHP',
     'name'       => 'Minimum PHP memory limit',
-    'type'       => 'enum|256M|512M|1024M|2048M',
+    'type'       => 'enum',
+    'params'     => [ '256M', '512M', '1024M', '2048M' ],
     'shortdesc'  => "Override PHP memory_limit setting from php.ini (".ini_get('memory_limit').") if less than this minimum. Has no effect until setting specified.",
 ];
 
@@ -164,15 +165,16 @@ $setting                                 = 'poller-wrapper|max_running';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Poller Wrapper';
 $config_variable[$setting]['name']       = 'Maximum allowed wrapper processes';
-$config_variable[$setting]['type']       = 'enum|2|3|4|6|8|10';
-$config_variable[$setting]['shortdesc']  = "The number of maximum allowed simultaneously running wrapper processes, used together with \$config['poller-wrapper']['max_la']. This prevents locking issues and too high Load Average on server. WARNING, don't set this number too high.";
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 2, 3, 4, 6, 8, 10 ];
+$config_variable[$setting]['shortdesc']  = "The maximum number of simultaneously allowed wrapper processes, used together with \$config['poller-wrapper']['max_la']. This prevents locking issues and excessively high Load Average on the server. WARNING: Do not set this number too high.";
 
 $setting                                 = 'poller-wrapper|max_la';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Poller Wrapper';
 $config_variable[$setting]['name']       = 'Maximum allowed Load Average';
 $config_variable[$setting]['type']       = 'float';
-$config_variable[$setting]['shortdesc']  = "Maximum allowed server Load Average to start wrapper processes, used together with \$config['poller-wrapper']['max_running']. This prevents locking issues and and too high Load Average on server. ";
+$config_variable[$setting]['shortdesc']  = "Maximum allowed server Load Average to start wrapper processes, used together with \$config['poller-wrapper']['max_running']. This prevents locking issues and excessively high Load Average on the server.";
 
 $setting                                 = 'poller-wrapper|poller_timeout';
 $config_variable[$setting]['section']    = $section;
@@ -268,6 +270,13 @@ $config_variable[$setting]['subsection'] = 'Ports Modules';
 $config_variable[$setting]['name']       = 'Poll 64bit counters';
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = 'Prefer 64bit (HC) counters when available.';
+
+$setting                                 = 'ports|descr_speed_override';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Ports Modules';
+$config_variable[$setting]['name']       = 'Use parsed speed from description';
+$config_variable[$setting]['type']       = 'bool';
+$config_variable[$setting]['shortdesc']  = 'Override ifSpeed with parsed speed from port description (e.g., [7Gbps] in ifAlias). This affects usage percentage calculations. Priority: ifSpeed_custom > port_descr_speed > ifHighSpeed > ifSpeed.';
 
 //$setting = 'enable_ports_separate_walk';
 //$config_variable[$setting]['section']    = $section;
@@ -712,12 +721,12 @@ $config_variable[$setting]['name']       = 'Refresh pages';
 $config_variable[$setting]['useredit']   = TRUE;  
 $config_variable[$setting]['type']       = 'enum'; // Normally this setting is just int, but we limit it with a pre-defined list
 $config_variable[$setting]['params']     = [
-  0    => ['name' => 'Manually', 'icon' => 'icon-ban-circle'],
-  60   => ['name' => '1 minute', 'icon' => 'icon-refresh'],
-  120  => ['name' => '2 minutes', 'icon' => 'icon-refresh'],
-  300  => ['name' => '5 minutes', 'icon' => 'icon-refresh'],
-  900  => ['name' => '15 minutes', 'icon' => 'icon-refresh'],
-  1800 => ['name' => '30 minutes', 'icon' => 'icon-refresh']
+    0    => [ 'name' => 'Manually',   'icon' => 'icon-ban-circle' ],
+    60   => [ 'name' => '1 minute',   'icon' => 'icon-refresh' ],
+    120  => [ 'name' => '2 minutes',  'icon' => 'icon-refresh' ],
+    300  => [ 'name' => '5 minutes',  'icon' => 'icon-refresh' ],
+    900  => [ 'name' => '15 minutes', 'icon' => 'icon-refresh' ],
+    1800 => [ 'name' => '30 minutes', 'icon' => 'icon-refresh' ]
 ];
 $config_variable[$setting]['shortdesc']  = "Defines an autorefresh for pages in the web interface. If it's unset pages won't auto refresh.";
 
@@ -734,7 +743,8 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'General';
 $config_variable[$setting]['name']       = 'Default pagination size';
 $config_variable[$setting]['useredit']   = TRUE;
-$config_variable[$setting]['type']       = 'enum|10|20|50|100|500|1000|10000|50000';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 10, 20, 50, 100, 500, 1000, 10000, 50000 ];
 $config_variable[$setting]['shortdesc']  = 'The default number of items per page used by the web UI when paginating large tables. Default is 100.';
 
 $setting                                 = 'web_iframe';
@@ -768,9 +778,10 @@ $config_variable[$setting]['useredit']   = TRUE;
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = 'Show or not notifications on top of Web UI. I.e. old version or remote poller down.';
 
+// Entities display settings
 $setting                                            = 'web_device_name';
 $config_variable[$setting]['section']               = $section;
-$config_variable[$setting]['subsection']            = 'General';
+$config_variable[$setting]['subsection']            = 'Entities';
 $config_variable[$setting]['name']                  = 'Default name to display device';
 $config_variable[$setting]['useredit']              = TRUE;
 $config_variable[$setting]['type']                  = 'enum';
@@ -781,29 +792,44 @@ $config_variable[$setting]['shortdesc']             = 'Default name to display d
 
 $setting                                 = 'web_show_disabled';
 $config_variable[$setting]['section']    = $section;
-$config_variable[$setting]['subsection'] = 'General';
-$config_variable[$setting]['name']       = 'Show disabled devices';
+$config_variable[$setting]['subsection'] = 'Entities';
+$config_variable[$setting]['name']       = 'Show disabled Devices';
 $config_variable[$setting]['useredit']   = TRUE;
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = 'Whether to show disabled devices on major pages or not. (To hide disabled devices and their ports/alerts/etc, set this to FALSE).';
 
+$setting                                 = 'navbar_port_groups_status';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Entities';
+$config_variable[$setting]['name']       = 'Show port group status counts';
+$config_variable[$setting]['useredit']   = TRUE;
+$config_variable[$setting]['type']       = 'bool';
+$config_variable[$setting]['shortdesc']  = 'Show up/down status counts in navbar port group dropdown menus instead of simple member counts. Device groups always show status counts (no performance overhead).';
+
 $setting                                 = 'web_show_overview';
 $config_variable[$setting]['section']    = $section;
-$config_variable[$setting]['subsection'] = 'General';
-$config_variable[$setting]['name']       = "Enable 'Overview' tab";
+$config_variable[$setting]['subsection'] = 'Entities';
+$config_variable[$setting]['name']       = "Show Devices 'Overview' tab";
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = "Enable 'Overview' tab on device pages.";
 
+$setting                                 = 'web_show_overview_extra';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Entities';
+$config_variable[$setting]['name']       = "Extra information on Devices 'Overview' tab";
+$config_variable[$setting]['type']       = 'bool';
+$config_variable[$setting]['shortdesc']  = "Display additional information on 'Overview' tab: sysDescr, sysObjectID, Load Averages, Poller.";
+
 $setting                                 = 'web_show_notes';
 $config_variable[$setting]['section']    = $section;
-$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['subsection'] = 'Entities';
 $config_variable[$setting]['name']       = "Enable display and edit Notes";
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = "Enable display and edit markdown Notes. Currently only for device pages.";
 
 $setting                                 = 'web_show_tech';
 $config_variable[$setting]['section']    = $section;
-$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['subsection'] = 'Entities';
 $config_variable[$setting]['name']       = "Enable 'show tech' option";
 $config_variable[$setting]['type']       = 'bool';
 $config_variable[$setting]['shortdesc']  = "Enable 'show tech' menu option. Currently only for device pages.";
@@ -895,7 +921,8 @@ $setting                                 = 'frontpage|syslog|items';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Frontpage';
 $config_variable[$setting]['name']       = 'Syslog items';
-$config_variable[$setting]['type']       = 'enum|5|10|15|25|50'; // Normally this setting is just int, but we limit it with a pre-defined list
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 5, 10, 15, 25, 50 ]; // Normally this setting is just int, but we limit it with a pre-defined list
 $config_variable[$setting]['shortdesc']  = 'Only show the last XX items of the syslog view';
 
 $setting                                 = 'frontpage|syslog|priority';
@@ -1039,7 +1066,8 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Graphs';
 $config_variable[$setting]['name']       = 'Port-type page legend port limit';
 $config_variable[$setting]['useredit']   = TRUE;
-$config_variable[$setting]['type']       = 'enum|1|5|10|15|20|100';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 1, 5, 10, 15, 20, 100 ];
 $config_variable[$setting]['shortdesc']  = 'The number of ports permitted to be displayed on the legend of the graph at the top of the port type (transit, peering, etc) page before the legend is disabled.';
 
 $setting                                 = "web_group_legend_limit";
@@ -1047,7 +1075,8 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Graphs';
 $config_variable[$setting]['name']       = 'Group aggregate graph legend entity limit';
 $config_variable[$setting]['useredit']   = TRUE;
-$config_variable[$setting]['type']       = 'enum|1|5|10|15|20|100';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 1, 5, 10, 15, 20, 100 ];
 $config_variable[$setting]['shortdesc']  = 'The number of entities permitted to be displayed on the legend of a group aggregate graph before the legend is disabled.';
 
 /// Entities
@@ -1166,7 +1195,7 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Notification';
 $config_variable[$setting]['name']       = 'Disable All Notifications';
 $config_variable[$setting]['type']       = 'bool';
-$config_variable[$setting]['shortdesc']  = 'Disables alert notification generation for all notification transport types.';
+$config_variable[$setting]['shortdesc']  = 'Disables alert notification generation for all notification transport types. (Do not show any notifications on the UI).';
 
 $setting                                 = 'alerts|suppress';
 $config_variable[$setting]['section']    = $section;
@@ -1225,10 +1254,10 @@ $config_variable[$setting]['subsection'] = 'Email Transport';
 $config_variable[$setting]['name']       = 'Mail backend';
 $config_variable[$setting]['type']       = 'enum';
 $config_variable[$setting]['params']     = [
-  'mail'     => ['name' => "PHP's built-in"],
-  'sendmail' => ['name' => 'Sendmail'],
-  'mx'       => ['name' => 'SMTP by MX records'],
-  'smtp'     => ['name' => 'SMTP']
+    'mail'     => [ 'name' => "PHP's built-in" ],
+    'sendmail' => [ 'name' => 'Sendmail' ],
+    'mx'       => [ 'name' => 'SMTP by MX records' ],
+    'smtp'     => [ 'name' => 'SMTP' ]
 ];
 $config_variable[$setting]['shortdesc']  = 'Mail backends. Sendmail and SMTP required additional configurations.';
 
@@ -1309,11 +1338,26 @@ $config_variable[$setting]['subsection'] = 'Email Transport (SMTP)';
 $config_variable[$setting]['name']       = 'SMTP connection encryption';
 $config_variable[$setting]['type']       = 'enum';
 $config_variable[$setting]['params']     = [
-  ''    => ['name' => 'No encryption'],
-  'tls' => ['name' => 'TLS'],
-  'ssl' => ['name' => 'SSL']
+    ''    => [ 'name' => 'Default (detect StartTLS when available)' ],
+    'tls' => [ 'name' => 'StartTLS' ],
+    'ssl' => [ 'name' => 'SSL' ],
+    'no'  => [ 'name' => 'Force disable StartTLS' ],
 ];
-$config_variable[$setting]['shortdesc']  = 'Use SMTP connection encryption (TLS, SSL, or none).';
+$config_variable[$setting]['shortdesc']  = 'Use SMTP connection encryption (StartTLS, SSL or no). Please note that by default, StartTLS is used when supported by the remote SMTP server.';
+
+$setting                                 = 'email|smtp_secure_verify';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Email Transport (SMTP)';
+$config_variable[$setting]['name']       = 'SMTP verify SSL certificate hostname';
+$config_variable[$setting]['type']       = 'bool';
+$config_variable[$setting]['shortdesc']  = 'Require verification of SNMP hostname.';
+
+$setting                                 = 'email|smtp_secure_self';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Email Transport (SMTP)';
+$config_variable[$setting]['name']       = 'SMTP self-signed certificate';
+$config_variable[$setting]['type']       = 'bool';
+$config_variable[$setting]['shortdesc']  = 'Allow self-signed certificates.';
 
 $setting                                 = 'email|smtp_auth';
 $config_variable[$setting]['section']    = $section;
@@ -1376,14 +1420,14 @@ $config_variable[$setting]['subsection'] = 'Sessions';
 $config_variable[$setting]['name']       = 'Session lifetime';
 $config_variable[$setting]['type']       = 'enum';
 $config_variable[$setting]['params']     = [
-  0      => ['name' => 'Until browser restart'],
-  //60     => [ 'name' => '1 minute' ],
-  //600    => [ 'name' => '10 minutes' ],
-  1800   => ['name' => '30 minutes'],
-  3600   => ['name' => '1 hour'],
-  10800  => ['name' => '3 hours'],
-  86400  => ['name' => '1 day'],
-  604800 => ['name' => '1 week']
+    0      => [ 'name' => 'Until browser restart' ],
+    //60     => [ 'name' => '1 minute' ],
+    //600    => [ 'name' => '10 minutes' ],
+    1800   => [ 'name' => '30 minutes' ],
+    3600   => [ 'name' => '1 hour' ],
+    10800  => [ 'name' => '3 hours' ],
+    86400  => [ 'name' => '1 day' ],
+    604800 => [ 'name' => '1 week' ]
 ];
 $config_variable[$setting]['shortdesc']  = 'Default user sessions lifetime in seconds (0 means until browser restart). This lifetime is used for sessions without "remember me" checkbox.';
 
@@ -1477,14 +1521,16 @@ $setting                                 = 'auth_ldap_version';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'LDAP';
 $config_variable[$setting]['name']       = 'LDAP version used';
-$config_variable[$setting]['type']       = 'enum|2|3';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 2, 3 ];
 $config_variable[$setting]['shortdesc']  = 'LDAP version used to connect to the LDAP server.';
 
 $setting                                 = 'auth_ldap_starttls';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'LDAP';
 $config_variable[$setting]['name']       = 'Use STARTTLS';
-$config_variable[$setting]['type']       = 'enum|no|optional|require';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 'no', 'optional', 'require' ];
 $config_variable[$setting]['shortdesc']  = 'Use STARTTLS for LDAP security: No, Optional (Try but not require), Require (Abort connection when failing).';
 
 $setting                                 = 'auth_ldap_referrals';
@@ -1526,7 +1572,8 @@ $setting                                 = 'auth_ad_starttls';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Active Directory';
 $config_variable[$setting]['name']       = 'Use STARTTLS';
-$config_variable[$setting]['type']       = 'enum|no|optional|require';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 'no', 'optional', 'require' ];
 $config_variable[$setting]['shortdesc']  = 'Use STARTTLS for AD security: No (Stay in plain text), Optional (Try but not require), Require (Abort connection when failing).';
 
 $setting                                 = 'auth_ad_validatecert';
@@ -1603,7 +1650,8 @@ $setting                                 = 'auth_radius_method';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'RADIUS';
 $config_variable[$setting]['name']       = 'RADIUS authentication method';
-$config_variable[$setting]['type']       = 'enum|PAP|CHAP|MSCHAPv1|MSCHAPv2';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 'PAP', 'CHAP', 'MSCHAPv1', 'MSCHAPv2' ];
 $config_variable[$setting]['shortdesc']  = 'Authentication method to use: PAP (default, unencrypted), CHAP (Windows RADIUS server not supported), MSCHAPv1, MSCHAPv2';
 
 $setting                                 = 'auth_radius_timeout';
@@ -1629,7 +1677,8 @@ $setting                                 = 'ping|retries';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Ping';
 $config_variable[$setting]['name']       = 'Ping request retries';
-$config_variable[$setting]['type']       = 'enum|1|3|5|7|10';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 1, 3, 5, 7, 10 ];
 $config_variable[$setting]['shortdesc']  = 'Specifies the number of retries to be used in icmp ping requests. The default is 3.';
 
 $setting                                 = 'ping|timeout';
@@ -1643,7 +1692,8 @@ $setting                                 = 'snmp|version';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'SNMP';
 $config_variable[$setting]['name']       = 'Default SNMP version to use';
-$config_variable[$setting]['type']       = 'enum|v2c|v3|v1';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 'v2c', 'v3', 'v1' ];
 $config_variable[$setting]['shortdesc']  = 'Default version of the SNMP protocol to use for new devices.';
 
 $setting                                 = 'snmp|community';
@@ -1673,7 +1723,8 @@ $setting                                 = 'snmp|retries';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'SNMP';
 $config_variable[$setting]['name']       = 'SNMP request retries';
-$config_variable[$setting]['type']       = 'enum|0|1|3|5|7';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 0, 1, 3, 5, 7 ];
 $config_variable[$setting]['shortdesc']  = 'Specifies the number of retries to be used in snmp requests. The default is 5.';
 
 $setting                                 = 'snmp|timeout';
@@ -1688,8 +1739,9 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'HTTP';
 $config_variable[$setting]['name']       = 'HTTP(S) IP version';
 //$config_variable[$setting]['type']       = 'string';
-$config_variable[$setting]['type']      = 'enum|IPv4|IPv6';
-$config_variable[$setting]['shortdesc'] = 'HTTP(S) force resolve names to specified addresses only (IPv4 or IPv6). When not specified try in default order (IPv6 than IPv4).';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 'IPv4', 'IPv6' ];
+$config_variable[$setting]['shortdesc']  = 'HTTP(S) force resolve names to specified addresses only (IPv4 or IPv6). When not specified try in default order (IPv6 than IPv4).';
 
 $setting                                 = 'http_proxy'; // FIXME should be renamed to proxy|hostname
 $config_variable[$setting]['section']    = $section;
@@ -1776,15 +1828,17 @@ $config_variable[$setting]['section']                 = $section;
 $config_variable[$setting]['subsection']              = 'Geocoding';
 $config_variable[$setting]['name']                    = 'Geolocation API';
 $config_variable[$setting]['type']                    = 'enum';
-$config_variable[$setting]['params']['geocodefarm']   = ['name' => 'Geocode.Farm',   'allowed' => 'geo_api|geocodefarm|key', 'subtext' => 'Free users have 250 req/day and 4 req/sec limit (IP based). Possible to configure API key.', 'desc' => 'Request a KEY <a href="https://geocode.farm/" target="_blank">here</a>'];
-$config_variable[$setting]['params']['arcgis']        = ['name' => 'ArcGIS',        'subtext' => 'Free users have 25000 req/day limit.', 'desc' => 'Please see geocode quality <a href="https://developers.arcgis.com/rest/geocode/api-reference/geocode-coverage.htm" target="_blank">here</a>'];
-$config_variable[$setting]['params']['openstreetmap'] = ['name' => 'OpenStreetMap', 'subtext' => 'Rate limit 150 req/day.', 'desc' => 'See the usage limits <a href="https://wiki.openstreetmap.org/wiki/Nominatim_usage_policy" target="_blank">here</a>'];
-$config_variable[$setting]['params']['google']        = ['name' => 'Google',         'required' => 'geo_api|google|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://developers.google.com/maps/documentation/geocoding/get-api-key" target="_blank">here</a>'];
-$config_variable[$setting]['params']['bing']          = ['name' => 'Microsoft Bing', 'required' => 'geo_api|bing|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://www.microsoft.com/en-us/maps/create-a-bing-maps-key" target="_blank">here</a>'];
-$config_variable[$setting]['params']['yandex']        = ['name' => 'Yandex',         'allowed'  => 'geo_api|yandex|key', 'subtext' => 'Free users have 25000 req/day limit. Possible to configure API key.', 'desc' => 'Request a key <a href="https://tech.yandex.ru/maps/commercial/doc/concepts/how-to-buy-docpage" target="_blank">here</a>'];
-$config_variable[$setting]['params']['mapquest']      = ['name' => 'MapQuest',       'required' => 'geo_api|mapquest|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://developer.mapquest.com/user/register" target="_blank">here</a>'];
-$config_variable[$setting]['params']['opencage']      = ['name' => 'OpenCage',       'required' => 'geo_api|opencage|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://opencagedata.com/users/sign_up" target="_blank">here</a>'];
-$config_variable[$setting]['params']['locationiq']    = ['name' => 'LocationIQ',     'required' => 'geo_api|locationiq|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://locationiq.com/register" target="_blank">here</a>'];
+$config_variable[$setting]['params']['arcgis']        = [ 'name' => 'ArcGIS',        'subtext' => 'Free users have 25000 req/day limit.', 'desc' => 'Please see geocode quality <a href="https://developers.arcgis.com/rest/geocode/api-reference/geocode-coverage.htm" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['openstreetmap'] = [ 'name' => 'OpenStreetMap', 'subtext' => 'Rate limit 150 req/day.', 'desc' => 'See the usage limits <a href="https://wiki.openstreetmap.org/wiki/Nominatim_usage_policy" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['geoapify']      = [ 'name' => 'Geoapify',       'required' => 'geo_api|geoapify|key', 'subtext' => 'API key REQUIRED. Free users have 3000 req/day limit (IP based).', 'desc' => 'Request a free KEY <a href="https://www.geoapify.com/pricing/" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['geocodefarm']   = [ 'name' => 'Geocode.Farm',   'required' => 'geo_api|geocodefarm|key', 'subtext' => 'API key REQUIRED. Free users have 250 req/day limit (IP based).', 'desc' => 'Request a free KEY <a href="https://geocode.farm/store/api-services/" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['google']        = [ 'name' => 'Google',         'required' => 'geo_api|google|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://developers.google.com/maps/documentation/geocoding/get-api-key" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['bing']          = [ 'name' => 'Microsoft Bing', 'required' => 'geo_api|bing|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'DEPRECATED. Request a key <a href="https://learn.microsoft.com/en-us/bingmaps/getting-started/bing-maps-dev-center-help/getting-a-bing-maps-key" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['azure']         = [ 'name' => 'Microsoft Azure', 'required' => 'geo_api|azure|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://learn.microsoft.com/en-us/azure/azure-maps/how-to-manage-authentication" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['yandex']        = [ 'name' => 'Yandex',         'allowed'  => 'geo_api|yandex|key', 'subtext' => 'Free users have 25000 req/day limit. Possible to configure API key.', 'desc' => 'Request a key <a href="https://yandex.ru/dev/commercial/doc/en/concepts/how-to-buy" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['mapquest']      = [ 'name' => 'MapQuest',       'required' => 'geo_api|mapquest|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://developer.mapquest.com/user/register" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['opencage']      = [ 'name' => 'OpenCage',       'required' => 'geo_api|opencage|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://opencagedata.com/users/sign_up" target="_blank">here</a>' ];
+$config_variable[$setting]['params']['locationiq']    = [ 'name' => 'LocationIQ',     'required' => 'geo_api|locationiq|key', 'subtext' => 'API key REQUIRED.', 'desc' => 'Request a key <a href="https://locationiq.com/register" target="_blank">here</a>' ];
 $config_variable[$setting]['shortdesc']               = 'Which API to use to resolve your addresses into coordinates. If locations turn up unknown, try switching to another API.';
 /*
 $setting                                 = 'geocoding|api_key';
@@ -1794,12 +1848,20 @@ $config_variable[$setting]['name']       = '(DEPRECATED) API key for currently u
 $config_variable[$setting]['type']       = 'string';
 $config_variable[$setting]['shortdesc']  = 'NOTE. Please use API specific KEY fields (below).';
 */
+
+$setting                                 = 'geo_api|geoapify|key';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Geocoding';
+$config_variable[$setting]['name']       = 'Geoapify API key';
+$config_variable[$setting]['type']       = 'string';
+$config_variable[$setting]['shortdesc']  = 'API key REQUIRED. Free users have 3000 req/day limit.';
+
 $setting                                 = 'geo_api|geocodefarm|key';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Geocoding';
 $config_variable[$setting]['name']       = 'Geocode.Farm API key';
 $config_variable[$setting]['type']       = 'string';
-$config_variable[$setting]['shortdesc']  = 'Free users (without key) have 250 req/day and 4 req/sec limit (IP based).';
+$config_variable[$setting]['shortdesc']  = 'API key REQUIRED. Free users have 250 req/day limit.';
 
 $setting                                 = 'geo_api|google|key';
 $config_variable[$setting]['section']    = $section;
@@ -1813,7 +1875,14 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Geocoding';
 $config_variable[$setting]['name']       = 'Microsoft Bing API key';
 $config_variable[$setting]['type']       = 'string';
-$config_variable[$setting]['shortdesc']  = 'Microsoft Bing API REQUIRES a key!';
+$config_variable[$setting]['shortdesc']  = 'DEPRECATED. Microsoft Bing API REQUIRES a key!';
+
+$setting                                 = 'geo_api|azure|key';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'Geocoding';
+$config_variable[$setting]['name']       = 'Microsoft Azure API key';
+$config_variable[$setting]['type']       = 'string';
+$config_variable[$setting]['shortdesc']  = 'Microsoft Azure API REQUIRES a key!';
 
 $setting                                 = 'geo_api|yandex|key';
 $config_variable[$setting]['section']    = $section;
@@ -1876,8 +1945,11 @@ $setting                                 = 'location|menu|type';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Web UI';
 $config_variable[$setting]['name']       = 'Location menu type';
-$config_variable[$setting]['type']       = 'enum|geocoded|nested|plain';
 $config_variable[$setting]['useredit']   = TRUE;
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']['geocoded'] = ['name' => 'Geocoded'];
+$config_variable[$setting]['params']['nested']   = ['name' => 'Nested'];
+$config_variable[$setting]['params']['plain']    = ['name' => 'Plain'];
 $config_variable[$setting]['shortdesc']  = "Use either geocoded (nested by Country, County, etc), nested (by configured separator) or plain location menu (simple list). Nested and plain are useful if you don't have mappable addresses in your devices. Automatically set to plain if you completely disable geocoding.";
 
 $setting                                 = 'location|menu|nested_reversed';
@@ -1892,8 +1964,9 @@ $setting                                 = 'location|menu|nested_max_depth';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Web UI';
 $config_variable[$setting]['name']       = 'Nested Location menu depth';
-$config_variable[$setting]['type']       = 'enum|2|3|4|5|6'; // Normally this setting is just int, but we limit it with a pre-defined list
 $config_variable[$setting]['useredit']   = TRUE;
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 2, 3, 4, 5, 6 ]; // Normally this setting is just int, but we limit it with a pre-defined list
 $config_variable[$setting]['shortdesc']  = 'Maximum depth to split the nested Location menu on.';
 
 $setting                                 = 'location|menu|nested_split_char';
@@ -1991,7 +2064,7 @@ $config_variable[$setting]['set_attrib'] = 'syslog_config_changed'; //set_obs_at
 $setting                                 = 'syslog|filter_tag';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'Hosts & filters';
-$config_variable[$setting]['name']       = 'Syslog program filters';
+$config_variable[$setting]['name']       = 'Syslog tag filters';
 $config_variable[$setting]['type']       = 'enum-freeinput';
 $config_variable[$setting]['shortdesc']  = 'Filter (ignore) syslog entries containing these tag(s). Case-insensitive.';
 $config_variable[$setting]['set_attrib'] = 'syslog_config_changed'; //set_obs_attrib('syslog_config_changed', time()); // Trigger reload syslog script
@@ -2047,7 +2120,8 @@ $setting                                 = 'rancid_revisions';
 $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'RANCID';
 $config_variable[$setting]['name']       = 'RANCID revisions';
-$config_variable[$setting]['type']       = 'enum|5|10|15|20|30';
+$config_variable[$setting]['type']       = 'enum';
+$config_variable[$setting]['params']     = [ 5, 10, 15, 20, 30 ];
 $config_variable[$setting]['shortdesc']  = 'Show such count of latest revisions for config changes.';
 
 $setting                                 = 'rancid_suffix';
@@ -2203,6 +2277,37 @@ $config_variable[$setting]['name']      = 'Enable API';
 $config_variable[$setting]['type']      = 'bool';
 $config_variable[$setting]['shortdesc'] = 'Enable or disable the API.';
 
+$section = 'api';
+
+$setting                                 = 'api|auth|session';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['name']      = 'API Session Auth';
+$config_variable[$setting]['type']      = 'bool';
+$config_variable[$setting]['shortdesc'] = 'Enable or disable session-based authentication (including HTTP Basic Auth).';
+
+$setting                                 = 'api|auth|api_token';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['name']      = 'API Token Auth';
+$config_variable[$setting]['type']      = 'bool';
+$config_variable[$setting]['shortdesc'] = 'Enable or disable API token authentication (e.g., Bearer tokens).';
+
+$setting                                 = 'api|auth|allow_x_api_token';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['name']      = 'Allow X-API-Token Header';
+$config_variable[$setting]['type']      = 'bool';
+$config_variable[$setting]['shortdesc'] = 'Allow API tokens via X-API-Token header.';
+
+$setting                                 = 'api|auth|allow_query_token';
+$config_variable[$setting]['section']    = $section;
+$config_variable[$setting]['subsection'] = 'General';
+$config_variable[$setting]['name']      = 'Allow Query Parameter Token';
+$config_variable[$setting]['type']      = 'bool';
+$config_variable[$setting]['shortdesc'] = 'Allow API tokens via query parameter (insecure, for testing only).';
+
+
 // Endpoints
 
 $setting                                 = 'api|endpoints|alerts';
@@ -2337,8 +2442,8 @@ $config_variable[$setting]['subsection'] = 'General';
 $config_variable[$setting]['name']       = 'Billing base';
 $config_variable[$setting]['type']       = 'enum';
 $config_variable[$setting]['params']     = [
-  1000 => ['name' => '1000', 'subtext' => '1kB = 1000B'],
-  1024 => ['name' => '1024', 'subtext' => '1kB = 1024B']
+   1000 => [ 'name' => '1000', 'subtext' => '1kB = 1000B' ],
+   1024 => [ 'name' => '1024', 'subtext' => '1kB = 1024B' ]
 ];
 $config_variable[$setting]['shortdesc']  = 'Set the base to divider bytes to kB, MB, GB, ... 1000 or 1024';
 
@@ -2408,7 +2513,7 @@ $config_variable[$setting]['section']    = $section;
 $config_variable[$setting]['subsection'] = 'RRD Files';
 $config_variable[$setting]['name']       = 'Delete stale RRD dirs';
 $config_variable[$setting]['type']       = 'bool';
-$config_variable[$setting]['shortdesc']  = 'Delete RRD directories for non-existent hostnames (deleted devices from db)';
+$config_variable[$setting]['shortdesc']  = 'Purge RRD directories for non-existent hostnames (deleted devices from db)';
 
 $setting                                 = 'housekeeping|rrd|disabled';
 $config_variable[$setting]['section']    = $section;

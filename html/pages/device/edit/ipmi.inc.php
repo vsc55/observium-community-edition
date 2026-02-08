@@ -1,58 +1,78 @@
 <?php
-
 /**
- * Observium Network Management and Monitoring System
- * Copyright (C) 2006-2015, Adam Armstrong - http://www.observium.org
+ * Observium
+ *
+ *   This file is part of Observium.
  *
  * @package        observium
- * @subpackage     webui
- * @author         Adam Armstrong <adama@observium.org>
+ * @subpackage     web
  * @copyright  (C) Adam Armstrong
  *
  */
 
-if ($vars['editing']) {
+//r($attribs);
+if (get_var_true($vars['editing'])) {
+    $updated = 0;
     if ($readonly) {
         print_error_permission('You have insufficient permissions to edit settings.');
     } else {
-        if ($vars['ipmi_hostname'] != '') {
+        if (!safe_empty($vars['ipmi_hostname'])) {
             set_dev_attrib($device, 'ipmi_hostname', $vars['ipmi_hostname']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_hostname'])) {
             del_dev_attrib($device, 'ipmi_hostname');
+            $updated++;
         }
-        if ($vars['ipmi_username'] != '') {
+        if (!safe_empty($vars['ipmi_username'])) {
             set_dev_attrib($device, 'ipmi_username', $vars['ipmi_username']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_username'])) {
             del_dev_attrib($device, 'ipmi_username');
+            $updated++;
         }
-        if ($vars['ipmi_password'] != '') {
+        if (!safe_empty($vars['ipmi_password'])) {
             set_dev_attrib($device, 'ipmi_password', $vars['ipmi_password']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_password'])) {
             del_dev_attrib($device, 'ipmi_password');
+            $updated++;
         }
-        if (is_numeric($vars['ipmi_port'])) {
+        // IPMI v2.0 Key
+        if (!safe_empty($vars['ipmi_key'])) {
+            set_dev_attrib($device, 'ipmi_key', $vars['ipmi_key']);
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_key'])) {
+            del_dev_attrib($device, 'ipmi_key');
+            $updated++;
+        }
+        if (is_valid_param($vars['ipmi_port'], 'port')) {
             set_dev_attrib($device, 'ipmi_port', $vars['ipmi_port']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_port'])) {
             del_dev_attrib($device, 'ipmi_port');
+            $updated++;
         }
 
         // We check interface & userlevel input from the dropdown against the allowed values in the definition array.
-        if ($vars['ipmi_interface'] != '' && array_search($vars['ipmi_interface'], array_keys($config['ipmi']['interfaces'])) !== FALSE) {
+        if (!safe_empty($vars['ipmi_interface']) && in_array($vars['ipmi_interface'], array_keys($config['ipmi']['interfaces']))) {
             set_dev_attrib($device, 'ipmi_interface', $vars['ipmi_interface']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_interface'])) {
             del_dev_attrib($device, 'ipmi_interface');
             print_error('Invalid interface specified (' . $vars['ipmi_interface'] . ').');
+            $updated++;
         }
 
-        if ($vars['ipmi_userlevel'] != '' && array_search($vars['ipmi_userlevel'], array_keys($config['ipmi']['userlevels'])) !== FALSE) {
+        if (!safe_empty($vars['ipmi_userlevel']) && in_array($vars['ipmi_userlevel'], array_keys($config['ipmi']['userlevels']))) {
             set_dev_attrib($device, 'ipmi_userlevel', $vars['ipmi_userlevel']);
-        } else {
+            $updated++;
+        } elseif (!safe_empty($attribs['ipmi_userlevel'])) {
             del_dev_attrib($device, 'ipmi_userlevel');
             print_error('Invalid user level specified (' . $vars['ipmi_userlevel'] . ').');
+            $updated++;
         }
 
         $update_message = "Device IPMI data updated.";
-        $updated        = 1;
     }
 
     if ($updated && $update_message) {
@@ -66,73 +86,84 @@ if (!file_exists($config['ipmitool'])) {
     print_warning("The ipmitool binary was not found at the configured path (" . $config['ipmitool'] . "). IPMI polling will not work.");
 }
 
-$ipmi_userlevels = [];
-foreach ($config['ipmi']['userlevels'] as $type => $descr) {
-    $ipmi_userlevels[$type] = ['name' => $descr['text']];
-}
-$ipmi_interfaces = [];
-foreach ($config['ipmi']['interfaces'] as $type => $descr) {
-    $ipmi_interfaces[$type] = ['name' => $descr['text']];
-}
 
-$form = ['type'     => 'horizontal',
-         'id'       => 'edit',
-         //'space'     => '20px',
-         'title'    => 'IPMI Settings',
-         //'icon'      => 'oicon-gear',
-         //'class'     => 'box box-solid',
-         'fieldset' => ['edit' => ''],
+$form = [
+    'type'     => 'horizontal',
+    'id'       => 'edit',
+    //'space'     => '20px',
+    'title'    => 'IPMI Settings',
+    //'icon'      => 'oicon-gear',
+    //'class'     => 'box box-solid',
+    'fieldset' => ['edit' => ''],
 ];
 
-$form['row'][0]['editing']        = [
-  'type'  => 'hidden',
-  'value' => 'yes'];
-$form['row'][1]['ipmi_hostname']  = [
-  'type'     => 'text',
-  'name'     => 'IPMI Hostname',
-  'width'    => '250px',
-  'readonly' => $readonly,
-  'value'    => get_dev_attrib($device, 'ipmi_hostname')];
-$form['row'][2]['ipmi_port']      = [
-  'type'     => 'text',
-  'name'     => 'IPMI Port',
-  'width'    => '250px',
-  'readonly' => $readonly,
-  'value'    => get_dev_attrib($device, 'ipmi_port')];
-$form['row'][3]['ipmi_username']  = [
-  'type'     => 'text',
-  'name'     => 'IPMI Username',
-  'width'    => '250px',
-  'readonly' => $readonly,
-  'value'    => get_dev_attrib($device, 'ipmi_username')];
-$form['row'][4]['ipmi_password']  = [
-  'type'          => 'password',
-  'name'          => 'IPMI Password',
-  'width'         => '250px',
-  'readonly'      => $readonly,
-  'show_password' => !$readonly,
-  'value'         => get_dev_attrib($device, 'ipmi_password')];
-$form['row'][5]['ipmi_userlevel'] = [
-  'type'     => 'select',
-  'name'     => 'IPMI Userlevel',
-  'width'    => '250px',
-  'readonly' => $readonly,
-  'values'   => $ipmi_userlevels,
-  'value'    => get_dev_attrib($device, 'ipmi_userlevel')];
-$form['row'][6]['ipmi_interface'] = [
-  'type'     => 'select',
-  'name'     => 'IPMI Interface',
-  'width'    => '250px',
-  'readonly' => $readonly,
-  'values'   => $ipmi_interfaces,
-  'value'    => get_dev_attrib($device, 'ipmi_interface')];
-$form['row'][7]['submit']         = [
-  'type'     => 'submit',
-  'name'     => 'Save Changes',
-  'icon'     => 'icon-ok icon-white',
-  'class'    => 'btn-primary',
-  'readonly' => $readonly,
-  'value'    => 'save'];
+$form['row'][0]['editing'] = [
+    'type'  => 'hidden',
+    'value' => 'yes'
+];
+$form['row'][1]['ipmi_hostname'] = [
+    'type'     => 'text',
+    'name'     => 'IPMI Hostname',
+    'width'    => '250px',
+    'readonly' => $readonly,
+    'value'    => get_dev_attrib($device, 'ipmi_hostname')
+];
+$form['row'][2]['ipmi_port'] = [
+    'type'     => 'text',
+    'name'     => 'IPMI Port',
+    'width'    => '250px',
+    'readonly' => $readonly,
+    'value'    => get_dev_attrib($device, 'ipmi_port')
+];
+$form['row'][3]['ipmi_username'] = [
+    'type'     => 'text',
+    'name'     => 'IPMI Username',
+    'width'    => '250px',
+    'readonly' => $readonly,
+    'value'    => get_dev_attrib($device, 'ipmi_username')
+];
+$form['row'][4]['ipmi_password'] = [
+    'type'          => 'password',
+    'name'          => 'IPMI Password',
+    'width'         => '250px',
+    'readonly'      => $readonly,
+    'show_password' => !$readonly,
+    'value'         => get_dev_attrib($device, 'ipmi_password')
+];
+$form['row'][5]['ipmi_key'] = [
+    'type'          => 'password',
+    'name'          => 'IPMI v2.0 Key',
+    'width'         => '250px',
+    'readonly'      => $readonly,
+    'show_password' => !$readonly,
+    'value'         => get_dev_attrib($device, 'ipmi_key')
+];
+$form['row'][6]['ipmi_userlevel'] = [
+    'type'     => 'select',
+    'name'     => 'IPMI Userlevel',
+    'width'    => '250px',
+    'readonly' => $readonly,
+    'values'   => $config['ipmi']['userlevels'],
+    'value'    => get_dev_attrib($device, 'ipmi_userlevel')
+];
+$form['row'][7]['ipmi_interface'] = [
+    'type'     => 'select',
+    'name'     => 'IPMI Interface',
+    'width'    => '250px',
+    'readonly' => $readonly,
+    'values'   => $config['ipmi']['interfaces'],
+    'value'    => get_dev_attrib($device, 'ipmi_interface')
+];
+
+$form['row'][10]['submit'] = [
+    'type'     => 'submit',
+    'name'     => 'Save Changes',
+    'icon'     => 'icon-ok icon-white',
+    'class'    => 'btn-primary',
+    'readonly' => $readonly,
+    'value'    => 'save'
+];
+
 print_form($form);
 unset($form);
 

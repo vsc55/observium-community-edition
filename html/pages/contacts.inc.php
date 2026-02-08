@@ -17,8 +17,8 @@ if ($_SESSION['userlevel'] < 7) {
     return;
 }
 
-include($config['html_dir'] . '/includes/alerting-navbar.inc.php');
-include($config['html_dir'] . '/includes/contacts-navbar.inc.php');
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
+include($config['html_dir'] . '/includes/navbars/contacts.inc.php');
 
 ?>
 
@@ -112,14 +112,16 @@ include($config['html_dir'] . '/includes/contacts-navbar.inc.php');
                         // If we have "identifiers" set for this type of transport, use those to print a user friendly destination.
                         // If we don't, just dump the JSON array as we don't have a better idea what to do right now.
                         $transport = $contact['contact_method'];
-                        if (isset($config['transports'][$transport]['identifiers'])) {
+                        if (isset($definitions['transports'][$transport]['identifiers'])) {
                             // Decode JSON for use below
                             $contact['endpoint_variables'] = safe_json_decode($contact['contact_endpoint']);
 
                             // Add all identifier strings to an array and implode them into the description variable
                             // We can't just foreach the identifiers array as we don't know what section the variable is in
-                            foreach ($config['transports'][$contact['contact_method']]['identifiers'] as $key) {
-                                foreach ($config['transports'][$contact['contact_method']]['parameters'] as $section => $parameters) {
+                            $identifiers = $definitions['transports'][$contact['contact_method']]['identifiers'];
+                            $parameters_all = $definitions['transports'][$contact['contact_method']]['parameters'];
+                            foreach ($identifiers as $key) {
+                                foreach ($parameters_all as $parameters) {
                                     if (isset($parameters[$key], $contact['endpoint_variables'][$key])) {
                                         $contact['endpoint_identifiers'][] = escape_html($parameters[$key]['description'] . ': ' . $contact['endpoint_variables'][$key]);
                                     }
@@ -135,12 +137,12 @@ include($config['html_dir'] . '/includes/contacts-navbar.inc.php');
                             $transport_name            = 'sysContact';
                             $transport_status          = $contact['contact_disabled'] ? '<span class="label label-error">disabled</span>' : '<span class="label label-success">enabled</span>';
                             $contact['endpoint_descr'] = 'Device specified contact in sysContact field (email only)';
-                        } elseif (!isset($config['transports'][$transport])) {
+                        } elseif (!isset($definitions['transports'][$transport])) {
                             // Transport undefined (removed or limited to Pro)
                             $transport_name   = nicecase($transport) . ' (Missing)';
                             $transport_status = '<span class="label">missing</span>';
                         } else {
-                            $transport_name   = $config['transports'][$transport]['name'];
+                            $transport_name   = $definitions['transports'][$transport]['name'];
                             $transport_status = $contact['contact_disabled'] ? '<span class="label label-error">disabled</span>' : '<span class="label label-success">enabled</span>';
                         }
                         echo '    <tr>';

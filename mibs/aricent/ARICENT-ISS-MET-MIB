@@ -1,7 +1,3 @@
--- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
-
--- $Id: fsissmet.mib,v 1.8 2012/09/07 09:52:14 siva Exp $
-
 ARICENT-ISS-MET-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
@@ -14,15 +10,23 @@ IMPORTS
 
 
    issMet MODULE-IDENTITY 
-      LAST-UPDATED "201209050000Z" 
+      LAST-UPDATED "200702150000Z" 
       ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
-      CONTACT-INFO "support@aricent.com" 
-      DESCRIPTION
-		   "Proprietary MIB definition for Metro Feature"
-      REVISION "201209050000Z"
-      DESCRIPTION
-                  "Proprietary MIB definition for Metro Feature"
- 
+      CONTACT-INFO 
+
+        "ARICENT COMMUNICATIONS SOFTWARE
+         3460 Hillview Avenue,
+         Palo Alto, CA 94304-1388, USA,
+         Phone : +1-650-391-1088
+         E-mail:support@aricent.com"
+
+         DESCRIPTION 
+       "The enterprise ID 2076 was originally assigned to Future Software Pvt Limited.
+        Future Software is a part of Aricent."
+         REVISION "200702150000Z"
+
+      DESCRIPTION 
+         "The MIB for AricentISSMetro." 
    ::= { enterprises futuresoftware (2076) iss (81) issExt (8) 4}  
 
 -- ----------------------------------------------------------------- -- 

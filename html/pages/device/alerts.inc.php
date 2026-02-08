@@ -17,27 +17,23 @@ $alert_table = cache_device_alert_table($device['device_id']);
 if (!isset($vars['status'])) {
     $vars['status'] = 'failed';
 }
-if (!$vars['entity_type']) {
-    $vars['entity_type'] = 'all';
-}
+// Don't force entity_type=all into vars - let it be the default behavior
 
 // Build Navbar
 
 $navbar['class'] = "navbar-narrow";
 $navbar['brand'] = "Alert Types";
 
-if ($vars['entity_type'] === 'all') {
+if (safe_empty($vars['entity_type'])) {
     $navbar['options']['all']['class'] = "active";
 }
 $navbar['options']['all']['url']  = generate_url(['page' => 'device', 'device' => $device['device_id'],
-                                                  'tab'  => 'alerts', 'entity_type' => 'all']);
+                                                  'tab'  => 'alerts', 'entity_type' => NULL]);
 $navbar['options']['all']['text'] = "All";
 
 foreach ($alert_table as $entity_type => $thing) {
 
-    if (!$vars['entity_type']) {
-        $vars['entity_type'] = $entity_type;
-    }
+    // Don't auto-set entity_type - let it remain empty for default 'all' behavior
     if ($vars['entity_type'] == $entity_type) {
         $navbar['options'][$entity_type]['class'] = "active";
     }
@@ -51,9 +47,7 @@ foreach ($alert_table as $entity_type => $thing) {
 if (isset($config['enable_syslog']) && $config['enable_syslog'] && OBSERVIUM_EDITION != 'community') {
     $entity_type = "syslog";
 
-    if (!$vars['entity_type']) {
-        $vars['entity_type'] = 'syslog';
-    }
+    // Don't auto-set entity_type to syslog - let it remain empty for default 'all' behavior
     if ($vars['entity_type'] === 'syslog') {
         $navbar['options'][$entity_type]['class'] = "active";
     }

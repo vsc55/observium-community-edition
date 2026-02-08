@@ -39,7 +39,7 @@ IMPORTS
 
 
                slotStatusTable OBJECT-TYPE
-                   SYNTAX  SEQUENCE OF cardStatusTableEntry
+                   SYNTAX  SEQUENCE OF CardStatusTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -47,7 +47,7 @@ IMPORTS
                    ::= { cardOper 2 }
 
                cardStatusTableEntry OBJECT-TYPE
-                   SYNTAX  cardStatusTableEntry
+                   SYNTAX  CardStatusTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
@@ -55,7 +55,7 @@ IMPORTS
                    INDEX { nmsSlotIndex }
                ::= { slotStatusTable 1 }
 
-               cardStatusTableEntry ::=
+               CardStatusTableEntry ::=
                    SEQUENCE {
                        nmsSlotIndex
                            INTEGER,

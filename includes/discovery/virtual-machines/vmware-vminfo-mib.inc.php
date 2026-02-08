@@ -34,7 +34,7 @@ $vmw_vmlist = [];
 
 $oids = snmpwalk_cache_oid($device, 'vmwVmTable', [], 'VMWARE-VMINFO-MIB');
 
-foreach ($oids as $index => $entry) {
+foreach ($oids as $entry) {
     // Call VM discovery
     discover_virtual_machine($valid, $device, [ 'id'       => $entry['vmwVmUUID'],
                                                 'name'     => $entry['vmwVmDisplayName'],

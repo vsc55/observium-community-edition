@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,62 +8,135 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Redis;
+namespace Phpfastcache\Drivers\Redis;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheLogicException;
+use DateTime;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException, PhpfastcacheLogicException};
 use Psr\Cache\CacheItemInterface;
 use Redis as RedisClient;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
- * @property RedisClient $instance Instance of driver service
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
     use DriverBaseTrait;
 
     /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        } else {
-            $this->driverConnect();
-        }
-    }
-
-    /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
         return extension_loaded('Redis');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @return DriverStatistic
      */
-    protected function driverWrite(CacheItemInterface $item)
+    public function getStats(): DriverStatistic
+    {
+        // used_memory
+        $info = $this->instance->info();
+        $date = (new DateTime())->setTimestamp(time() - $info['uptime_in_seconds']);
+
+        return (new DriverStatistic())
+            ->setData(implode(', ', array_keys($this->itemInstances)))
+            ->setRawData($info)
+            ->setSize((int)$info['used_memory'])
+            ->setInfo(
+                sprintf(
+                    "The Redis daemon v%s is up since %s.\n For more information see RawData. \n Driver size includes the memory allocation size.",
+                    $info['redis_version'],
+                    $date->format(DATE_RFC2822)
+                )
+            );
+    }
+
+    /**
+     * @return bool
+     * @throws PhpfastcacheLogicException
+     */
+    protected function driverConnect(): bool
+    {
+        if ($this->instance instanceof RedisClient) {
+            throw new PhpfastcacheLogicException('Already connected to Redis server');
+        }
+
+        /**
+         * In case of an user-provided
+         * Redis client just return here
+         */
+        if ($this->getConfig()->getRedisClient() instanceof RedisClient) {
+            /**
+             * Unlike Predis, we can't test if we're are connected
+             * or not, so let's just assume that we are
+             */
+            $this->instance = $this->getConfig()->getRedisClient();
+            return true;
+        }
+
+        $this->instance = $this->instance ?: new RedisClient();
+
+        /**
+         * If path is provided we consider it as an UNIX Socket
+         */
+        if ($this->getConfig()->getPath()) {
+            $isConnected = $this->instance->connect($this->getConfig()->getPath());
+        } else {
+            $isConnected = $this->instance->connect($this->getConfig()->getHost(), $this->getConfig()->getPort(), $this->getConfig()->getTimeout());
+        }
+
+        if (!$isConnected && $this->getConfig()->getPath()) {
+            return false;
+        }
+
+        if ($this->getConfig()->getOptPrefix()) {
+            $this->instance->setOption(RedisClient::OPT_PREFIX, $this->getConfig()->getOptPrefix());
+        }
+
+        if ($this->getConfig()->getPassword() && !$this->instance->auth($this->getConfig()->getPassword())) {
+            return false;
+        }
+
+        if ($this->getConfig()->getDatabase() !== null) {
+            $this->instance->select($this->getConfig()->getDatabase());
+        }
+        return true;
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return null|array
+     */
+    protected function driverRead(CacheItemInterface $item)
+    {
+        $val = $this->instance->get($item->getKey());
+        if ($val == false) {
+            return null;
+        }
+
+        return $this->decode($val);
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return mixed
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverWrite(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
@@ -74,94 +148,31 @@ class Driver implements ExtendedCacheItemPoolInterface
              * @see https://redis.io/commands/setex
              * @see https://redis.io/commands/expire
              */
-            if($ttl <= 0){
+            if ($ttl <= 0) {
                 return $this->instance->expire($item->getKey(), 0);
-            }else{
-                return $this->instance->setex($item->getKey(), $ttl, $this->encode($this->driverPreWrap($item)));
             }
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+
+            return $this->instance->setex($item->getKey(), $ttl, $this->encode($this->driverPreWrap($item)));
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return null|array
-     */
-    protected function driverRead(CacheItemInterface $item)
-    {
-        $val = $this->instance->get($item->getKey());
-        if ($val == false) {
-            return null;
-        } else {
-            return $this->decode($val);
-        }
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
-            return $this->instance->del($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+            return (bool)$this->instance->del($item->getKey());
         }
-    }
 
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        return $this->instance->flushDB();
-    }
-
-    /**
-     * @return bool
-     * @throws phpFastCacheLogicException
-     */
-    protected function driverConnect()
-    {
-        if ($this->instance instanceof RedisClient) {
-            throw new phpFastCacheLogicException('Already connected to Redis server');
-        } else {
-            $this->instance = $this->instance ?: new RedisClient();
-
-            $host = isset($this->config[ 'host' ]) ? (string) $this->config[ 'host' ] : '127.0.0.1';
-            $path = isset($this->config[ 'path' ]) ? (string) $this->config[ 'path' ] : false;
-            $port = isset($this->config[ 'port' ]) ? (int) $this->config[ 'port' ] : 6379;
-            $password = isset($this->config[ 'password' ]) ? (string) $this->config[ 'password' ] : '';
-            $database = isset($this->config[ 'database' ]) ?  $this->config[ 'database' ] : false;
-            $timeout = isset($this->config[ 'timeout' ]) ?  $this->config[ 'timeout' ] : '';
-
-            /**
-             * If path is provided we consider it as an UNIX Socket
-             */
-            if($path){
-                $isConnected = $this->instance->connect($path);
-            }else{
-                $isConnected = $this->instance->connect($host, (int)$port, (int)$timeout);
-            }
-
-            if (!$isConnected && $path) {
-                return false;
-            } else if(!$path) {
-                if ($password && !$this->instance->auth($password)) {
-                    return false;
-                }
-            }
-            if ($database !== false) {
-                $this->instance->select((int)$database);
-            }
-            return true;
-        }
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /********************
@@ -171,19 +182,10 @@ class Driver implements ExtendedCacheItemPoolInterface
      *******************/
 
     /**
-     * @return DriverStatistic
+     * @return bool
      */
-    public function getStats()
+    protected function driverClear(): bool
     {
-        // used_memory
-        $info = $this->instance->info();
-        $date = (new \DateTime())->setTimestamp(time() - $info[ 'uptime_in_seconds' ]);
-
-        return (new DriverStatistic())
-          ->setData(implode(', ', array_keys($this->itemInstances)))
-          ->setRawData($info)
-          ->setSize($info[ 'used_memory' ])
-          ->setInfo(sprintf("The Redis daemon v%s is up since %s.\n For more information see RawData. \n Driver size includes the memory allocation size.",
-            $info[ 'redis_version' ], $date->format(DATE_RFC2822)));
+        return $this->instance->flushDB();
     }
 }

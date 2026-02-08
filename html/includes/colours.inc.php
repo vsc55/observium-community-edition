@@ -149,9 +149,13 @@ function hsvToRgb($h, $s, $v)
  * @return array An array of color codes in the format "#RRGGBB", where RR, GG, and BB are two-digit hexadecimal
  *               values representing the red, green, and blue components of the color.
  */
-function generate_palette($n, $interpolator)
-{
+function generate_palette($n, $interpolator) {
     if ($n <= 0) {
+        return [];
+    }
+
+    if (safe_empty($interpolator) || !function_exists($interpolator)) {
+        print_debug("DEBUG: Interpolator '$interpolator' not defined for generate_palette().");
         return [];
     }
 

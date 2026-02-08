@@ -53,7 +53,7 @@ STORMSHIELD-QOS-MIB DEFINITIONS ::= BEGIN
       }
 
    snsQosEntryIndex OBJECT-TYPE
-      SYNTAX        Integer32 (1..65535)
+      SYNTAX        Integer32 (0..65535)
       MAX-ACCESS    read-only
       STATUS        current
       DESCRIPTION   "Index of QoS queue in table"

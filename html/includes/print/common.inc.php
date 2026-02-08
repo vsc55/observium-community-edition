@@ -29,7 +29,7 @@ function build_table($array, $options = [])
     }
 
     // data rows
-    foreach ($array as $key => $value) {
+    foreach ($array as $value) {
         $html .= '<tr>';
         foreach ($value as $key2 => $value2) {
             // Entry defaults
@@ -257,6 +257,7 @@ function print_box($text, $type = '', $options = []) {
     // disable shadow when requested in options
     if (in_array('no-shadow', $options, TRUE)) {
         $class .= ' no-shadow';
+        $style = 'margin-bottom: 0px;'; // remove bottom margin when no shadows
     }
     // default centered text while no-center requested
     if (!in_array('no-center', $options, TRUE)) {
@@ -271,6 +272,9 @@ function print_box($text, $type = '', $options = []) {
     if (in_array('escape', $options, TRUE)) {
         $text = escape_html($text);
     }
+    if ($style) {
+        $style = ' style="' . $style . '"';
+    }
     // use div container instead
     if (in_array('div', $options, TRUE)) {
         echo '<div class="'.$class.'">'.$text.'</div>';
@@ -278,7 +282,7 @@ function print_box($text, $type = '', $options = []) {
     }
     //r($text);
 
-    echo '<p class="'.$class.'">'.$text.'</p>';
+    echo '<p class="'.$class.'"'.$style.'>'.$text.'</p>';
 }
 
 /**
@@ -290,6 +294,113 @@ function print_box($text, $type = '', $options = []) {
  * @return string $string
  */
 
+/**
+ * Generate table header with sortable columns and support for multi-field columns
+ *
+ * Generates a <thead> element with <th> columns that support sorting, multiple fields per column,
+ * and nested subfields. Columns can contain multiple sortable fields separated by slashes.
+ *
+ * @param array $header Column definitions array. Each element defines one <th> column.
+ *
+ *   Column array key (optional):
+ *     - String key = column ID used for sorting (e.g., 'device', 'hostname')
+ *     - Numeric key = auto-assigned, column not directly sortable by key
+ *     - Special: 'state-marker' = creates state marker column
+ *
+ *   Column definition formats:
+ *
+ *   1. Simple sortable column:
+ *      'hostname' => 'Hostname'
+ *      'hostname' => ['hostname' => 'Hostname']
+ *
+ *   2. Empty spacer column:
+ *      [NULL]
+ *      [NULL, 'style' => 'width: 1px;']
+ *
+ *   3. State marker column:
+ *      'state-marker' => ''
+ *
+ *   4. Column with style/class:
+ *      'device' => ['device' => 'Device', 'style' => 'min-width: 150px;']
+ *      'device' => ['device' => 'Device', 'class' => 'entity-title', 'style' => 'width: 200px;']
+ *
+ *   5. Multi-field column (multiple sortable fields in one <th>):
+ *      ['type' => 'Type', 'peer_as' => 'Remote AS', 'style' => 'width: 140px;']
+ *      ['port' => 'Port Name', 'descr' => 'Description', 'errors' => 'Errors']
+ *      Result: <th>Type / Remote AS</th> with both fields independently sortable
+ *
+ *   6. Column with subfields (shown in brackets):
+ *      ['traffic' => ['Bits', 'subfields' => ['traffic_in' => 'In', 'traffic_out' => 'Out']], 'style' => 'width: 100px;']
+ *      Result: <th>Bits [In / Out]</th>
+ *
+ *   7. Non-sortable label (numeric key, no field ID):
+ *      ['Family']
+ *      ['Family', 'style' => 'width: 50px;']
+ *
+ *   Special keys in column definition:
+ *     - 'class' => CSS class for <th> element
+ *     - 'style' => CSS style for <th> element
+ *     - 'subfields' => Array of sub-fields shown in brackets [Sub1 / Sub2]
+ *     - All other keys are treated as sortable field IDs with their values as labels
+ *
+ * @param array $vars Variables array controlling sorting and display:
+ *     - 'sort' => Current sort field ID (e.g., 'hostname', 'device')
+ *     - 'sort_order' => Current sort order: 'asc', 'desc', 'reset' (default: 'asc')
+ *     - 'show_sort' => Set to FALSE to disable all sorting links
+ *     - 'show_header' => Set to FALSE to make header invisible (for printing)
+ *     - Other keys are preserved in generated sort URLs
+ *
+ * @return string Generated HTML <thead> element with sortable column headers
+ *
+ * Sorting behavior:
+ *   - Clicking a field cycles: no sort -> asc -> desc -> no sort
+ *   - Currently sorted field shows with arrow icon and primary color styling
+ *   - All fields in multi-field columns are independently sortable
+ *   - Fields separated by ' / ' in output
+ *   - Subfields separated by ' / ' and wrapped in brackets [ ]
+ *
+ * Example 1 - Simple table (devices):
+ *   $cols = [
+ *       'state-marker' => '',
+ *       'device' => ['device' => 'Device', 'style' => 'min-width: 150px;'],
+ *       'hostname' => 'Hostname',
+ *       'status' => 'Status',
+ *       'uptime' => 'Uptime'
+ *   ];
+ *   echo '<table>' . generate_table_header($cols, $vars) . '<tbody>...</tbody></table>';
+ *
+ * Example 2 - Multi-field column (BGP peers):
+ *   $cols = [
+ *       'state-marker' => '',
+ *       'peer_ip' => ['peer_ip' => 'Peer address', 'style' => 'width: 150px;'],
+ *       ['type' => 'Type', 'peer_as' => 'Remote AS', 'style' => 'width: 140px;'],
+ *       'state' => 'State'
+ *   ];
+ *   // Output: <th>Type / Remote AS</th> - both fields clickable for sorting
+ *
+ * Example 3 - Complex with subfields (ports):
+ *   $cols = [
+ *       'state-marker' => '',
+ *       [NULL, 'style' => 'width: 1px;'],
+ *       'device' => ['device' => 'Device', 'style' => 'min-width: 150px;'],
+ *       ['port' => 'Port Name', 'descr' => 'Description', 'errors' => 'Errors', 'style' => 'min-width: 250px;'],
+ *       ['traffic' => ['Bits', 'subfields' => ['traffic_in' => 'In', 'traffic_out' => 'Out']], 'style' => 'width: 100px;'],
+ *       ['speed' => 'Speed', 'mtu' => 'MTU', 'style' => 'width: 90px;']
+ *   ];
+ *   // Output:
+ *   // <th>Port Name / Description / Errors</th>
+ *   // <th>Bits [In / Out]</th>
+ *   // <th>Speed / MTU</th>
+ *
+ * Example 4 - Non-sortable labels:
+ *   $cols = [
+ *       'state-marker' => '',
+ *       ['Family', 'style' => 'width: 50px;'],  // No field ID, not sortable
+ *       'state' => 'State'  // Has field ID, sortable
+ *   ];
+ *
+ * Note: For the deprecated old format using get_table_header(), see that function's documentation.
+ */
 function generate_table_header($header = [], $vars = []) {
 
     // Store current $vars sort variables
@@ -388,19 +499,37 @@ function generate_table_header_field($field_id, $field, $vars, $sort, $sort_orde
         // Sorting forced to disable
         $return = $field['label'];
     } else {
+        // Apply styling and caret if this column is currently sorted
         if ($sort == $field_id) {
             $field['label'] = '<span class="text-primary" style="font-style: italic">' . $field['label'] . '</span>';
             if ($sort_order === 'asc') {
-                $new_vars = [ 'sort' => $field_id, 'sort_order' => 'desc' ];
                 $field['caret'] = '&nbsp;<i class="text-primary small glyphicon glyphicon-arrow-up"></i>'; // glyphicon-triangle-top
             } else {
-                $new_vars = [ 'sort' => NULL, 'sort_order' => NULL ];
                 $field['caret'] = '&nbsp;<i class="text-primary small glyphicon glyphicon-arrow-down"></i>'; // glyphicon-triangle-bottom
             }
-        } else {
-            $new_vars = [ 'sort' => $field_id ];
         }
-        $return = '<a href="' . generate_url($vars, $new_vars) . '">' . $field['label'] . $field['caret'] . '</a>';
+
+        // Initialize caret if not set
+        if (!isset($field['caret'])) {
+            $field['caret'] = '';
+        }
+
+        // In widget mode, show label and indicator without clickable link
+        if (defined('OBS_WIDGET_MODE')) {
+            $return = $field['label'] . $field['caret'];
+        } else {
+            // Normal mode: generate clickable sort link
+            if ($sort == $field_id) {
+                if ($sort_order === 'asc') {
+                    $new_vars = [ 'sort' => $field_id, 'sort_order' => 'desc' ];
+                } else {
+                    $new_vars = [ 'sort' => NULL, 'sort_order' => NULL ];
+                }
+            } else {
+                $new_vars = [ 'sort' => $field_id ];
+            }
+            $return = '<a href="' . generate_url($vars, $new_vars) . '">' . $field['label'] . $field['caret'] . '</a>';
+        }
     }
 
     // Generate slash separated links for subfields

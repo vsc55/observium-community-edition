@@ -32,7 +32,7 @@ function dbClientInfo() {
 function dbHostInfo($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_get_host_info() without link identifier.");
         }
         return '';
@@ -50,7 +50,7 @@ function dbHostInfo($connection = NULL) {
  * @param string $host     Hostname for mysql server, default 'localhost'
  * @param string $charset  Charset used for mysql connection, default 'utf8'
  *
- * @return object $connection
+ * @return object|null
  */
 function dbOpen($host, $user, $password, $database, $charset = 'utf8') {
 
@@ -102,8 +102,11 @@ function dbOpen($host, $user, $password, $database, $charset = 'utf8') {
         }
 
         // Connection timeout
-        //$timeout = (isset($GLOBALS['config']['db_timeout']) && $GLOBALS['config']['db_timeout'] >= 1) ? (int) $GLOBALS['config']['db_timeout'] : 30;
-        //mysqli_options($connection, MYSQLI_OPT_CONNECT_TIMEOUT, $timeout);
+        if (isset($GLOBALS['config']['db_timeout']) && $timeout = age_to_seconds($GLOBALS['config']['db_timeout'])) {
+            // Set timeout only when user passed by own risks
+            print_debug("DEBUG DB: forced connection timeout $timeout seconds.");
+            mysqli_options($connection, MYSQLI_OPT_CONNECT_TIMEOUT, (int)$timeout);
+        }
 
         // Convert integer and float columns back to PHP numbers. Boolean returns as int. Only valid for mysqlnd.
         /*
@@ -167,7 +170,7 @@ function dbConnectionValid(&$connection) {
 function dbClose($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_close() without link identifier.");
         }
         return FALSE;
@@ -186,7 +189,7 @@ function dbClose($connection = NULL) {
 function dbError($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        // if (!OBS_DB_SKIP) {
+        // if (!db_skip()) {
         //     print_error("Call to function mysqli_error() without link identifier.");
         // }
         return mysqli_connect_error();
@@ -205,7 +208,7 @@ function dbError($connection = NULL) {
 function dbErrorNo($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        // if (!OBS_DB_SKIP) {
+        // if (!db_skip()) {
         //     print_error("Call to function mysqli_errno() without link identifier.");
         // }
         return mysqli_connect_errno();
@@ -224,7 +227,7 @@ function dbErrorNo($connection = NULL) {
 function dbWarnings($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        // if (!OBS_DB_SKIP) {
+        // if (!db_skip()) {
         //     print_error("Call to function mysqli_get_warnings() without link identifier.");
         // }
         return FALSE;
@@ -236,28 +239,35 @@ function dbWarnings($connection = NULL) {
         do {
             //echo "Warning: $e->errno: $e->message\n";
             $warning[] = "$e->errno: $e->message";
-        } while ($e -> next());
+        } while ($e->next());
     }
 
     return $warning;
 }
 
+// DEPRECATED: This function used only in syslog when mysql server has gone
 function dbPing($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        // if (!OBS_DB_SKIP) {
+        // if (!db_skip()) {
         //     print_error("Call to function mysqli_ping() without link identifier.");
         // }
         return FALSE;
     }
 
+    if (PHP_VERSION_ID >= 80400) {
+        // Check if MySQL connection is alive using lightweight query.
+        // Much faster than mysqli_ping() as it doesn't attempt reconnection.
+        // The reconnect feature has not been available as of PHP 8.2.0
+        return mysqli_query($connection, 'DO 1') !== FALSE;
+    }
     return mysqli_ping($connection);
 }
 
 function dbAffectedRows($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_affected_rows() without link identifier.");
         }
         return FALSE;
@@ -269,7 +279,7 @@ function dbAffectedRows($connection = NULL) {
 function dbCallQuery($fullSql, $connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_query() without link identifier.");
         }
         return FALSE;
@@ -290,16 +300,14 @@ function dbCallQuery($fullSql, $connection = NULL) {
 function dbEscape($string, $connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_real_escape_string() without link identifier.");
         }
         //return FALSE;
 
         // FIXME. I really not know why, but in unittests $connection object is lost!
         //print_debug("Mysql connection lost, in dbEscape() used escape alternative!");
-        $search  = ["\\", "\x00", "\n", "\r", "'", '"', "\x1a"];
-        $replace = ["\\\\", "\\0", "\\n", "\\r", "\'", '\"', "\\Z"];
-        return str_replace($search, $replace, $string);
+        return db_real_escape_string($string);
     }
 
     $return = mysqli_real_escape_string($connection, $string);
@@ -307,9 +315,7 @@ function dbEscape($string, $connection = NULL) {
         // If character set empty, use escape alternative
         // FIXME. I really not know why, but in unittests $connection object is lost!
         print_debug("Mysql connection lost, in dbEscape() used escape alternative!");
-        $search  = ["\\", "\x00", "\n", "\r", "'", '"', "\x1a"];
-        $replace = ["\\\\", "\\0", "\\n", "\\r", "\'", '\"', "\\Z"];
-        $return  = str_replace($search, $replace, $string);
+        return db_real_escape_string($string);
     }
     return $return;
 }
@@ -324,7 +330,7 @@ function dbEscape($string, $connection = NULL) {
 function dbLastID($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to function mysqli_insert_id() without link identifier.");
         }
         return FALSE;
@@ -479,7 +485,7 @@ function dbFetchCell($sql, $parameters = [], $print_query = FALSE) {
 function dbBeginTransaction($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to begin db transaction without link identifier.");
         }
         return FALSE;
@@ -491,7 +497,7 @@ function dbBeginTransaction($connection = NULL) {
 function dbCommitTransaction($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to commit db transaction without link identifier.");
         }
         return FALSE;
@@ -504,7 +510,7 @@ function dbCommitTransaction($connection = NULL) {
 function dbRollbackTransaction($connection = NULL) {
 
     if (!dbConnectionValid($connection)) {
-        if (!OBS_DB_SKIP) {
+        if (!db_skip()) {
             print_error("Call to rollback db transaction without link identifier.");
         }
         return FALSE;

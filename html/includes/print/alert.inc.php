@@ -27,9 +27,22 @@ function build_alert_table_query($vars) {
     foreach ($vars as $var => $value) {
         if (!safe_empty($value)) {
             switch ($var) {
-                // Search by device_id if we have a device or device_id
+                // Standard Observium pattern: support both device and device_id
+                case 'device':
                 case 'device_id':
-                    $where_array[] = generate_query_values($value, 'device_id');
+                    // Efficient handling: if numeric, filter by device_id; if string, filter by hostname pattern
+                    $device_conditions = [];
+                    foreach ((array)$value as $v) {
+                        if (is_intnum($v)) {
+                            $device_conditions[] = generate_query_values($v, 'alert_table.device_id');
+                        } else {
+                            // String value - search hostname with LIKE for partial matches
+                            $device_conditions[] = generate_query_values($v, 'devices.hostname', '%LIKE%');
+                        }
+                    }
+                    if (!empty($device_conditions)) {
+                        $where_array[] = '(' . implode(' OR ', $device_conditions) . ')';
+                    }
                     break;
 
                 case 'entity_type':
@@ -45,7 +58,10 @@ function build_alert_table_query($vars) {
                 case 'alert_test_id':
                     $where_array[] = generate_query_values($value, 'alert_test_id');
                     break;
+
+                // Support both status and alert_status (database field name)
                 case 'status':
+                case 'alert_status':
                     $values = [];
                     foreach ((array)$value as $status) {
                         if ($status === 'failed') {
@@ -69,31 +85,67 @@ function build_alert_table_query($vars) {
     // Permissions query
     $query_permitted = generate_query_permitted_ng([ 'device', 'alert' ], [ 'hide_ignored' => TRUE ]);
 
-    // Base query
-    $query = 'FROM `alert_table` ' . generate_where_clause($where_array, $query_permitted);
+    // Base query with conditional device join (needed for sorting or device filtering)
+    $device_join = '';
+    $device_fields = '';
+    $need_device_join = ($vars['sort'] === 'device' || $vars['sort'] === 'device_id' || $vars['sort'] === 'hostname') ||
+                        (isset($vars['device']) || isset($vars['device_id']));
+
+    if ($need_device_join) {
+        $device_join = ' LEFT JOIN `devices` USING (`device_id`)';
+        $device_fields = ', `devices`.`hostname`';
+    }
+
+    $query = 'FROM `alert_table`' . $device_join . ' ' . generate_where_clause($where_array, $query_permitted);
 
     // Build the query to get a count of entries
     $query_count = 'SELECT COUNT(`alert_table_id`) ' . $query;
 
     // Build the query to get the list of entries
-    $query = 'SELECT * ' . $query;
+    $query = 'SELECT `alert_table`.*' . $device_fields . ' ' . $query;
 
-    //$sort_order = get_sort_order($vars);
     switch ($vars['sort']) {
         case 'device':
-            // fix this to sort by hostname
-            //$query .= generate_query_sort('hostname', get_sort_order($vars));
-            $query .= generate_query_sort('device_id', get_sort_order($vars));
+            $query .= generate_query_sort('hostname', get_sort_order($vars));
+            break;
+
+        case 'entity_type':
+            $query .= generate_query_sort('entity_type', get_sort_order($vars));
+            break;
+
+        case 'entity_id':
+        case 'entity':
+            $query .= generate_query_sort('entity_id', get_sort_order($vars));
+            break;
+
+        case 'alert_test_id':
+        case 'alert':
+            $query .= generate_query_sort('alert_test_id', get_sort_order($vars));
+            break;
+
+        case 'status':
+        case 'alert_status':
+            $query .= generate_query_sort('alert_status', get_sort_order($vars));
+            break;
+
+        case 'last_checked':
+        case 'checked':
+            $query .= generate_query_sort('last_checked', get_sort_order($vars));
             break;
 
         case 'last_changed':
         case 'changed':
-            $query .= generate_query_sort('last_changed', 'DESC');
+            $query .= generate_query_sort('last_changed', get_sort_order($vars));
+            break;
+
+        case 'last_alerted':
+        case 'alerted':
+            $query .= generate_query_sort('last_alerted', get_sort_order($vars));
             break;
 
         default:
             // default sort order
-            $query .= generate_query_sort([ 'device_id', 'alert_test_id', 'entity_type', 'entity_id' ], 'DESC');
+            $query .= generate_query_sort([ 'device_id', 'alert_test_id', 'entity_type', 'entity_id' ], get_sort_order($vars, 'desc'));
     }
 
     if (isset($vars['pagination']) && $vars['pagination']) {
@@ -178,44 +230,42 @@ function print_alert_table($vars)
 
     echo generate_box_open($vars['header']);
 
+    // Build column definitions for sortable headers
+    $cols = [];
+    $cols[]         = [NULL, 'class="state-marker"'];
+    $cols[]         = [NULL, 'style="width: 1px;"'];
+
+    if ($list['device_id']) {
+        $cols['device'] = ['Device', 'style="width: 15%;"'];
+    }
+    if ($list['entity_type']) {
+        $cols['entity_type'] = ['Type', 'style="width: 10%;"'];
+    }
+    if ($list['entity_id']) {
+        $cols['entity_id'] = ['Entity', 'style=""'];
+    }
+    if ($list['alert_test_id']) {
+        $cols['alert_test_id'] = ['Alert', 'style="min-width: 15%;"'];
+    }
+
+    $cols['alert_status'] = ['Status', 'style="width: 100px;"'];
+
+    if ($list['checked']) {
+        $cols['last_checked'] = ['Checked', 'style="width: 95px;"'];
+    }
+    if ($list['changed']) {
+        $cols['last_changed'] = ['Changed', 'style="width: 95px;"'];
+    }
+    if ($list['alerted']) {
+        $cols['last_alerted'] = ['Alerted', 'style="width: 95px;"'];
+    }
+
+    $cols[] = [NULL, 'style="width: 70px;"'];
+
     echo '<table class="table table-condensed  table-striped  table-hover">';
 
     if (!get_var_true($vars['no_header'])) {
-        echo '
-  <thead>
-    <tr>
-      <th class="state-marker"></th>
-      <th style="width: 1px;"></th>';
-
-        if ($list['device_id']) {
-            echo('      <th style="width: 15%">Device</th>');
-        }
-        if ($list['entity_type']) {
-            echo('      <th style="width: 10%">Type</th>');
-        }
-        if ($list['entity_id']) {
-            echo('      <th style="">Entity</th>');
-        }
-        if ($list['alert_test_id']) {
-            echo('      <th style="min-width: 15%;">Alert</th>');
-        }
-
-        echo '
-      <th style="width: 100px;">Status</th>';
-
-        if ($list['checked']) {
-            echo '      <th style="width: 95px;">Checked</th>';
-        }
-        if ($list['changed']) {
-            echo '      <th style="width: 95px;">Changed</th>';
-        }
-        if ($list['alerted']) {
-            echo '      <th style="width: 95px;">Alerted</th>';
-        }
-
-        echo '    <th style="width: 70px;"></th>
-    </tr>
-  </thead>';
+        echo get_table_header($cols, $vars);
     }
     echo '<tbody>' . PHP_EOL;
 
@@ -302,7 +352,7 @@ function print_alert_table($vars)
 
         $alert['state_popup'] = '';
 
-        if (is_array($state) && isset($state['failed']) && safe_count($state['failed'])) {
+        if (is_array($state) && !safe_empty($state['failed'])) {
             $alert['state_popup'] .= generate_box_open(['title' => 'Failed Tests']); //'<h4>Failed Tests</h4>';
 
             $alert['state_popup'] .= '<table style="min-width: 400px;" class="table   table-striped table-condensed">';
@@ -342,32 +392,32 @@ function print_alert_table($vars)
         echo '&nbsp;&nbsp;';
 
         $form = [
-          'type'  => 'simple',
-          //'userlevel'  => 10,          // Minimum user level for display form
-          'id'    => 'alert_entry_ignore_until_ok_' . $alert['alert_table_id'],
-          'style' => 'display:inline;',
+            'type'  => 'simple',
+            //'userlevel'  => 10,          // Minimum user level for display form
+            'id'    => 'alert_entry_ignore_until_ok_' . $alert['alert_table_id'],
+            'style' => 'display:inline;',
         ];
 
         $form['row'][0]['form_alert_table_id'] = [
-          'type'  => 'hidden',
-          'value' => $alert['alert_table_id']
+            'type'  => 'hidden',
+            'value' => $alert['alert_table_id']
         ];
 
         $form['row'][99]['form_alert_table_action'] = [
-          'type'      => 'submit',
-          'icon_only' => TRUE, // hide button styles
-          'name'      => '',
-          'readonly'  => get_var_true($alert['alert_status'], '3'), // alert_status == 3 mean suppressed
-          'icon'      => get_var_true($alert['alert_status'], '3') ? 'icon-ok-circle text-muted' : 'icon-ok-sign text-muted',
-          // confirmation dialog
-          'attribs'   => [
-            'data-toggle'            => 'confirm', // Enable confirmation dialog
-            'data-confirm-placement' => 'left',
-            'data-confirm-content'   => 'Ignore until ok?',
-            //'data-confirm-content' => '<div class="alert alert-warning"><h4 class="alert-heading"><i class="icon-warning-sign"></i> Warning!</h4>
-            //                           This association will be deleted!</div>'),
-          ],
-          'value'     => 'alert_entry_ignore_until_ok'
+            'type'      => 'submit',
+            'icon_only' => TRUE, // hide button styles
+            'name'      => '',
+            'readonly'  => get_var_true($alert['alert_status'], '3'), // alert_status == 3 mean suppressed
+            'icon'      => get_var_true($alert['alert_status'], '3') ? 'icon-ok-circle text-muted' : 'icon-ok-sign text-muted',
+            // confirmation dialog
+            'attribs'   => [
+                'data-toggle'            => 'confirm', // Enable confirmation dialog
+                'data-confirm-placement' => 'left',
+                'data-confirm-content'   => 'Ignore until ok?',
+                //'data-confirm-content' => '<div class="alert alert-warning"><h4 class="alert-heading"><i class="icon-warning-sign"></i> Warning!</h4>
+                //                           This association will be deleted!</div>'),
+            ],
+            'value'     => 'alert_entry_ignore_until_ok'
         ];
 
         // Only show ignore-until button if userlevel is above 8
@@ -405,7 +455,7 @@ function generate_alert_metrics_table($entity_type, &$metrics_list = []) {
         ];
         $metric_list['values'] = '';
         if (is_array($entry['values'])) {
-            if (is_array_list($entry['values'])) {
+            if (array_is_list($entry['values'])) {
                 $values = $entry['values'];
             } else {
                 $values = [];

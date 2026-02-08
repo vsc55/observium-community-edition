@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-MAC-AUTHENTICATION-MIB DEFINITIONS ::= BEGIN
 
 --  enterasys-mac-authentication-mib.txt
@@ -28,7 +30,7 @@ ENTERASYS-MAC-AUTHENTICATION-MIB DEFINITIONS ::= BEGIN
 --  parties a non-exclusive license to use this Specification in
 --  connection with the management of Extreme Networks products.
 
---  Copyright December, 2014 Extreme Networks, Inc.
+--  Copyright February, 2019 Extreme Networks, Inc.
 
 IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE, Unsigned32 
@@ -49,7 +51,7 @@ IMPORTS
         FROM ENTERASYS-MIB-NAMES;
 
 etsysMACAuthenticationMIB MODULE-IDENTITY
-    LAST-UPDATED "201706071035Z"  --  Wed June 07 10:35 UTC 2017
+    LAST-UPDATED "201812031401Z"  --  Mon Dec  03 14:01 UTC 2018
 
     ORGANIZATION "Extreme Networks, Inc"
     CONTACT-INFO
@@ -79,6 +81,9 @@ etsysMACAuthenticationMIB MODULE-IDENTITY
          The term MAC-Authentication is used because an authentication
          backend mechanism is used to allow the MAC onto the network,
          as well as provide authorization information to the switch."
+
+    REVISION    "201812031401Z"  --  Mon Dec  03 14:01 UTC 2018
+    DESCRIPTION "Added etsysMACAuthenticationSystemUserNameCase."
 
     REVISION    "201706071035Z"  --  Wed June 07 10:35 UTC 2017
     DESCRIPTION "Added colon to etsysMACAuthenticationSystemUserNameFormat."
@@ -234,9 +239,34 @@ etsysMACAuthenticationSystemUserNameFormat OBJECT-TYPE
          MAC address formatted as 'xxxxxxxxxxxx'.
 
          When colon(3), the user-name credential is the
-         MAC address formatted as 'xx:xx:xx:xx:xx:xx'."
+         MAC address formatted as 'xx:xx:xx:xx:xx:xx'.
+
+	 In general, the use of uppercase or lowercase hexadecimal
+	 characters is controlled by the
+	 etsysMACAuthenticationSystemUserNameCase object."
+
     DEFVAL { none }
     ::= { etsysMACAuthenticationSystem 6 }
+
+etsysMACAuthenticationSystemUserNameCase OBJECT-TYPE
+    SYNTAX	INTEGER {
+		  lower(1),
+		  upper(2)
+		}
+    MAX-ACCESS 	read-write
+    STATUS	current
+    DESCRIPTION
+	"When LOWER(1), the user-name credential is the
+	MAC address formatted as xx:xx:xx:xx:xx:xx or xx-xx-xx-xx-xx-xx
+	or xxxxxxxxxxxx, depending on the value of the
+	etsysMACAuthenticationSystemUserNameFormat object.
+
+	When set to UPPER(2), the user-name credential is the
+	MAC address formatted as XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX
+	or XXXXXXXXXXXX, depending on the value of the
+	etsysMACAuthenticationSystemUserNameFormat object."
+    DEFVAL { upper }
+    ::= { etsysMACAuthenticationSystem 7 }
 
 -- -------------------------------------------------------------
 -- etsysMACAuthenticationPortConfigGroup
@@ -800,7 +830,7 @@ etsysMACAuthenticationSystemGroup3 OBJECT-GROUP
         etsysMACAuthenticationSystemAccountEnable,
         etsysMACAuthenticationSystemUserNameFormat 
     }
-    STATUS      current
+    STATUS      deprecated
     DESCRIPTION
         "Global object controlling this feature. 
          Global objects that affect how the credentials are
@@ -821,6 +851,22 @@ etsysMACAuthenticationMACListGroup OBJECT-GROUP
         "Objects associated with MAC-List configuration."
     ::= { etsysMACAuthenticationGroups 7 }
 
+etsysMACAuthenticationSystemGroup4 OBJECT-GROUP
+    OBJECTS {
+        etsysMACAuthenticationSystemEnable,
+        etsysMACAuthenticationMACUserPassword,
+        etsysMACAuthenticationPortUserNameSignificantBits,
+        etsysMACAuthenticationMode,
+        etsysMACAuthenticationSystemAccountEnable,
+        etsysMACAuthenticationSystemUserNameFormat,
+	etsysMACAuthenticationSystemUserNameCase
+    }
+    STATUS      current
+    DESCRIPTION
+        "Global object controlling this feature.
+         Global objects that affect how the credentials are
+         presented to the authentication server."
+    ::= { etsysMACAuthenticationGroups 8 }
 -- -------------------------------------------------------------
 -- Compliance statements
 -- -------------------------------------------------------------
@@ -946,7 +992,7 @@ etsysMACAuthenticationCompliance3 MODULE-COMPLIANCE
        ::= { etsysMACAuthenticationCompliances 3 }
 
 etsysMACAuthenticationCompliance4 MODULE-COMPLIANCE
-    STATUS      current
+    STATUS      deprecated
     DESCRIPTION
         "The compliance statement for devices that support
          MAC-Authentication."
@@ -1011,5 +1057,74 @@ etsysMACAuthenticationCompliance4 MODULE-COMPLIANCE
 	     supported for writing."
 
        ::= { etsysMACAuthenticationCompliances 4 }
+
+etsysMACAuthenticationCompliance5 MODULE-COMPLIANCE
+    STATUS      current
+    DESCRIPTION
+        "The compliance statement for devices that support
+         MAC-Authentication."
+
+    MODULE
+        MANDATORY-GROUPS {
+            etsysMACAuthenticationSystemGroup4,
+            etsysMACAuthenticationPortConfigGroup,
+            etsysMACAuthenticationMACConfigGroup
+            }
+
+	GROUP etsysMACAuthenticationMACSessionGroup
+	DESCRIPTION
+	     "Implementation of the etsysMACAuthenticationMACSessionGroup
+	      is optional for all agents.  If the agent implements session
+	      functionality, then this table should be supported."
+
+	GROUP etsysMACAuthenticationMACListGroup
+	DESCRIPTION
+	    "Implementation of the etysMACAuthenticationMACListGroup is
+	     optional for all agents. If the agent implements MAC-List
+	     functionality, then this table should be supported."
+
+	OBJECT      etsysMACAuthenticationSystemEnable
+	SYNTAX      EnabledStatus
+	MIN-ACCESS  read-only
+	DESCRIPTION
+	    "Write access is not required. If read-only is selected,
+	     then the default value must be enabled(1)."
+
+	OBJECT     etsysMACAuthenticationMode
+	SYNTAX     INTEGER {
+		     password(1),
+		     radiusUsername(2),
+		     macList(3)
+		   }
+	MIN-ACCESS read-only
+	DESCRIPTION
+	    "Write access is not required."
+
+	OBJECT      etsysMACAuthenticationSystemUserNameFormat
+	SYNTAX      INTEGER {
+		      hyphen(1),
+		      none(2),
+		      colon(3)
+		    }
+	MIN-ACCESS  read-only
+	DESCRIPTION
+	    "Write access is not required."
+
+        OBJECT      etsysMACAuthenticationSystemUserNameCase
+        SYNTAX      INTEGER {
+                      lower(1),
+                      upper(2)
+                    }
+        MIN-ACCESS  read-only
+        DESCRIPTION
+            "Write access is not required."
+
+	OBJECT etsysMACAuthenticationMACListRowStatus
+	WRITE-SYNTAX RowStatus { active(1), createAndGo(4), destroy(6) }
+	DESCRIPTION
+	    "The states createAndWait, notInService and notReady are not
+	     supported for writing."
+
+       ::= { etsysMACAuthenticationCompliances 5 }
 
 END

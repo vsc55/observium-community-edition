@@ -14,7 +14,9 @@
 
 print_device_header($device, ['no_graphs' => TRUE]);
 
-include($config['html_dir'] . "/pages/device/overview/information_extended.inc.php");
+$overview_extended = TRUE;
+include($config['html_dir'] . "/pages/device/overview/information.inc.php");
+//include($config['html_dir'] . "/pages/device/overview/information_extended.inc.php");
 
 echo generate_box_open();
 

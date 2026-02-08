@@ -15,8 +15,11 @@
 
 //if ($device['os_group'] == 'unix' && $count == 0)
 //if ($count_processors == 0)
-if (dbExist('processors', '`device_id` = ? AND `processor_type` NOT IN (?, ?)', [ $device['device_id'], 'ucd-cpu', 'ucd-raw' ])) {
-    print_debug("Skip UCD CPU. Already exist better processor(s)");
+if (dbExist('processors', '`device_id` = ? AND `processor_type` NOT IN (?, ?)', [ $device['device_id'], 'ucd-old', 'ucd-raw' ])) {
+    print_debug("Skip UCD CPU. Already exist better processor(s):");
+    if (OBS_DEBUG) {
+        print_vars(dbFetchRows("SELECT * FROM `processors` WHERE `device_id` = ? AND `processor_type` NOT IN (?, ?)", [ $device['device_id'], 'ucd-old', 'ucd-raw' ]));
+    }
     return;
 }
 

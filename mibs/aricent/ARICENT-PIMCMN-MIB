@@ -1,6 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fspimcmn.mib,v 1.23 2015/07/10 10:25:56 siva Exp $
 -- Introduction
 
 -- This document explains the propreitary MIB implemented for the PIM (IPv4/IPv6)
@@ -99,22 +98,27 @@ ARICENT-PIMCMN-MIB DEFINITIONS ::= BEGIN
 IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE,NOTIFICATION-TYPE,
     Integer32, TimeTicks, Unsigned32,
-    Counter32, Counter64, enterprises, IpAddress  FROM SNMPv2-SMI
+    Counter32, Counter64, enterprises,
+    IpAddress                                FROM SNMPv2-SMI
     TEXTUAL-CONVENTION, RowStatus,
-    TruthValue,  DisplayString                    FROM SNMPv2-TC
-    InetAddressType, InetAddress                  FROM INET-ADDRESS-MIB
+    TruthValue,  DisplayString		     FROM SNMPv2-TC
+    InetAddressType, InetAddress             FROM INET-ADDRESS-MIB
     IANAipRouteProtocol, 
-    IANAipMRouteProtocol                          FROM IANA-RTPROTO-MIB
-    PortList                                      FROM Q-BRIDGE-MIB;
+    IANAipMRouteProtocol                     FROM IANA-RTPROTO-MIB
+    PortList                                 FROM Q-BRIDGE-MIB;
 
 
 fsPimCmnMIB MODULE-IDENTITY
---    LAST-UPDATED "200006050000Z"
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202411070000Z" -- November 7, 2024
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"  
     CONTACT-INFO "support@aricent.com" 
     DESCRIPTION "The MIB module for management of PIM Routers
                     Initial Version"
+
+    REVISION "202411070000Z" -- November 7, 2024
+    DESCRIPTION "Added fsPimCmnContextExtTable for 
+                 implementation conformance"
+
     REVISION "201209050000Z"
     DESCRIPTION "The MIB module for management of PIM Routers
                     Initial Version"
@@ -1181,7 +1185,7 @@ fsPimCmnNeighborAddrType OBJECT-TYPE
 
 fsPimCmnNeighborAddress OBJECT-TYPE
     SYNTAX     InetAddress
-    MAX-ACCESS not-accessible
+    MAX-ACCESS accessible-for-notify
     STATUS     deprecated
     DESCRIPTION
 	    "The IP address of the PIM neighbor for which this entry
@@ -2520,7 +2524,7 @@ FsPimCmnNeighborExtEntry ::= SEQUENCE {
 }
 
 fsPimCmnNeighborExtIfIndex OBJECT-TYPE
-    SYNTAX     Integer32
+    SYNTAX     Integer32 (1..65535)
     MAX-ACCESS not-accessible
     STATUS     current
     DESCRIPTION
@@ -3331,5 +3335,304 @@ fsPimCmnIpGenMRouteNextHopNPStatus OBJECT-TYPE
     DESCRIPTION
              "This object displays the NP programming status of the next hop interface"
     ::= { fsPimCmnIpGenMRouteNextHopEntry 15 }
+
+--
+-- fsPimCmnContextExtTable
+--
+
+fsPimCmnContextExtTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF FsPimCmnContextExtEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+	    "Provides status settings based on context"
+    ::= { futurePimCmnTables 15 }
+
+fsPimCmnContextExtEntry OBJECT-TYPE
+    SYNTAX     FsPimCmnContextExtEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+	    "An entry in the fsPimCmnContextExtTable"
+    INDEX      { fsPimCmnContextExtContextId }
+    ::= { fsPimCmnContextExtTable 1 }
+
+FsPimCmnContextExtEntry ::= SEQUENCE {
+    fsPimCmnContextExtContextId                  Integer32,
+    fsPimCmnContextExtJoinPruneInterval          Integer32,
+    fsPimCmnContextExtVersionString              DisplayString,
+    fsPimCmnContextExtSPTGroupThreshold          Integer32,
+    fsPimCmnContextExtSPTSourceThreshold         Integer32,
+    fsPimCmnContextExtSPTSwitchingPeriod         Integer32,
+    fsPimCmnContextExtSPTRpThreshold             Integer32,
+    fsPimCmnContextExtSPTRpSwitchingPeriod       Integer32,
+    fsPimCmnContextExtRegStopRateLimitingPeriod  Integer32,
+    fsPimCmnContextExtPmbrStatus                 INTEGER,
+    fsPimCmnContextExtRouterMode                 INTEGER,
+    fsPimCmnContextExtStaticRpEnabled            INTEGER,
+    fsPimCmnContextExtIpStatus                   INTEGER,
+    fsPimCmnContextExtIpv6Status                 INTEGER,
+    fsPimCmnContextExtSRProcessingStatus         INTEGER,
+    fsPimCmnContextExtRefreshInterval            Integer32,
+    fsPimCmnContextExtSourceActiveInterval       Unsigned32,
+    fsPimCmnContextExtIpRpfVector                INTEGER,
+    fsPimCmnContextExtIpBidirPIMStatus           INTEGER,
+    fsPimCmnContextExtIpBidirOfferInterval       Integer32,
+    fsPimCmnContextExtIpBidirOfferLimit          Integer32,
+    fsPimCmnContextExtStatus                     INTEGER,
+    fsPimCmnContextExtIpMaxRouteCnt              Integer32,
+    fsPimCmnContextExtIpCurrRouteCnt             Integer32
+}
+
+fsPimCmnContextExtContextId OBJECT-TYPE
+    SYNTAX      Integer32 (0..256)
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+       "Context ID for this table entry"
+    ::= { fsPimCmnContextExtEntry 1 }    
+
+fsPimCmnContextExtJoinPruneInterval OBJECT-TYPE
+    SYNTAX      Integer32
+    UNITS       "seconds"
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The default interval at which periodic PIM Join/Prune
+       messages are to be sent"
+    ::= { fsPimCmnContextExtEntry 2 }
+
+fsPimCmnContextExtVersionString OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+       "The version number of the PIM protocol in the router"
+    ::= { fsPimCmnContextExtEntry 3 }
+
+fsPimCmnContextExtSPTGroupThreshold OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The threshold of data rate for any group when exceeded, 
+       source specific counters are initiated for that particular 
+       group. It is based on number of bits per sec. To initiate 
+       SPT switching counter, this threshold MUST be configured"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 4 }
+
+fsPimCmnContextExtSPTSourceThreshold OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The threshold of data rate for any source when exceeded,
+       switching to Shortest Path Tree is initiated. It is based 
+       on number of bits per sec. To switch to SPT, this threshold 
+       MUST be configured"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 5 }
+
+fsPimCmnContextExtSPTSwitchingPeriod OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The period (in seconds) over which the data rate
+       is to be monitored for initiating source specific
+       counting or initiating switch to shortest path tree.
+       Same period is used for monitoring data rate for
+       both source and group. To switch to SPT, this period 
+       MUST be configured"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 6 }
+
+fsPimCmnContextExtSPTRpThreshold OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The threshold at which the RP initiates switching to
+       Source specific shortest path.It is based on number
+       of registered packets received. To switch to SPT, this 
+       threshold MUST be configured"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 7 }
+
+fsPimCmnContextExtSPTRpSwitchingPeriod OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The period (in seconds) over which RP monitors
+       register packets for switching to the source specific
+       shortest path tree. To switch to SPT, this period MUST 
+       be configured"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 8 }
+
+fsPimCmnContextExtRegStopRateLimitingPeriod OBJECT-TYPE
+    SYNTAX      Integer32 (0..2147483647)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The period (in seconds) over which RP monitors number of
+       register packets after sending the register stop message
+       to the source of the register message for rate limiting the
+       sending of register stop message"
+    DEFVAL      { 5 }
+    ::= { fsPimCmnContextExtEntry 9 }
+
+fsPimCmnContextExtPmbrStatus OBJECT-TYPE
+    SYNTAX      INTEGER { disable (1), enable (2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+            "The border bit which identifies the router as a 
+            border router"
+    DEFVAL      { 1 }
+    ::= { fsPimCmnContextExtEntry 10 }
+
+fsPimCmnContextExtRouterMode OBJECT-TYPE
+    SYNTAX      INTEGER { ssmonly (1), smssm (2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+            "The mode of the PIM-SM router (ssm_only or sm_ssm )"
+    DEFVAL      { 2 }
+    ::= { fsPimCmnContextExtEntry 11 }
+
+fsPimCmnContextExtStaticRpEnabled OBJECT-TYPE
+    SYNTAX      INTEGER { disable (0), enabled(1) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The flag indicating that static configuration of RP 
+       is available"
+    DEFVAL      { 0 }
+    ::= { fsPimCmnContextExtEntry 12 }
+
+fsPimCmnContextExtIpStatus OBJECT-TYPE
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The enabled status of IPv4 Multicast Routing by PIM 
+       on this router"
+    ::= { fsPimCmnContextExtEntry 13 }
+
+fsPimCmnContextExtIpv6Status OBJECT-TYPE
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The enabled status of IPv6 Multicast Routing by PIM 
+       on this router."
+    ::= { fsPimCmnContextExtEntry 14 }
+
+fsPimCmnContextExtSRProcessingStatus OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    disable (0),
+                    enable  (1)
+                }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "Indicates whether to process and forward the state 
+       Refresh message"
+    DEFVAL      { 1 }
+    ::= { fsPimCmnContextExtEntry 15 }
+
+fsPimCmnContextExtRefreshInterval OBJECT-TYPE
+    SYNTAX      Integer32 (-1 | 4..100)
+    UNITS       "seconds"
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The interval between successive State Refresh messages 
+       sent by an Originator. This timer period is called the 
+       RefreshInterval in the PIM-DM specification. This object 
+       is used only by PIM-DM. Minus one indicates that Generation 
+       of State Refresh Message is disabled"
+    REFERENCE "RFC 3973 section 4.8"
+    DEFVAL      { -1 }
+    ::= { fsPimCmnContextExtEntry 16 }
+
+fsPimCmnContextExtSourceActiveInterval OBJECT-TYPE
+    SYNTAX      Unsigned32 (120..210)
+    UNITS       "seconds"
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The period of time after receiving a multicast message a 
+       Originator router (directly connected to source) will 
+       continue to send State Refresh Message"
+    DEFVAL      { 210 }
+    ::= { fsPimCmnContextExtEntry 17 }
+
+fsPimCmnContextExtIpRpfVector OBJECT-TYPE
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+          "The status of IPv4 Multicast RPF Vector feature" 
+    DEFVAL      { 2 }
+    ::= { fsPimCmnContextExtEntry 18 }
+
+fsPimCmnContextExtIpBidirPIMStatus OBJECT-TYPE
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The status of Bidir-PIM Feature. Enabling/Disabling this 
+       feature is applicable for both PIMv4 and PIMv6" 
+    DEFVAL      { 2 }
+    ::= { fsPimCmnContextExtEntry 19 }
+
+fsPimCmnContextExtIpBidirOfferInterval OBJECT-TYPE
+    SYNTAX      Integer32 (1..20000000)
+    UNITS       "milliseconds"
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "The time interval between the DF Election Offer 
+        messages to be sent"
+    DEFVAL      { 100 }
+    ::= { fsPimCmnContextExtEntry 20 }
+
+fsPimCmnContextExtIpBidirOfferLimit OBJECT-TYPE
+    SYNTAX      Integer32 (3..100)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "The number of unanswered offers before the router 
+        changes as the designated forwarder (DF)"
+    DEFVAL      { 3 }
+    ::= { fsPimCmnContextExtEntry 21 }
+
+fsPimCmnContextExtStatus OBJECT-TYPE
+    SYNTAX      INTEGER { enabled(1), disabled(2) }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "The status of Multicast Routing by PIM on this router"
+    ::= { fsPimCmnContextExtEntry 22 }
+
+fsPimCmnContextExtIpMaxRouteCnt OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "Maximum IP route count"
+    ::= { fsPimCmnContextExtEntry 23 }
+
+fsPimCmnContextExtIpCurrRouteCnt OBJECT-TYPE
+    SYNTAX      Integer32
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "Current IP route count"
+    ::= { fsPimCmnContextExtEntry 24 }
 
 END

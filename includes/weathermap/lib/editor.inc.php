@@ -42,7 +42,7 @@ function wm_editor_sanitize_string($str) {
 }
 
 function wm_editor_validate_bandwidth($bw) {
-  
+
     if(preg_match( '/^(\d+\.?\d*[KMGT]?)$/', $bw) ) {
 	return true;
     }
@@ -51,12 +51,12 @@ function wm_editor_validate_bandwidth($bw) {
 
 function wm_editor_validate_one_of($input,$valid=array(),$case_sensitive=false) {
     if(! $case_sensitive ) $input = strtolower($input);
-    
+
     foreach ($valid as $v) {
 	if(! $case_sensitive ) $v = strtolower($v);
 	if($v == $input) return true;
     }
-    
+
     return false;
 }
 
@@ -67,7 +67,7 @@ function wm_editor_sanitize_name($str) {
 
 function wm_editor_sanitize_selected($str) {        
 	$res = urldecode($str);
-	
+
 	if( ! preg_match("/^(LINK|NODE):/",$res)) {
 	    return "";
 	}
@@ -75,11 +75,11 @@ function wm_editor_sanitize_selected($str) {
 }
 
 function wm_editor_sanitize_file($filename,$allowed_exts=array()) {
-    
+
     $filename = wm_editor_sanitize_uri($filename);
-    
+
     if ($filename == "") return "";
-        
+
     $ok = false;
     foreach ($allowed_exts as $ext) {
 		$match = ".".$ext;
@@ -93,9 +93,9 @@ function wm_editor_sanitize_file($filename,$allowed_exts=array()) {
 }
 
 function wm_editor_sanitize_conffile($filename) {
-    
+
     $filename = wm_editor_sanitize_uri($filename);
-    
+
     # If we've been fed something other than a .conf filename, just pretend it didn't happen
     if ( substr($filename,-5,5) != ".conf" ) {
 		$filename = "";
@@ -125,7 +125,7 @@ function show_editor_startpage()
     if ($configerror!='') {
         $errormessage .= $configerror.'<p>';
     }
-		
+
 	if ( !$observium_found && !$ignore_observium) {
 		//$errormessage .= '$cacti_base is not set correctly. Cacti integration will be disabled in the editor.';
 		//$errormessage .= "$observium_found and $ignore_observium";
@@ -133,7 +133,7 @@ function show_editor_startpage()
             	//$errormessage .= " You might need to copy editor-config.php-dist to editor-config.php and edit it."; 
         	//}
 	}
-	
+
 	if ($errormessage != '') {
 		print '<div class="alert" id="nocacti">'.htmlspecialchars($errormessage).'</div>';
 	}
@@ -169,7 +169,7 @@ function show_editor_startpage()
 		    while (false !== ($file = readdir($dh))) {
 			$realfile=$mapdir . DIRECTORY_SEPARATOR . $file;
 			$note = "";
-	
+
 			// skip directories, unreadable files, .files and anything that doesn't come through the sanitiser unchanged
 			if ( (is_file($realfile)) && (is_readable($realfile)) && (!preg_match("/^\./",$file) )  && ( wm_editor_sanitize_conffile($file) == $file ) ) {
 				if (!is_writable($realfile)) {
@@ -180,12 +180,12 @@ function show_editor_startpage()
 				if ($fd) {
 					while (!feof($fd)) {
 						$buffer=fgets($fd, 4096);
-	
+
 						if (preg_match('/^\s*TITLE\s+(.*)/i', $buffer, $matches)) {
 						    $title= wm_editor_sanitize_string($matches[1]); 
 						}
 					}
-	
+
 					fclose ($fd);
 					$titles[$file] = $title;
 					$notes[$file] = $note;
@@ -198,9 +198,9 @@ function show_editor_startpage()
 		} else { 
             $errorstring = "Can't open mapdir to read."; 
         }
-		
+
 		ksort($titles);
-		
+
 		if ($n == 0) { 
 		    $errorstring = "No files in mapdir"; 
 		}
@@ -351,7 +351,7 @@ function extract_with_validation($array, $paramarray, $prefix = "")
 
 				break;
 			}
-			
+
 			if ($all_present) {
 				$candidates["{$prefix}{$varname}"]=$varvalue;
 			}
@@ -398,7 +398,7 @@ function handle_inheritance(&$map, &$inheritables)
 		$fieldname = $inheritable[1];
 		$formname = $inheritable[2];
 		$validation = $inheritable[3];
-		
+
 		$new = $_REQUEST[$formname];
 		if($validation != "") {
 		    switch($validation) {
@@ -410,9 +410,9 @@ function handle_inheritance(&$map, &$inheritables)
 			    break;
 		    }
 		}
-		
+
 		$old = ($inheritable[0]=='node' ? $map->nodes['DEFAULT']->$fieldname : $map->links['DEFAULT']->$fieldname);	
-		
+
 		if ($old != $new) {
 			if ($inheritable[0]=='node') {
 				$map->nodes['DEFAULT']->$fieldname = $new;
@@ -422,11 +422,11 @@ function handle_inheritance(&$map, &$inheritables)
 					}
 				}
 			}
-			
+
 			if ($inheritable[0]=='link') {
 				$map->links['DEFAULT']->$fieldname = $new;
 				foreach ($map->links as $link) {
-					
+
 					if ($link->name != ":: DEFAULT ::" && $link->$fieldname == $old) {
 						$map->links[$link->name]->$fieldname = $new;
 					}
@@ -439,7 +439,7 @@ function handle_inheritance(&$map, &$inheritables)
 function get_fontlist(&$map,$name,$current)
 {
     $output = '<select class="fontcombo" name="'.$name.'">';
-        
+
     ksort($map->fonts);
 
     foreach ($map->fonts as $fontnumber => $font) {		
@@ -449,7 +449,7 @@ function get_fontlist(&$map,$name,$current)
         }
         $output .= ' value="'.$fontnumber.'">'.$fontnumber.' ('.$font->type.')</option>';
     }
-        
+
     $output .= "</select>";
 
     return($output);
@@ -686,7 +686,7 @@ function retidy_links(&$map, $ignore_tidied=FALSE)
 
 			if( ($ignore_tidied || $link->get_hint("_tidied")==1) && !isset($done[$route]) && isset( $routes[$route] ) ) {
 
-				if( sizeof($routes[$route]) == 1) {
+				if( count($routes[$route]) == 1) {
 					tidy_link($map,$link->name);
 					$done[$route] = 1;
 				} else {

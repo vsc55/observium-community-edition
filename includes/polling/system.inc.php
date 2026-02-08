@@ -22,7 +22,7 @@ include("includes/include-dir-mib.inc.php");
 $uptimes = ['use' => 'sysUpTime', 'sysUpTime' => $poll_device['sysUpTime']];
 
 // Find MIB-specific SNMP data via OID fetch: sysDescr, sysLocation, sysContact, sysName, sysUpTime
-$system_metatypes = ['sysDescr', 'sysLocation', 'sysContact', 'sysName', 'sysUpTime', 'reboot']; // 'snmpEngineID' ];
+$system_metatypes = [ 'sysDescr', 'sysLocation', 'sysContact', 'sysName', 'sysUpTime', 'boottime' ]; // 'snmpEngineID' ];
 poll_device_mib_metatypes($device, $system_metatypes, $poll_device);
 
 // Store original sysName for devices who store hardware in this Oid,
@@ -35,7 +35,7 @@ if (!isset($polled)) {
     $polled = time();
 }
 
-// Uptime data and reboot triggers
+// Uptime data and boottime triggers
 // NOTES. http://net-snmp.sourceforge.net/docs/FAQ.html#The_system_uptime__sysUpTime__returned_is_wrong_
 // According to it, sysUptime reports time since last snmpd restart, while 
 // hrSystemUptime reports time since last system reboot.
@@ -68,7 +68,7 @@ if (is_numeric($agent_data['uptime']) && $agent_data['uptime'] > 0) {
     // 3. Uptime from hrSystemUptime (only in snmp v2c/v3)
     // NOTE, about windows uptime,
     // sysUpTime resets when SNMP service restarted, but hrSystemUptime resets at 49.7 days (always),
-    // Now we use LanMgr-Mib-II-MIB::comStatStart.0 as reboot time instead
+    // Now we use LanMgr-Mib-II-MIB::comStatStart.0 as boottime time instead
     if ($device['os'] !== 'windows' &&
         $device['snmp_version'] !== 'v1' && is_device_mib($device, 'HOST-RESOURCES-MIB')) {
         // HOST-RESOURCES-MIB::hrSystemUptime.0 = Wrong Type (should be Timeticks): 1632295600

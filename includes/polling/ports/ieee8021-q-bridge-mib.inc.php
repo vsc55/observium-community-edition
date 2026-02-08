@@ -22,7 +22,7 @@ if (!$ports_modules[$port_module]) {
 $vlan_rows = [];
 
 // Base port ifIndex association
-$dot1d_baseports = snmpwalk_cache_oid($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB');
+$dot1d_baseports = snmp_cache_table($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB');
 $use_baseports   = safe_count($dot1d_baseports) > 0;
 
 $use_aruba = FALSE;
@@ -51,7 +51,7 @@ if (snmp_status() && $use_baseports) {
     }
     print_debug_vars($dot1q_ports);
 
-    foreach ($dot1q_ports as $domain_index => $vlans) {
+    foreach ($dot1q_ports as $vlans) {
         foreach ($vlans as $index => $entry) {
             $vlan_num = $entry['ieee8021QBridgePvid'];
             $ifIndex  = $dot1d_baseports[$index]['dot1dBasePortIfIndex'];
@@ -107,7 +107,7 @@ if (snmp_status() && $use_baseports) {
     }
     */
 
-    foreach ($dot1q_ports as $domain_index => $vlans) {
+    foreach ($dot1q_ports as $vlans) {
         foreach ($vlans as $index => $entry) {
             $index_array = explode('.', $index);
             $vlan_num    = end($index_array); // need explode for dot1qVlanCurrentUntaggedPorts.0

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -17,18 +16,7 @@
 //                 FAKE DEFINITIONS                    //
 /////////////////////////////////////////////////////////
 
-$GLOBALS['cache']['db_version'] = 999; // Set fake DB version
-setlocale(LC_ALL, 'C');
-putenv('LC_ALL=C');
-if (!defined('OBS_DEBUG')) { define('OBS_DEBUG', 0); }
-
-/*
-set_include_path(dirname(__FILE__) . "/../../includes/pear" . PATH_SEPARATOR . get_include_path());
-
-require("Net/IPv4.php");
-require("Net/IPv6.php");
-require("Console/Color2.php");
-*/
+global $config;
 
 unset($config['os_group']['default']); // Override default for tests
 
@@ -204,5 +192,8 @@ $config['os'][$os]['graphs'][]              = "device_mempool";
 $config['os'][$os]['sysObjectID'][]         = ".1.3.6.1.4.1.6321";
 $config['os'][$os]['mibs'][]                = "E7-Calix-MIB";
 $config['os'][$os]['model']                 = "calix"; // Per-HW hardware names
+
+// Group definitions to os
+process_os_group_def($config);
 
 // EOF

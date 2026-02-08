@@ -301,9 +301,6 @@ function session_encrypt_password($auth_password, $key) {
     if ($config['auth_mechanism'] === 'ldap' &&
         !($config['auth_ldap_bindanonymous'] || !safe_empty($config['auth_ldap_binddn'] . $config['auth_ldap_bindpw']))) {
         if (OBS_ENCRYPT) {
-            if (OBS_ENCRYPT_MODULE === 'mcrypt') {
-                $key .= get_unique_id();
-            }
             // For some admin LDAP functions required store encrypted password in session (userslist)
             session_set_var('user_encpass', encrypt($auth_password, $key));
         } else {
@@ -318,12 +315,9 @@ function session_encrypt_password($auth_password, $key) {
 function session_decrypt_password() {
     if (!isset($_SESSION['encrypt_required'])) {
         $key = session_unique_id();
-        if (OBS_ENCRYPT_MODULE === 'mcrypt') {
-            $key .= get_unique_id();
-        }
         return decrypt($_SESSION['user_encpass'], $key);
     }
-    // WARNING, requires mcrypt or sodium
+    // WARNING, requires sodium extension
     return base64_decode($_SESSION['user_encpass'], TRUE);
 }
 
@@ -474,11 +468,15 @@ function session_user_changed() {
  * @param string|array $var   A string representing the key or nested keys (e.g., 'key1->key2->key3') or an array of keys.
  * @param mixed        $value The value to set or NULL to unset the session variable.
  */
-function session_set_var($var, $value)
-{
+function session_set_var($var, $value) {
     // Extract nested keys if they exist
     $keys = is_array($var) ? $var : explode('->', $var);
 
+    if ($GLOBALS['config']['devel'] && (is_ajax() || is_graph() || is_api())) {
+        // Normally we should not set session in ajax/graphs?
+        $debug_value = is_null($value) ? 'NULL' : $value;
+        bdump("Session set var: [$keys] => [$debug_value]");
+    }
 
     // Start the session (unblock)
     @session_start();
@@ -504,8 +502,7 @@ function session_set_var($var, $value)
  *
  * @param string $var A string representing the key or nested keys (e.g., 'key1->key2->key3').
  */
-function session_unset_var($var)
-{
+function session_unset_var($var) {
     session_set_var($var, NULL);
 }
 

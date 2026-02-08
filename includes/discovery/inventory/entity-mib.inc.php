@@ -76,6 +76,7 @@ if (is_device_mib($device, 'ELTEX-MES-PHYSICAL-DESCRIPTION-MIB')) {
 } elseif (is_device_mib($device, 'HUAWEI-ENTITY-EXTENT-MIB') &&
           $vendor_oids = snmpwalk_cache_oid($device, "hwEntityOpticalVendorSn", $vendor_oids, 'HUAWEI-ENTITY-EXTENT-MIB', NULL, $snmp_flags)) {
     $vendor_mib  = 'HUAWEI-ENTITY-EXTENT-MIB';
+    $vendor_oids = snmpwalk_cache_oid($device, "hwEntityOpticalMode",       $vendor_oids, $vendor_mib, NULL, $snmp_flags);
     $vendor_oids = snmpwalk_cache_oid($device, "hwEntityOpticalType",       $vendor_oids, $vendor_mib, NULL, $snmp_flags);
     $vendor_oids = snmpwalk_cache_oid($device, "hwEntityOpticalVenderName", $vendor_oids, $vendor_mib, NULL, $snmp_flags);
     $vendor_oids = snmpwalk_cache_oid($device, "hwEntityOpticalVenderPn",   $vendor_oids, $vendor_mib, NULL, $snmp_flags);
@@ -85,6 +86,21 @@ if (is_device_mib($device, 'ELTEX-MES-PHYSICAL-DESCRIPTION-MIB')) {
 } elseif (is_device_mib($device, 'S5-CHASSIS-MIB')) {
     $vendor_mib  = 'S5-CHASSIS-MIB';
     $vendor_oids = snmpwalk_cache_oid($device, "s5ChasGbicInfoTable", $vendor_oids, $vendor_mib, NULL, $snmp_flags);
+} elseif (is_device_mib($device, 'JUNIPER-MIB')) {
+    $vendor_mib  = 'JUNIPER-MIB';
+    if (OBS_DEBUG > 1) {
+        // It’s very difficult to correlate entities across different MIBs - but it seems it’s not really necessary anyway.
+        $vendor_oids = snmpwalk_cache_oid($device, 'jnxContentsTable', $vendor_oids, 'JUNIPER-MIB:JUNIPER-CHASSIS-DEFINES-MIB');
+        $vendor_oids = snmpwalk_cache_oid($device, 'jnxFruTable',      $vendor_oids, 'JUNIPER-MIB:JUNIPER-CHASSIS-DEFINES-MIB');
+        $vendor_map  = [
+            'entPhysicalSerialNum'   => 'jnxContentsSerialNo',
+            'entPhysicalHardwareRev' => 'jnxContentsRevision',
+            'entPhysicalModelName'   => 'jnxContentsPartNo',
+        ];
+        $entity_array = array_merge_map($entity_array, $vendor_oids, $vendor_map);
+        print_debug_vars($entity_array);
+        print_debug_vars($vendor_oids);
+    }
 }
 
 foreach ($entity_array as $entPhysicalIndex => $entry) {
@@ -95,7 +111,7 @@ foreach ($entity_array as $entPhysicalIndex => $entry) {
             break;
         }
     }
-    if (isset($entAliasMappingIdentifier) && str_contains_array($entAliasMappingIdentifier, 'fIndex')) {
+    if (isset($entAliasMappingIdentifier) && str_contains($entAliasMappingIdentifier, 'fIndex')) {
         $ifIndex = explode('.', $entAliasMappingIdentifier)[1];
         $entry['ifIndex'] = $ifIndex;
     }
@@ -231,8 +247,9 @@ foreach ($entity_array as $entPhysicalIndex => $entry) {
         $entry['entPhysicalSerialNum']   = trim($vendor_oids[$entry['entPhysicalParentRelPos']]['swL2PortSfpInfoVendorSN']);
         $entry['entPhysicalMfgName']     = trim($vendor_oids[$entry['entPhysicalParentRelPos']]['swL2PortSfpInfoVendorName']);
         $entry['entPhysicalModelName']   = trim($vendor_oids[$entry['entPhysicalParentRelPos']]['swL2PortSfpInfoFiberType']);
-    } elseif ($vendor_mib === 'HUAWEI-ENTITY-EXTENT-MIB' && isset($vendor_oids[$entPhysicalIndex]) &&
+    } elseif ($vendor_mib === 'HUAWEI-ENTITY-EXTENT-MIB' && isset($vendor_oids[$entPhysicalIndex]['hwEntityOpticalType']) &&
               $vendor_oids[$entPhysicalIndex]['hwEntityOpticalType'] !== 'unknown') {
+        // && $vendor_oids[$entPhysicalIndex]['hwEntityOpticalMode'] !== 'notSupported') {
         //$entry = array_merge($entry, $vendor_oids[$entry['ifIndex']]);
         print_debug_vars($vendor_oids[$entPhysicalIndex]);
 
@@ -252,6 +269,28 @@ foreach ($entity_array as $entPhysicalIndex => $entry) {
         $entry['entPhysicalMfgName']   = trim($vendor_oids[$entPhysicalIndex]['hwEntityOpticalVenderName']);
         $entry['entPhysicalModelName'] = trim($vendor_oids[$entPhysicalIndex]['hwEntityOpticalVenderPn']);
         $entry['entPhysicalAlias']     = trim($vendor_oids[$entPhysicalIndex]['hwEntityOpticalTransType']);
+    } elseif ($vendor_mib === 'JUNIPER-MIB' && $entry['entPhysicalClass'] === 'port' && !isset($entry['ifIndex'])) {
+        // Associate port for JunOS EVO when entAliasMappingIdentifier empty or incorrect
+        $ifDescr = NULL;
+        if (preg_match('!@ /Chassis\[0\]/Fpc\[(\d+)\]/Pic\[(\d+)\]/Port\[(\d+)\]$!', $entry['entPhysicalDescr'], $m)) {
+            // SFP+-10G-USR @ /Chassis[0]/Fpc[0]/Pic[0]/Port[25]
+            // UNKNOWN @ /Chassis[0]/Fpc[0]/Pic[0]/Port[6]
+            $ifDescr = "et-{$m[1]}/{$m[2]}/{$m[3]}";
+        } elseif (preg_match('!@ (\d+/\d+/\d+)$!', $entry['entPhysicalDescr'], $m)) {
+            // QSFP56-DD-400G-ZR-M @ 0/0/9
+            // QSFP-100GBASE-SR4 @ 0/0/7
+            $ifDescr = "et-{$m[1]}";
+        }
+        if ($ifDescr) {
+            if ($port_id = get_port_id_by_ifDescr($device['device_id'], $ifDescr)) {
+                $port             = get_port_by_id_cache($port_id);
+                $entry['ifIndex'] = $port['ifIndex'];
+            } elseif ($port_id = get_port_id_by_ifDescr($device['device_id'], $ifDescr.":0")) {
+                // in rare cases (multi-lane) port named as 0/0/0:0
+                $port             = get_port_by_id_cache($port_id);
+                $entry['ifIndex'] = $port['ifIndex'];
+            }
+        }
     }
 
     if ($entry['entPhysicalDescr'] || $entry['entPhysicalName']) {

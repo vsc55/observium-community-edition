@@ -10,7 +10,7 @@
  *
  */
 
-// print_vars($permissions);
+// print_vars(mem_cache_get('user_permissions'));
 
 // Global write permissions required.
 if ($_SESSION['userlevel'] < 10) {
@@ -298,6 +298,9 @@ if (isset($vars['role_id'])) {
 
                 // Device permissions
                 print_device_permission_box('role', $role_perms, $role);
+
+                // Poller permissions
+                print_poller_permission_box('role', $role_perms, $role);
 
                 // Port permissions
                 print_port_permission_box('role', $role_perms, $role);

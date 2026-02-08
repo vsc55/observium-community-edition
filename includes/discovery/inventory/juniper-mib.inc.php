@@ -41,6 +41,7 @@ discover_inventory($device, $system_index, $inventory[$system_index], $mib);
 // Now fetch data for the rest of the hardware in the chassis
 $data = snmpwalk_cache_oid($device, 'jnxContentsTable', [], 'JUNIPER-MIB:JUNIPER-CHASSIS-DEFINES-MIB');
 $data = snmpwalk_cache_oid($device, 'jnxFruTable',   $data, 'JUNIPER-MIB:JUNIPER-CHASSIS-DEFINES-MIB');
+print_debug_vars($data);
 
 $global_relPos = 0;
 

@@ -1,30 +1,37 @@
--- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
-
--- $Id: fsissacl.mib,v 1.11 2015/03/04 10:30:07 siva Exp $
 
 ARICENT-ISS-ACL-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
    MODULE-IDENTITY, OBJECT-TYPE, 
-   Counter32, enterprises, IpAddress, Integer32, Unsigned32   
+   Counter32, enterprises, Integer32, Unsigned32   
    FROM SNMPv2-SMI 
-   InetAddressType, InetAddress, InetAddressPrefixLength,
-   InetPortNumber
+   InetAddressType, InetAddress, InetAddressPrefixLength
    FROM INET-ADDRESS-MIB
-   RowStatus, TEXTUAL-CONVENTION, MacAddress, TruthValue
+   RowStatus, TEXTUAL-CONVENTION, MacAddress, DisplayString, TruthValue 
    FROM SNMPv2-TC; 
 
    issAcl MODULE-IDENTITY 
-      LAST-UPDATED "201209050000Z" 
+      LAST-UPDATED "202309180000Z" -- September 18, 2023
       ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
-      CONTACT-INFO "support@aricent.com" 
+      CONTACT-INFO 
 
-         DESCRIPTION 
-             "Proprietary MIB definition for Access Control Feature" 
-         REVISION "201209050000Z"
+        "ARICENT COMMUNICATIONS SOFTWARE
+         3460 Hillview Avenue,
+         Palo Alto, CA 94304-1388, USA,
+         Phone : +1-650-391-1088
+         E-mail:support@aricent.com"
 
-      DESCRIPTION 
-             "Proprietary MIB definition for Access Control Feature" 
+      DESCRIPTION "The MIB for AricentISSAcessControl." 
+
+      REVISION    "202309180000Z" -- September 18, 2023
+      DESCRIPTION "Defined issAclTrcFlag for ACL trace support"
+
+      REVISION    "202208310000Z" -- August 31, 2022
+      DESCRIPTION "Added issAclL3FilterSynBit to IssAclL3FilterEntry"
+
+      REVISION    "200702150000Z"
+      DESCRIPTION "The enterprise ID 29601 is assigned to ARICENT COMMUNICATIONS SOFTWARE."
+
    ::= { enterprises  aricent-communication-holding-ltd(29601) iss(2) 21 }
 
 
@@ -47,7 +54,7 @@ IndexInteger ::= TEXTUAL-CONVENTION
    DISPLAY-HINT "d"
    STATUS   current
    DESCRIPTION
-        "An integer which may be used as a table index. If 0 then it is invalid"
+        "An integer which may be used as a table index. If 0 then it is invalid."
    SYNTAX   Unsigned32 (1..65535)
 
 
@@ -80,13 +87,28 @@ IndexIntegerNextFree ::= TEXTUAL-CONVENTION
        relevant table for which the object is providing this
        functionality."
     SYNTAX   Unsigned32 (0..4294967295)
-iss    OBJECT IDENTIFIER ::= { enterprises 2076 81 }
 
 EnabledStatus ::= TEXTUAL-CONVENTION
     STATUS      current
     DESCRIPTION
         "A simple status value for the object."
     SYNTAX      INTEGER { enabled(1), disabled(2) }
+
+ReservedFrameType ::= TEXTUAL-CONVENTION
+    STATUS current
+    DESCRIPTION
+    "IfDirection specifies a direction of data travel on an
+    transmission on the interface."
+    SYNTAX  INTEGER {
+                bpdu         (1),
+                lacpdu-udld  (2),
+                eap          (3),
+                lldpdu       (4),
+                other        (5),
+                all          (6)
+    }
+
+--iss    OBJECT IDENTIFIER ::= { enterprises 2076 81 }
 
 -- ----------------------------------------------------------------- -- 
 -- groups in the MIB  
@@ -98,7 +120,8 @@ EnabledStatus ::= TEXTUAL-CONVENTION
       issAclUserDefinedFilter     OBJECT IDENTIFIER ::= { issAcl 4 }
       issRedirectInterfaceGrp     OBJECT IDENTIFIER ::= { issAcl 5 }
       issRedirectIdNextFree       OBJECT IDENTIFIER ::= { issAcl 6 }
-      issAclTrafficControl        OBJECT IDENTIFIER ::= { issAcl 7 }
+      issReservedFrameGrp         OBJECT IDENTIFIER ::= { issAcl 7 }
+      issAclTrc                   OBJECT IDENTIFIER ::= { issAcl 8 }
 
 -- Rate Control Group --------------------------------------------- --
 
@@ -107,9 +130,8 @@ issAclRateCtrlTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "A table to control the rate limiting parameters 
-       either for the entire switch or for each physical and port-channel
-       interface in the switch."
+      "This object specifies a table to control the rate limiting parameters 
+       either for the entire switch or for each interface in the switch."
    ::= { issAclRateControl 1 }
 
 issAclRateCtrlEntry OBJECT-TYPE 
@@ -117,7 +139,7 @@ issAclRateCtrlEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "An entry appears in this table for each physical and port-channel
+      "This object specifies an entry which appears in this table for each physical
        interface in the switch."
    INDEX { issAclRateCtrlIndex }
    ::= { issAclRateCtrlTable 1 }
@@ -143,7 +165,7 @@ issAclRateCtrlIndex OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "The interface index for which the configuration in this 
+      "This object specifies the interface index for which the configuration in this 
        entry applies."
    ::= { issAclRateCtrlEntry 1 }
     
@@ -152,7 +174,7 @@ issAclRateCtrlDLFLimitValue OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Allows to configure the limiting value for the maximum number
+      "This object is used to configure the limiting value for the maximum number
        of dlf packets that can be transmitted per second over this interface.
        Setting this object to the value zero disables rate limiting for 
        Destination lookup failure packets on this interface. The value that
@@ -166,7 +188,7 @@ issAclRateCtrlBCASTLimitValue OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Allows to configure the limiting value for the maximum number
+      "This object is used to configure the limiting value for the maximum number
        of broadcast packets that can be transmitted per second over this 
        interface. Setting this object to the value zero disables rate 
        limiting for Broadcast packets on this interface. The value that
@@ -181,7 +203,7 @@ issAclRateCtrlMCASTLimitValue OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Allows to configure the limiting value for the maximum number
+      "This object is used to configure the limiting value for the maximum number
        of multicast packets that can be transmitted per second over this 
        interface. Setting this object to the value zero disables rate 
        limiting for Multicast packets on this interface. The value that
@@ -195,7 +217,7 @@ issAclRateCtrlPortRateLimit OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "Configures interface Rate Limit (Packet that can be transferred
+      "This object is used to configure interface Rate Limit (Packet that can be transferred
       on a port at a particular second).
 
       This object's value will take effect on the interface speed. Based
@@ -210,7 +232,7 @@ issAclRateCtrlPortBurstSize OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "Configures interface Burst Pkt Rate. (Packet Burst that can be
+      "this object is used to configure interface Burst Pkt Rate. (Packet Burst that can be
        transferred on a port at a particular second)
 
       This object's value will take effect on the interface speed. Based
@@ -233,7 +255,7 @@ issAclL2FilterTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-       "A table to configure L2 filter rules in the system."
+       "This object specifies the table which is used to configure L2 filter rules in the system."
    ::= { issAclL2Filter 1 }
 
 issAclL2FilterEntry OBJECT-TYPE 
@@ -241,8 +263,7 @@ issAclL2FilterEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-       "Each entry in this table is a L2 filter rule.
-   
+       "This object specifies that each entry in this table is a L2 filter rule.
        Index to the table is the L2 filter number."
    INDEX { issAclL2FilterNo}
    ::= { issAclL2FilterTable 1 }
@@ -284,17 +305,17 @@ IssAclL2FilterEntry ::=
       issAclL2NextFilterNo 
          Integer32, 
       issAclL2NextFilterType 
-         INTEGER,
-      issAclL2FilterCreationMode
-         INTEGER,
-      issAclL2FilterInPortChannelList
-         PortList,
-      issAclL2FilterOutPortChannelList
-         PortList,
-      issAclL2FilterStatsEnabledStatus
-         EnabledStatus,
-      issAclClearL2FilterStats
-         TruthValue
+          INTEGER,
+      issAclL2FilterCfiDeiBit
+          INTEGER,
+      issAclL2FilterDP
+          INTEGER,
+      issAclL2FilterRestore
+          DisplayString,
+      issAclL2FilterDstMacAddrMask
+         MacAddress, 
+      issAclL2FilterSrcMacAddrMask
+         MacAddress 
   }
 
 issAclL2FilterNo OBJECT-TYPE 
@@ -302,7 +323,7 @@ issAclL2FilterNo OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-      "L2 Filter rule number."
+      "This object specifies the L2 Filter rule number."
    ::= { issAclL2FilterEntry 1 }
     
 issAclL2FilterPriority OBJECT-TYPE 
@@ -310,7 +331,7 @@ issAclL2FilterPriority OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The priority of the L2 filter can be used to decide which filter rule
+      "This object specifies the priority of the L2 filter can be used to decide which filter rule
        is applicable when 
           --> the packet matches with more than one filter rules
           --> All the filter rules result in 'allow'ing the packet
@@ -326,7 +347,7 @@ issAclL2FilterEtherType OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The value in the Type/Len field of a frame that will
+      "This object specifies the value in the Type/Len field of a frame that will
       be matched to trigger this filter. The default value of
       this object is '0'. When this object is SET with the default
       value, frames are not matched for the value in the Type/Len
@@ -340,7 +361,7 @@ issAclL2FilterProtocolType OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the non IP protocol type to be filtered.
+      "This object specifies the non IP protocol type to be filtered.
        aarp | amber | dec-spanning | decnet-iv | 
        diagnostic | dsm |etype-6000 | etype-8042 | 
        lat | lavc-sca | mop-console | mop-dump | 
@@ -356,7 +377,7 @@ issAclL2FilterDstMacAddr OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Destination MAC address to be matched with the packet. By Default, the
+      "This object specifies that the Destination MAC address to be matched with the packet. By Default, the
        Destination Mac Address will be zero which means dont care condition ie)
        any Dst Mac Address ."
    ::= { issAclL2FilterEntry 5 }
@@ -366,7 +387,7 @@ issAclL2FilterSrcMacAddr OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Source MAC address to be matched with the packet. By Default, the Source 
+      "This object specifies that the Source MAC address to be matched with the packet. By Default, the Source 
        Mac Address will be zero which means dont care condition ie) any Src Mac 
        address"
    ::= { issAclL2FilterEntry 6 }
@@ -377,7 +398,7 @@ issAclL2FilterVlanId OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Vlan Id to be filtered. In case of Provider bridges, This Vlan Id will
+      "This object specifies that the Vlan Id to be filtered. In case of Provider bridges, This Vlan Id will
       be treated as customer Vlan Id. 
       A value of '0' means, this object is unused. Configuring this value is not
       allowed."
@@ -390,10 +411,9 @@ issAclL2FilterInPortList OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the complete set of ports over which this filter is applied
+      "This object specifies the complete set of ports over which this filter is applied
        for packets ingress at ports in this list.
-       If the In port list is '0', the filter rule is applicable for  the 
-       incoming packets on all ports.
+       If the In port list is '0', the filter rule will not be installed in hardware.
        Even though the issAclL2FilterInPortList is configured, It is applicable only
        if issAclL2FilterDirection is configured as 'in'.
        By default inport list is maintained as '0'." 
@@ -403,24 +423,18 @@ issAclL2FilterAction OBJECT-TYPE
    SYNTAX      INTEGER {
                   allow (1),
                   drop  (2),
-                  redirect (3),
-                  switchandcopytocpu (4),
-                  dropandcopytocpu (5)
+                  redirect (3)
                }
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the action to be taken on the packet if the filter
+      "This object specifies the action to be taken on the packet if the filter
       rule matches.
       If the action is 'allow', the packet will be forwarded according
       to the forwarding rules.
       If the action is 'drop', the packet will be discarded.
       If the action is 'redirect', the packet will be switched according
-      to the redirect rules.
-      If the action is 'switch-and-copy-to-cpu', packet is switched and a copy of the
-      packet is sent to the CPU.
-      If the action is 'drop-and-copy-to-cpu', packet is not switched but only 
-      sent to the CPU."
+      to the redirect rules."
    DEFVAL  { allow } 
    ::= { issAclL2FilterEntry 9 }
 
@@ -429,7 +443,7 @@ issAclL2FilterMatchCount OBJECT-TYPE
    MAX-ACCESS  read-only 
    STATUS      current 
    DESCRIPTION 
-      "Number of times this filter is matched."
+      "This object specifies the number of times this filter is matched."
 
    ::= { issAclL2FilterEntry 10 }
 
@@ -438,14 +452,12 @@ issAclL2FilterStatus OBJECT-TYPE
    MAX-ACCESS  read-create 
    STATUS      current 
    DESCRIPTION 
-        "This object indicates the status of this entry. An entry is
+        "This object specifies the status of this entry. An entry is
         created in this table when this object is SET to 'createAndWait'.
         The entry in this table is used when the status of this object 
         is SET 'active'. The entry in this table is not used when this 
         object is SET 'notInService'. An entry created in this table is
-        be deleted when this object is SET 'destroy'. The entry status will 
-        be made 'active' only if either of In/Out PortList or In/Out 
-        PortChannelList are configured in case of l2Filter."
+        be deleted when this object is SET 'destroy'."
    ::= { issAclL2FilterEntry 11 }
 
 issAclL2FilterOutPortList OBJECT-TYPE 
@@ -453,7 +465,7 @@ issAclL2FilterOutPortList OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the complete set of ports over which this filter is applied
+      "This object specifies the complete set of ports over which this filter is applied
        for packets egress at Ports in this list.
       If the Out port list is '0', the filter rule is applicable for  the 
       outgoing packets on all ports.
@@ -470,7 +482,7 @@ issAclL2FilterDirection OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the direction of this filter to be applied. By Default the
+      "This object specifies the direction of this filter to be applied. By Default the
       filter will be applied on ingress direction.
       When the direction of this filter is 'in', It is applied on specified
       ports of the issAclL2FilterInPortList.
@@ -484,23 +496,27 @@ issAclL2FilterSubAction OBJECT-TYPE
                   none         (0),
                   modifyVlan   (1),
                   nestedVlan   (2),
-                  modifyCVlan  (3)
+                  stripOuterHdr (3),
+                  modifyDP (4),
+                  modifyTC (5),
+                  modifyCfiDei (6)
                }
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-       "The action to be taken on the incoming packet is detailed below -
+       "This object specifies that the action to be taken on the incoming packet is detailed below -
         none       - no action
         modifyVlan - Traffic matching ACL rule will have VLAN ID
                     classified/modified to value specified by this object.
         nestedVlan - Traffic matching ACL rule will have one additional VLAN Tag
                     added to the packet ( on top of existing VLAN tags, if any).
-        modifyCVlan - Traffic matching ACL rule will have Customer VLAN ID
-                    classified/modified to value specified by this object.
         Note - VLANID added is specified by mib object issAclL2FilterSubActionId
         strip-etherhdr-apply-nextfilter - Traffic matching ACL rule  will have 
         outer ethernet header stripped, Ex This can be used for stripping the 
-        outer ethernet header for MPLS packet."
+        outer ethernet header for MPLS packet.
+        modifyDP - Drop precedence of the traffic is modified
+        modifyCfiDei - CFI or DEI bit of the packet is modifed
+        modifyTC - TC of the traffic is modified."
    DEFVAL  { none } 
    ::= { issAclL2FilterEntry 14 }
 
@@ -509,8 +525,10 @@ issAclL2FilterSubActionId OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Id to be used if the object as specified by  issAclL2FilterSubAction is either modifyvlan or nestedvlan only.
-       Non-Zero value need to be specify when issAclL2FilterSubAction is modify or Nested        Vlan. Value of Zero need to be specify when issAclL2FilterSubAction is none" 
+      "This object specifies that the Id to be used if the object as specified by 
+	  issAclL2FilterSubAction is either modifyvlan or nestedvlan only.
+      Non-Zero value need to be specify when issAclL2FilterSubAction is modify or Nested Vlan.
+	  Value of Zero need to be specify when issAclL2FilterSubAction is none." 
    DEFVAL  { 0 } 
    ::= { issAclL2FilterEntry 15 }
 
@@ -520,7 +538,7 @@ issAclL2FilterRedirectId OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "Specifies the redirect index associated with L2Filter entry."
+      "This object specifies the redirect index associated with L2Filter entry."
    ::= { issAclL2FilterEntry 16 }
 
 issAclL2NextFilterNo OBJECT-TYPE 
@@ -528,7 +546,7 @@ issAclL2NextFilterNo OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Next Filter rule number to be matched for traffic matching 
+      "This object specifies that the Next Filter rule number to be matched for traffic matching 
       the current ACL rule "
    ::= { issAclL2FilterEntry 17 }
 
@@ -541,75 +559,64 @@ issAclL2NextFilterType OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
- 	" This object specifies the type of the next access-control list. The type could take the value 'l2filter' for MAC-based
-	  ACLs and 'l3filter' for IP-based ACLs. It takes the value 'userdefined' for filtering based on user-defined 
-          filters."
+ 	"This object specifies the type of the next access-control list. 
+	The type could take the value 'l2filter' for MAC-based ACLs and 'l3filter' for IP-based ACLs. 
+	It takes the value 'userdefined' for filtering based on user-defined filters."
    ::= { issAclL2FilterEntry 18 }
-issAclL2FilterCreationMode OBJECT-TYPE
-   SYNTAX      INTEGER {
-                   internal (1),
-                   external (2)
-               }
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "Specifies the filter created mode.
-       internal: Indicates filter is created by the system internally.
-       external: Indicates filter is created externally by user configuration.
-       Filter table with the mode 'internal' is readonly, and cannot be deleted 
-       by setting 'destroy' to table row status."
-   DEFVAL  { external }
-   ::= { issAclL2FilterEntry 19 }
 
-issAclL2FilterInPortChannelList OBJECT-TYPE
-   SYNTAX      PortList
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the complete set of port channel interfaces over which
-       the filter is applied for packets arriving at the ports in this list.
+issAclL2FilterCfiDeiBit OBJECT-TYPE
+    SYNTAX      INTEGER {
+            set (1),
+            reset (2)
+    }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "This object specifies the CfiDei bit value in the c-vlan tag or s-vlan tag of
+    the packet to be applied in the filter."
+    DEFVAL  { set }
+    ::= { issAclL2FilterEntry 19}
 
-       By default InPortChannel list is '0'."
-   ::= { issAclL2FilterEntry 20 }
+issAclL2FilterDP OBJECT-TYPE
+    SYNTAX      INTEGER {
+              green (1),
+              yellow (2),
+              red (3)
+    }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "This object specifies the drop precedence level to be applied in the filter."
+    DEFVAL  { green }
+    ::= { issAclL2FilterEntry 20 }
 
-
-issAclL2FilterOutPortChannelList OBJECT-TYPE
-   SYNTAX      PortList
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the complete set of portchannel interfaces over which the filter is applied
-       for packets egress at ports in this list.
-       This configuration is applicable only if issAclL2FilterDirection is configured as 'out'.
-       By default the OutPortChannel list is '0'."
-   ::= { issAclL2FilterEntry 21 }
-
-issAclL2FilterStatsEnabledStatus OBJECT-TYPE
-   SYNTAX      EnabledStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the status of L2 filter statistics collection.
-       When set as enabled, the number of hits for the specific
-       filter entry is collected and can be verified using the
-       issAclL2FilterMatchCount object.
-
-       When set as disabled, the number of hits for the specific filter
-       entry is not collected."
-   DEFVAL   { disabled }
+issAclL2FilterRestore                   OBJECT-TYPE
+        SYNTAX                          DisplayString
+        MAX-ACCESS                      read-write
+        STATUS                          current
+        DESCRIPTION
+                " This  object stores the order of PCL index while storing
+           the configurations."
+    ::= { issAclL2FilterEntry 21 }
+   
+issAclL2FilterDstMacAddrMask OBJECT-TYPE 
+   SYNTAX      MacAddress
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "This object specifies that the mask used to match the Destination MAC address with the packet. By Default, the Destination 
+       Mac Address Mask will be ff:ff:ff:ff:ff:ff  which means macth exactly the Src Mac specified
+       address"
    ::= { issAclL2FilterEntry 22 }
 
-issAclClearL2FilterStats OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object clears the hit count of the specific filter.
-
-       When this object is set as 'true'(1), the hit count for the filter is
-       cleared and the object value is reset to 'false'(2). The get routine for
-       this object always returns 'false'(2)."
-   DEFVAL   { false }
+issAclL2FilterSrcMacAddrMask OBJECT-TYPE 
+   SYNTAX      MacAddress
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "This object specifies that the mask used to match the Source MAC address with the packet. By Default, the Source 
+       Mac Address Mask will be ff:ff:ff:ff:ff:ff  which means macth exactly the Src Mac specified
+       address"
    ::= { issAclL2FilterEntry 23 }
 
 -- ------------------------------------------------------------------ 
@@ -620,8 +627,7 @@ issAclL3FilterTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-       " A table to configure L3 filter rules in the system.
-       "
+       "This object specifies a table to configure L3 filter rules in the system."
    ::= { issAclL3Filter 1 }
 
 issAclL3FilterEntry OBJECT-TYPE 
@@ -629,7 +635,7 @@ issAclL3FilterEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-       " Each entry in this table is a L3 filter rule.
+       "This object specifies that each entry in this table is a L3 filter rule.
          Index to the table is L3 filter number. "
    INDEX { issAclL3FilterNo}
    ::= { issAclL3FilterTable 1 }
@@ -692,16 +698,10 @@ IssAclL3FilterEntry ::=
          Integer32,
       issAclL3FilterRedirectId
          Integer32,
-      issAclL3FilterCreationMode
-         INTEGER,
-      issAclL3FilterInPortChannelList
-         PortList,
-      issAclL3FilterOutPortChannelList
-         PortList,
-      issAclL3FilterStatsEnabledStatus
-         EnabledStatus,
-      issAclClearL3FilterStats
-         TruthValue
+      issAclL3FilterRestore
+         DisplayString,
+      issAclL3FilterSynBit
+         INTEGER
 
   }
 
@@ -718,7 +718,7 @@ issAclL3FilterPriority OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The priority of the filter can be used to decide which filter rule
+      "This object specifies that the priority of the filter can be used to decide which filter rule
        is applicable when 
           --> the packet matches with more than one filter rules
           --> All the filter rules result in 'allow'ing the packet
@@ -733,7 +733,7 @@ issAclL3FilterProtocol OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      " The type of protocol to be checked against the packet. The
+      "This object specifies the type of protocol to be checked against the packet. The
       default value is 255. If the value is 255, it means that the
       protocol type can be anything and it will not be checked to 
       decide the action. "
@@ -741,11 +741,11 @@ issAclL3FilterProtocol OBJECT-TYPE
    ::= { issAclL3FilterEntry 3 }
    
 issAclL3FilterMessageType OBJECT-TYPE 
-   SYNTAX      Integer32 (0..65535)
+   SYNTAX      Integer32 (0..255)
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-     " The message type to be checked against the packet. If the
+     "This object specifies the message type to be checked against the packet. If the
       message type matches with the packet, then the packet will be
       dropped / allowed based on the action set in issAclL3FilterAction.
       The default value is 255. It means that message type is not
@@ -767,17 +767,16 @@ issAclL3FilterMessageType OBJECT-TYPE
            informationReply(16),
            addressMaskRequest(17),
            addressMaskReply (18),
-           noICMPType(255)
-      "
+           noICMPType(255)."
    DEFVAL  { 255 }
    ::= { issAclL3FilterEntry 4 }
 
 issAclL3FilterMessageCode OBJECT-TYPE 
-   SYNTAX      Integer32 (0..65535)
+   SYNTAX      Integer32 (0..255)
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      " The message code to be checked against the packet. If the
+      "This object specifies the message code to be checked against the packet. If the
       packet matches with the message code, then the packet will
       be dropped / allowed based on the action set in issAclL3FilterAction.
       The default value is 255. It means that message code is not 
@@ -808,9 +807,8 @@ issAclL3FilteAddrType OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-       "The type of IP address used by this classifier entry.  While
+       "This object specifies the type of IP address used by this classifier entry. While
        other types of addresses are defined in the InetAddressType
-
        textual convention, and DNS names, a classifier can only look at
        packets on the wire. Therefore, this object is limited to IPv4
        and IPv6 addresses."
@@ -822,7 +820,7 @@ issAclL3FilterDstIpAddr OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-       "The IP address to match against the packet's destination IP
+       "This object specifies the IP address to match against the packet's destination IP
        address. This may not be a DNS name, but may be an IPv4 or IPv6
        prefix.  issAclL3FilterDstIpAddrPrefixLength indicates the
        number of bits that are relevant."
@@ -833,7 +831,7 @@ issAclL3FilterSrcIpAddr OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-       "The IP address to match against the packet's source IP address.
+       "This object specifies the IP address to match against the packet's source IP address.
        This may not be a DNS name, but may be an IPv4 or IPv6 prefix.
        issAclL3FilterSrcIpAddrPrefixLength indicates the number of
        bits that are relevant."
@@ -846,7 +844,7 @@ issAclL3FilterDstIpAddrPrefixLength OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-       "The length of the CIDR Prefix carried in
+       "This object specifies the length of the CIDR Prefix carried in
        issAclL3FilterDstIpAddr. In IPv4 addresses, a length of 0
        indicates a match of any address; a length of 32 indicates a
        match of a single host address, and a length between 0 and 32
@@ -862,8 +860,7 @@ issAclL3FilterSrcIpAddrPrefixLength OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-
-       "The length of the CIDR Prefix carried in
+       "This object specifies the length of the CIDR Prefix carried in
        issAclL3FilterSrcIpAddr. In IPv4 addresses, a length of 0
        indicates a match of any address; a length of 32 indicates a
        match of a single host address, and a length between 0 and 32
@@ -877,7 +874,7 @@ issAclL3FilterMinDstProtPort OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "The minimum port in the destination port range. Please note 
+      "This object specifies the minimum port in the destination port range. Please note 
        these ports are the TCP / UDP ports."
    DEFVAL   { 0 }
    ::= { issAclL3FilterEntry 11 }
@@ -887,7 +884,7 @@ issAclL3FilterMaxDstProtPort OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "The maximum port in the destination port range. Please note 
+      "This object specifies the maximum port in the destination port range. Please note 
        these ports are the TCP / UDP ports."
    DEFVAL   { 65535 }
    ::= { issAclL3FilterEntry 12 }
@@ -897,7 +894,7 @@ issAclL3FilterMinSrcProtPort OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "The minimum port in the source port range. Please note 
+      "This object specifies the minimum port in the source port range. Please note 
        these ports are the TCP / UDP ports."
    DEFVAL   { 0 }
    ::= { issAclL3FilterEntry 13 }
@@ -907,7 +904,7 @@ issAclL3FilterMaxSrcProtPort OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "The maximum port in the source port range. Please note 
+      "This object specifies the maximum port in the source port range. Please note 
        these ports are the TCP / UDP ports."
    DEFVAL   { 65535 }
    ::= { issAclL3FilterEntry 14 }
@@ -917,11 +914,9 @@ issAclL3FilterInPortList OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the complete set of ports over which if the packet arrives
+      "This object specifies the complete set of ports over which if the packet arrives
       this filter rule will be applicable.
-      If the incoming port list is '0', the filter rule is applicable for all the 
-      incoming ports.
-
+       If the In port list is '0', the filter rule will not be installed in hardware.
       By default inport list is maintained as '0'." 
    ::= { issAclL3FilterEntry 15 }
 
@@ -930,7 +925,7 @@ issAclL3FilterOutPortList OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the complete set of ports over which if the packet goes out, 
+      "This object specifies the complete set of ports over which if the packet goes out, 
       this filter rule will be applicable.
       If the outgoing port list is '0', the filter rule is applicable for all the 
       outgoing packets in all ports.
@@ -946,9 +941,8 @@ issAclL3FilterAckBit		OBJECT-TYPE
 	MAX-ACCESS	read-create
 	STATUS		current
 	DESCRIPTION
-		" The TCP ACK bit to be checked against the packet. The default 
-		value is 'any'(3). It means that ACK bit will not be checked 
-            	to decide the action. "
+		"This object specifies the TCP ACK bit to be checked against the packet. The default 
+		value is 'any'(3). It means that ACK bit will not be checked to decide the action."
 	DEFVAL	{ any }
 	::= { issAclL3FilterEntry 17 }
 
@@ -961,7 +955,7 @@ issAclL3FilterRstBit	 OBJECT-TYPE
 	MAX-ACCESS	read-create
 	STATUS		current
 	DESCRIPTION
-		" The TCP RST bit to be checked against the packet. The default 
+		"This object specifies the TCP RST bit to be checked against the packet. The default 
 		value is 'any'(3). It means that RST bit will not be checked to 
 		decide the action. "
 	DEFVAL	{ any }
@@ -972,7 +966,7 @@ issAclL3FilterTos		OBJECT-TYPE
 	MAX-ACCESS	read-create
 	STATUS		current
 	DESCRIPTION
-		" The IP TOS bit to be checked against the packet. This is a 
+		"This object specifies that the IP TOS bit to be checked against the packet. This is a 
 		single byte integer of which the last three bits (least 
       significant bits) indicate Delay, Throughput and Reliability 
       i.e 'uuuuudtr', u-unused, d-delay, t-throughput, r-reliability.
@@ -986,7 +980,7 @@ issAclL3FilterDscp		OBJECT-TYPE
 	MAX-ACCESS	read-create
 	STATUS		current
 	DESCRIPTION
-		" The IP Dscp value to be checked against the packet. 
+		"This object specifies that the IP Dscp value to be checked against the packet. 
         A value of '-1' means, the Dscp Field becomes dont care."
 	DEFVAL	{ -1 }
 	::= { issAclL3FilterEntry 20 }
@@ -999,7 +993,7 @@ issAclL3FilterDirection OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the direction of this filter to be applied. By Default the
+      "This object specifies the direction of this filter to be applied. By Default the
       filter will be applied on ingress direction.
       When the direction of this filter is 'in', It is applied on specified
       ports of the issAclL3FilterInPortList.
@@ -1012,14 +1006,12 @@ issAclL3FilterAction OBJECT-TYPE
    SYNTAX      INTEGER {
                   allow (1),
                   drop  (2),
-                  redirect (3),
-                  switchandcopytocpu (4),
-                  dropandcopytocpu (5)
+                  redirect (3)
                }
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the action to be taken on the packet if the filter
+      "This object specifies the action to be taken on the packet if the filter
       rule matches.
       
       If the action is 'allow', the packet will be sent to the
@@ -1028,10 +1020,9 @@ issAclL3FilterAction OBJECT-TYPE
       based on further processing on the packet.
 
       If the action is 'drop', the packet will be discarded.
-      If the action is 'switch-and-copy-to-cpu', packet is switched and a copy of
-      the packet is sent to the CPU.
-      If the action is 'drop-and-copy-to-cpu', packet is not switched but only 
-      sent to the CPU."
+
+      If the action is 'redirect', the packet will be switched
+      based on the redirect rule."
 
    DEFVAL  { allow } 
    ::= { issAclL3FilterEntry 22 }
@@ -1041,7 +1032,7 @@ issAclL3FilterMatchCount OBJECT-TYPE
    MAX-ACCESS  read-only 
    STATUS      current 
    DESCRIPTION 
-      "Number of times this filter is matched."
+      "This object specifies the number of times this filter is matched."
 
    ::= { issAclL3FilterEntry 23 }
    
@@ -1050,7 +1041,7 @@ issAclL3FilterFlowId OBJECT-TYPE
     MAX-ACCESS     read-create
     STATUS         current
     DESCRIPTION
-       "The flow identifier in an IPv6 header."
+       "This object specifies the flow identifier in an IPv6 header."
     ::= { issAclL3FilterEntry 24 }
 
 issAclL3FilterStatus OBJECT-TYPE 
@@ -1058,34 +1049,29 @@ issAclL3FilterStatus OBJECT-TYPE
    MAX-ACCESS  read-create 
    STATUS      current 
    DESCRIPTION 
-        "This object indicates the status of this entry. An entry is
+        "This object specifies the status of this entry. An entry is
         created in this table when this object is SET to 'createAndWait'.
         The entry in this table is used when the status of this object 
         is SET 'active'. The entry in this table is not used when this 
         object is SET 'notInService'. An entry created in this table is
-        be deleted when this object is SET 'destroy'. The entry status will be made 
-        'active' only if either of In/Out PortList or In/Out PortChannelList are 
-        configured in case of l3Filter."
+        be deleted when this object is SET 'destroy'."
    ::= { issAclL3FilterEntry 25 }
 issAclL3FilterSubAction OBJECT-TYPE 
    SYNTAX      INTEGER {
                   none         (0),
                   modifyVlan   (1),
-                  nestedVlan   (2),
-                  modifyCVlan  (3)
+                  nestedVlan   (2)
                }
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The  action to be taken on the incoming packet on the incoming packet
+      "This object specifies the action that is  to be taken on the incoming packet
        value specified by this object is detailed below -
         none -  no action
         modifyVlan - Traffic matching ACL rule will have VLAN ID classified/modified 
                      to value specified by this object.
         nestedVlan -  Traffic matching ACL rule will have one additional VLAN Tag
                       added to the packet ( on top of existing VLAN tags, if any).
-        modifyCVlan - Traffic matching ACL rule will have Customer VLAN ID
-                      classified/modified to value specified by this object.
         Note - VLANID added is specified by mib object issAclL3FilterSubActionId." 
    DEFVAL  { none } 
    ::= { issAclL3FilterEntry 26 }
@@ -1095,8 +1081,10 @@ issAclL3FilterSubActionId OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Id to be used if the object as specified by  issAcl3FilterSubAction is either modifyvlan or nestedvlan only.
-       Non-Zero value need to be specify when issAclL3FilterSubAction is modify or Nested        Vlan. Value of Zero need to be specify when issAclL3FilterSubAction is none" 
+      "This object specifies the Id to be used if the object as specified by  
+	  issAcl3FilterSubAction is either modifyvlan or nestedvlan only.
+      Non-Zero value need to be specify when issAclL3FilterSubAction is modify or Nested Vlan.
+	  Value of Zero need to be specify when issAclL3FilterSubAction is none." 
  
    DEFVAL  { 0 } 
    ::= { issAclL3FilterEntry 27 }
@@ -1106,74 +1094,33 @@ issAclL3FilterRedirectId OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "Specifies the redirect index associated with L3Filter entry."
+      "This object specifies the redirect index associated with L3Filter entry."
    ::= { issAclL3FilterEntry 28 }
 
-issAclL3FilterCreationMode OBJECT-TYPE
-   SYNTAX      INTEGER {
-                   internal (1),
-                   external (2)
-               }
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "Specifies the filter created mode.
-       internal: Indicates filter is created by the system internally.
-       external: Indicates filter is created externally by user configuration.
-       Filter table with the mode 'internal' is readonly, and cannot be deleted 
-       by setting 'destroy' to table row status."
-   DEFVAL  { external }
+issAclL3FilterRestore                   OBJECT-TYPE
+        SYNTAX                          DisplayString
+        MAX-ACCESS                      read-write
+        STATUS                          current
+        DESCRIPTION
+           "This object is used to store the order of PCL index while storing
+		   the configurations."
    ::= { issAclL3FilterEntry 29 }
 
-issAclL3FilterInPortChannelList OBJECT-TYPE
-   SYNTAX      PortList
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the complete set of port channel interfaces over which
-       the filter is applied for packets arriving at the ports in this list.
+issAclL3FilterSynBit	 OBJECT-TYPE
+	SYNTAX	INTEGER	{
+						set(1),
+						notSet(2),
+				     	any(3)	
+					}
+	MAX-ACCESS	read-create
+	STATUS		current
+	DESCRIPTION
+		"This object specifies the SYN RST bit to be checked against the packet. The default 
+		value is 'any'(3). It means that SYN bit will not be checked to 
+		decide the action. "
+	DEFVAL	{ any }
+	::= { issAclL3FilterEntry 30 }
 
-       By default InPortChannel list is '0'."
-   ::= { issAclL3FilterEntry 30 }
-
-issAclL3FilterOutPortChannelList OBJECT-TYPE
-   SYNTAX      PortList
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the complete set of portchannel interfaces over which the filter is applied
-       for packets egress at ports in this list.
-       This configuration is applicable only if issAclL3FilterDirection is configured as 'out'.
-       By default the OutPortChannel list is '0'."
-   ::= { issAclL3FilterEntry 31 }
-
-issAclL3FilterStatsEnabledStatus OBJECT-TYPE
-   SYNTAX      EnabledStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the status of L3 filter statistics collection.
-       When set as enabled, the number of hits for the specific
-       filter entry is collected and can be verified using the
-       issAclL3FilterMatchCount object.
- 	 
-       When set as disabled, the number of hits for the filter entry is not
-       collected."
-   DEFVAL   { disabled }
-   ::= { issAclL3FilterEntry 32 }
-
-issAclClearL3FilterStats OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object clears the hit count of the specific filter.
- 	       
-       When this object is set as 'true'(1), the hit count for the filter is 
-       cleared and the object value is reset to 'false'(2). The get routine for
-       this object always returns 'false'(2)."
-   DEFVAL   { false }
-   ::= { issAclL3FilterEntry 33 }
 
 ------------------------------------------------------------------------------------------
 -- User Defined Filter Table for specifying user defined packet header elements
@@ -1186,10 +1133,10 @@ issAclUserDefinedFilterTable  OBJECT-TYPE
    MAX-ACCESS not-accessible
    STATUS     current
    DESCRIPTION
-       "A table to configure user defined filter rules in the system. This table is used for 
-	  specifying the user defined packet header elements for application of filter rules.
-	  This table could also be used for supporting AND, OR,NOT operations on existing filter
-	  rules and deriving new user defined ACL rules."
+       "This object specifies the table which is used to configure user defined filter rules in the system.
+	   This table is used for specifying the user defined packet header elements for application of filter rules.
+	   This table could also be used for supporting AND, OR,NOT operations on existing filter rules and deriving
+	   new user defined ACL rules."
     ::= { issAclUserDefinedFilter 1 }
 
 issAclUserDefinedFilterEntry OBJECT-TYPE
@@ -1197,7 +1144,7 @@ issAclUserDefinedFilterEntry OBJECT-TYPE
    MAX-ACCESS not-accessible
    STATUS     current
    DESCRIPTION
-        "Specifies user defined filter entry indexed uniquely by issAclUserDefinedFilterId"
+        "This object specifies the user defined filter entry indexed uniquely by issAclUserDefinedFilterId."
    INDEX { issAclUserDefinedFilterId }
    ::= { issAclUserDefinedFilterTable 1 }
 
@@ -1218,10 +1165,7 @@ FsIssAclUserDefinedFilterEntry ::=
        issAclUserDefinedFilterSubAction              INTEGER,
        issAclUserDefinedFilterSubActionId            Integer32,
        issAclUserDefinedFilterRedirectId              Integer32,
-       issAclUserDefinedFilterStatus                  RowStatus,
-       issAclUserDefinedFilterMatchCount              Counter32,
-       issAclUserDefinedFilterStatsEnabledStatus      EnabledStatus,
-       issAclClearUserDefinedFilterStats              TruthValue
+       issAclUserDefinedFilterStatus                  RowStatus
 
           }
 issAclUserDefinedFilterId OBJECT-TYPE
@@ -1229,7 +1173,7 @@ issAclUserDefinedFilterId OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-         "Index to uniquely identify the User defined filter table entry."
+         "This object specifies an Index to uniquely identify the User defined filter table entry."
    ::= { issAclUserDefinedFilterEntry 1 }
 
 
@@ -1260,7 +1204,9 @@ issAclUserDefinedFilterOffSetBase OBJECT-TYPE
    STATUS      current
    DESCRIPTION 
       "This object specifies the offset base from the start of packet header ( beginning of full packet) for which the match needs to 
-	 be applied on incoming traffic. A value of 0 indicates Start of L2 Header, value 1      indicates start of L3 Header, value 2 start of L4 Header, value 3 start of IPv6 start header, value 4 start from Ethertype and value 5 indicated start from MPLS Header(minus2). Other value are correctly invlaid and reserved for future use." 
+	 be applied on incoming traffic. A value of 0 indicates Start of L2 Header, value 1 indicates start of L3 Header,
+	 value 2 start of L4 Header, value 3 start of IPv6 start header, value 4 start from Ethertype and value 5
+	 indicated start from MPLS Header(minus2). Other value are correctly invlaid and reserved for future use." 
    DEFVAL  { 0 }
    ::= { issAclUserDefinedFilterEntry 3 }
 
@@ -1290,7 +1236,7 @@ issAclUserDefinedFilterPriority OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The priority of the filter can be used to decide which filter rule
+      "This object specifies the priority of the filter that can be used to decide which filter rule
        is applicable when 
           --> the packet matches with more than one filter rules
           --> All the filter rules result in 'allow'ing the packet
@@ -1335,7 +1281,7 @@ issAclUserDefinedFilterInPortList OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "Specifies the complete set of ports over which this filter is applied
+      "This object specifies the complete set of ports over which this filter is applied
        for packets ingress at ports in this list. Filter will be applied in
        chip when port list is not null.
        If the In port list is '0', the filter rule will not be installed in hardware.
@@ -1387,7 +1333,7 @@ issAclUserDefinedFilterSubAction OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "The action to be taken on the incoming packet is detailed below -
+      "This object specifies the action that is to be taken on the incoming packet is detailed below -
        none       - no action
        modifyVlan - Traffic matching ACL rule will have VLAN ID classified/modified 
                      to value specified by this object.
@@ -1418,7 +1364,7 @@ issAclUserDefinedFilterRedirectId OBJECT-TYPE
    MAX-ACCESS  read-only
    STATUS      current
    DESCRIPTION
-      "Specifies the redirect index associated with UserDefinedFilter entry."
+      "This object specifies the redirect index associated with UserDefinedFilter entry."
    ::= { issAclUserDefinedFilterEntry 15 }
 
 issAclUserDefinedFilterStatus OBJECT-TYPE 
@@ -1426,7 +1372,7 @@ issAclUserDefinedFilterStatus OBJECT-TYPE
    MAX-ACCESS  read-create 
    STATUS      current 
    DESCRIPTION 
-        "This object indicates the status of this entry. An entry is
+        "This object speifies the status of this entry. An entry is
         created in this table when this object is SET to 'createAndWait'.
         The entry in this table is used when the status of this object 
         is SET 'active'. The entry in this table is not used when this 
@@ -1434,42 +1380,6 @@ issAclUserDefinedFilterStatus OBJECT-TYPE
         be deleted when this object is SET 'destroy'."
    ::= { issAclUserDefinedFilterEntry 16 }
 
-issAclUserDefinedFilterMatchCount OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the number of times the filter is matched."
-
-   ::= { issAclUserDefinedFilterEntry 17 }
-
-issAclUserDefinedFilterStatsEnabledStatus OBJECT-TYPE
-   SYNTAX      EnabledStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object specifies the status of User Defined filter statistics collection.
-       When set as enabled, the number of hits for the specific
-       filter entry is collected and can be verified using the
-       issAclUserDefinedFilterMatchCount object.
- 	 
-       When set as disabled, the number of hits for the filter entry is not
-       collected."
-   DEFVAL   { disabled }
-   ::= { issAclUserDefinedFilterEntry 18 }
-
-issAclClearUserDefinedFilterStats OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "This object clears the hit count of the specific filter.
- 	       
-       When this object is set as 'true'(1), the hit count for the filter is 
-       cleared and the object value is reset to 'false'(2). The get routine for
-       this object always returns 'false'(2)."
-   DEFVAL   { false }
-   ::= { issAclUserDefinedFilterEntry 19 }
 
 
 
@@ -1483,7 +1393,7 @@ issRedirectInterfaceGrpTable  OBJECT-TYPE
    MAX-ACCESS not-accessible
    STATUS     current
    DESCRIPTION
-        "An interface group is a collection of physical ports ( or ) trunks that
+        "This object specifies an interface group which is a collection of physical ports ( or ) trunks that
         are grouped together for distributing traffic received on an ingress interface.
         Based on the access-list match on an incoming interface, traffic is distributed 
         among the member ports of an interface-group/virtual trunk." 
@@ -1494,8 +1404,8 @@ issRedirectInterfaceGrpEntry OBJECT-TYPE
    MAX-ACCESS not-accessible
    STATUS     current
    DESCRIPTION
-        "There is one entry in this table for each created Interface-Group. An interface-group/virtual trunk is 
-	 uniquely identified by the object 'issRedirectInterfaceGrpId'."
+        "This object specifies that there is one entry in this table for each created Interface-Group. 
+		An interface-group/virtual trunk is uniquely identified by the object 'issRedirectInterfaceGrpId'."
    INDEX { issRedirectInterfaceGrpId }
    ::= { issRedirectInterfaceGrpTable 1 }
 
@@ -1515,7 +1425,7 @@ issRedirectInterfaceGrpId OBJECT-TYPE
    MAX-ACCESS  not-accessible
    STATUS      current
    DESCRIPTION
-         "Index to the Redirect Interface Group table entry. Uniquely identifies the interface-group."
+         "This object specifies an Index to the Redirect Interface Group table entry. Uniquely identifies the interface-group."
    ::= { issRedirectInterfaceGrpEntry 1 }
 
 
@@ -1550,7 +1460,7 @@ issRedirectInterfaceGrpDistByte OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
- 	"Specifies the  Distribution Byte that needs to be used for deriving the traffic distribution hash-logic for the 
+ 	"This object specifies the Distribution Byte that needs to be used for deriving the traffic distribution hash-logic for the 
 	 set of interfaces in the interface-group/virtual-trunk. The output of the hash-logic is an egress 
 	 interface from amongst the member ports of a virtual trunk. Traffic would get redirected to this egress interface. 
        'udb' can take any value between (0..128). If srcip is selected, then Source IP in the packet header would be 
@@ -1587,7 +1497,7 @@ issRedirectInterfaceGrpUdbPosition OBJECT-TYPE
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "This object indicates the User defined postion of a byte in
+      "This object specifies the User defined postion of a byte in
 	  the packet when the value of the object as specified by 
 	  issRedirectInterfaceGrpDistByte is udb." 
    DEFVAL  { 0 }
@@ -1597,7 +1507,7 @@ issRedirectInterfaceGrpStatus OBJECT-TYPE
    MAX-ACCESS  read-create
    STATUS      current
    DESCRIPTION
-	"This object indicates the status of this entry. An entry is
+	"This object specifies the status of this entry. An entry is
   	 created in this table when this object is SET to 'createAndWait'.
 	 The entry is 'not-ready' when the mandatory parameters are not specified.
 	 Following objects are mandatory parameters that need to be set before this object
@@ -1622,44 +1532,190 @@ issRedirectInterfaceGrpIdNextFree OBJECT-TYPE
     to be used for creation of redirect interface entry, or a 
     zero to indicate that none exist"
    ::= { issRedirectIdNextFree 1 }
--- Traffic Control Group ------------------------------------------ --
 
-issAclTrafficSeperationCtrl OBJECT-TYPE 
-   SYNTAX      INTEGER {
-                  systemdefault (1), 
-                  userconfig (2)
-               }
+----------------------------------------
+-- Reserved Frame Transmission Control
+----------------------------------------
+
+issReservedFrameCtrlTable  OBJECT-TYPE
+   SYNTAX     SEQUENCE OF FsReservedFrameCtrlEntry
+   MAX-ACCESS not-accessible
+   STATUS     current
+   DESCRIPTION
+        "A table to configure IEEE802 Reserved Multicast-MAC Address filter rules in the system.
+                The reserved transmission control function is a function that takes frames that normally are
+                sent to the CPU and then it decides to either permit them or to stop forwarding them to the CPU." 
+    ::= { issReservedFrameGrp 1 }
+
+issReservedFrameCtrlEntry OBJECT-TYPE
+   SYNTAX     FsReservedFrameCtrlEntry
+   MAX-ACCESS not-accessible
+   STATUS     current
+   DESCRIPTION
+                 "An Reserved-Frame-Tranmission-Entry is uniquely identified by the object 'issReservedFrameTxnCtrlId'."
+   INDEX { issReservedFrameCtrlId }
+   ::= { issReservedFrameCtrlTable 1 }
+
+FsReservedFrameCtrlEntry ::=
+   SEQUENCE {
+         issReservedFrameCtrlId                      IndexInteger,
+         issReservedFrameCtrlPktType                 ReservedFrameType,
+         issReservedFrameCtrlAction                  INTEGER,
+                 issReservedFrameCtrlOtherMacAddr            MacAddress,
+         issReservedFrameCtrlOtherMacMask                  INTEGER,
+                 issReservedFrameCtrlMatchCount              Counter32,
+         issReservedFrameCtrlStatsEnabledStatus      EnabledStatus,
+         issClearReservedFrameCtrlStats              TruthValue,
+                 issReservedFrameCtrlStatus                  RowStatus
+          }
+issReservedFrameCtrlId OBJECT-TYPE
+   SYNTAX      IndexInteger
+   MAX-ACCESS  not-accessible
+   STATUS      current
+   DESCRIPTION
+         "Index to the ReservedFrameTxnCtrl entry. Uniquely identifies the issReservedFrameTxnCtrl entry."
+   ::= { issReservedFrameCtrlEntry 1 }
+
+issReservedFrameCtrlPktType OBJECT-TYPE
+   SYNTAX      ReservedFrameType
    MAX-ACCESS  read-write
-   STATUS      deprecated 
+   STATUS      current
+   DESCRIPTION
+        " This object specifies the type of the PDUs. The type could take the following values
+         bpdu - (MAC:01:80:C2:00:00:00) for Suppressing BPDU CPU transfer (Cannot be combined with Spanning Tree Protocol).
+         lacpdu-udld - (MAC:01:80:C2:00:00:02) Suppressing Slow protocol frame CPU transfer (Cannot be combined with lacp and mlag lacp)
+     eap - (MAC:01:80:C2:00:00:03) Suppressing IEEE802.1X EAP frame CPU transfer(Cannot be combined with IEEE802.1X.)
+         lldpdu - Suppressing LLDPDU CPU transfer (Can not be combined with LLDP)
+         all - MAC Range : 01:80:C2:00:00:00 to 01:80:C2:00:00:0F and 01:80:C2:00:00:20 to 01:80:C2:00:00:2F"
+   ::= { issReservedFrameCtrlEntry 2 }
+
+issReservedFrameCtrlAction OBJECT-TYPE 
+   SYNTAX      INTEGER {
+                  allow    (1),
+                  drop     (2)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
    DESCRIPTION 
-      "This object provides control to administrator, to have system default or 
-       user defined ACL/QoS rules to carry control traffic to CPU.
+      "Action value allow/drop specify the action to be taken on the packet if the ReservedFrameCtrl-entry matches.
+     -->  If the action is 'allow', the packet will be forwarded. 
+     -->  If the action is 'drop', the packet will be discarded."
+   ::= { issReservedFrameCtrlEntry 3 }
 
-       system-default: ACL/QoS rules for all the control packets will be 
-       automatically installed by the ISS software at system init time.Either a
-       'switch-and-copy-to-cpu'filter (or) 'drop-and-copy-to-cpu' filter will be
-       installed, as appropriate, for getting the control packets to CPU, for 
-       processing.
+issReservedFrameCtrlOtherMacAddr OBJECT-TYPE
+   SYNTAX      MacAddress
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+       "Reserved Destination Multicast MAC address to be matched with the packet"
 
-       user-config: The ACL/QoS rules for receiving all the control packets to 
-       CPU for processing, will NOT be automatically installed by the the ISS 
-       software.The administrator is expected to install required rules for the
-       control packets as requried.
+   ::= { issReservedFrameCtrlEntry 4 }
 
-       If the configuration is changed from 'systemdefault' to 'userconfig' 
-       option, then all the default ACL/QoS rules for carrying protocol control
-       packets to CPU are removed.Then user has to install the specific ACL/QoS
-       rules, to carry the intended control packets to CPU for the processing.
+issReservedFrameCtrlOtherMacMask OBJECT-TYPE
+   SYNTAX      INTEGER
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "The range of Mac addresses will be decided based on the Mask Specified.
+        The possible  masks are :
+        Mask Value       MAC addresses
+        0xff             1 
+        0xfe             2 
+        0xfc             4
+        0xf8             8
+        0xf0             16
+        0xe0             32."
 
-       If the configuration is changed from 'userconfig' to 'systemdefault',
-       all the default ACL/QoS rules are installed. Already existing(if any) 
-       user configured ACL rules in the system are not removed.
+   ::= { issReservedFrameCtrlEntry 5 }
 
-       Above two options can be configured during system runtime.
-       
-       This object is deprecated, corresponding functionality can be
-       realised by issTrafficSeperationCtrl from fsiss.mib"
+issReservedFrameCtrlMatchCount OBJECT-TYPE
+   SYNTAX      Counter32
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+      "Number of times this ReservedFrameCtrl-entry is matched."
 
-   DEFVAL      { systemdefault }
-   ::= { issAclTrafficControl 1 } 
+   ::= { issReservedFrameCtrlEntry 6 }
+
+issReservedFrameCtrlStatsEnabledStatus OBJECT-TYPE
+   SYNTAX      EnabledStatus
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "This object specifies the status of ReservedFrameCtrl-entry statistics collection.
+       When set as enabled, the number of hits for the specific entry is collected and can
+           be verified using the issReservedFrameCtrlMatchCount object.
+           When set as disabled, the number of hits for the entry is not collected."
+   DEFVAL   { disabled }
+   ::= { issReservedFrameCtrlEntry 7 }
+
+issClearReservedFrameCtrlStats OBJECT-TYPE
+   SYNTAX      TruthValue
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "This object clears the hit count of the specific ReservedFrameCtrl-entry.
+         
+       When this object is set as 'true'(1), the hit count for the filter is 
+       cleared and the object value is reset to 'false'(2). The get routine for
+       this object always returns 'false'(2)."
+   DEFVAL   { false }
+   ::= { issReservedFrameCtrlEntry 8 }
+
+issReservedFrameCtrlStatus OBJECT-TYPE
+   SYNTAX      RowStatus
+   MAX-ACCESS  read-create
+   STATUS      current
+   DESCRIPTION
+        "This object indicates the status of this entry. An entry is
+         created in this table when this object is SET to 'createAndWait'.
+         The entry is 'not-ready' when the mandatory parameters are not specified.
+         Following objects are mandatory parameters that need to be set before this object
+         can be SET to 'active' -
+         a. issReservedFrameCtrlId
+         b. issReservedFrameCtrlPktType
+     c. issReservedFrameCtrlAction
+         The entry in this table is used when the status of this object is 
+         SET to 'active'. The entry in this table is not used when this object is SET to 'notInService'. 
+         An entry created in this table is deleted when this object is SET to 'destroy'."
+   ::= { issReservedFrameCtrlEntry 9 }
+
+-------------------------------------------------------------------
+--SCALAR OBJECT 
+-------------------------------------------------------------------
+
+issAclTrcFlag OBJECT-TYPE
+    SYNTAX      Unsigned32 (0..255)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+       "This object is used to enable trace statements in Acl module. 
+        A four byte integer is used for enabling the trace level.  
+        Each bit in the four byte integer represents a particular  
+        trace level.  
+        The mapping between the bit positions & the trace level is  
+        as follows:  
+
+            0 - Init and Shutdown traces 
+            1 - Management traces 
+            2 - Data Path traces 
+            3 - Control Plane traces 
+            5 - Traces related to all resources except buffers 
+            6 - Buffer allocation/release traces 
+            7 - All Failure traces 
+            None of the bit is set the Disable the Trace,value(0). 
+
+        The remaining bits are unused. Combination of levels are  
+        also allowed. 
+
+        For example if the bits 0 and 1 are set, then the trace 
+        statement related to Init-Shutdown and management  
+        will be printed. 
+
+        The user has to enter the corresponding integer value for the 
+        bits set. For example if bits 0 and 1 are to be set ,then user
+        has to give the value 3." 
+
+    ::= { issAclTrc 1 }
+
 END

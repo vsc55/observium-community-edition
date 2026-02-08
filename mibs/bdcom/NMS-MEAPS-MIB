@@ -146,10 +146,10 @@ nmsMEAPS OBJECT IDENTIFIER ::={ nmslocal 234 }
 					INTEGER,
 				nmsMEAPSRingHealthCheck
 					INTEGER,
-				nmsMEAPSRingChannelCheck
-					INTEGER,
-				nmsMEAPSRingChannelRecovery
-					INTEGER,
+--				nmsMEAPSRingChannelCheck
+--					INTEGER,
+--				nmsMEAPSRingChannelRecovery
+--					INTEGER,
 				nmsMEAPSRingHelloTime
 					INTEGER,
 				nmsMEAPSRingFailTime
@@ -267,6 +267,8 @@ nmsMEAPS OBJECT IDENTIFIER ::={ nmslocal 234 }
 					"A value indicates whether Health packets are being sent from MasterNode.
 					Available only for MasterNodes."
 				::={ nmsMEAPSRingTableEntry 8 }
+--				nmsMEAPSRingChannelCheck
+--				nmsMEAPSRingChannelRecovery
 				            
 			-- 1.3.6.1.4.1.3320.2.X.5.1.9
 			nmsMEAPSRingHelloTime OBJECT-TYPE

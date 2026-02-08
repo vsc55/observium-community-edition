@@ -18246,8 +18246,8 @@ ntpEntNTPCompliance MODULE-COMPLIANCE
     MODULE  -- this module
         MANDATORY-GROUPS {
                            ntpEntObjectsGroup1,
-                           ntpEntObjectsGroup2,
-                           ntpEntNotifPrefixGroup
+                           ntpEntObjectsGroup2
+                           -- , ntpEntNotifPrefixGroup
         }
         ::= { ntpEntCompliances 1 }
 

@@ -538,9 +538,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
                --如果端口进来的报文速率恢复正常，则发出端口速率正常的trap
        	::= { portFlowAlarmTrap 2 }        
 
-   -----------------------------------------------------
+   --
    -- the quene-scheduer QOS 
-   -----------------------------------------------------
+   --
    
    qosQueueSchedulerGroup  OBJECT IDENTIFIER ::= { gbnDeviceSwitchQueneScheduer 1 }
   
@@ -642,9 +642,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
                --队列8的权重
        ::= { qosQueueSchedulerGroup 10 }          
        
-   -----------------------------------------------------
+   --
    -- the line-rate configuration 
-   -----------------------------------------------------              
+   --
    qosLineRateTable OBJECT-TYPE
        SYNTAX  SEQUENCE OF QosLineRateEntry
        ACCESS  not-accessible
@@ -692,9 +692,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
                --端口限速目标速率
        ::= { qosLineRateEntry 2 }  
        
-   -----------------------------------------------------
+   --
    -- the port-isolation configuration 
-   -----------------------------------------------------                                           
+   --
    portIsolationGroup  OBJECT IDENTIFIER ::= { gbnDeviceSwitchPortIsolation 1 }
  
    portIsolationDownLinkPorts OBJECT-TYPE
@@ -706,9 +706,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
                -- 端口隔离的下行端口列表 --
        ::= { portIsolationGroup 1 }  
 
-   -----------------------------------------------------
+   --
    -- the storm control 
-   -----------------------------------------------------
+   --
  
    stormControlTable OBJECT-TYPE
        SYNTAX  SEQUENCE OF StormControlEntry
@@ -777,9 +777,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
                 --风暴控制行状态
         ::= { stormControlEntry 4 }    	    
 
------------------------------------------------------
---gbnDeviceSwitchAntiDos
------------------------------------------------------
+--
+-- gbnDeviceSwitchAntiDos
+--
     ipfragmnetnumber OBJECT-TYPE
         SYNTAX INTEGER (0..800)
         MAX-ACCESS read-write
@@ -797,9 +797,9 @@ MirrorMacType ::= TEXTUAL-CONVENTION
            "Control IP with TTL=0 packet,default is not traffic  to the  CPU."
          --控制TTL=0的报文是否送往CPU,默认情况是关闭上报CPU.
          ::= { gbnDeviceSwitchAntiDos 2 } 
------------------------------------------------------
+--
 -- the bandwidth control 
------------------------------------------------------
+--
    
    bandwidthcontrolTable OBJECT-TYPE
         SYNTAX SEQUENCE OF BandwidthcontrolEntry

@@ -258,8 +258,7 @@ jnxFirewalls MODULE-IDENTITY
 	DESCRIPTION
 	    "An extended list of firewall filter counters.
 	    This table maintains the additional statistics
-	    for the additional policer counters and is only
-	    supported on MX platform for now."
+	    for the additional policer counters."
 
 
 	::= { jnxFirewalls 3 }

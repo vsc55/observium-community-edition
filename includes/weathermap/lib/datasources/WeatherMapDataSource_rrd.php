@@ -106,7 +106,7 @@ class WeatherMapDataSource_rrd extends WeatherMapDataSource
                 $fields[] = $result['data_source_name'];
               }
               if (count($fields) > 0) {
-                wm_warn("RRD ReadData: poller_output: " . $dsnames[$dir] . " is not a valid DS name for $db_rrdname - valid names are: " . join(", ", $fields) . " [WMRRD07]\n");
+                wm_warn("RRD ReadData: poller_output: " . $dsnames[$dir] . " is not a valid DS name for $db_rrdname - valid names are: " . implode(", ", $fields) . " [WMRRD07]\n");
               } else {
                 wm_warn("RRD ReadData: poller_output: $db_rrdname is not a valid RRD filename within this Cacti install. <path_rra> is $path_rra [WMRRD08]\n");
               }
@@ -242,7 +242,7 @@ class WeatherMapDataSource_rrd extends WeatherMapDataSource
 
     $command = $map->rrdtool;
     foreach ($args as $arg) {
-      if (strchr($arg, " ") != FALSE) {
+      if (strstr($arg, " ") != FALSE) {
         $command .= ' "' . $arg . '"';
       } else {
         $command .= ' ' . $arg;
@@ -334,7 +334,7 @@ class WeatherMapDataSource_rrd extends WeatherMapDataSource
 
     $command = $map->rrdtool;
     foreach ($args as $arg) {
-      if (strchr($arg, " ") != FALSE) {
+      if (strstr($arg, " ") != FALSE) {
         $command .= ' "' . $arg . '"';
       } else {
         $command .= ' ' . $arg;
@@ -419,7 +419,7 @@ class WeatherMapDataSource_rrd extends WeatherMapDataSource
         }
       } else {
         // report DS name error
-        $names = join(",", $heads);
+        $names = implode(",", $heads);
         $names = str_replace("timestamp,", "", $names);
         wm_warn("RRD ReadData: At least one of your DS names (" . $dsnames[IN] . " and " . $dsnames[OUT] . ") were not found, even though there was a valid data line. Maybe they are wrong? Valid DS names in this file are: $names [WMRRD06]\n");
       }
@@ -556,11 +556,11 @@ class WeatherMapDataSource_rrd extends WeatherMapDataSource
     //
     if ($data[IN] !== NULL) {
       $data[IN] = floatval(str_replace(",", ".", $data[IN]));
-      $data[IN] = $data[IN] * $multiplier;
+      $data[IN] *= $multiplier;
     }
     if ($data[OUT] !== NULL) {
       $data[OUT] = floatval(str_replace(",", ".", $data[OUT]));
-      $data[OUT] = $data[OUT] * $multiplier;
+      $data[OUT] *= $multiplier;
     }
 
     wm_debug("RRD ReadData: Returning (" . ($data[IN] === NULL ? 'NULL' : $data[IN]) . "," . ($data[OUT] === NULL ? 'NULL' : $data[OUT]) . ",$data_time)\n");

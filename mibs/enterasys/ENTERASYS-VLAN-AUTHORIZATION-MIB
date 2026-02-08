@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-VLAN-AUTHORIZATION-MIB DEFINITIONS ::= BEGIN
 
 --  enterasys-vlan-authorization-mib.txt

@@ -55,9 +55,9 @@ qtechVMMIB MODULE-IDENTITY
 
 qtechVMMIBObjects OBJECT IDENTIFIER ::= { qtechVMMIB 1 }
 
--- -----------------------------------------------------------------------
+--
 -- Scalar of configuring VM support.
--- -----------------------------------------------------------------------
+--
 qtechVMFuncVMSupport OBJECT-TYPE
         SYNTAX ConfigStatus
         MAX-ACCESS read-write
@@ -122,9 +122,9 @@ qtechVMBurstMax OBJECT-TYPE
                 Burst Size: The maximum number of byte to allow in a burst."
         ::= { qtechVMMIBObjects 15 }
         
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM information.
--- -----------------------------------------------------------------------
+--
 qtechVMInfoTable OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMInfoEntry
         MAX-ACCESS not-accessible
@@ -176,9 +176,9 @@ qtechVMInfoRowStatus OBJECT-TYPE
                 Set this object to ROW_ACTIVE, add VM to VM Group."
         ::= { qtechVMInfoEntry 3 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM Group.
--- -----------------------------------------------------------------------
+--
 qtechVMGroupInfoTable  OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMGroupInfoEntry
         MAX-ACCESS not-accessible
@@ -245,9 +245,9 @@ qtechVMGroupInfoRowStatus OBJECT-TYPE
                 associate with this profile"
         ::= { qtechVMGroupInfoEntry 4 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM Profile.
--- -----------------------------------------------------------------------
+--
 qtechVMProfileTable OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMProfileEntry
         MAX-ACCESS not-accessible
@@ -393,9 +393,9 @@ qtechVMProfileQosRxPolicyMap OBJECT-TYPE
                "Police map name of ServerPort ingress match about VM."
         ::= { qtechVMProfileEntry  11 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM location.
--- -----------------------------------------------------------------------
+--
 qtechVMLocInfoTable OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMLocInfoEntry
         MAX-ACCESS not-accessible
@@ -456,9 +456,9 @@ qtechVMLocInfoRowStatus OBJECT-TYPE
                  Set this object to ROW_ACTIVE, add the location of VM."
         ::= { qtechVMLocInfoEntry 4 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM support ServerPort and ReflectPort.
--- -----------------------------------------------------------------------
+--
 qtechVMPortInfoTable  OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMPortInfoEntry
         MAX-ACCESS not-accessible
@@ -511,9 +511,9 @@ qtechVMPortInfoReflectStatus OBJECT-TYPE
                 set its value to valid(1) and this port reflectrelay function enable."
         ::= { qtechVMPortInfoEntry 3 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for VM support SNMP trap interface configuration.
--- -----------------------------------------------------------------------
+--
 qtechVMPortTrapCfgTable  OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMPortTrapCfgEntry
         MAX-ACCESS not-accessible
@@ -555,9 +555,9 @@ qtechVMPortTrapCfgNotifyStatus OBJECT-TYPE
             set its value to valid(1) and VM notification will be enabled on this port."
         ::= { qtechVMPortTrapCfgEntry 2 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for VM support trap information.
--- -----------------------------------------------------------------------
+--
 qtechVMInfoChgTable OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMInfoChgEntry
         MAX-ACCESS not-accessible
@@ -626,9 +626,9 @@ qtechVMInfoChgDate OBJECT-TYPE
                 "The date and time when this VM is discovered or deleted."
         ::= { qtechVMInfoChgEntry 5 }
 
--- -----------------------------------------------------------------------
+--
 -- A table for configuring VM OUI.
--- -----------------------------------------------------------------------
+--
 qtechVMOuiInfoTable OBJECT-TYPE
         SYNTAX SEQUENCE OF QtechVMOuiInfoEntry
         MAX-ACCESS not-accessible
@@ -671,9 +671,9 @@ qtechVMOuiInfoRowStatus OBJECT-TYPE
                  Set this object to ROW_DESTORY, delete the VM OUI.
                  Set this object to ROW_ACTIVE, add the VM OUI"
         ::= { qtechVMOuiInfoEntry 2 }
--- -----------------------------------------------------------------------
+--
 -- Notification of VM support.
--- -----------------------------------------------------------------------
+--
 qtechVMMIBTraps OBJECT IDENTIFIER ::= { qtechVMMIB 2 }
 
 qtechVMsupMIBTrap NOTIFICATION-TYPE

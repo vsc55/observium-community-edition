@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -18,7 +17,7 @@ include_once($config['html_dir'] . '/includes/ldap-functions.inc.php');
 check_extension_exists('ldap', 'AD selected as authentication module, but PHP does not have LDAP support! Please load the PHP LDAP module.', TRUE);
 
 // Set LDAP debugging level to 7 (dumped to Apache daemon error log) (not virtualhost error log!)
-if (OBS_DEBUG > 1) { // FIXME Currently OBS_DEBUG > 1 for WUI is not supported ;)
+if (OBS_DEBUG) { // FIXME Currently OBS_DEBUG > 1 for WUI is not supported ;)
     // Disabled by default, VERY chatty.
     ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL, 7);
 }
@@ -26,7 +25,7 @@ if (OBS_DEBUG > 1) { // FIXME Currently OBS_DEBUG > 1 for WUI is not supported ;
 // If a single server is specified, convert it to array anyway for use in functions below
 if (!is_array($config['auth_ad_server'])) {
     // If no server set and AD domain is specified, get domain controllers from SRV records
-    if ($config['auth_ad_server'] == '' && $config['auth_ad_domain'] != '') {
+    if (safe_empty($config['auth_ad_server']) && !safe_empty($config['auth_ad_domain'])) {
         $config['auth_ad_server'] = ldap_domain_servers_from_dns($config['auth_ad_domain']);
     } else {
         $config['auth_ad_server'] = array($config['auth_ad_server']);
@@ -44,7 +43,7 @@ if (!isset($config['auth_ad_basedn'])) {
         $config['auth_ad_basedn'] = ad_internal_basedn_from_domain($config['auth_ad_domain']);
         print_debug("Synthesized base DN " . $config['auth_ad_basedn'] . " from " . $config['auth_ad_domain']);
     } else {
-        print_error("AD authentication selected, but AD domain AND BaseDN are not set. Authentication will fail.");
+        print_error("AD authentication selected, but AD domain OR AD Base DN are not set. Authentication will fail.");
   }
 }
 
@@ -53,13 +52,17 @@ if ($config['auth_ad_tls']) {
     unset($config['auth_ad_starttls']);
 
     // Add ldaps:// in front of every hostname
-    $config['auth_ad_server'] = array_map(function($value) { return "ldaps://$value"; }, $config['auth_ad_server']);
+    $config['auth_ad_server'] = array_map(function($value) { return 'ldaps://' . str_replace('ldap://', '', $value); }, $config['auth_ad_server']);
 }
 
 // We need a bind DN, as we only get the user's password on initial login and not on successive page loads, meaning that
 // we are not able to connect to AD anymore without a dedicated bind user.
-if (!isset($config['auth_ad_binddn']) || !isset($config['auth_ad_bindpw'])) {
+if (!isset($config['auth_ad_binddn'], $config['auth_ad_bindpw'])) {
     print_error("AD authentication selected, but AD bind user is not correctly set (auth_ad_binddn and auth_ad_bindpwd). Authentication will fail.");
+}
+if (!empty($config['auth_ad_domain']) && !str_contains_array($config['auth_ad_binddn'], [ '@', '=' ])) {
+    $config['auth_ad_binddn'] .= '@' . $config['auth_ad_domain'];
+    print_debug("Bind DN passed without domain or DN, append AD domain: binddn@" . $config['auth_ad_domain']);
 }
 
 // TESTME
@@ -362,7 +365,7 @@ function ad_auth_user_id($username) {
     $filter_params[] = ldap_filter_create('objectClass', 'person');
     $filter_params[] = ldap_filter_create('sAMAccountName', $username);
     $filter          = ldap_filter_combine($filter_params);
-  
+
     print_debug("ad_auth_user_id: Filter $filter");
     $search = ldap_search($ds, $config['auth_ad_basedn'], $filter);
     $entries = ldap_internal_is_valid($search) ? ldap_get_entries($ds, $search) : [];
@@ -469,7 +472,7 @@ function ad_auth_user_list($username = NULL) {
         foreach($config['auth_ad_group'] as $group) {
             $group_params[] = ldap_filter_create('memberOf:1.2.840.113556.1.4.1941:', ad_internal_dn_from_groupname($group));
         }
-      
+
         $filter_params[] = ldap_filter_combine($group_params, '|');
     }
 
@@ -506,7 +509,7 @@ function ad_internal_user_entries($entries, &$userlist) {
     if ($entries['count']) {
         unset($entries['count']);
 
-        foreach ($entries as $i => $entry) {
+        foreach ($entries as $entry) {
             $username    = $entry['samaccountname'][0];
             $realname    = $entry['name'][0];
             $user_id     = ad_internal_auth_user_id($entry);
@@ -627,7 +630,7 @@ function ad_internal_auth_user_id($result) {
     if (isset($result['uidnumber'][0])) {
         return $result['uidnumber'][0];
     } 
-  
+
     // No RFC2307 UID found, convert SID S-1-5-21-4113566099-323201010-15454308-1104 to 1104 as our numeric unique ID
     $sid = explode('-', ldap_bin_to_str_sid($result['objectsid'][0]));
     $userid = $sid[count($sid)-1];

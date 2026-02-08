@@ -639,13 +639,13 @@
             DESCRIPTION
                 "Indicates if and how an NSSA Border router is
                  performing NSSA translation of NSSA-LSAs into
-                AS-External-LSAÆs. When this object is set to enabled,
+                AS-External-LSAs. When this object is set to enabled,
                 the NSSA Border router's extremeOspfv3AreaNssTranslatorRole
                 has been set to always. When this object is set to
                 elected, a candidate NSSA Border router is translating
-                NSSA-LSAÆs into AS-External-LSAÆs. When this object is
+                NSSA-LSAs into AS-External-LSAs. When this object is
                 set to disabled, a candidate NSSA Border router is NOT
-                translating NSSA-LSAÆs into AS-External-LSAÆs."
+                translating NSSA-LSAs into AS-External-LSAs."
             ::= { extremeOspfv3AreaEntry 12 }
 
     extremeOspfv3AreaNssaTranslatorStabInt OBJECT-TYPE
@@ -2678,8 +2678,8 @@
             STATUS          current
             DESCRIPTION
                 "This tag is advertised only in the summarized
-                 As-External LSA when summarizing from NSSA-LSAÆs to
-                 AS-External-LSAÆs."
+                 As-External LSA when summarizing from NSSA-LSAs to
+                 AS-External-LSAs."
             DEFVAL         { 0 }
             ::= { extremeOspfv3AreaAggregateEntry 9 }
 

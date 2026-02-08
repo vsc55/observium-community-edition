@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-ENTITY-SENSOR-MIB-EXT-MIB DEFINITIONS ::= BEGIN
 
 --  enterasys-entity-sensor-mib-ext-mib.txt
@@ -46,7 +48,7 @@ IMPORTS
         FROM ENTERASYS-MIB-NAMES;
 
 etsysEntitySensorExtMIB MODULE-IDENTITY
-    LAST-UPDATED "201405131206Z"  -- Tue May 13 12:06 UTC 2014
+    LAST-UPDATED "202210201620Z"  -- Thu Oct 20 16:20 UTC 2022
     ORGANIZATION "Extreme Networks Inc."
     CONTACT-INFO
         "Postal:  Extreme Networks, Inc.
@@ -61,6 +63,21 @@ etsysEntitySensorExtMIB MODULE-IDENTITY
         "This MIB module defines a portion of the SNMP MIB under
          the Enterasys Networks enterprise OID that provide
          extensions to the industry proposed standard ENTITY-SENSOR-MIB."
+
+    REVISION    "202210201620Z"  -- Thu Oct 20 16:20 UTC 2022
+    DESCRIPTION
+        "Added etsysEntitySfpSensorSupportedSpeeds to EtsysEntitySfpSensorExtEntry."
+
+    REVISION    "202111051000Z"  -- Fri Nov 05 10:00 UTC 2021
+    DESCRIPTION
+        "Added etsysEntitySfpSensorTxDdm, etsysEntitySfpSensorTxDdmLastGasp,
+         etsysEntitySfpSensorRxDdm and etsysEntitySfpSensorRxDdmLastGasp to
+         EtsysEntitySfpSensorExtEntry."
+
+    REVISION    "202110221514Z"  -- Fri Oct 22 15:14 UTC 2021
+    DESCRIPTION
+        "Added etsysEntitySfpSensorWavelength and
+         etsysEntitySfpSensorPowerOnCounter to EtsysEntitySfpSensorExtEntry."
 
     REVISION    "201405131206Z"  -- Tue May 13 12:06 UTC 2014
     DESCRIPTION
@@ -243,7 +260,21 @@ EtsysEntitySfpSensorExtEntry ::=
         etsysEntitySfpSensorLowWarning
             EntitySensorValue,
         etsysEntitySfpSensorLowAlarm
-            EntitySensorValue
+            EntitySensorValue,
+        etsysEntitySfpSensorWavelength
+            Integer32,
+        etsysEntitySfpSensorPowerOnCounter
+            Counter32,
+        etsysEntitySfpSensorTxDdm
+            Integer32,
+        etsysEntitySfpSensorTxDdmLastGasp
+            Integer32,
+        etsysEntitySfpSensorRxDdm
+            Integer32,
+        etsysEntitySfpSensorRxDdmLastGasp
+            Integer32,
+        etsysEntitySfpSensorSupportedSpeeds
+            Integer32
     }
 
 etsysEntitySfpSensorState OBJECT-TYPE
@@ -314,6 +345,96 @@ etsysEntitySfpSensorLowAlarm OBJECT-TYPE
          associated entPhySensorType, entPhySensorScale, and
          entPhySensorPrecision objects must also be examined."
     ::= { etsysEntitySfpSensorExtEntry 5 }
+
+etsysEntitySfpSensorWavelength OBJECT-TYPE
+    SYNTAX        Integer32 (0..65535)
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This object indicates nominal transmitter output wavelength
+         at room temperature.  It is expressed in nano-meters."
+    ::= { etsysEntitySfpSensorExtEntry 6 }
+
+etsysEntitySfpSensorPowerOnCounter OBJECT-TYPE
+    SYNTAX        Counter32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This object indicates the power-on counter.  Host increments
+         it by 1 every 48 hours."
+    ::= { etsysEntitySfpSensorExtEntry 7 }
+
+etsysEntitySfpSensorTxDdm OBJECT-TYPE
+    SYNTAX        Integer32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This value represents the Tx dB from low alarm. Host sets
+         it once only, after the first 48 consecutive hours of operation.
+         Update only if Tx_disable is not active."
+    ::= { etsysEntitySfpSensorExtEntry 8 }
+
+etsysEntitySfpSensorTxDdmLastGasp OBJECT-TYPE
+    SYNTAX        Integer32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This value represents the last gasp of Tx dB from low alarm.
+         Host updates it every 48 hours. Update only if Tx_disable is
+         not active."
+    ::= { etsysEntitySfpSensorExtEntry 9 }
+
+etsysEntitySfpSensorRxDdm OBJECT-TYPE
+    SYNTAX        Integer32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This value represents the Rx dB from low alarm. Host sets
+         it after the first 48 consecutive hours of operation since
+         PMD power cycle. Update only if Rx_LOS is not asserted."
+    ::= { etsysEntitySfpSensorExtEntry 10 }
+
+etsysEntitySfpSensorRxDdmLastGasp OBJECT-TYPE
+    SYNTAX        Integer32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This value represents the last gasp of Rx dB from low alarm.
+         Host updates it every 48 hours. Update only if Rx_LOS is
+         not asserted."
+    ::= { etsysEntitySfpSensorExtEntry 11 }
+
+etsysEntitySfpSensorSupportedSpeeds OBJECT-TYPE
+    SYNTAX        Integer32
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+        "This value represents the set of speeds supported
+         by transceivers present in the platform.  For each
+         speed capability, 2 raised to the power noted below
+         is added to the sum.  The unit for speed capability
+         is 1 Mbps.
+
+         For example, a transceiver that supports 10G would
+         have a value of (2**6) or 64.  In contrast, a transceiver
+         that supports both 1G and 10G would have a value of
+         ((2**3) + (2**6)) or 72.
+
+         Power  Capability
+           0      other or unknown
+           1      10
+           2      100
+           3      1000
+           4      2500
+           5      5000
+           6      10000
+           7      20000
+           8      25000
+           9      40000
+          10      50000
+          11      100000
+          12      400000"
+    ::= { etsysEntitySfpSensorExtEntry 12 }
 
 etsysEntitySfpSensorTrapEnable OBJECT-TYPE
     SYNTAX       EnabledStatus
@@ -412,6 +533,13 @@ etsysEntitySfpSensorGroup OBJECT-GROUP
         etsysEntitySfpSensorHighWarning,
         etsysEntitySfpSensorLowWarning,
         etsysEntitySfpSensorLowAlarm,
+        etsysEntitySfpSensorWavelength,
+        etsysEntitySfpSensorPowerOnCounter,
+        etsysEntitySfpSensorTxDdm,
+        etsysEntitySfpSensorTxDdmLastGasp,
+        etsysEntitySfpSensorRxDdm,
+        etsysEntitySfpSensorRxDdmLastGasp,
+        etsysEntitySfpSensorSupportedSpeeds,
         etsysEntitySfpSensorTrapEnable
     }
     STATUS        current

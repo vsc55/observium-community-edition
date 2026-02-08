@@ -21,7 +21,7 @@ if (!$GLOBALS['snmp_status']) {
 $port_stack = snmpwalk_cache_oid($device, "portName", $port_stack, "CISCO-STACK-MIB");
 $port_stack = snmpwalk_cache_oid($device, "portDuplex", $port_stack, "CISCO-STACK-MIB");
 
-foreach ($port_stack as $key => $data) {
+foreach ($port_stack as $data) {
     if (!isset($port_stats[$data['portIfIndex']])) {
         continue;
     } // Unknown ifIndex

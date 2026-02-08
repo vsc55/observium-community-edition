@@ -660,7 +660,7 @@ function ldap_internal_user_entries($entries, &$userlist)
         unset($entries['count']);
         //print_vars($entries);
 
-        foreach ($entries as $i => $entry) {
+        foreach ($entries as $entry) {
             $username    = $entry[strtolower($config['auth_ldap_attr']['uid'])][0];
             $realname    = $entry[strtolower($config['auth_ldap_attr']['cn'])][0];
             $user_id     = ldap_internal_auth_user_id($entry);

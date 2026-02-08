@@ -71,7 +71,7 @@ $count = safe_count($oids);
 $scale = 0.1;
 
 print_debug_vars($oids);
-foreach ($oids as $index => $entry) {
+foreach ($oids as $entry) {
     $module  = $entry['sBTAModulesRPCBreakersModulesIndex'];
     $breaker = $entry['sBTAModulesRPCBreakersBreakersIndex'];
     $descr   = "Breaker $module.$breaker";

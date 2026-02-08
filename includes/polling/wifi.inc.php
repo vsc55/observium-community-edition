@@ -225,6 +225,8 @@ if (count($wifi_controller)) {
       'NUMAPS'     => $wifi_controller['aps'],
       'NUMCLIENTS' => $wifi_controller['clients'],
     ]);
+    $graphs['wifi_clients'] = TRUE;
+    $graphs['wifi_ap_count'] = TRUE;
 }
 unset($GLOBALS['cache']['wifi_radios'], $GLOBALS['cache']['wifi_wlans'], $aps_db, $aps_poll, $aps_member_db, $aps_member_poll, $member_index);
 

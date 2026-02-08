@@ -51,7 +51,6 @@
               'name'   => 'Device',
               'width'  => '100%',
               'value'  => $vars['device_id'],
-              'groups' => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
               'values' => $form_items['devices']
             ];
 
@@ -94,6 +93,15 @@
               //'disabled'      => TRUE,
               //'submit_by_key' => TRUE,
               'value'    => $vars['deleted']
+            ];
+            $form['row'][0]['guess_source'] = [
+              'type'     => 'switch-ng',
+              'on-color' => 'success',
+              'on-icon'  => 'icon-ok',
+              'off-icon' => 'icon-question-sign',
+              'grid'     => 2,
+              'title'    => 'Guess Source Port',
+              'value'    => $vars['guess_source']
             ];
             // search button
             $form['row'][0]['search'] = [

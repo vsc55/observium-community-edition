@@ -85,7 +85,7 @@ foreach ($devices as $device)
         echo ('.');
         break;
     }
-    
+
     force_discovery($device, array('sensors'));
   }
 }

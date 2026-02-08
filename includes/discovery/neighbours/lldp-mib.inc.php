@@ -42,10 +42,10 @@ $dot1d_array = snmp_cache_table($device, "dot1dBasePortIfIndex", [], "BRIDGE-MIB
 $lldp_local_array = snmpwalk_cache_oid($device, "lldpLocPortEntry", [], "LLDP-MIB");
 
 foreach ($lldp_array as $index => $lldp) {
-    if (str_contains_array($index, '.')) {
+    if (str_contains($index, '.')) {
         // This is correct RFC case:
         // LLDP-MIB::lldpRemChassisIdSubtype.0.0.1 = INTEGER: macAddress(4)
-        [$lldpRemTimeMark, $lldpRemLocalPortNum, $lldpRemIndex] = explode('.', $index);
+        [ $lldpRemTimeMark, $lldpRemLocalPortNum, $lldpRemIndex ] = explode('.', $index);
     } else {
         // Incorrect case (ie on old RouterOS):
         // LLDP-MIB::lldpRemChassisIdSubtype.1495 = INTEGER: macAddress(4)
@@ -78,33 +78,62 @@ foreach ($lldp_array as $index => $lldp) {
             $ifName .= '0';
         }
         $port = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND (`ifName`= ? OR `ifDescr` = ? OR `port_label_short` = ?)", [$device['device_id'], 0, $ifName, $ifName, $ifName]);
+
+        if (OBS_DEBUG && $port) {
+            print_cli("Local Port associated by lldpLocPortDesc '$ifName' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+        }
+    }
+
+    // second try by lldpLocPortId & interfaceName, also see below for remote port
+    // Prefer exact port name, other fields can be intersected
+    // See: https://jira.observium.org/browse/OBS-5061
+    if (!$port && $lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortIdSubtype'] === 'interfaceName' &&
+        !empty($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId'])) {
+
+        $ifName = snmp_hexstring($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']);
+        $port   = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?)", [$device['device_id'], 0, $ifName, $ifName, $ifName]);
+        if (OBS_DEBUG && $port) {
+            print_cli("Local Port associated by interfaceName '$ifName' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+        }
     }
 
     // By BRIDGE-MIB (Warning, seems as more hard on multiple platforms not correctly association with ifIndex for LLDP)
     if (!$port && is_numeric($dot1d_array[$lldpRemLocalPortNum]['dot1dBasePortIfIndex']) &&
-        !in_array($device['os'], [ 'junos', 'junos-evo', 'dell-os10' ])) { // Incorrect association on these platforms
+        !in_array($device['os'], [ 'junos', 'junos-evo', 'dell-os10', 'cumulus-os' ])) { // Incorrect association on these platforms
         // Gets the port using BRIDGE-MIB
         $ifIndex = $dot1d_array[$lldpRemLocalPortNum]['dot1dBasePortIfIndex'];
 
         $port = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND `ifIndex` = ? AND `ifDescr` NOT LIKE 'Vlan%'", [$device['device_id'], 0, $ifIndex]);
+        if (OBS_DEBUG && $port) {
+            print_cli("Local Port associated by dot1dBasePortIfIndex '$ifIndex' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+        }
     }
 
-    // last try by lldpLocPortId, also see below for remote port
     if (!$port) {
+        // This is less accurate fields
         switch ($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortIdSubtype']) {
-            case 'interfaceName':
-                $ifName = snmp_hexstring($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']);
-                $port   = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?)", [$device['device_id'], 0, $ifName, $ifName, $ifName]);
-                break;
+            // case 'interfaceName':
+            //     $ifName = snmp_hexstring($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']);
+            //     $port   = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?)", [$device['device_id'], 0, $ifName, $ifName, $ifName]);
+            //     if (OBS_DEBUG && $port) {
+            //         print_cli("Local Port associated by interfaceName '$ifName' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+            //     }
+            //     break;
 
             case 'interfaceAlias':
                 $ifAlias = snmp_hexstring($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']);
                 $port    = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND `ifAlias` = ?", [$device['device_id'], 0, $ifAlias]);
+                if (OBS_DEBUG && $port) {
+                    print_cli("Local Port associated by interfaceAlias '$ifAlias' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+                }
                 break;
 
             case 'macAddress':
                 $ifPhysAddress = strtolower(str_replace(' ', '', $lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']));
                 $port          = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND `ifPhysAddress` = ?", [$device['device_id'], 0, $ifPhysAddress]);
+                if (OBS_DEBUG && $port) {
+                    print_cli("Local Port associated by macAddress '$ifPhysAddress' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+                }
                 break;
 
             case 'networkAddress':
@@ -123,6 +152,9 @@ foreach ($lldp_array as $index => $lldp) {
                 if ($ids = get_entity_ids_ip_by_network('port', $ip, $peer_where)) {
                     $port = get_port_by_id_cache($ids[0]);
                 }
+                if (OBS_DEBUG && $port) {
+                    print_cli("Local Port associated by networkAddress '$ip' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+                }
 
                 break;
         }
@@ -133,9 +165,16 @@ foreach ($lldp_array as $index => $lldp) {
         print_debug('WARNING. Local port for neighbour not found, used incorrect lldpRemLocalPortNum as ifIndex.');
         $ifIndex = $lldpRemLocalPortNum; // This is incorrect, not really ifIndex, but seems sometime this numbers same
         $port    = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND `ifIndex` = ? AND `ifDescr` NOT LIKE 'Vlan%'", [$device['device_id'], 0, $ifIndex]);
+        if (OBS_DEBUG && $port) {
+            print_cli("Local Port associated by (incorrect) lldpRemLocalPortNum '$ifIndex' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+        }
+
         if (!$port && $device['os'] === 'ciena-waveserveros') {
             $ifName = 'PORT-' . snmp_hexstring($lldp_local_array[$lldpRemLocalPortNum]['lldpLocPortId']);
             $port   = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `deleted` = ? AND (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?)", [$device['device_id'], 0, $ifName, $ifName, $ifName]);
+            if (OBS_DEBUG && $port) {
+                print_cli("Local Port associated by (ciena-waveserveros) interfaceName '$ifName' -> ifIndex {$port['ifIndex']} ({$port['port_label_short']})\n");
+            }
         }
     }
 
@@ -191,19 +230,44 @@ foreach ($lldp_array as $index => $lldp) {
             // lldpRemSysName.89.3.1 =
             // lldpRemSysDesc.89.3.1 = GS724Tv4 ProSafe 24-port Gigabit Ethernet Smart Switch, 6.3.1.4, B1.0.0.4
             // lldpRemManAddrIfId.89.3.1.1.4.192.168.0.239 = 51
-            $lldp['lldpRemSysName'] = str_replace([' ', '-'], '', strtolower($lldp['lldpRemChassisId']));
+            $lldp['lldpRemSysName'] = str_replace([ ' ', '-' ], '', strtolower($lldp['lldpRemChassisId']));
         } elseif ($lldp['lldpRemChassisIdSubtype'] === 'networkAddress' &&
                   preg_match('/^01 (?<ip>([A-F\d]{2}\s?){4})$/', $lldp['lldpRemChassisId'], $matches)) {
             $lldp['lldpRemSysName'] = hex2ip($matches['ip']);
         }
     }
 
-    // Try find remote device and check if already cached
-    $remote_device_id = get_autodiscovery_device_id($device, $lldp['lldpRemSysName'], $lldp['lldpRemManAddr'], $remote_mac);
-    if (is_null($remote_device_id) &&                                            // NULL - never cached in other rounds
-        check_autodiscovery($lldp['lldpRemSysName'], $lldp['lldpRemManAddr'])) { // Check all previous autodiscovery rounds
-        // Neighbour never checked, try autodiscovery
-        $remote_device_id = autodiscovery_device($lldp['lldpRemSysName'], $lldp['lldpRemManAddr'], 'LLDP', $lldp['lldpRemSysDesc'], $device, $port);
+    // Try to find a remote device and check if already cached
+    if (empty($lldp['lldpRemSysName']) && empty($lldp['lldpRemSysDesc']) && empty($lldp['lldpRemPortDesc']) &&
+        $lldp['lldpRemChassisIdSubtype'] === 'macAddress' && !empty($lldp['lldpRemPortId'])) {
+        // Some derp SNR/D-Link devices do not report sysName and SysDescr by default,
+        // need exact set on device configs
+        // lldpRemChassisIdSubtype.7100.6.1 = macAddress
+        // lldpRemChassisId.7100.6.1 = "F8 F0 82 10 7B 03 "
+        // lldpRemPortIdSubtype.7100.6.1 = interfaceName
+        // lldpRemPortId.7100.6.1 = "Ethernet1/25"
+        // lldpRemSysName.7100.6.1 =
+        // lldpRemPortDesc.7100.6.1 =
+        // lldpRemSysDesc.7100.6.1 =
+
+        // Try to detect a remote device without autodiscovery
+        $id = trim($lldp['lldpRemPortId']);
+        switch ($lldp['lldpRemPortIdSubtype']) {
+            case 'interfaceName':
+                $query            = 'SELECT `device_id` FROM `ports` WHERE `device_id` != ? AND `ifPhysAddress` = ? AND (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?) AND `deleted` = ?';
+                $remote_device_id = dbFetchCell($query, [ $device['device_id'], mac_zeropad($lldp['lldpRemChassisId']), $id, $id, $id, 0 ]);
+                break;
+        }
+
+        // use mac address instead empty hostname:
+        $lldp['lldpRemSysName'] = str_replace([ ' ', '-' ], '', strtolower($lldp['lldpRemChassisId']));
+    } else {
+        $remote_device_id = get_autodiscovery_device_id($device, $lldp['lldpRemSysName'], $lldp['lldpRemManAddr'], $remote_mac);
+        if (is_null($remote_device_id) &&                                            // NULL - never cached in other rounds
+            check_autodiscovery($lldp['lldpRemSysName'], $lldp['lldpRemManAddr'])) { // Check all previous autodiscovery rounds
+            // Neighbour never checked, try autodiscovery
+            $remote_device_id = autodiscovery_device($lldp['lldpRemSysName'], $lldp['lldpRemManAddr'], 'LLDP', $lldp['lldpRemSysDesc'], $device, $port);
+        }
     }
 
     if ($remote_device_id) {
@@ -221,24 +285,40 @@ foreach ($lldp_array as $index => $lldp) {
         switch ($lldp['lldpRemPortIdSubtype']) {
             case 'interfaceAlias':
                 $remote_port_id = dbFetchCell("SELECT `port_id` FROM `ports` WHERE (`ifAlias` = ? OR `ifDescr` = ? OR `port_label_short` = ?) AND `device_id` = ? AND `deleted` = ?", [$id, $if, $if, $remote_device_id, 0]);
+                if (OBS_DEBUG && $remote_port_id) {
+                    print_cli("Remote Port associated by interfaceAlias '$id' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                }
                 break;
 
             case 'interfaceName':
                 // Try lldpRemPortId
                 $query          = 'SELECT `port_id` FROM `ports` WHERE (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?) AND `device_id` = ? AND `deleted` = ?';
                 $remote_port_id = dbFetchCell($query, [$id, $id, $id, $remote_device_id, 0]);
+                if (OBS_DEBUG && $remote_port_id) {
+                    print_cli("Remote Port associated by interfaceName '$id' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                }
+
                 if (!$remote_port_id && !safe_empty($if)) {
                     // Try same by lldpRemPortDesc
                     $remote_port_id = dbFetchCell($query, [$if, $if, $if, $remote_device_id, 0]);
+                    if (OBS_DEBUG && $remote_port_id) {
+                        print_cli("Remote Port associated by interfaceName '$if' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                    }
                 }
                 break;
 
             case 'macAddress':
                 $remote_port_id = get_port_id_by_mac($remote_device_id, $id);
+                if (OBS_DEBUG && $remote_port_id) {
+                    print_cli("Remote Port associated by macAddress '$id' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                }
                 if (!$remote_port_id && !safe_empty($if)) {
                     // Try same by lldpRemPortDesc
                     $query          = 'SELECT `port_id` FROM `ports` WHERE (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?) AND `device_id` = ? AND `deleted` = ?';
                     $remote_port_id = dbFetchCell($query, [$if, $if, $if, $remote_device_id, 0]);
+                    if (OBS_DEBUG && $remote_port_id) {
+                        print_cli("Remote Port associated by interfaceName '$if' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                    }
                 }
                 break;
 
@@ -252,6 +332,9 @@ foreach ($lldp_array as $index => $lldp) {
                         $remote_port_id = $ids[0];
                         //$port = get_port_by_id_cache($ids[0]);
                     }
+                    if (OBS_DEBUG && $remote_port_id) {
+                        print_cli("Remote Port associated by networkAddress '$id' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                    }
                 }
                 break;
 
@@ -261,9 +344,15 @@ foreach ($lldp_array as $index => $lldp) {
                     // Not sure what should be if $id ifName and it just numeric
                     $query          = 'SELECT `port_id` FROM `ports` WHERE (`ifName` = ? OR `ifDescr` = ? OR `port_label_short` = ?) AND `device_id` = ? AND `deleted` = ?';
                     $remote_port_id = dbFetchCell($query, [$id, $id, $id, $remote_device_id, 0]);
+                    if (OBS_DEBUG && $remote_port_id) {
+                        print_cli("Remote Port associated by local '$id' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                    }
                     if (!$remote_port_id) {
                         // Try same by lldpRemPortDesc
                         $remote_port_id = dbFetchCell($query, [$if, $if, $if, $remote_device_id, 0]);
+                        if (OBS_DEBUG && $remote_port_id) {
+                            print_cli("Remote Port associated by interfaceName '$if' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                        }
                     }
                 }
             case 'ifIndex':
@@ -277,16 +366,25 @@ foreach ($lldp_array as $index => $lldp) {
         if (!$remote_port_id && is_numeric($id)) {
             // Not found despite our attempts above - fall back to try matching with ifDescr/ifIndex
             $remote_port_id = dbFetchCell("SELECT `port_id` FROM `ports` WHERE (`ifIndex`= ? OR `ifDescr` = ?) AND `device_id` = ? AND `deleted` = ?", [$id, $if, $remote_device_id, 0]);
+            if (OBS_DEBUG && $remote_port_id) {
+                print_cli("Remote Port associated by ifIndex '$id' & ifDescr '$if' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+            }
         }
 
         if (!$remote_port_id) { // Still not found?
             if ($lldp['lldpRemChassisIdSubtype'] === 'macAddress') {
                 // Find the port by chassis MAC address, only use this if exactly 1 match is returned, otherwise we'd link wrongly - think switches with 1 global MAC on all ports.
                 $remote_port_id = get_port_id_by_mac($remote_device_id, $lldp['lldpRemChassisId']);
+                if (OBS_DEBUG && $remote_port_id) {
+                    print_cli("Remote Port associated by lldpRemChassisId '{$lldp['lldpRemChassisId']}' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                }
             } else {
                 // Last chance
                 $query          = 'SELECT `port_id` FROM `ports` WHERE (`ifName` IN (?, ?) OR `ifDescr` IN (?, ?) OR `port_label_short` IN (?, ?)) AND `device_id` = ? AND `deleted` = ?';
                 $remote_port_id = dbFetchCell($query, [$id, $if, $id, $if, $id, $if, $remote_device_id, 0]);
+                if (OBS_DEBUG && $remote_port_id) {
+                    print_cli("Remote Port associated by lldpRemPortId '$id' & lldpRemPortDesc '$if' -> Remote Device ID $remote_device_id, Port ID $remote_port_id\n");
+                }
             }
         }
 

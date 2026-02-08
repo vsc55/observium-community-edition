@@ -14,7 +14,7 @@ EXTREME-UPM-MIB DEFINITIONS ::= BEGIN
 
 
     extremeUpm     MODULE-IDENTITY
-                LAST-UPDATED "200402140000Z"
+                LAST-UPDATED "202412090000Z"
                 ORGANIZATION "Extreme Networks, Inc."
                 CONTACT-INFO "www.extremenetworks.com"
                 DESCRIPTION "Extreme universal port management mib"
@@ -66,7 +66,20 @@ upmEventType OBJECT-TYPE
         userauthenticated(3),
         userunauthenticated(4),
         upmTimer(5),
-        userrequest(7)
+        userrequest(6),
+        logmessage(7),
+        identitydetect(8),
+        identityundetect(9),
+        identityroleassociate(10),
+        identityroledisassociate(11),
+        portlinkstatusdown(12),
+        upmexecutexsf(13),
+        instaportprofileupdate(14),
+        vpstoperation(15),
+        maclockingdeldisable(16),
+        maclockingflushport(17),
+        lagmemberportadd(18),
+        lagmemberportdel(19)
     }
     MAX-ACCESS accessible-for-notify
     STATUS current
@@ -77,7 +90,9 @@ upmEventType OBJECT-TYPE
 upmExecutionStatus OBJECT-TYPE
     SYNTAX INTEGER {
         success (1),
-        failure (2)
+        failure (2),
+        failuretimetoolarge (3),
+        inprogress (4)
     }
     MAX-ACCESS accessible-for-notify
     STATUS current

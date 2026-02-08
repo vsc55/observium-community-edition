@@ -1,94 +1,72 @@
 <?php
 
-//define('OBS_DEBUG', 2);
+// Test-specific setup (bootstrap.php handles common setup and JSON precision)
+// Any additional setup specific to common tests can go here
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
+class IncludesCommonTest extends \PHPUnit\Framework\TestCase {
+    /**
+     * @dataProvider providerSafeCount
+     * @group safe
+     */
+    public function testSafeCount($value, $result) {
+        $this->assertSame($result, safe_count($value));
+    }
 
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-include(__DIR__ . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/functions.inc.php');
+    public static function providerSafeCount() {
+        return [
+            [ NULL,        0 ],
+            [ TRUE,        0 ],
+            [ FALSE,       0 ],
+            [ '3y',        0 ],
+            [ '',          0 ],
+            [ '1',         0 ],
+            [ '0',         0 ],
+            [ '-1',        0 ],
+            [ 1,           0 ],
+            [ 0,           0 ],
+            [ -1,          0 ],
+            // common format_uptime() strings
+            [ [],                                       0 ],
+            [ [ 1 ],                                    1 ],
+            [ [ '1234.5', 3, '1234' ],                  3 ],
+            [ new ArrayIterator([]),                    0 ],
+            [ new ArrayIterator(['foo', 'bar', 'baz']), 3 ]
+        ];
+    }
 
-// Notes about JSON precision:
-// php 7.0 and earlier use precision for floats in json_encode()
-ini_set('precision',           14);
-ini_set('serialize_precision', 17);
-//var_dump(OBS_JSON_DECODE); exit;
+    /**
+     * @dataProvider providerSafeEmpty
+     * @group safe
+     */
+    public function testSafeEmpty($value, $result) {
+        $this->assertSame($result, safe_empty($value));
+    }
 
-class IncludesCommonTest extends \PHPUnit\Framework\TestCase
-{
-  /**
-   * @dataProvider providerSafeCount
-   * @group safe
-   */
-  public function testSafeCount($value, $result)
-  {
-    $this->assertSame($result, safe_count($value));
-  }
-
-  public function providerSafeCount()
-  {
-    return [
-      [ NULL,        0 ],
-      [ TRUE,        0 ],
-      [ FALSE,       0 ],
-      [ '3y',        0 ],
-      [ '',          0 ],
-      [ '1',         0 ],
-      [ '0',         0 ],
-      [ '-1',        0 ],
-      [ 1,           0 ],
-      [ 0,           0 ],
-      [ -1,          0 ],
-      // common format_uptime() strings
-      [ [],                                       0 ],
-      [ [ 1 ],                                    1 ],
-      [ [ '1234.5', 3, '1234' ],                  3 ],
-      [ new ArrayIterator([]),                    0 ],
-      [ new ArrayIterator(['foo', 'bar', 'baz']), 3 ]
-    ];
-  }
-
-  /**
-   * @dataProvider providerSafeEmpty
-   * @group safe
-   */
-  public function testSafeEmpty($value, $result)
-  {
-    $this->assertSame($result, safe_empty($value));
-  }
-
-  public function providerSafeEmpty()
-  {
-    return [
-      [ NULL,        TRUE ],
-      [ TRUE,        FALSE ],
-      [ FALSE,       FALSE ],
-      [ '3y',        FALSE ],
-      [ '',          TRUE ],
-      [ '1',         FALSE ],
-      [ '0',         FALSE ],
-      [ '00',        FALSE ],
-      [ 0x0,         FALSE ],
-      [ '-1',        FALSE ],
-      [ 1,           FALSE ],
-      [ 0,           FALSE ],
-      [ -1,          FALSE ],
-      // common format_uptime() strings
-      [ [],                                       TRUE ],
-      [ [ 1 ],                                    FALSE ],
-      [ [ '1234.5', 3, '1234' ],                  FALSE ],
-      [ new ArrayIterator([]),                    FALSE ],
-      [ new ArrayIterator(['foo', 'bar', 'baz']), FALSE ]
-    ];
-  }
+    public static function providerSafeEmpty() {
+        return [
+            [ NULL,        TRUE ],
+            [ TRUE,        FALSE ],
+            [ FALSE,       FALSE ],
+            [ '3y',        FALSE ],
+            [ '',          TRUE ],
+            [ '1',         FALSE ],
+            [ '0',         FALSE ],
+            [ '0.0',       FALSE ],
+            [ '00',        FALSE ],
+            [ 0x0,         FALSE ],
+            [ '-1',        FALSE ],
+            [ 1,           FALSE ],
+            [ 0,           FALSE ],
+            [ 0.0,         FALSE ],
+            [ -1,          FALSE ],
+            // common format_uptime() strings
+            [ [],                                       TRUE ],
+            [ [ 1 ],                                    FALSE ],
+            [ [ '1234.5', 3, '1234' ],                  FALSE ],
+            [ new ArrayIterator([]),                    FALSE ],
+            [ new ArrayIterator(['foo', 'bar', 'baz']), FALSE ]
+        ];
+    }
 
     /**
     * @dataProvider providerAgeToSeconds
@@ -98,24 +76,29 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, age_to_seconds($value));
     }
 
-    public function providerAgeToSeconds() {
+    public static function providerAgeToSeconds() {
         return [
-            [ '3y 4M 6w 5d 3h 1m 3s',         109191663 ],
-            [ '3y4M6w5d3h1m3s',               109191663 ],
-            [ '184 days 22 hrs 02 min 38 sec', 15976958 ],
-            [ '3 day(s) 5 hour(s)',              277200 ],
-            [ '1.5w',                            907200 ],
-            [ '2Y',                            63072000 ],
-            [ '315 days18:50:04',              27283804 ],
-            [ '35 days, 06:58:01',              3049081 ],
-            [ '02:33:16.7',                        9196 ],
-            [ '8123ms',                               8 ],
+            [ '3y 4M 6w 5d 3h 1m 3s',              109191663 ],
+            [ '3y4M6w5d3h1m3s',                    109191663 ],
+            [ '184 days 22 hrs 02 min 38 sec',      15976958 ],
+            [ '3 day(s) 5 hour(s)',                   277200 ],
+            [ '1.5w',                                 907200 ],
+            [ '2Y',                                 63072000 ],
+            [ '1d01h',                                 90000 ],
+            [ '315 days18:50:04',                   27283804 ],
+            [ '35 days, 06:58:01',                   3049081 ],
+            [ '02:33:16.7',                             9196 ],
+            [ '8123ms',                                    8 ],
+            [ '15 days : 19 hrs : 49 mins : 17 sec',                1367357 ],
+            [ '0 weeks, 4 days, 20 hours, 31 minutes, 0 seconds',    419460 ],
+            [ '10 weeks, 2 days, 22 hours, 43 minutes, 21 seconds', 6302601 ],
             // common format_uptime() strings
             [ '2 years, 1 day, 1h 1m 1s',      63162061 ],
             [ '1 year, 1 day, 1h 1m 1s',       31626061 ],
             [ '2 hours 2 minutes 2 seconds',       7322 ],
             // incorrect age
             [ -886732,                                0 ],
+            [ '',                                     0 ],
             [ 'Star Wars',                            0 ],
         ];
     }
@@ -128,7 +111,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, age_to_seconds($value, TRUE));
     }
 
-    public function providerAgeToSecondsMs() {
+    public static function providerAgeToSecondsMs() {
         return [
             [ '0.567',       0.567 ],
             [ '0.567s',      0.567 ],
@@ -152,116 +135,139 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, $test);
     }
 
-  /**
-   * @dataProvider providerUptimeToSeconds
-   * @group datetime
-   */
-  public function testUptimeToSeconds($value, $result) {
-    $this->assertSame($result, uptime_to_seconds($value));
-  }
-
-  public function providerUptimeToSeconds() {
-    return [
-      [ '00:11:09',                  669 ],
-      [ '4d05h',                  363600 ],
-      [ '315 days18:50:04',     27283804 ],
-      [ 'up 35 days, 06:58:01',  3049081 ],
-    ];
-  }
-
-  /**
-   * @dataProvider providerAgeToUnixtime
-   * @group datetime
-   */
-  public function testAgeToUnixtime($value, $min_age, $result)
-  {
-    // We fudge this a little since it's difficult to mock time().
-    // We simply make sure that we are not off by more than 2 secs.
-    if ($result > 0) {
-      // prevent long time running errors
-      $result = time() - $result;
+    /**
+     * @dataProvider providerUptimeToSeconds
+     * @group datetime
+     */
+    public function testUptimeToSeconds($value, $result) {
+        $this->assertSame($result, uptime_to_seconds($value));
     }
-    $this->assertLessThanOrEqual(2, age_to_unixtime($value, $min_age) - $result);
-  }
 
-  public function providerAgeToUnixtime()
-  {
-    return array(
-      array('3y 4M 6w 5d 3h 1m 3s', 1, 109191663),
-      array('3y4M6w5d3h1m3s',       1, 109191663),
-      array('1.5w',                 1,    907200),
-      array('30m',               7200,         0),
-      array(-886732,                1,         0),
-      array('Star Wars',            1,         0),
-    );
-  }
-
-  /**
-   * @dataProvider providerExternalExec
-   * @group exec
-   */
-  public function testExternalExec($cmd, $timeout, $result)
-  {
-    //var_dump($_SERVER['SHELL']);
-    $test = external_exec($cmd, $exec_status, $timeout);
-    unset($exec_status['endtime'], $exec_status['runtime'], $exec_status['exitdelay']);
-    if ($exec_status['exitcode'] == 127) {
-      // Fix shell specific output for tests
-      $exec_status['stderr'] = str_replace(array('sh: 1:', 'sh: exec:', 'not found'),
-                                           array('sh:',    'sh:',       'No such file or directory'),
-                                           $exec_status['stderr']);
+    public static function providerUptimeToSeconds() {
+        return [
+            [ '00:11:09',                  669 ],
+            [ '4d05h',                  363600 ],
+            [ '315 days18:50:04',     27283804 ],
+            [ 'up 35 days, 06:58:01',  3049081 ],
+        ];
     }
-    $this->assertSame($result, $exec_status);
-  }
 
-  public function providerExternalExec()
-  {
-    // CentOS 6 use different place for which
-    $cmd_which = is_executable('/bin/which') ? '/bin/which' : '/usr/bin/which';
-    return array(
-      // normal stdout
-      array($cmd_which.' true',
+    /**
+     * @dataProvider providerAgeToUnixtime
+     * @group datetime
+     */
+    public function testAgeToUnixtime($value, $min_age, $result) {
+        // We fudge this a little since it's difficult to mock time().
+        // We simply make sure that we are not off by more than 2 secs.
+        if ($result > 0) {
+            // prevent long time running errors
+            $result = time() - $result;
+        }
+        $this->assertLessThanOrEqual(2, age_to_unixtime($value, $min_age) - $result);
+    }
+
+    public static function providerAgeToUnixtime() {
+        return [
+            [ '3y 4M 6w 5d 3h 1m 3s', 1, 109191663 ],
+            [ '3y4M6w5d3h1m3s',       1, 109191663 ],
+            [ '1.5w',                 1,    907200 ],
+            [ '10 weeks, 2 days, 22 hours, 43 minutes, 21 seconds', 1,    907200000 ],
+            //[ '1.5w',                 1,    907200 ],
+            [ '30m',               7200,         0 ],
+            [ -886732,                1,         0 ],
+            [ 'Star Wars',            1,         0 ],
+        ];
+    }
+
+    /**
+     * @dataProvider providerExternalExec
+     * @group exec
+     */
+    public function testExternalExec($cmd, $timeout, $result) {
+        //var_dump($_SERVER['SHELL']);
+        $test = external_exec($cmd, $exec_status, $timeout);
+        unset($exec_status['endtime'], $exec_status['runtime'], $exec_status['exitdelay']);
+        if ($exec_status['exitcode'] == 127) {
+            // Fix shell specific output for tests
+            $exec_status['stderr'] = str_replace([ 'sh: 1:', 'sh: exec:', 'not found' ],
+                                                 [ 'sh:',    'sh:',       'No such file or directory' ],
+                                                 $exec_status['stderr']);
+        }
+        $this->assertSame($result, $exec_status);
+    }
+
+    public static function providerExternalExec() {
+        // Base cmd paths
+        $cmd_which = is_executable('/bin/which') ? '/bin/which' : '/usr/bin/which';
+        $cmd_true  = is_executable('/bin/true')  ? '/bin/true'  : '/usr/bin/true';
+        $cmd_false = is_executable('/bin/false') ? '/bin/false' : '/usr/bin/false';
+
+        $return = [];
+
+        // normal stdout
+        $return[] = array(
+            $cmd_which.' true',
             NULL,
             array(
-              'stdout'   => '/bin/true',
+              'stdout'   => $cmd_true,
               'stderr'   => '',
               //'command'  => $cmd_which.' true',
               'exitcode' => 0,
             )
-      ),
-      // here generate stderr
-      array($cmd_which.' true >&2',
+        );
+        // here generate stderr
+        $return[] = array(
+            $cmd_which.' true >&2',
             NULL,
             array(
               'stdout'   => '',
-              'stderr'   => '/bin/true',
+              'stderr'   => $cmd_true,
               //'command'  => $cmd_which.' true >&2',
               'exitcode' => 0,
             )
-      ),
-      // normal stdout, but exitcode 1
-      array('/bin/false',
+        );
+        // normal stdout, but exitcode 1
+        $return[] = array(
+            $cmd_false,
             NULL,
             array(
               'stdout'   => '',
               'stderr'   => '',
-              //'command'  => '/bin/false',
+              //'command'  => $cmd_false,
               'exitcode' => 1,
             )
-      ),
-      // real stdout, exit code 127
-      array('/bin/jasdhksdhka',
-            NULL,
-            array(
-              'stdout'   => '',
-              //'stderr'   => 'sh: 1: /bin/jasdhksdhka: not found', // this stderror is shell env specific for dash
-              'stderr'   => 'sh: /bin/jasdhksdhka: No such file or directory', // this stderror is shell env specific for bash
-              //'command'  => '/bin/jasdhksdhka',
-              'exitcode' => 127,
-            )
-      ),
-      // normal stdout with special chars (tabs, eol in eof)
-      array('/bin/cat ' . __DIR__ . '/data/text.txt',
+        );
+        // real stdout, exit code 127
+        if (PHP_OS !== 'Darwin') {
+            $return[] = array(
+                '/bin/jasdhksdhka',
+                NULL,
+                array(
+                    'stdout'   => '',
+                    //'stderr'   => 'sh: 1: /bin/jasdhksdhka: not found', // this stderror is shell env specific for dash
+                    'stderr'   => 'sh: /bin/jasdhksdhka: No such file or directory', // this stderror is shell env specific for bash
+                    //'command'  => '/bin/jasdhksdhka',
+                    'exitcode' => 127,
+                )
+            );
+        } else {
+            // MacOS specific, not really required, but keep for local testing
+            $return[] = array(
+                '/bin/jasdhksdhka',
+                NULL,
+                array(
+                    'stdout'   => '',
+                    //'stderr'   => 'sh: 1: /bin/jasdhksdhka: not found', // this stderror is shell env specific for dash
+                    'stderr'   => 'sh: /bin/jasdhksdhka: No such file or directory
+sh: line 0: exec: /bin/jasdhksdhka: cannot execute: No such file or directory', // this stderror is shell env specific for bash
+                    //'command'  => '/bin/jasdhksdhka',
+                    'exitcode' => 126,
+                )
+            );
+        }
+        // normal stdout with special chars (tabs, eol in eof)
+        $return[] = array(
+            '/bin/cat ' . __DIR__ . '/data/text.txt',
              NULL,
              array(
                'stdout'   =>
@@ -280,9 +286,10 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
                //'command'  => '/bin/cat ' . __DIR__ . '/data/text.txt',
                'exitcode' => 0,
              )
-      ),
-      // timeout 5sec, ok
-      array('/bin/sleep 1',
+        );
+        // timeout 5sec, ok
+        $return[] = array(
+            '/bin/sleep 1',
             5,
             array(
               'stdout'   => '',
@@ -290,9 +297,10 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
               //'command'  => '/bin/sleep 1',
               'exitcode' => 0,
             )
-      ),
-      // timeout 2sec, expired, exitcode -1
-      array('/bin/sleep 10',
+        );
+        // timeout 2sec, expired, exitcode -1
+        $return[] = array(
+            '/bin/sleep 10',
             1,
             array(
               'stdout'   => '',
@@ -300,10 +308,11 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
               //'command'  => '/bin/sleep 10',
               'exitcode' => -1,
             )
-      ),
+        );
 
-      // Empty
-      array('',
+        // Empty
+        $return[] = array(
+            '',
             NULL,
             array(
               'stdout'   => '',
@@ -311,8 +320,9 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
               //'command'  => '',
               'exitcode' => -1
             )
-      ),
-      array(FALSE,
+        );
+        $return[] = array(
+            FALSE,
             NULL,
             array(
               'stdout'   => '',
@@ -320,10 +330,10 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
               //'command'  => '',
               'exitcode' => -1,
             )
-      ),
+        );
 
-    );
-  }
+        return $return;
+    }
 
   /* This test not work for now */
   ///**
@@ -338,7 +348,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
   //  $this->assertSame($result, $GLOBALS['exec_status']['command']);
   //}
   //
-  //public function providerExternalExecHideAuth()
+  //public static function providerExternalExecHideAuth()
   //{
   //  return array(
   //    // hide auth
@@ -356,78 +366,82 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
   //  );
   //}
 
-  /**
-   * @group pid
-   */
-  public function testGetPidInfo() {
+    /**
+     * @group pid
+     */
+    public function testGetPidInfo() {
 
-    $pid = getmypid();
-    $timezone = get_timezone(); // Get system timezone info, for correct started time conversion
+        $pid = getmypid();
+        $timezone = get_timezone(TRUE); // Get system timezone info, for correct started time conversion
+        //var_dump($timezone);
 
-    // Compare only this keys
-    $compare_keys = [ 'PID', 'PPID', 'UID', 'GID', 'COMMAND', 'STARTED', 'STARTED_UNIX', 'VSZ' ];
+        // Compare only this keys
+        $compare_keys = [ 'PID', 'PPID', 'UID', 'GID', 'COMMAND', 'STARTED', 'STARTED_UNIX', 'VSZ' ];
 
-    $test_pid_info['ps']       = get_pid_info($pid);
-    $test_pid_info['ps_stats'] = get_pid_info($pid, TRUE);
-    $test['ps']       = external_exec('/bin/ps -ww -o pid,ppid,uid,gid,tty,stat,time,lstart,args -p '.$pid, $exec_status, 1); // Set timeout 1sec for exec
-    $test['ps_stats'] = external_exec('/bin/ps -ww -o pid,ppid,uid,gid,pcpu,pmem,vsz,rss,tty,stat,time,lstart,args -p '.$pid, $exec_status, 1); // Set timeout 1sec for exec
+        $test_pid_info['ps']       = get_pid_info($pid);
+        $test_pid_info['ps_stats'] = get_pid_info($pid, TRUE);
+        //var_dump($test_pid_info);
+        $test['ps']       = external_exec('/bin/ps -ww -o pid,ppid,uid,gid,tty,stat,time,lstart,args -p '.$pid, $exec_status, 1); // Set timeout 1sec for exec
+        $test['ps_stats'] = external_exec('/bin/ps -ww -o pid,ppid,uid,gid,pcpu,pmem,vsz,rss,tty,stat,time,lstart,args -p '.$pid, $exec_status, 1); // Set timeout 1sec for exec
+        //var_dump($test);
 
-    foreach ($test as $ps_type => $ps) {
-      // Copy-pasted from function get_pid_info()
-      $ps = explode("\n", rtrim($test[$ps_type]));
+        foreach ($test as $ps_type => $ps) {
+            // Copy-pasted from function get_pid_info()
+            $ps = explode("\n", rtrim($test[$ps_type]));
 
-      // Parse output
-      $keys = preg_split("/\s+/", $ps[0], -1, PREG_SPLIT_NO_EMPTY);
-      $entries = preg_split("/\s+/", $ps[1], count($keys) - 1, PREG_SPLIT_NO_EMPTY);
-      $started = preg_split("/\s+/", array_pop($entries), 6, PREG_SPLIT_NO_EMPTY);
-      $command = array_pop($started);
+            // Parse output
+            $keys = preg_split("/\s+/", $ps[0], -1, PREG_SPLIT_NO_EMPTY);
+            $entries = preg_split("/\s+/", $ps[1], count($keys) - 1, PREG_SPLIT_NO_EMPTY);
+            $started = preg_split("/\s+/", array_pop($entries), 6, PREG_SPLIT_NO_EMPTY);
+            $command = array_pop($started);
 
-      $started[]    = str_replace(':', '', $timezone['system']); // Add system TZ to started time
-      $started_rfc  = array_shift($started) . ','; // Sun
-      // Reimplode and convert to RFC2822 started date 'Sun, 20 Mar 2016 18:01:53 +0300'
-      $started_rfc .= ' ' . ltrim($started[1], '0'); // 20
-      //$started_rfc .= ' ' . str_pad($started[1], 2, '0', STR_PAD_LEFT); // 20
-      $started_rfc .= ' ' . $started[0]; // Mar
-      $started_rfc .= ' ' . $started[3]; // 2016
-      $started_rfc .= ' ' . $started[2]; // 18:01:53
-      $started_rfc .= ' ' . $started[4]; // +0300
-      //$started_rfc .= implode(' ', $started);
-      $entries[] = $started_rfc;
+            $started[]    = str_replace(':', '', $timezone['system']); // Add system TZ to started time
+            //var_dump($started);
+            $started_rfc  = array_shift($started) . ','; // Sun
+            // Reimplode and convert to RFC2822 started date 'Sun, 20 Mar 2016 18:01:53 +0300'
+            $started_rfc .= ' ' . ltrim($started[1], '0'); // 20
+            //$started_rfc .= ' ' . str_pad($started[1], 2, '0', STR_PAD_LEFT); // 20
+            $started_rfc .= ' ' . $started[0]; // Mar
+            $started_rfc .= ' ' . $started[3]; // 2016
+            $started_rfc .= ' ' . $started[2]; // 18:01:53
+            $started_rfc .= ' ' . $started[4]; // +0300
+            //$started_rfc .= implode(' ', $started);
+            $entries[] = $started_rfc;
 
-      $entries[] = $command; // Re-add command
-      //print_vars($entries);
-      //print_vars($started);
+            $entries[] = $command; // Re-add command
+            //print_vars($entries);
+            //print_vars($started);
 
-      $pid_info = [];
-      foreach ($keys as $i => $key) {
-        if (!in_array($key, $compare_keys, TRUE)) { continue; }
-        $pid_info[$key] = $entries[$i];
-      }
-      $pid_info['STARTED_UNIX'] = strtotime($pid_info['STARTED']);
+            $pid_info = [];
+            foreach ($keys as $i => $key) {
+                if (!in_array($key, $compare_keys, TRUE)) { continue; }
+                $pid_info[$key] = $entries[$i];
+            }
+            $pid_info['STARTED_UNIX'] = strtotime($pid_info['STARTED']);
 
-      foreach ($test_pid_info[$ps_type] as $key => $tmp) {
-        if (!in_array($key, $compare_keys, TRUE)) {
-          unset($test_pid_info[$ps_type][$key]);
+            foreach ($test_pid_info[$ps_type] as $key => $tmp) {
+                if (!in_array($key, $compare_keys, TRUE)) {
+                    unset($test_pid_info[$ps_type][$key]);
+                }
+                if ($key === 'STARTED') {
+                    // Another derp fix for dates
+                    // Wed, 01 Dec 2021 10:28:51 +0300
+                    $test_pid_info[$ps_type][$key] = preg_replace('/, 0(\d) /', ', $1 ', $test_pid_info[$ps_type][$key]);
+                }
+            }
+            ksort($test_pid_info[$ps_type]);
+            ksort($pid_info);
+
+            $diff = abs($pid_info['STARTED_UNIX'] - $test_pid_info[$ps_type]['STARTED_UNIX']);
+            if ($diff > 0 && $diff < 5) {
+                // prevent false in time diff around 5 sec
+                $pid_info['STARTED_UNIX'] = $test_pid_info[$ps_type]['STARTED_UNIX'];
+                $pid_info['STARTED']      = ltrim($test_pid_info[$ps_type]['STARTED'], '0');
+            }
+
+            $this->assertSame($test_pid_info[$ps_type], $pid_info);
         }
-        if ($key === 'STARTED') {
-          // Another derp fix for dates
-          // Wed, 01 Dec 2021 10:28:51 +0300
-          $test_pid_info[$ps_type][$key] = preg_replace('/, 0(\d) /', ', $1 ', $test_pid_info[$ps_type][$key]);
-        }
-      }
-      ksort($test_pid_info[$ps_type]);
-      ksort($pid_info);
-
-      $diff = abs($pid_info['STARTED_UNIX'] - $test_pid_info[$ps_type]['STARTED_UNIX']);
-      if ($diff > 0 && $diff < 5) {
-        // prevent false in time diff around 5 sec
-        $pid_info['STARTED_UNIX'] = $test_pid_info[$ps_type]['STARTED_UNIX'];
-        $pid_info['STARTED']      = ltrim($test_pid_info[$ps_type]['STARTED'], '0');
-      }
-      $this->assertSame($test_pid_info[$ps_type], $pid_info);
     }
-
-  }
 
   /**
    * @dataProvider providerPercentClass
@@ -437,7 +451,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, percent_class($value));
   }
 
-  public function providerPercentClass()
+  public static function providerPercentClass()
   {
     return array(
       array(  24,      'info'), // if < 25
@@ -466,7 +480,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     }
   }
 
-  public function providerPercentColour()
+  public static function providerPercentColour()
   {
     return array(
       array(0,    NULL, '#008000'), // default brightness
@@ -505,7 +519,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, timeticks_to_sec($value, $float));
   }
 
-  public function providerTimeticksToSec()
+  public static function providerTimeticksToSec()
   {
     return array(
       // Main, return integer
@@ -534,23 +548,22 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     );
   }
 
-  /**
-   * @dataProvider providerDeviceUptime
-   * @group values
-   */
-  public function testDeviceUptime($value, $result)
-  {
-    $this->assertSame($result, device_uptime($value));
-  }
+    /**
+     * @dataProvider providerDeviceUptime
+     * @group values
+     */
+    public function testDeviceUptime($device, $result) {
+        $this->assertSame($result, device_uptime($device));
+    }
 
-  public function providerDeviceUptime()
-  {
-    return array(
-      array(array('status' => 0, 'last_polled' =>        0),  'Never polled'),
-      array(array('status' => 0, 'last_polled' => '-1 day'),  'Down 1 day'),
-      array(array('status' => 1, 'uptime'      =>   '3600'),  '1h'),
-    );
-  }
+    public static function providerDeviceUptime() {
+        return [
+            [ [ 'last_polled' =>        NULL ],  'Never polled' ],
+            [ [ 'status' => 0, 'last_polled' =>        0 ],  'Never polled' ],
+            [ [ 'status' => 0, 'last_polled' => '-1 day' ],  'Down 1 day' ],
+            [ [ 'status' => 1, 'uptime'      =>   '3600' ],  '1h' ],
+        ];
+    }
 
   /**
    * @dataProvider providerFormatUptime
@@ -561,7 +574,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, format_uptime($value, $format));
   }
 
-  public function providerFormatUptime()
+  public static function providerFormatUptime()
   {
     return array(
       array(       0, 'long',     '0s'),                          // zero
@@ -682,7 +695,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, humanspeed($value));
   }
 
-  public function providerHumanspeed()
+  public static function providerHumanspeed()
   {
     return array(
       array(     '',         '-'),
@@ -699,7 +712,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, format_mac($value, $char));
   }
 
-  public function providerFormatMac()
+  public static function providerFormatMac()
   {
     return array(
       array(     '123456789ABC', '12:34:56:78:9a:bc'),
@@ -744,7 +757,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, mac_zeropad($value));
     }
 
-    public function providerMacZeropad() {
+    public static function providerMacZeropad() {
         return [
             [      '123456789ABC', '123456789abc' ],
             [    '1234.5678.9abc', '123456789abc' ],
@@ -752,11 +765,11 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
             [  '66:c:9b:1b:62:7e', '660c9b1b627e' ],
             [       '0:0:0:0:0:0', '000000000000' ],
             [    '0x123456789ABC', '123456789abc' ],
-            
+
             // snmp hex string
             [ '30:30:2d:30:36:2d:33:39:2d:30:41:2d:35:46:2d:36:38', '0006390a5f68' ],
             [ '30 30 2d 30 36 2d 33 39 2d 30 41 2d 35 46 2d 36 38', '0006390a5f68' ],
-    
+
             // incorrect
             [  '66:Z:9b:1b:62:7e',           NULL ],
             [ '66:c:c:b:1b:62:7e',           NULL ],
@@ -767,14 +780,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatNumberShort
-   * @group numbers
+   * @group number
    */
   public function testFormatNumberShort($value, $sf, $result)
   {
     $this->assertSame($result, format_number_short($value, $sf));
   }
 
-  public function providerFormatNumberShort()
+  public static function providerFormatNumberShort()
   {
     return array(
       array( '12345', 3,  '12345'),
@@ -793,9 +806,11 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
       array('1.234b', 3,   '1.23'), // alpha in decimals
 
       // zero
-      array('-0', 3,  '0'),
-      array(   0, 3,  '0'),
-      array( 0.0, 3,  '0'),
+      array( '0',  3, '0'),
+      array('-0',  3, '0'),
+      array('0.0', 3, '0'),
+      array(   0,  3, '0'),
+      array( 0.0,  3, '0'),
 
       // big numbers
       array('1000.0', 3,  '1000'),
@@ -819,7 +834,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, sgn($value));
   }
 
-  public function providerSgn()
+  public static function providerSgn()
   {
     return array(
       array( 10,  1),
@@ -843,7 +858,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         }
     }
 
-    public function providerValueUnitConvert()
+    public static function providerValueUnitConvert()
     {
         return [
             [ NULL,   'F',      0,  -17.7777 ],
@@ -905,7 +920,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, get_sensor_rrd($device, $sensor));
   }
 
-  public function providerGetSensorRrd()
+  public static function providerGetSensorRrd()
   {
     return array(
       array(array('os' => 'ios'), // device
@@ -929,7 +944,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, port_html_class($ifOperStatus, $ifAdminStatus));
   }
 
-  public function providerIfclass()
+  public static function providerIfclass()
   {
     return array(
       array(             '-',   'up', 'purple'),
@@ -941,26 +956,35 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     );
   }
 
-  /**
-   * @dataProvider providerTruncate
-   */
-  public function testTruncate($value, $max, $rep = '...', $result)
-  {
-    $this->assertSame($result, truncate($value, $max, $rep));
-  }
+    /**
+     * @dataProvider providerTruncate
+     * @group string
+     */
+    public function testTruncate($value, $max, $result, $rep = '...') {
+        $this->assertSame($result, truncate($value, $max, $rep));
+    }
 
-  public function providerTruncate()
-  {
-    return array(
-      array('Observium is an autodiscovering network monitoring platform', 19, '...',
-            'Observium is an ...'),
-      array('Observium is an autodiscovering network monitoring platform', 19, '???',
-            'Observium is an ???'),
-    );
-  }
+    public static function providerTruncate() {
+        return [
+            [ 'Observium is an autodiscovering network monitoring platform', 19,
+              'Observium is an ...' ],
+            [ 'Observium is an autodiscovering network monitoring platform', 19,
+              'Observium is an au&mldr;', '&mldr;' ], // HTML entity
+            [ 'Observium is an autodiscovering network monitoring platform', 19,
+              'Observium is an ???', '???' ],
+            [ 'Observium is an autodiscovering network monitoring platform', 19,
+              'Observium is an aut', '' ],
+            // Multibyte
+            [ 'Observium je platforma za nadzor mreže sa automatskim otkrivanjem uređaja', 50,
+              'Observium je platforma za nadzor mreže sa autom...' ],
+            [ 'Observium je platforma za nadzor mreže sa automatskim otkrivanjem uređaja', 50,
+              'Observium je platforma za nadzor mreže sa automats', '' ],
+        ];
+    }
 
   /**
    * @dataProvider providerGenerateRandomString
+   * @group string
    */
   public function testGenerateRandomString($len, $chars, $regex)
   {
@@ -974,7 +998,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertTrue($len === strlen($rv));
   }
 
-  public function providerGenerateRandomString()
+  public static function providerGenerateRandomString()
   {
     return array(
       array(96, NULL, '/^[[:alnum:]]+$/'),
@@ -984,13 +1008,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerSafename
+   * @group string
    */
   public function testSafename($value, $result)
   {
     $this->assertSame($result, safename($value));
   }
 
-  public function providerSafename()
+  public static function providerSafename()
   {
     return array(
       array('aA0._-',  'aA0._-'), // all good
@@ -1001,14 +1026,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerIsIntNum
-   * @group numbers
+   * @group number
    */
   public function testIsIntNum($value, $result)
   {
     $this->assertSame($result, is_intnum($value));
   }
 
-  public function providerIsIntNum()
+  public static function providerIsIntNum()
   {
     return [
       [ 23,          TRUE ], // ctype_digit() = FALSE
@@ -1020,6 +1045,10 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
       [ 923874924209482482038402384,  FALSE ], // false, because greater than PHP_INT_MAX
       [ '923874924209482482038402384', TRUE ],  // is_int() = FALSE
       [ PHP_INT_MAX, TRUE ],
+      [ 0,           TRUE ],
+      [ '0',         TRUE ],
+      [ 0.0,        FALSE ],
+      [ '0.0',      FALSE ],
       [ 23.5,       FALSE ],
       [ "23.5",     FALSE ],
       [ -23.5,      FALSE ],
@@ -1035,14 +1064,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerZeropad
-   * @group numbers
+   * @group number
    */
   public function testZeropad($value, $result)
   {
     $this->assertSame($result, zeropad($value));
   }
 
-  public function providerZeropad()
+  public static function providerZeropad()
   {
     return array(
       array(1,     '01'),
@@ -1052,14 +1081,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatRates
-   * @group numbers
+   * @group number
    */
   public function testFormatRates($value, $round, $sf, $result)
   {
     $this->assertSame($result, format_bps($value, $round, $sf));
   }
 
-  public function providerFormatRates()
+  public static function providerFormatRates()
   {
     return array(
       // simple test; most testing is done against format_si
@@ -1072,14 +1101,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatStorage
-   * @group numbers
+   * @group number
    */
   public function testFormatStorage($value, $round, $sf, $result)
   {
     $this->assertSame($result, format_bytes($value, $round, $sf));
   }
 
-  public function providerFormatStorage()
+  public static function providerFormatStorage()
   {
     return array(
       // simple test; most testing is done against format_bi
@@ -1092,14 +1121,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatSi
-   * @group numbers
+   * @group number
    */
   public function testFormatSi($value, $round, $sf, $result)
   {
     $this->assertSame($result, format_si($value, $round, $sf));
   }
 
-  public function providerFormatSi()
+  public static function providerFormatSi()
   {
     return array(
       // return int
@@ -1157,14 +1186,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatBi
-   * @group numbers
+   * @group number
    */
   public function testFormatBi($value, $round, $sf, $result)
   {
     $this->assertSame($result, format_bi($value, $round, $sf));
   }
 
-  public function providerFormatBi()
+  public static function providerFormatBi()
   {
     return array(
       // return int
@@ -1218,14 +1247,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerFormatNumber
-   * @group numbers
+   * @group number
    */
   public function testFormatNumber($value, $base, $round, $sf, $result)
   {
     $this->assertSame($result, format_number($value, $base, $round, $sf));
   }
 
-  public function providerFormatNumber()
+  public static function providerFormatNumber()
   {
     return array(
       // simple base 1000 tests; most testing is done against format_si
@@ -1240,6 +1269,122 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     );
   }
 
+
+    /**
+     * @dataProvider providerFormatValue
+     * @group number
+     */
+    public function testFormatValue($value, $format, $result, $round = 2, $sf = 3)
+    {
+        $this->assertSame($result, format_value($value, $format, $round, $sf));
+    }
+
+    public static function providerFormatValue()
+    {
+        return array(
+            // Boolean values
+            array(TRUE,  '',   'TRUE'),
+            array(FALSE, '',   'FALSE'),
+            array(true,  'si', 'TRUE'),
+            array(false, 'bi', 'FALSE'),
+
+            // NULL value
+            array(NULL, '',   'NULL'),
+            array(null, 'si', 'NULL'),
+
+            // Empty values - should return ""
+            array('',    '', '""'),
+            array('   ', '', '""'),
+            array(0,     '', '0'),      // Zero is not empty
+            array('0',   '', '0'),      // String zero is not empty
+
+            // SI format (1000-based)
+            array(1000,      'si',   '1k'),
+            array(1500,      'si',   '1.5k'),
+            array(1000000,   'si',   '1M'),
+            array(1500000,   'si',   '1.5M'),
+            array(1000000000,'si',   '1G'),
+            array('2500',    '1000', '2.5k'),  // 1000 is alias for si
+            array(999,       'si',   '999'),   // Below 1000
+
+            // BI format (1024-based)
+            array(1024,      'bi',   '1k'),
+            array(1536,      'bi',   '1.5k'),
+            array(1048576,   'bi',   '1M'),
+            array(1572864,   'bi',   '1.5M'),
+            array(1073741824,'bi',   '1G'),
+            array('2048',    '1024', '2k'),    // 1024 is alias for bi
+            array(1000,      'bi',   '1000'),  // Below 1024
+
+            // Uptime formats
+            array(86400,     'uptime',    '1 day'),  // 1 day
+            array(3661,      'time',      '1h 1m 1s'),     // time is alias for uptime
+            array(90,        'shorttime', '1m 30s'),           // Short format
+            array(3600,      'shorttime', '1h'),
+
+            // Time60 format (minutes converted to uptime when >= 1440 minutes = 1 day)
+            array(1440,      'time60', '1 day'),  // 1440 minutes = 1 day
+            array(1500,      'time60', '1 day, 1h'),  // Over 1 day
+            array(60,        'time60', '60'),            // Under 1 day, returns raw value
+            array(1439,      'time60', '1439'),          // Just under 1 day
+
+            // Numeric values with default format - rounding
+            array(123.456,   '', '123.46',  2, 3),    // Round to 2 decimals
+            array(123.456,   '', '123',     0, 3),       // Round to 0 decimals
+            array(123.456,   '', '123.456', 3, 3),   // Round to 3 decimals
+            array(123.456,   '', '123.4560', 4, 3),   // More decimals than needed
+            array('999.99',  '', '999.99',  2, 3),      // String number
+
+            // Numeric values - trailing zero removal
+            array(100.0,     '', '100'),       // Remove .00
+            array(123.10,    '', '123.1'),     // Remove trailing 0
+            array(123.00,    '', '123'),       // Remove .00
+            array(0.10,      '', '0.1'),       // Remove trailing 0
+
+            // Very small values - prevent showing as zero
+            array(0.000627,  '', '0.000627'),  // Should use format_number_short
+            array(0.0001,    '', '0.0001'),    // Small value
+            array(0.00001,   '', '0.00001'),   // Very small value
+            array(-0.000627, '', '-0.000627'), // Negative small value
+
+            // Negative numbers
+            array(-123.456,  '', '-123.46'),
+            array(-100,      '', '-100'),
+            array(-1000,     'si', '-1k'),
+            array(-1024,     'bi', '-1k'),
+
+            // Numbers with units/suffixes (clean_number removes them)
+            array('123.45V',   '', '123.45'),
+            array('999.9MHz',  '', '999.9'),
+            array('1234dBm',   '', '1234'),
+
+            // String values (non-numeric)
+            array('text',        '', 'text'),
+            array('some string', '', 'some string'),
+            array('abc123def',   '', 'abc123def'),
+
+            // Varying significant figures parameter
+            array(0.00012345, '', '0.00012', 2, 2),  // 2 significant figures
+            array(0.00012345, '', '0.0001235', 2, 4), // 4 significant figures
+            array(0.00012345, '', '0.00012345', 2, 5), // 5 significant figures
+
+            // Case insensitivity of format parameter
+            // array(1000, 'SI',   2, 3, '1k'),
+            // array(1000, 'Si',   2, 3, '1k'),
+            // array(1024, 'BI',   2, 3, '1k'),
+            // array(1024, 'Bi',   2, 3, '1k'),
+            // array(3600, 'UPTIME', 2, 3, '1h 0m 0s'),
+            // array(3600, 'TIME',   2, 3, '1h 0m 0s'),
+            // array(90,   'SHORTTIME', 2, 3, '1m'),
+
+            // Edge cases
+            array(0,      '', '0'),
+            array('0.0',  '', '0'),
+            array(-0,     '', '0'),
+            array(-0.0,   '', '0'),
+        );
+    }
+
   /**
    * @dataProvider providerIsValidHostname
    * @group hostname
@@ -1250,7 +1395,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result_fqdn, is_valid_hostname($value, TRUE)); // FQDN
   }
 
-  public function providerIsValidHostname()
+  public static function providerIsValidHostname()
   {
     return array(
       array('router1',          TRUE, FALSE),
@@ -1283,6 +1428,10 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
       array(str_repeat('a', 63) . '.com',           TRUE, TRUE), // per level 63
       array('aaaa' . str_repeat('.bb.cc.com', 25), FALSE, FALSE), // total 254
       array(str_repeat('a', 64) . '.com',          FALSE, FALSE), // per level 64
+
+      // Unicode
+      //[ 'www.lohnkostenförderung.de', TRUE, TRUE ],
+      //[ 'www.lohnkostenförderung.de', TRUE, FALSE ],
 
       // Test cases from http://stackoverflow.com/a/4694816
       array('a',                TRUE, FALSE),
@@ -1324,7 +1473,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertLessThanOrEqual(5, $diff); // +- 5 sec
     }
 
-    public function providerGetTime()
+    public static function providerGetTime()
     {
         //$now = time();
         return [
@@ -1354,21 +1503,32 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     * @dataProvider providerFormatTimestamp
     * @group datetime
     */
-    public function testFormatTimestamp($value, $result)
-    {
+    public function testFormatTimestamp($value, $result) {
         $GLOBALS['config']['timestamp_format'] = 'Y-m-d H:i:s'; // force fixed format
-        //if ($value === 'now') { $result = date('Y-m-d H:i:s'); } // force same times
         $this->assertSame($result, format_timestamp($value));
     }
 
-    public function providerFormatTimestamp()
+    public static function providerFormatTimestamp()
     {
         return [
             [ 'Aug 30 2014',      '2014-08-30 00:00:00' ],
             [ '2012-04-18 14:25', '2012-04-18 14:25:00' ],
-            [ 'now',              date('Y-m-d H:i:s') ],
+            [ 1409397693,         '2014-08-30 11:21:33' ], // unixtime
+            //[ 'now',              date('Y-m-d H:i:s') ], // moved to separate
+            // incorrect dates
             [ 'Star Wars',        'Star Wars' ],
+            [ 0,                  0 ],
+            [ '',                 '' ],
+            [ FALSE,              FALSE ],
         ];
+    }
+
+    /**
+     * @group datetime
+     */
+    public function testFormatTimestampNow() {
+        $GLOBALS['config']['timestamp_format'] = 'Y-m-d H:i:s'; // force fixed format
+        $this->assertSame(date('Y-m-d H:i:s'), format_timestamp('now'));
     }
 
     /**
@@ -1381,9 +1541,8 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         date_default_timezone_set('UTC');
         $this->assertSame($result, format_unixtime($value, $format));
     }
-    
-    public function providerFormatUnixtime()
-    {
+
+    public static function providerFormatUnixtime() {
         return [
             [ 1409397693,                NULL, '2014-08-30 11:21:33' ],
             [ 1409397693,        DATE_RFC2822, 'Sat, 30 Aug 2014 11:21:33 +0000' ],
@@ -1406,14 +1565,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerUnitStringToNumeric
-   * @group numbers
+   * @group number
    */
   public function testUnitStringToNumeric($value, $result)
   {
     $this->assertSame($result, unit_string_to_numeric($value));
   }
 
-  public function providerUnitStringToNumeric()
+  public static function providerUnitStringToNumeric()
   {
     $results = array(
       // String should stay string
@@ -1475,6 +1634,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
       array('3 Tbit',            3*1000*1000*1000*1000.0),
       array('3.5 Tbit',        3.5*1000*1000*1000*1000.0),
       array('5 Tbps',            5*1000*1000*1000*1000.0),
+      [ '7700Mbps',                 7.7*1000*1000*1000.0 ],
       // IEC prefixes
       array('1024 MiB',                 1024*1024*1024.0),
       array('1 ZiB', 1024*1024*1024*1024*1024*1024*1024.0),
@@ -1484,14 +1644,14 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @dataProvider providerUnitStringToNumeric2
-     * @group numbers
+     * @group number
      */
     public function testUnitStringToNumeric2($value, $result)
     {
         $this->assertSame($result, unit_string_to_numeric($value, 1000));
     }
 
-    public function providerUnitStringToNumeric2()
+    public static function providerUnitStringToNumeric2()
     {
         $array = [
             [ '17.3kVA', 17300.0 ],
@@ -1501,7 +1661,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerRangeToList
-   * @group numbers
+   * @group number
    */
   public function testRangeToList($value, $separator, $sort, $result)
   {
@@ -1509,7 +1669,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, range_to_list($arr, $separator, $sort));
   }
 
-  public function providerRangeToList()
+  public static function providerRangeToList()
   {
     return array(
       array(0, ',', TRUE, '0'),
@@ -1524,7 +1684,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
 
   /**
    * @dataProvider providerListToRange
-   * @group numbers
+   * @group number
    */
   public function testListToRange($result, $separator, $sort, $value)
   {
@@ -1532,7 +1692,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, list_to_range($value, $separator, $sort));
   }
 
-  public function providerListToRange()
+  public static function providerListToRange()
   {
     return array(
       array([ 0 ], ',', TRUE, '0'),
@@ -1546,314 +1706,6 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
   }
 
   /**
-   * @dataProvider providerGetDeviceMibs
-   * @group mibs
-   */
-  public function testGetDeviceMibs($device, $result)
-  {
-    $mibs = array_values(get_device_mibs($device, FALSE)); // Use array_values for reset keys
-    $this->assertEquals($result, $mibs);
-  }
-
-  /**
-   * @dataProvider providerGetDeviceMibs
-   * @group mibs
-   */
-  public function testGetDeviceMibs2($device, $result)
-  {
-    $device['device_id'] = 13;
-
-    // Empty sysORID MIBs
-    $GLOBALS['cache']['entity_attribs']['device'][$device['device_id']]['sysORID'] = '[]';
-    $mibs = array_values(get_device_mibs($device, TRUE)); // Use array_values for reset keys
-    $this->assertEquals($result, $mibs);
-
-    // Any sysORID MIBs
-    $GLOBALS['cache']['entity_attribs']['device'][$device['device_id']]['sysORID'] = '["SOME-MIB", "SOME2-MIB"]';
-    $mibs = array_values(get_device_mibs($device, TRUE)); // Use array_values for reset keys
-    if ($device['os'] === 'test_dlinkfw' && isset($device['sysObjectID'])) {
-      // model definition first
-      $new_result[] = array_shift($result);
-      $new_result[] = 'SOME-MIB';
-      $new_result[] = 'SOME2-MIB';
-      $result = array_merge($new_result, $result);
-    } else {
-      $result = array_merge([ 'SOME-MIB', 'SOME2-MIB' ], $result);
-    }
-    //$result[] = 'SOME-MIB';
-    //$result[] = 'SOME2-MIB';
-    $this->assertEquals($result, $mibs);
-  }
-
-  public function providerGetDeviceMibs()
-  {
-    return array(
-      // OS with empty mibs (only default)
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_generic'
-        ),
-        array(
-          'UCD-SNMP-MIB',
-          'HOST-RESOURCES-MIB',
-          'LSI-MegaRAID-SAS-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          //'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-
-      // OS with group mibs
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_ios'
-        ),
-        array(
-          'CISCO-IETF-IP-MIB',
-          'CISCO-ENTITY-SENSOR-MIB',
-          'CISCO-VTP-MIB',
-          'CISCO-ENVMON-MIB',
-          'CISCO-ENTITY-QFP-MIB',
-          'CISCO-IP-STAT-MIB',
-          'CISCO-FIREWALL-MIB',
-          'CISCO-ENHANCED-MEMPOOL-MIB',
-          'CISCO-MEMORY-POOL-MIB',
-          'CISCO-PROCESS-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-
-      // OS with group and os mibs
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_linux'
-        ),
-        array(
-          'LM-SENSORS-MIB',
-          'SUPERMICRO-HEALTH-MIB',
-          'MIB-Dell-10892',
-          'CPQHLTH-MIB',
-          'CPQIDA-MIB',
-          'UCD-SNMP-MIB',
-          'HOST-RESOURCES-MIB',
-          'LSI-MegaRAID-SAS-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          //'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-      // OS with in os blacklisted mibs
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_junos'
-        ),
-        array(
-          'JUNIPER-MIB',
-          'JUNIPER-ALARM-MIB',
-          'JUNIPER-DOM-MIB',
-          'JUNIPER-SRX5000-SPU-MONITORING-MIB',
-          'JUNIPER-VLAN-MIB',
-          'JUNIPER-MAC-MIB',
-          'EtherLike-MIB',
-          //'ENTITY-MIB',
-          //'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-
-      // OS with in os and group blacklisted mibs
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_freebsd'
-        ),
-        array(
-          'CISCO-IETF-IP-MIB',
-          'CISCO-ENTITY-SENSOR-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          //'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          'HOST-RESOURCES-MIB',
-          //'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-
-      // OS with per-HW mibs
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_dlinkfw'
-        ),
-        array(
-          'JUST-TEST-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-      // OS with per-HW mibs, but with correct sysObjectID
-      array(
-        array(
-          'device_id' => 1,
-          'os'        => 'test_dlinkfw',
-          'sysObjectID' => '.1.3.6.1.4.1.171.20.1.2.1'
-        ),
-        array(
-          'DFL800-MIB', // HW specific MIB
-          'JUST-TEST-MIB',
-          'EtherLike-MIB',
-          'ENTITY-MIB',
-          'ENTITY-SENSOR-MIB',
-          'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-          'HOST-RESOURCES-MIB',
-          'Q-BRIDGE-MIB',
-          'LLDP-MIB',
-          'CISCO-CDP-MIB',
-          'PW-STD-MIB',
-          'DISMAN-PING-MIB',
-          'BGP4-MIB',
-        )
-      ),
-
-    );
-  }
-
-  /**
-   * @dataProvider providerGetDeviceMibsOrder
-   * @group mibs
-   */
-  public function testGetDeviceMibsOrder($device, $order, $result)
-  {
-    $mibs = array_values(get_device_mibs($device, FALSE, $order)); // Use array_values for reset keys
-    $this->assertEquals($result, $mibs);
-  }
-
-  public function providerGetDeviceMibsOrder()
-  {
-    $device = array(
-      'device_id' => 1,
-      'os'        => 'test_order',
-      'sysObjectID' => '.1.3.6.1.4.1.171.20.1.2.1'
-    );
-    $default = array(
-      'EtherLike-MIB',
-      'ENTITY-MIB',
-      'ENTITY-SENSOR-MIB',
-      'CISCO-ENTITY-VENDORTYPE-OID-MIB',
-      'HOST-RESOURCES-MIB',
-      //'Q-BRIDGE-MIB', // Blacklisted in group 'test_black'
-      'LLDP-MIB',
-      'CISCO-CDP-MIB',
-      'PW-STD-MIB',
-      'DISMAN-PING-MIB',
-      'BGP4-MIB',
-    );
-    $model = array(
-      'DFL800-MIB',
-    );
-    $os    = array(
-      'JUST-TEST-MIB',
-    );
-    $group = array(
-      'CISCO-IETF-IP-MIB',
-      'CISCO-ENTITY-SENSOR-MIB',
-    );
-
-    return array(
-      // Empty (default order)
-      array(
-        $device,
-        NULL,
-        array_merge($model, $os, $group, $default),
-      ),
-      // Same but with default order passed or unknown data
-      array(
-        $device,
-        array('model', 'os', 'group', 'default'),
-        array_merge($model, $os, $group, $default),
-      ),
-      array(
-        $device,
-        'model,os,group,default',
-        array_merge($model, $os, $group, $default),
-      ),
-      array(
-        $device,
-        'asdasd,asdasdsw,asdasda',
-        array_merge($model, $os, $group, $default),
-      ),
-      // Order changed
-      array(
-        $device,
-        'default', // Default first
-        array_merge($default, $model, $os, $group),
-      ),
-      array(
-        $device,
-        array('group', 'os'), // group and os first
-        array_merge($group, $os, $model, $default),
-      ),
-      array(
-        $device,
-        array('group', 'os', 'default', 'model'), // full changed order
-        array_merge($group, $os, $default, $model),
-      ),
-
-    );
-  }
-
-  /**
    * @dataProvider providerStringToId
    * @group string
    */
@@ -1862,7 +1714,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, string_to_id($string));
   }
 
-  public function providerStringToId()
+  public static function providerStringToId()
   {
     $array = array();
 
@@ -1907,94 +1759,85 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, var_decode($string, $method));
   }
 
-  public function providerVarEncode()
-  {
-    $json_utf8 = defined('JSON_UNESCAPED_UNICODE');
-    if (!$json_utf8) echo("WARNING. In var_encode() with method 'json' converts UTF-8 characters to Unicode escape sequences!\n\n");
+    public static function providerVarEncode() {
 
-    $array = array();
+        $array   = [];
 
-    // Basic data types
-    $array[] = array(NULL,    'json',      'bnVsbA==');
-    $array[] = array(array(), 'json',      'W10=');
-    $array[] = array(TRUE,    'json',      'dHJ1ZQ==');
-    $array[] = array(FALSE,   'json',      'ZmFsc2U=');
-    $array[] = array('true',  'json',      'InRydWUi');
-    $array[] = array('false', 'json',      'ImZhbHNlIg==');
-    $array[] = array('0',     'json',      'IjAi');
-    $array[] = array('',      'json',      'IiI=');
-    $array[] = array(0,       'json',      'MA==');
-    $array[] = array(1,       'json',      'MQ==');
-    $array[] = array(81,      'json',      'ODE=');
-    $array[] = array(9.8172397123457E-14,      'json', 'OS44MTcyMzk3MTIzNDU3ZS0xNA==');
-    $array[] = array(NULL,    'serialize', 'Tjs=');
-    $array[] = array(array(), 'serialize', 'YTowOnt9');
-    $array[] = array(TRUE,    'serialize', 'YjoxOw==');
-    $array[] = array(FALSE,   'serialize', 'YjowOw==');
-    $array[] = array('true',  'serialize', 'czo0OiJ0cnVlIjs=');
-    $array[] = array('false', 'serialize', 'czo1OiJmYWxzZSI7');
-    $array[] = array('0',     'serialize', 'czoxOiIwIjs=');
-    $array[] = array('',      'serialize', 'czowOiIiOw==');
-    $array[] = array(0,       'serialize', 'aTowOw==');
-    $array[] = array(1,       'serialize', 'aToxOw==');
-    $array[] = array(81,      'serialize', 'aTo4MTs=');
-    $array[] = array(9.8172397123457E-14, 'serialize', 'ZDo5LjgxNzIzOTcxMjM0NTdFLTE0Ow==');
+        // Basic data types
+        $array[] = array(NULL,    'json',      'bnVsbA==');
+        $array[] = array(array(), 'json',      'W10=');
+        $array[] = array(TRUE,    'json',      'dHJ1ZQ==');
+        $array[] = array(FALSE,   'json',      'ZmFsc2U=');
+        $array[] = array('true',  'json',      'InRydWUi');
+        $array[] = array('false', 'json',      'ImZhbHNlIg==');
+        $array[] = array('0',     'json',      'IjAi');
+        $array[] = array('',      'json',      'IiI=');
+        $array[] = array(0,       'json',      'MA==');
+        $array[] = array(1,       'json',      'MQ==');
+        $array[] = array(81,      'json',      'ODE=');
+        $array[] = array(9.8172397123457E-14,      'json', 'OS44MTcyMzk3MTIzNDU3ZS0xNA==');
+        $array[] = array(NULL,    'serialize', 'Tjs=');
+        $array[] = array(array(), 'serialize', 'YTowOnt9');
+        $array[] = array(TRUE,    'serialize', 'YjoxOw==');
+        $array[] = array(FALSE,   'serialize', 'YjowOw==');
+        $array[] = array('true',  'serialize', 'czo0OiJ0cnVlIjs=');
+        $array[] = array('false', 'serialize', 'czo1OiJmYWxzZSI7');
+        $array[] = array('0',     'serialize', 'czoxOiIwIjs=');
+        $array[] = array('',      'serialize', 'czowOiIiOw==');
+        $array[] = array(0,       'serialize', 'aTowOw==');
+        $array[] = array(1,       'serialize', 'aToxOw==');
+        $array[] = array(81,      'serialize', 'aTo4MTs=');
+        $array[] = array(9.8172397123457E-14, 'serialize', 'ZDo5LjgxNzIzOTcxMjM0NTdFLTE0Ow==');
 
-    // Basic string encode
-    $array[] = array('Sgt. Pepper\'s Lonely Hearts Club Band', 'json',      'IlNndC4gUGVwcGVyJ3MgTG9uZWx5IEhlYXJ0cyBDbHViIEJhbmQi');
-    $array[] = array('Sgt. Pepper\'s Lonely Hearts Club Band', 'serialize', 'czozNzoiU2d0LiBQZXBwZXIncyBMb25lbHkgSGVhcnRzIENsdWIgQmFuZCI7');
+        // Basic string encode
+        $array[] = array('Sgt. Pepper\'s Lonely Hearts Club Band', 'json',      'IlNndC4gUGVwcGVyJ3MgTG9uZWx5IEhlYXJ0cyBDbHViIEJhbmQi');
+        $array[] = array('Sgt. Pepper\'s Lonely Hearts Club Band', 'serialize', 'czozNzoiU2d0LiBQZXBwZXIncyBMb25lbHkgSGVhcnRzIENsdWIgQmFuZCI7');
 
-    // Random string encode
-    $array[] = array('8,G(?\'A>_7p`>qbr!;9``1ssc$WZpc\'>KxD*?Py3', 'json',      'IjgsRyg/J0E+XzdwYD5xYnIhOzlgYDFzc2MkV1pwYyc+S3hEKj9QeTMi');
-    $array[] = array('8,G(?\'A>_7p`>qbr!;9``1ssc$WZpc\'>KxD*?Py3', 'serialize', 'czo0MDoiOCxHKD8nQT5fN3BgPnFiciE7OWBgMXNzYyRXWnBjJz5LeEQqP1B5MyI7');
+        // Random string encode
+        $array[] = array('8,G(?\'A>_7p`>qbr!;9``1ssc$WZpc\'>KxD*?Py3', 'json',      'IjgsRyg/J0E+XzdwYD5xYnIhOzlgYDFzc2MkV1pwYyc+S3hEKj9QeTMi');
+        $array[] = array('8,G(?\'A>_7p`>qbr!;9``1ssc$WZpc\'>KxD*?Py3', 'serialize', 'czo0MDoiOCxHKD8nQT5fN3BgPnFiciE7OWBgMXNzYyRXWnBjJz5LeEQqP1B5MyI7');
 
-    // UTF-8 string encode
-    if ($json_utf8)
-    {
-      $array[] = array('Оркестр Клуба Одиноких Сердец Сержанта Пеппера', 'json',
-                       'ItCe0YDQutC10YHRgtGAINCa0LvRg9Cx0LAg0J7QtNC40L3QvtC60LjRhSDQodC10YDQtNC10YYg0KHQtdGA0LbQsNC90YLQsCDQn9C10L/Qv9C10YDQsCI=');
-    } else {
-      // Wrong pre-5.4 Unicode escaped
-      $array[] = array('Оркестр Клуба Одиноких Сердец Сержанта Пеппера', 'json',
-                       'Ilx1MDQxZVx1MDQ0MFx1MDQzYVx1MDQzNVx1MDQ0MVx1MDQ0Mlx1MDQ0MCBcdTA0MWFcdTA0M2JcdTA0NDNcdTA0MzFcdTA0MzAgXHUwNDFlXHUwNDM0XHUwNDM4XHUwNDNkXHUwNDNlXHUwNDNhXHUwNDM4XHUwNDQ1IFx1MDQyMVx1MDQzNVx1MDQ0MFx1MDQzNFx1MDQzNVx1MDQ0NiBcdTA0MjFcdTA0MzVcdTA0NDBcdTA0MzZcdTA0MzBcdTA0M2RcdTA0NDJcdTA0MzAgXHUwNDFmXHUwNDM1XHUwNDNmXHUwNDNmXHUwNDM1XHUwNDQwXHUwNDMwIg==');
+        // UTF-8 string encode
+        $array[] = array('Оркестр Клуба Одиноких Сердец Сержанта Пеппера', 'json',
+                         'ItCe0YDQutC10YHRgtGAINCa0LvRg9Cx0LAg0J7QtNC40L3QvtC60LjRhSDQodC10YDQtNC10YYg0KHQtdGA0LbQsNC90YLQsCDQn9C10L/Qv9C10YDQsCI=');
+
+        $array[] = array('Оркестр Клуба Одиноких Сердец Сержанта Пеппера', 'serialize', 'czo4Nzoi0J7RgNC60LXRgdGC0YAg0JrQu9GD0LHQsCDQntC00LjQvdC+0LrQuNGFINCh0LXRgNC00LXRhiDQodC10YDQttCw0L3RgtCwINCf0LXQv9C/0LXRgNCwIjs=');
+
+        // Basic array
+        //$array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'json',      'WzMuMTQsIjAiLCJZZWxsb3cgU3VibWFyaW5lIix0cnVlXQ==');
+        $array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'json',      'WzMuMTQwMDAwMDAwMDAwMDAwMSwiMCIsIlllbGxvdyBTdWJtYXJpbmUiLHRydWVd');
+        $array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'serialize', 'YTo0OntpOjA7ZDozLjE0MDAwMDAwMDAwMDAwMDE7aToxO3M6MToiMCI7aToyO3M6MTY6IlllbGxvdyBTdWJtYXJpbmUiO2k6MztiOjE7fQ==');
+
+        // Complex array
+        $array[] = array(
+            array(
+                0       => array('tempHumidSensorID' => 'A1', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A1'),
+                '1.2'   => array('tempHumidSensorID' => 'A2', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A2'),
+                'Frodo' => 'Baggins',
+                'binary' => TRUE,
+                //'number' => 98172397.1234567890, // Ohoho, json rounds this number to 98172397.123457
+                'number' => 98172397.123456,
+                NULL
+            ),
+            //'json',      'eyIwIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTEiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTEifSwiMS4yIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTIiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTIifSwiRnJvZG8iOiJCYWdnaW5zIiwiYmluYXJ5Ijp0cnVlLCJudW1iZXIiOjk4MTcyMzk3LjEyMzQ1NiwiMSI6bnVsbH0='
+            'json',      'eyIwIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTEiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTEifSwiMS4yIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTIiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTIifSwiRnJvZG8iOiJCYWdnaW5zIiwiYmluYXJ5Ijp0cnVlLCJudW1iZXIiOjk4MTcyMzk3LjEyMzQ1NjAwMSwiMSI6bnVsbH0='
+        );
+        $array[] = array(
+            array(
+                0       => array('tempHumidSensorID' => 'A1', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A1'),
+                '1.2'   => array('tempHumidSensorID' => 'A2', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A2'),
+                'Frodo' => 'Baggins',
+                'binary' => TRUE,
+                'number' => 98172397.1234567890,
+                NULL
+            ),
+            'serialize', 'YTo2OntpOjA7YToyOntzOjE3OiJ0ZW1wSHVtaWRTZW5zb3JJRCI7czoyOiJBMSI7czoxOToidGVtcEh1bWlkU2Vuc29yTmFtZSI7czoyMDoiVGVtcF9IdW1pZF9TZW5zb3JfQTEiO31zOjM6IjEuMiI7YToyOntzOjE3OiJ0ZW1wSHVtaWRTZW5zb3JJRCI7czoyOiJBMiI7czoxOToidGVtcEh1bWlkU2Vuc29yTmFtZSI7czoyMDoiVGVtcF9IdW1pZF9TZW5zb3JfQTIiO31zOjU6IkZyb2RvIjtzOjc6IkJhZ2dpbnMiO3M6NjoiYmluYXJ5IjtiOjE7czo2OiJudW1iZXIiO2Q6OTgxNzIzOTcuMTIzNDU2NzkxO2k6MTtOO30='
+        );
+
+        return $array;
     }
-    $array[] = array('Оркестр Клуба Одиноких Сердец Сержанта Пеппера', 'serialize', 'czo4Nzoi0J7RgNC60LXRgdGC0YAg0JrQu9GD0LHQsCDQntC00LjQvdC+0LrQuNGFINCh0LXRgNC00LXRhiDQodC10YDQttCw0L3RgtCwINCf0LXQv9C/0LXRgNCwIjs=');
 
-    // Basic array
-    //$array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'json',      'WzMuMTQsIjAiLCJZZWxsb3cgU3VibWFyaW5lIix0cnVlXQ==');
-    $array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'json',      'WzMuMTQwMDAwMDAwMDAwMDAwMSwiMCIsIlllbGxvdyBTdWJtYXJpbmUiLHRydWVd');
-    $array[] = array(array(3.14, '0', 'Yellow Submarine', TRUE), 'serialize', 'YTo0OntpOjA7ZDozLjE0MDAwMDAwMDAwMDAwMDE7aToxO3M6MToiMCI7aToyO3M6MTY6IlllbGxvdyBTdWJtYXJpbmUiO2k6MztiOjE7fQ==');
-
-    // Complex array
-    $array[] = array(
-      array(
-        0       => array('tempHumidSensorID' => 'A1', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A1'),
-        '1.2'   => array('tempHumidSensorID' => 'A2', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A2'),
-        'Frodo' => 'Baggins',
-        'binary' => TRUE,
-        //'number' => 98172397.1234567890, // Ohoho, json rounds this number to 98172397.123457
-        'number' => 98172397.123456,
-        NULL
-      ),
-      //'json',      'eyIwIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTEiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTEifSwiMS4yIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTIiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTIifSwiRnJvZG8iOiJCYWdnaW5zIiwiYmluYXJ5Ijp0cnVlLCJudW1iZXIiOjk4MTcyMzk3LjEyMzQ1NiwiMSI6bnVsbH0='
-      'json',      'eyIwIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTEiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTEifSwiMS4yIjp7InRlbXBIdW1pZFNlbnNvcklEIjoiQTIiLCJ0ZW1wSHVtaWRTZW5zb3JOYW1lIjoiVGVtcF9IdW1pZF9TZW5zb3JfQTIifSwiRnJvZG8iOiJCYWdnaW5zIiwiYmluYXJ5Ijp0cnVlLCJudW1iZXIiOjk4MTcyMzk3LjEyMzQ1NjAwMSwiMSI6bnVsbH0='
-    );
-    $array[] = array(
-      array(
-        0       => array('tempHumidSensorID' => 'A1', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A1'),
-        '1.2'   => array('tempHumidSensorID' => 'A2', 'tempHumidSensorName' => 'Temp_Humid_Sensor_A2'),
-        'Frodo' => 'Baggins',
-        'binary' => TRUE,
-        'number' => 98172397.1234567890,
-        NULL
-      ),
-      'serialize', 'YTo2OntpOjA7YToyOntzOjE3OiJ0ZW1wSHVtaWRTZW5zb3JJRCI7czoyOiJBMSI7czoxOToidGVtcEh1bWlkU2Vuc29yTmFtZSI7czoyMDoiVGVtcF9IdW1pZF9TZW5zb3JfQTEiO31zOjM6IjEuMiI7YToyOntzOjE3OiJ0ZW1wSHVtaWRTZW5zb3JJRCI7czoyOiJBMiI7czoxOToidGVtcEh1bWlkU2Vuc29yTmFtZSI7czoyMDoiVGVtcF9IdW1pZF9TZW5zb3JfQTIiO31zOjU6IkZyb2RvIjtzOjc6IkJhZ2dpbnMiO3M6NjoiYmluYXJ5IjtiOjE7czo2OiJudW1iZXIiO2Q6OTgxNzIzOTcuMTIzNDU2NzkxO2k6MTtOO30='
-    );
-
-    return $array;
-  }
-
-  public function providerVarDecodeWrong()
+  public static function providerVarDecodeWrong()
   {
     $tests = array(
       0, 1, 9.8E-14, TRUE, FALSE, NULL, '', array(), array('Yellow Submarine'),
@@ -2021,7 +1864,7 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, get_var_csv($var, $encoded));
     }
 
-    public function providerGetVarCsv() {
+    public static function providerGetVarCsv() {
         $var_encoded        = 'WzMuMTQwMDAwMDAwMDAwMDAwMSwiMCIsIlllbGxvdyBTdWJtYXJpbmUiLHRydWVd';
         $var_encoded_quoted = '"WzMuMTQwMDAwMDAwMDAwMDAwMSwiMCIsIlllbGxvdyBTdWJtYXJpbmUiLHRydWVd"';
         $var_string         = 'aksdlasmd';
@@ -2055,12 +1898,12 @@ class IncludesCommonTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, parse_csv($var, $header));
     }
 
-    public function providerParseCsv() {
+    public static function providerParseCsv() {
         $csv = <<<CSV
 
  index, name, temperature.gpu, fan.speed [%], power.draw [W], utilization.gpu [%], utilization.memory [%]
 
-  
+
 0, NVIDIA GeForce RTX 3080 Ti, 35, 32 %, 26.86 W, 2 %, 30 %
  1, NVIDIA GeForce RTX 4060, 55, 40 %, 46.6 W, 5 %, 10 %
 CSV;
@@ -2102,10 +1945,111 @@ CSV;
             [ 'index' => '1' ],
         ];
 
+        $zimbra_mailboxd = <<<MAILBOX
+timestamp,lmtp_rcvd_msgs,lmtp_rcvd_bytes,lmtp_rcvd_rcpt,lmtp_dlvd_msgs,lmtp_dlvd_bytes,db_conn_count,db_conn_ms_avg,ldap_dc_count,ldap_dc_ms_avg,mbox_add_msg_count,mbox_add_msg_ms_avg,mbox_get_count,mbox_get_ms_avg,mbox_cache,mbox_msg_cache,mbox_item_cache,soap_count,soap_ms_avg,imap_count,imap_ms_avg,pop_count,pop_ms_avg,idx_wrt_avg,idx_wrt_opened,idx_wrt_opened_cache_hit,calcache_hit,calcache_mem_hit,calcache_lru_size,idx_bytes_written,idx_bytes_written_avg,idx_bytes_read,idx_bytes_read_avg,bis_read,bis_seek_rate,db_pool_size,innodb_bp_hit_rate,lmtp_conn,lmtp_threads,pop_conn,pop_threads,pop_ssl_conn,pop_ssl_threads,imap_conn,imap_threads,imap_ssl_conn,imap_ssl_threads,http_idle_threads,http_threads,soap_sessions,mbox_cache_size,msg_cache_size,fd_cache_size,fd_cache_hit_rate,acl_cache_hit_rate,account_cache_size,account_cache_hit_rate,cos_cache_size,cos_cache_hit_rate,domain_cache_size,domain_cache_hit_rate,server_cache_size,server_cache_hit_rate,ucservice_cache_size,ucservice_cache_hit_rate,zimlet_cache_size,zimlet_cache_hit_rate,group_cache_size,group_cache_hit_rate,xmpp_cache_size,xmpp_cache_hit_rate,gc_parnew_count,gc_parnew_ms,gc_concurrentmarksweep_count,gc_concurrentmarksweep_ms,gc_minor_count,gc_minor_ms,gc_major_count,gc_major_ms,mpool_code_cache_used,mpool_code_cache_free,mpool_par_eden_space_used,mpool_par_eden_space_free,mpool_par_survivor_space_used,mpool_par_survivor_space_free,mpool_cms_old_gen_used,mpool_cms_old_gen_free,mpool_cms_perm_gen_used,mpool_cms_perm_gen_free,heap_used,heap_free
+04/24/2013 00:23:23,1,6506,1,1,6506,81,0.32098765432098764,1,0.0,1,36.0,84,0.0,100.0,50.0,34.59119496855346,0,0.0,138,10.405797101449275,0,0.0,0.0,0,0,0.0,0.0,0.0,0,0.0,0,0.0,1,0.0,0,1000,0,1,0,1,0,0,1,1,24,3,2,18,2,132,2000,1000,96.99490867673337,99.73302998524733,133,99.78571547607365,1,99.02449324324324,7,99.24445818173449,1,99.99996904482866,0,0.0,28,57.52625437572929,31,67.36491311592478,0,0.0,29250,487518,1382,103802,29250,487518,1382,103802,26258688,480000,83049792,24429248,13369344,0,216226736,186426448,125015776,9201952,312645872,210855696
+MAILBOX;
+        $zimbra_mailboxd_array = [
+            [
+                'timestamp' => '04/24/2013 00:23:23',
+                'lmtp_rcvd_msgs' => '1',
+                'lmtp_rcvd_bytes' => '6506',
+                'lmtp_rcvd_rcpt' => '1',
+                'lmtp_dlvd_msgs' => '1',
+                'lmtp_dlvd_bytes' => '6506',
+                'db_conn_count' => '81',
+                'db_conn_ms_avg' => '0.32098765432098764',
+                'ldap_dc_count' => '1',
+                'ldap_dc_ms_avg' => '0.0',
+                'mbox_add_msg_count' => '1',
+                'mbox_add_msg_ms_avg' => '36.0',
+                'mbox_get_count' => '84',
+                'mbox_get_ms_avg' => '0.0',
+                'mbox_cache' => '100.0',
+                'mbox_msg_cache' => '50.0',
+                'mbox_item_cache' => '34.59119496855346',
+                'soap_count' => '0',
+                'soap_ms_avg' => '0.0',
+                'imap_count' => '138',
+                'imap_ms_avg' => '10.405797101449275',
+                'pop_count' => '0',
+                'pop_ms_avg' => '0.0',
+                'idx_wrt_avg' => '0.0',
+                'idx_wrt_opened' => '0',
+                'idx_wrt_opened_cache_hit' => '0',
+                'calcache_hit' => '0.0',
+                'calcache_mem_hit' => '0.0',
+                'calcache_lru_size' => '0.0',
+                'idx_bytes_written' => '0',
+                'idx_bytes_written_avg' => '0.0',
+                'idx_bytes_read' => '0',
+                'idx_bytes_read_avg' => '0.0',
+                'bis_read' => '1',
+                'bis_seek_rate' => '0.0',
+                'db_pool_size' => '0',
+                'innodb_bp_hit_rate' => '1000',
+                'lmtp_conn' => '0',
+                'lmtp_threads' => '1',
+                'pop_conn' => '0',
+                'pop_threads' => '1',
+                'pop_ssl_conn' => '0',
+                'pop_ssl_threads' => '0',
+                'imap_conn' => '1',
+                'imap_threads' => '1',
+                'imap_ssl_conn' => '24',
+                'imap_ssl_threads' => '3',
+                'http_idle_threads' => '2',
+                'http_threads' => '18',
+                'soap_sessions' => '2',
+                'mbox_cache_size' => '132',
+                'msg_cache_size' => '2000',
+                'fd_cache_size' => '1000',
+                'fd_cache_hit_rate' => '96.99490867673337',
+                'acl_cache_hit_rate' => '99.73302998524733',
+                'account_cache_size' => '133',
+                'account_cache_hit_rate' => '99.78571547607365',
+                'cos_cache_size' => '1',
+                'cos_cache_hit_rate' => '99.02449324324324',
+                'domain_cache_size' => '7',
+                'domain_cache_hit_rate' => '99.24445818173449',
+                'server_cache_size' => '1',
+                'server_cache_hit_rate' => '99.99996904482866',
+                'ucservice_cache_size' => '0',
+                'ucservice_cache_hit_rate' => '0.0',
+                'zimlet_cache_size' => '28',
+                'zimlet_cache_hit_rate' => '57.52625437572929',
+                'group_cache_size' => '31',
+                'group_cache_hit_rate' => '67.36491311592478',
+                'xmpp_cache_size' => '0',
+                'xmpp_cache_hit_rate' => '0.0',
+                'gc_parnew_count' => '29250',
+                'gc_parnew_ms' => '487518',
+                'gc_concurrentmarksweep_count' => '1382',
+                'gc_concurrentmarksweep_ms' => '103802',
+                'gc_minor_count' => '29250',
+                'gc_minor_ms' => '487518',
+                'gc_major_count' => '1382',
+                'gc_major_ms' => '103802',
+                'mpool_code_cache_used' => '26258688',
+                'mpool_code_cache_free' => '480000',
+                'mpool_par_eden_space_used' => '83049792',
+                'mpool_par_eden_space_free' => '24429248',
+                'mpool_par_survivor_space_used' => '13369344',
+                'mpool_par_survivor_space_free' => '0',
+                'mpool_cms_old_gen_used' => '216226736',
+                'mpool_cms_old_gen_free' => '186426448',
+                'mpool_cms_perm_gen_used' => '125015776',
+                'mpool_cms_perm_gen_free' => '9201952',
+                'heap_used' => '312645872',
+                'heap_free' => '210855696',
+            ]
+        ];
+
         return [
             [ $csv, $csv_array ],
             [ $csv, $csv_array_noheader, FALSE ],
             [ $csv_single, $csv_single_array ],
+            [ $zimbra_mailboxd, $zimbra_mailboxd_array ],
         ];
     }
 
@@ -2123,7 +2067,7 @@ CSV;
         }
     }
 
-    public function providerGetVarTrue() {
+    public static function providerGetVarTrue() {
         return [
             // yes
             [ 'yes',   TRUE ],
@@ -2184,7 +2128,7 @@ CSV;
         }
     }
 
-    public function providerGetVarFalse() {
+    public static function providerGetVarFalse() {
         return [
             // yes
             [ 'yes',   FALSE ],
@@ -2239,7 +2183,7 @@ CSV;
     $this->assertSame($result, array_get_nested($array, $nest));
   }
 
-  public function providerArrayGetNested() {
+  public static function providerArrayGetNested() {
     $arr1 = [
               [
                 'device_id' => 1,
@@ -2276,58 +2220,114 @@ CSV;
       [ NULL,     TRUE, 'lev1-1->lev2-1-1' ],
     ];
   }
-  
-  /**
-   * @dataProvider providerIsArrayAssoc
-   * @group arrays
-   */
-  public function testIsArrayAssoc($result, $array)
-  {
-    $this->assertSame($result, is_array_assoc($array));
-  }
 
-  public function providerIsArrayAssoc()
-  {
-    return array(
-      array(FALSE, array('a', 'b', 'c')),
-      array(FALSE, array(array(), 1, 'c')),
-      array(FALSE, array("0" => 'a', "1" => array(), "2" => 2)),
-      array(FALSE, array("0" => 'a', "1" => 'b', "2" => 'c')),
+    /**
+     * @dataProvider providerIsArrayAssoc
+     * @group arrays
+     */
+    public function testIsArrayAssoc($result, $array) {
+        $this->assertSame($result, is_array_assoc($array));
+    }
 
-      array(TRUE, array("1" => 'a', "0" => 'b', "2" => 'c')),
-      array(TRUE, array("1" => 'a', "0" => 'b', "2" => 'c')),
-      array(TRUE, array("a" => 'a', "b" => 'b', "c" => 'c')),
+    public static function providerIsArrayAssoc() {
+        return array(
+            array(FALSE, array('a', 'b', 'c')),
+            array(FALSE,  [ 3, 10, 500, 20 ]),
+            array(FALSE, array(array(), 1, 'c')),
+            array(FALSE, array("0" => 'a', "1" => array(), "2" => 2)),
+            array(FALSE, array("0" => 'a', "1" => 'b', "2" => 'c')),
 
-      // Not array!
-      array(FALSE, "string"),
-    );
-  }
+            array(TRUE, array("1" => 'a', "0" => 'b', "2" => 'c')),
+            array(TRUE, array("1" => 'a', "0" => 'b', "2" => 'c')),
+            array(TRUE, array("a" => 'a', "b" => 'b', "c" => 'c')),
 
-  /**
-   * @dataProvider providerIsArraySeq
-   * @group arrays
-   */
-  public function testIsArraySeq($result, $array)
-  {
-    $this->assertSame($result, is_array_list($array));
-  }
+            // Not array!
+            array(FALSE, "string"),
+        );
+    }
 
-  public function providerIsArraySeq()
-  {
-    return array(
-      array(TRUE, array('a', 'b', 'c')),
-      array(TRUE, array(array(), 1, 'c')),
-      array(TRUE, array("0" => 'a', "1" => array(), "2" => 2)),
-      array(TRUE, array("0" => 'a', "1" => 'b', "2" => 'c')),
+    /**
+     * @dataProvider providerIsArrayFlat
+     * @group arrays
+     */
+    public function testIsArrayFlat($result, $array) {
+        $this->assertSame($result, is_array_flat($array));
+    }
 
-      array(FALSE, array("1" => 'a', "0" => 'b', "2" => 'c')),
-      array(FALSE, array("1" => 'a', "0" => 'b', "2" => 'c')),
-      array(FALSE, array("a" => 'a', "b" => 'b', "c" => 'c')),
+    public static function providerIsArrayFlat() {
+        return [
+            array(TRUE,  [ 'a', 'b', 'c' ]),
+            array(TRUE,  [ 3, 10, 500, 20 ]),
+            array(TRUE,  [ "0" => 'a', "1" => 'b', "2" => 'c' ]),
 
-      // Not array!
-      array(FALSE, "string"),
-    );
-  }
+            array(FALSE, [ [], 1, 'c' ]),                      // array_is_list() return TRUE for that!
+            array(FALSE, [ "0" => 'a', "1" => [], "2" => 2 ]), // array_is_list() return TRUE for that!
+
+            array(FALSE, [ [ 0 ], [ 1 ], [ 2 ] ]),
+            array(FALSE, [ "1" => 'a', "0" => 'b', "2" => 'c' ]),
+            array(FALSE, [ "1" => 'a', "0" => 'b', "2" => 'c' ]),
+            array(FALSE, [ "a" => 'a', "b" => 'b', "c" => 'c' ]),
+
+            // Not array!
+            array(FALSE, "string"),
+        ];
+    }
+
+    /**
+     * @dataProvider providerIsArrayNumeric
+     * @group arrays
+     */
+    public function testIsArrayNumeric($result, $array) {
+        $this->assertSame($result, is_array_numeric($array));
+    }
+
+    public static function providerIsArrayNumeric() {
+        return [
+            array(TRUE,  [ 3, 10, 500, 20 ]),
+            array(TRUE,  [ '3', '10', '500', '20' ]),
+            array(TRUE,  [ 3, 10, 5e6, 3.2, '42' ]),
+
+            array(FALSE, [ 'a', 'b', 'c' ]),
+            array(FALSE, [ "0" => 'a', "1" => 'b', "2" => 'c' ]),
+
+            array(FALSE, [ [], 1, 'c' ]),                      // array_is_list() return TRUE for that!
+            array(FALSE, [ "0" => 'a', "1" => [], "2" => 2 ]), // array_is_list() return TRUE for that!
+
+            array(FALSE, [ [ 0 ], [ 1 ], [ 2 ] ]),
+            array(FALSE, [ "1" => 'a', "0" => 'b', "2" => 'c' ]),
+            array(FALSE, [ "1" => 'a', "0" => 'b', "2" => 'c' ]),
+            array(FALSE, [ "a" => 'a', "b" => 'b', "c" => 'c' ]),
+
+            // Not array!
+            array(FALSE, "string"),
+        ];
+    }
+
+    /**
+     * @dataProvider providerIsArraySeq
+     * @group arrays
+     */
+    public function testIsArraySeq($result, $array) {
+        // This is common PHP8+ function, just for compatibility checks
+        $this->assertSame($result, array_is_list($array));
+    }
+
+    public static function providerIsArraySeq() {
+        return array(
+            array(TRUE, array('a', 'b', 'c')),
+            array(TRUE,  [ 3, 10, 500, 20 ]),
+            array(TRUE, array(array(), 1, 'c')),
+            array(TRUE, array("0" => 'a', "1" => array(), "2" => 2)),
+            array(TRUE, array("0" => 'a', "1" => 'b', "2" => 'c')),
+
+            array(FALSE, array("1" => 'a', "0" => 'b', "2" => 'c')),
+            array(FALSE, array("1" => 'a', "0" => 'b', "2" => 'c')),
+            array(FALSE, array("a" => 'a', "b" => 'b', "c" => 'c')),
+
+            // Not array!
+            //array(FALSE, "string"),
+        );
+    }
 
   /**
    * @dataProvider providerArrayPushAfter
@@ -2338,7 +2338,7 @@ CSV;
     $this->assertSame($result, array_push_after($array, $key, $new));
   }
 
-  public function providerArrayPushAfter()
+  public static function providerArrayPushAfter()
   {
     return [
       array([ 'a', 'b', 'c' ], 0, 'new', [ 'a', 'new', 'b', 'c' ]),
@@ -2376,7 +2376,7 @@ CSV;
         }
     }
 
-  public function providerSafeJsonDecode() {
+  public static function providerSafeJsonDecode() {
     $array = [];
     $array[] = [
       '["QWERTYUIOPASDFGHJKLZXCVBNM"]',
@@ -2475,7 +2475,7 @@ CSV;
     }
   }
 
-  public function providerStrContains()
+  public static function providerStrContains()
   {
     $test_string1 = 'Observium is a low-maintenance auto-discovering network monitoring platform.';
     $test_string2 = 'Съешь ещё этих мягких французских булок, да выпей же чаю.'; // UTF-8
@@ -2550,7 +2550,7 @@ CSV;
     }
   }
 
-  public function providerStrStarts()
+  public static function providerStrStarts()
   {
     $test_string1 = 'Observium is a low-maintenance auto-discovering network monitoring platform.';
     $test_string2 = 'Съешь ещё этих мягких французских булок, да выпей же чаю.'; // UTF-8
@@ -2624,7 +2624,7 @@ CSV;
     }
   }
 
-  public function providerStrEnds()
+  public static function providerStrEnds()
   {
     $test_string1 = 'Observium is a low-maintenance auto-discovering network monitoring platforM.';
     $test_string2 = 'Съешь ещё этих мягких французских булок, да выпей же чаЮ.'; // UTF-8
@@ -2720,7 +2720,7 @@ CSV;
   public function testStrDecompressInvalid($string, $result) {
     $this->assertSame($result, str_decompress($string));
   }
-  public function providerStrCompress() {
+  public static function providerStrCompress() {
     return [
       // 681 chars compressed to 120 chars (base64)
       [ '.1.3.6.1.4.1.2606.7.4.2.2.1.11.1.2 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.40 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.47 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.54 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.64 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.73 .1.3.6.1.4.1.2606.7.4.2.2.1.11.1.82 .1.3.6.1.4.1.2606.7.4.2.2.1.11.4.2 .1.3.6.1.4.1.2606.7.4.2.2.1.11.4.11 .1.3.6.1.4.1.2606.7.4.2.2.1.11.4.20 .1.3.6.1.4.1.2606.7.4.2.2.1.11.6.2 .1.3.6.1.4.1.2606.7.4.2.2.1.11.6.11 .1.3.6.1.4.1.2606.7.4.2.2.1.11.6.20 .1.3.6.1.4.1.2606.7.4.2.2.1.11.7.2 .1.3.6.1.4.1.2606.7.4.2.2.1.11.7.11 .1.3.6.1.4.1.2606.7.4.2.2.1.11.7.20 .1.3.6.1.4.1.2606.7.4.2.2.1.11.12.2 .1.3.6.1.4.1.2606.7.4.2.2.1.11.12.11 .1.3.6.1.4.1.2606.7.4.2.2.1.11.12.20',
@@ -2739,7 +2739,7 @@ CSV;
     ];
   }
 
-  public function providerStrCompressRandom() {
+  public static function providerStrCompressRandom() {
     $charlist = ' 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()_+-=[]{}\|/?,.<>;:"'."'";
     $result = [];
     for ($i=0; $i<20; $i++) {
@@ -2749,7 +2749,7 @@ CSV;
     return $result;
   }
 
-  public function providerStrDecompress() {
+  public static function providerStrDecompress() {
     return [
       [ '15500aaff8d9281090031080357f9094263fdf8fb4ff6ed040922881c1e8a203604a24f969630a7ac1304797b0f1cd22b60c6336f7b460133db339fddab11206430c69e475ea540a540355e35816a02152b789e0a6477d0fa01', FALSE ],
       [ 'AVUAqv-NkoEJADEIA1f5CUJj_fj7T_btBAkiiBweiiA2BKJPlpYwp6wTBHl7DxzSK2DGM297RgEz2zOf3asRIGQwxp5HXqVApUA1XjWBagIVK3ieCmR30Po', FALSE ],
@@ -2766,7 +2766,7 @@ CSV;
         $this->assertSame($result, is_valid_param($string, $type));
     }
 
-    public function providerIsValidParam() {
+    public static function providerIsValidParam() {
         return [
             // common
             [ '',          '', FALSE ],
@@ -2776,6 +2776,7 @@ CSV;
             [ '1234567890',                                    'serial', FALSE ],
             [ 'Ã´Â¿i+',                                        'serial', FALSE ],
             [ 'Ã´▒Â¿i+',                                       'serial', FALSE ],
+            [ '/bin/cat: /proc/device-tree/serial: No such file or directory', 'serial', FALSE ],
             [ '22:00:00:33:FF:AA',                             'serial', TRUE ],
             [ '~!@#$%^&*()_+`1234567890-=[]\\{}|;: \'",./<>?', 'serial', TRUE ],
 
@@ -2812,7 +2813,7 @@ CSV;
         $this->assertSame($result, escape_html($value));
     }
 
-    public function providerEscapeHtml() {
+    public static function providerEscapeHtml() {
         return [
             [ '<div class="alert alert-info"><button type="button" class="close" data-dismiss="alert">&times;</button>',
               '&lt;div class=&quot;alert alert-info&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;close&quot; data-dismiss=&quot;alert&quot;&gt;&amp;times;&lt;/button&gt;' ],
@@ -2822,6 +2823,10 @@ CSV;
             // entities
             [ '<p>Text with entities &#x200B; &pi; &pipipi;',
               '&lt;p&gt;Text with entities &#x200B; &pi; &amp;pipipi;' ],
+            // non utf-8 encoding
+            [ 'address: H' .chr(0xF6).'jdrodergatan 25', 'address: Höjdrodergatan 25' ],
+            [ "address: Malm\xF6",                       'address: Malmö' ],
+            [ "P\xFAlt stj\xF3rnst\xF6\xF0",             "Púlt stjórnstöð" ],
             // EMPTY
             [ NULL, NULL ],
         ];
@@ -2839,7 +2844,7 @@ CSV;
     print_message($text, $type, $strip);
   }
 
-  public function providerPrintMessage()
+  public static function providerPrintMessage()
   {
     return array(
       // Basic CLI output ($cli=TRUE, $type='', $strip=TRUE)
@@ -3012,7 +3017,7 @@ CSV;
     $this->assertSame($result, reformat_us_date($value));
   }
 
-  public function providerReformatUSDate()
+  public static function providerReformatUSDate()
   {
     return array(
       array('07/01/12',   '2012-07-01'),
@@ -3050,7 +3055,7 @@ CSV;
         $this->assertSame($code,   get_http_last_code());
     }
 
-    public function providerGetHttpRequest()
+    public static function providerGetHttpRequest()
     {
         return array(
             array('http://info.cern.ch',           '<html',  TRUE, 200), // OK, http

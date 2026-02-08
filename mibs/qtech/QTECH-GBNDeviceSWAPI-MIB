@@ -3112,7 +3112,7 @@ sMIBCompliances OBJECT IDENTIFIER ::= { sMIBConformance 2 }
 
     sMIBMauGroup OBJECT-GROUP
      OBJECTS {
-         sIfMauSwitchIndex,
+         -- sIfMauSwitchIndex,
          sIfMauIndex,
          sIfMauType,
          sIfMauMediaAvailable,
@@ -3206,22 +3206,22 @@ sMIBCompliances OBJECT IDENTIFIER ::= { sMIBConformance 2 }
         ::= { sMIBGroups 9 }
 
 
-    sMIBCompliance MODULE-COMPLIANCE
-     STATUS  current
-     DESCRIPTION
-            "The compliance statement for s module."
-     MODULE
-     MANDATORY-GROUPS {
-         sMIBBaseGroup,
-         sMIBDot1dGroup,
-         sMIBRMONGroup,
-         sMIBMauGroup,
-         sMIBDot1pGroup,
-         sMIBDot1QGroup,
-         sMIBDot3Group,
-         sMIBArchGroup
-     }
-     ::= { sMIBCompliances 1 }
+--    sMIBCompliance MODULE-COMPLIANCE
+--     STATUS  current
+--     DESCRIPTION
+--            "The compliance statement for s module."
+--     MODULE
+--     MANDATORY-GROUPS {
+--         sMIBBaseGroup,
+--         sMIBDot1dGroup,
+--         sMIBRMONGroup,
+--         sMIBMauGroup,
+--         sMIBDot1pGroup,
+--         sMIBDot1QGroup,
+--         sMIBDot3Group,
+--         sMIBArchGroup
+--     }
+--     ::= { sMIBCompliances 1 }
 
     END
 

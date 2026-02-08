@@ -1,6 +1,6 @@
 
 -- ARISTA-PRODUCTS-MIB: Arista Networks product object identifier assignments
--- Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 Arista Networks, Inc.  All rights reserved.
+-- Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 Arista Networks, Inc.  All rights reserved.
 
 ARISTA-PRODUCTS-MIB DEFINITIONS ::= BEGIN
 
@@ -12,7 +12,7 @@ IMPORTS
         FROM ARISTA-SMI-MIB;
 
 aristaProductsMIB MODULE-IDENTITY
-    LAST-UPDATED    "202305110000Z"
+    LAST-UPDATED    "202505140000Z"
     ORGANIZATION "Arista Networks, Inc."
     CONTACT-INFO
         "Arista Networks, Inc.
@@ -26,6 +26,147 @@ aristaProductsMIB MODULE-IDENTITY
     DESCRIPTION
         "This module defines the object identifiers returned as values for
          sysObjectID or entPhysicalVendorType for Arista Networks hardware."
+        REVISION      "202505140000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060X6-32PE and DCS-7060X6-32PE-N"
+        REVISION      "202505120000Z"
+        DESCRIPTION
+                "Revised to include ZTX-7230S-4TX-4S"
+        REVISION      "202504040000Z"
+        DESCRIPTION
+                "Revised to include DCS-7050X4-48Y-4DF"
+        REVISION      "202502211736Z"
+        DESCRIPTION
+                "Revised to include CCS-710XP-12TH-2S"
+        REVISION      "202502180001Z"
+        DESCRIPTION
+                "Revised to include CCS-720XPM-48TH-6SY"
+        REVISION      "202410070000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060DX4-32SB-RV3"
+        REVISION      "202408120000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060CX5-56D8"
+        REVISION      "202407310001Z"
+        DESCRIPTION
+                "Revised to include DCS-7050SX3-24YC4C-S"
+        REVISION      "202407150002Z"
+        DESCRIPTION
+                "Revised to include ZTX-7250S-16S"
+        REVISION      "202405030000Z"
+        DESCRIPTION
+                "Revised to include AWE-7220RP-5TH-2S"
+        REVISION      "202405010002Z"
+        DESCRIPTION
+                "Revised to include DCS-7010TX-48C-DC, DCS-7010TX-48C-DC-RV3"
+        REVISION      "202405010000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060DX4-32C-RV3"
+        REVISION      "202403220000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060X6-64DE and DCS-7060X6-64PE"
+        REVISION      "202401300000Z"
+        DESCRIPTION
+                "Revised to include DCS-7135LB-48Y4C"
+        REVISION      "202401220000Z"
+        DESCRIPTION
+                "Revised to include CCS-720XP-96ZC2-M-S"
+        REVISION      "202401190005Z"
+        DESCRIPTION
+                "Revised to include CCS-720DF-48Y-M-S-2"
+        REVISION      "202401190004Z"
+        DESCRIPTION
+                "Revised to include CCS-720DT-24S-M-S-2"
+        REVISION      "202401190003Z"
+        DESCRIPTION
+                "Revised to include CCS-720DP-24S-M-S-2"
+        REVISION      "202401190002Z"
+        DESCRIPTION
+                "Revised to include AWE-5310"
+        REVISION      "202401190001Z"
+        DESCRIPTION
+                "Revised to include AWE-7250R-16S"
+        REVISION      "202401190000Z"
+        DESCRIPTION
+                "Revised to include AWE-7230R-4TX-4S"
+        REVISION      "202401120418Z"
+        DESCRIPTION
+                "Revised to include DCS-7280SR3AK-48YC8"
+        REVISION      "202401120417Z"
+        DESCRIPTION
+                "Revised to include DCS-7280SR3AM-48YC8"
+        REVISION      "202401120415Z"
+        DESCRIPTION
+                "Revised to include DCS-7280SR3A-48YC8"
+        REVISION      "202401120001Z"
+        DESCRIPTION
+                "Revised to iclude CCS-720DP-48S-M-S-2"
+        REVISION      "202401110002Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AM-32S"
+        REVISION      "202401110001Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AK-32S"
+        REVISION      "202401110000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3A-32S"
+        REVISION      "202312080000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280SR3E-40YC6-M"
+        REVISION      "202310190000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3MK-32D4A-S"
+        REVISION      "202310100000Z"
+        DESCRIPTION
+                "Revised to include DCS-7060DX5-32"
+        REVISION      "202309080000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AK-24D12-S"
+        REVISION      "202308280000Z"
+        DESCRIPTION
+                "Revised to include DCS-7050CX4M-48D8"
+        REVISION      "202308090002Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AM-72"
+        REVISION      "202308080001Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AK-72"
+        REVISION      "202308070000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3A-72"
+        REVISION      "202308060000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AM-48D6"
+        REVISION      "202308050000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AK-48D6"
+        REVISION      "202308040000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3A-48D6"
+        REVISION      "202308030001Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AM-24D12"
+        REVISION      "202308020002Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3AK-24D12"
+        REVISION      "202308010000Z"
+        DESCRIPTION
+                "Revised to include DCS-7280CR3A-24D12"
+        REVISION      "202307250000Z"
+        DESCRIPTION
+                "Revised to include CCS-720DF-48Y-DC and CCS-720DF-48Y-DC-2"
+        REVISION      "202306190000Z"
+        DESCRIPTION
+                "Revised to include CCS-720DP-48ZS and CCS-720DP-48ZS-2"
+        REVISION      "202306150002Z"
+        DESCRIPTION
+                "Revised to include DCS-7010TX-48C"
+        REVISION      "202306150001Z"
+        DESCRIPTION
+                "Revised to include DCS-7050SX3-48C8C"
+        REVISION      "202306150000Z"
+        DESCRIPTION
+                "Revised to include DCS-7050CX3-32C."
         REVISION      "202305110000Z"
         DESCRIPTION
                 "Revised to include DCS-7280SR3MK-48YC8A-S"
@@ -47,15 +188,9 @@ aristaProductsMIB MODULE-IDENTITY
         REVISION      "202302100001Z"
         DESCRIPTION
                 "Revised to include AWE-5510"
-        REVISION      "202302060000Z"
-        DESCRIPTION
-                "Revised to include AWE-5310"
         REVISION      "202301300000Z"
         DESCRIPTION
                 "Revised to include DCS-7050DX4M-32S"
-        REVISION      "202301230000Z"
-        DESCRIPTION
-                "Revised to include DCS-7280CR3MK-32D4A"
         REVISION      "202301120002Z"
         DESCRIPTION
                 "Revised to include DCS-7050SDX4-48D8"
@@ -362,18 +497,12 @@ aristaProductsMIB MODULE-IDENTITY
         REVISION      "201905200000Z"
         DESCRIPTION
                 "Revised to include DCS-7280CR3-32P4-M and DCS-7280CR3-32D4-M"
-        REVISION      "201904300000Z"
-        DESCRIPTION
-                "Revised to include WEDGE100S12V"
         REVISION      "201904230000Z"
         DESCRIPTION
                 "Revised to include DCS-7280CR3-32D4"
         REVISION      "201904220000Z"
         DESCRIPTION
                 "Revised to include DCS-7280DR3-24"
-        REVISION      "201902050000Z"
-        DESCRIPTION
-                "Revised to include T7032-IX7 and IX7"
         REVISION      "201901230000Z"
         DESCRIPTION
                 "Revised to include CCS-720XP-24Y6"
@@ -419,15 +548,9 @@ aristaProductsMIB MODULE-IDENTITY
         REVISION      "201806181400Z"
         DESCRIPTION
                 "Revised to include DCS-7150SC-24-CLD and DCS-7150SC-64-CLD."
-        REVISION      "201805240000Z"
-        DESCRIPTION
-                "Revised to include T4048-IX8."
         REVISION      "201805170000Z"
         DESCRIPTION
                 "Revised to include DCS-7170-32C and DCS-7170-32C-M"
-        REVISION      "201805020000Z"
-        DESCRIPTION
-                "Revised to include S4048ON"
         REVISION      "201804090000Z"
         DESCRIPTION
                 "Revised to include DCS-7280CR2M-30."
@@ -446,12 +569,6 @@ aristaProductsMIB MODULE-IDENTITY
         REVISION      "201712100000Z"
         DESCRIPTION
                 "Revised to include DCS-7050SX3-48YC12 and DCS-7050SX3-48YC12-SSD."
-        REVISION      "201711070000Z"
-        DESCRIPTION
-                "Revised to include Seastone-DX010"
-        REVISION      "201709280000Z"
-        DESCRIPTION
-                "Revised to include WEDGE100SACF"
         REVISION      "201709220000Z"
         DESCRIPTION
                 "Revised to include DCS-7280SR2L-48C6."
@@ -470,9 +587,6 @@ aristaProductsMIB MODULE-IDENTITY
         REVISION      "201708180000Z"
         DESCRIPTION
                 "Revised to include DCS-7516N."
-        REVISION      "201707100000Z"
-        DESCRIPTION
-                "Revised to include IX1"
         REVISION      "201707050000Z"
         DESCRIPTION
                 "Revised to include DCS-7020SR-24C2."
@@ -1063,8 +1177,6 @@ aristaQuestoneD3020 OBJECT IDENTIFIER ::= { aristaProducts 138 1605 3020 }
 aristaDCS7060CX32SES OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2733 32 3282 3362 }
 -- DCS-7020SR-24C2 24xSFP+ & 2xQSFP100 Switch
 aristaDCS7020SR24C2 OBJECT IDENTIFIER ::= { aristaProducts 3011 7020 3735 24 2878 2 }
--- IX1 32x100GbE (QSFP100) Switch
-aristaIX1 OBJECT IDENTIFIER ::= { aristaProducts 575 1 }
 -- DCS-7516N Switch Chassis. 2 Supervisor slots, 16 Linecard slots, 6 Fabric Module slots, with AC or DC Power Supply
 aristaDCS7516N OBJECT IDENTIFIER ::= { aristaProducts 3011 7516 1359 }
 -- DCS-7060SX2-48YC6-SSD 48x25GbE (SFP+) & 6x100GbE (QSFP+) Ethernet Switch
@@ -1077,10 +1189,6 @@ aristaDCS7280CR2K30 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 2 202 
 aristaDCS7280SR2K48C6 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 2 202 48 2878 6 }
 -- DCS-7280SR2L-48C6 24x10GbE (SFP+), 24x25GbE (SFP25) & 6x100GbE (QSFP) Ethernet Switch with SSD
 aristaDCS7280SR2L48C6 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 2 589 48 2878 6 }
--- WEDGE100SACF 32x100GbE (QSFP) Ethernet Switch
-aristaWEDGE100SACF OBJECT IDENTIFIER ::= { aristaProducts 1759 100 2301 }
--- DX010 32x100GbE (QSFP28) Switch
-aristaDX010 OBJECT IDENTIFIER ::= { aristaProducts 2966 2097 10 }
 -- DCS-7050SX3-48YC12 48x25GbE SFP + 12x100GbE QSFP Switch
 aristaDCS7050SX348YC12 OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 3741 3 48 1654 12 }
 -- DCS-7050SX3-48YC12-SSD 48x25GbE SFP + 12x100GbE QSFP Switch with SSD
@@ -1091,7 +1199,7 @@ aristaDCS7050CX332S OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 3 32 3
 aristaDCS7050CX332SSSD OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 3 32 3282 761 }
 -- DCS-7170-64C Programmable 64-port QSFP100 + 2-port SFP+ Ethernet Switch
 aristaDCS717064C OBJECT IDENTIFIER ::= { aristaProducts 3011 7170 64 2878 }
--- DCS-7170-64C-M Programmable 64-port QSFP100 + 2-port SFP+ Ethernet Switch with SSD
+-- DCS-7170-64C-M Programmable 64-port QSFP100 + 2-port SFP+ Ethernet Switch + SSD
 aristaDCS717064CM OBJECT IDENTIFIER ::= { aristaProducts 3011 7170 64 2878 972 }
 -- DCS-7280SRM-40CX2 40x10GbE (SFP+) & 2x200G (CFP2-DCO) Ethernet switch with SSD
 aristaDCS7280SRM40CX2 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 1359 40 2733 2 }
@@ -1099,14 +1207,10 @@ aristaDCS7280SRM40CX2 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 1359 40 2
 aristaDCS7280SR32C2 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 32 2878 2 }
 -- DCS-7280CR2M-30 30x100GbE (QSFP) Ethernet Switch
 aristaDCS7280CR2M30 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 2 972 30 }
--- S4048ON 48x10GbE (SFP+) & 6x40GbE (QSFP+) Switch
-aristaS4048ON OBJECT IDENTIFIER ::= { aristaProducts 3282 4048 2463 }
 -- DCS-7170-32C Programmable 32-port QSFP100 + 2-port SFP+ Ethernet Switch
 aristaDCS717032C OBJECT IDENTIFIER ::= { aristaProducts 3011 7170 32 2878 }
 -- DCS-7170-32C-M Programmable 32-port QSFP100 + 2-port SFP+ Ethernet Switch with SSD
 aristaDCS717032CM OBJECT IDENTIFIER ::= { aristaProducts 3011 7170 32 2878 972 }
--- T4048-IX8 48x25GbE (SFP28) & 8x100GbE (QSFP28) Switch
-aristaT4048IX8 OBJECT IDENTIFIER ::= { aristaProducts 427 4048 575 8 }
 -- DCS-7150SC-24-CLD 24-port SFP+ 10GigE 1RU + SSD + Clock
 aristaDCS7150SC24CLD OBJECT IDENTIFIER ::= { aristaProducts 3011 7150 3720 24 1208 }
 -- DCS-7150SC-64-CLD 48-port SFP+ 40GigE 1RU + SSD + Clock
@@ -1145,16 +1249,10 @@ aristaCCS720XP24ZY4 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 858 24 213 4
 aristaCCS720XP48Y6 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 858 48 2600 6 }
 -- CCS-720XP-24Y6 24 Gig Base-T PoE & 6-port SFP28 Switch
 aristaCCS720XP24Y6 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 858 24 2600 6 }
--- T7032-IX7 32x100GbE (QSFP28) Switch
-aristaT7032IX7 OBJECT IDENTIFIER ::= { aristaProducts 427 7032 575 7 }
--- IX7 32x100GbE (QSFP28) Switch
-aristaIX7 OBJECT IDENTIFIER ::= { aristaProducts 575 7 }
 -- DCS-7280DR3-24 24x400GbE (QSFP-DD) Ethernet Switch
 aristaDCS7280DR324 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2972 3 24 }
 -- DCS-7280CR3-32D4 32x100GbE (QSFP100) & 4x400GbE (QSFP-DD) Ethernet Switch
 aristaDCS7280CR332D4 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 32 1605 4 }
--- WEDGE100S12V 32x100GbE (QSFP28) Ethernet Switch
-aristaWEDGE100S12V OBJECT IDENTIFIER ::= { aristaProducts 1759 100 3282 12 3753 }
 -- DCS-7280CR3-32P4-M 32x100GbE (QSFP100) & 4x400GbE (OSFP) Ethernet Switch with SSD
 aristaDCS7280CR332P4M OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 32 2129 4 972 }
 -- DCS-7280CR3-32D4-M 32x100GbE (QSFP100) & 4x400GbE (QSFP-DD) Ethernet Switch with SSD
@@ -1351,7 +1449,7 @@ aristaDCS713048G3 OBJECT IDENTIFIER ::= { aristaProducts 3011 7130 48 2758 3 }
 aristaDCS713048G3S OBJECT IDENTIFIER ::= { aristaProducts 3011 7130 48 2758 3 3282 }
 -- 7289 7289 Chassis
 arista7289 OBJECT IDENTIFIER ::= { aristaProducts 7289 }
--- DCS-7132LB-48Y4C 48x SFP28 & 4x QSFP100 Ethernet Switch with a VU9P-3 application FPGA
+-- DCS-7132LB-48Y4C 48x SFP28 + 4x QSFP100 Ethernet Switch with a VU9P-3 application FPGA
 aristaDCS7132LB48Y4C OBJECT IDENTIFIER ::= { aristaProducts 3011 7132 420 48 2600 4 2878 }
 -- DCS-7060DX4-32S 32x400GbE QSFP-DD & 2xSFP+ Ethernet Switch
 aristaDCS7060DX432S OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2966 4 32 3282 }
@@ -1379,12 +1477,8 @@ aristaDCS7050CX440D OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 4 40 1
 aristaDCS7050SPX448D8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 32 4 48 1605 8 }
 -- DCS-7050SDX4-48D8 48x100G SFP-DD & 8x400G QSFP-DD Ethernet Switch
 aristaDCS7050SDX448D8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 3564 4 48 1605 8 }
--- DCS-7280CR3MK-32D4A 32x100GbE (QSFP100) & 4x400GbE (QSFP-DD) Ethernet Switch with MACsec, large routes and SSD
-aristaDCS7280CR3MK32D4A OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 1810 32 1605 4 3648 }
 -- DCS-7050DX4M-32S 32x400GbE QSFP-DD & 2xSFP+ Ethernet Switch with MacSec
 aristaDCS7050DX4M32S OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2966 4 972 32 3282 }
--- AWE-5310 8x RJ45 (w/2x Fail to Wire, 4x 10G SFP+)
-aristaAWE5310 OBJECT IDENTIFIER ::= { aristaProducts 1082 5310 }
 -- AWE-5510 8x SFP+ 10G, 8 SFP+ 10G Enhanced
 aristaAWE5510 OBJECT IDENTIFIER ::= { aristaProducts 1082 5510 }
 -- CCS-720XP-48TXH-2C-S 48-port 10GBASE-T PoE + 4-port SFP28 + 2-port QSFP Switch
@@ -1399,6 +1493,110 @@ aristaDCS7060DX564E OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2966 5 64 1
 aristaDCS7050CX424D8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 4 24 1605 8 }
 -- DCS-7280SR3MK-48YC8A-S 48x25GbE (SFP) & 8x100GbE (QSFP) Ethernet Switch with large routes, MACsec, and secure boot
 aristaDCS7280SR3MK48YC8AS OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 3 1810 48 1654 8 3648 3282 }
+-- DCS-7050CX3-32C 32x100GbE QSFP & 2 SFP+ switch
+aristaDCS7050CX332C OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 3 32 2878 }
+-- DCS-7050SX3-48C8C 48x10GbE SFP + 8x100GbE QSFP Switch
+aristaDCS7050SX348C8C OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 3741 3 48 2878 8 2878 }
+-- DCS-7010TX-48C 48-port 1000BASE-T + 4-port SFP28 Switch
+aristaDCS7010TX48C OBJECT IDENTIFIER ::= { aristaProducts 3011 7010 1958 48 2878 }
+-- CCS-720DP-48ZS 48-port 2.5G PoE & 4-port SFP+ Switch
+aristaCCS720DP48ZS OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2974 48 223 }
+-- CCS-720DP-48ZS-2 48-port 2.5G PoE & 4-port SFP+ Switch
+aristaCCS720DP48ZS2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2974 48 223 2 }
+-- CCS-720DF-48Y-DC 48-port SFP & 4-port SFP28 Ethernet Switch with DC Power Supply
+aristaCCS720DF48YDC OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2952 48 2600 2957 }
+-- CCS-720DF-48Y-DC-2 48-port SFP & 4-port SFP28 Ethernet Switch with DC Power Supply
+aristaCCS720DF48YDC2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2952 48 2600 2957 2 }
+-- DCS-7280CR3A-24D12 24x100GbE (QSFP100) & 12x400GbE (QSFP-DD) Ethernet Switch
+aristaDCS7280CR3A24D12 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 3648 24 1605 12 }
+-- DCS-7280CR3AK-24D12 24x100GbE (QSFP100) & 12x400GbE (QSFP-DD) Ethernet Switch with MACsec and large routes
+aristaDCS7280CR3AK24D12 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2102 24 1605 12 }
+-- DCS-7280CR3AM-24D12 24x100GbE (QSFP100) & 12x400GbE (QSFP-DD) Ethernet Switch with MACsec
+aristaDCS7280CR3AM24D12 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2100 24 1605 12 }
+-- DCS-7280CR3A-48D6 48x100GbE (QSFP) + 6x400GbE (QSFP-DD) Ethernet Switch
+aristaDCS7280CR3A48D6 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 3648 48 1605 6 }
+-- DCS-7280CR3AK-48D6 48x100GbE (QSFP) + 6x400GbE (QSFP-DD) Ethernet Switch with MACsec and large routes
+aristaDCS7280CR3AK48D6 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2102 48 1605 6 }
+-- DCS-7280CR3AM-48D6 48x100GbE (QSFP) + 6x400GbE (QSFP-DD) Ethernet Switch with MACsec
+aristaDCS7280CR3AM48D6 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2100 48 1605 6 }
+-- DCS-7280CR3A-72 72x100GbE (QSFP100) Ethernet Switch
+aristaDCS7280CR3A72 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 3648 72 }
+-- DCS-7280CR3AK-72 72x100GbE (QSFP100) Ethernet Switch with MACsec and large routes
+aristaDCS7280CR3AK72 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2102 72 }
+-- DCS-7280CR3AM-72 72x100GbE (QSFP100) Ethernet Switch with MACsec
+aristaDCS7280CR3AM72 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2100 72 }
+-- DCS-7050CX4M-48D8 48x100GbE QSFP & 8x400GbE QSFP-DD & 2xSFP+ Ethernet Switch with MACsec
+aristaDCS7050CX4M48D8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2733 4 972 48 1605 8 }
+-- DCS-7280CR3AK-24D12-S 24x100GbE (QSFP100) & 12x400GbE (QSFP-DD) Ethernet Switch with MACsec, large routes, and secure boot
+aristaDCS7280CR3AK24D12S OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2102 24 1605 12 3282 }
+-- DCS-7060DX5-32 32x400GbE QSFP-DD & 1xSFP+ Ethernet Switch
+aristaDCS7060DX532 OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2966 5 32 }
+-- DCS-7280CR3MK-32D4A-S 32x100GbE (QSFP100) & 4x400GbE (QSFP-DD) Ethernet Switch with MACsec, large routes, SSD
+aristaDCS7280CR3MK32D4AS OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 1810 32 1605 4 3648 3282 }
+-- DCS-7280SR3E-40YC6-M 40x25GbE (SFP) & 6x100GbE (QSFP) Ethernet Switch with Sync-E and Expanded Memory
+aristaDCS7280SR3E40YC6M OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 3 1988 40 1654 6 972 }
+-- DCS-7280CR3A-32S 28x100GbE (QSFP28) & 4x200GbE (QSFP56) Ethernet Switch
+aristaDCS7280CR3A32S OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 3648 32 3282 }
+-- DCS-7280CR3AK-32S 28x100GbE (QSFP28) & 4x200GbE (QSFP56) Ethernet Switch with MACsec and large routes
+aristaDCS7280CR3AK32S OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2102 32 3282 }
+-- DCS-7280CR3AM-32S 28x100GbE (QSFP28) & 4x200GbE (QSFP56) Ethernet Switch with MACsec
+aristaDCS7280CR3AM32S OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 2727 3 2100 32 3282 }
+-- CCS-720DP-48S-M-S-2 48-port 1000BASE-T PoE & 4-port SFP+ Ethernet Switch with expanded memory and secure boot
+aristaCCS720DP48SMS2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2974 48 3282 972 3282 2 }
+-- DCS-7280SR3A-48YC8 48x50GbE (SFP) & 8x100GbE (QSFP) Ethernet Switch
+aristaDCS7280SR3A48YC8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 3 3648 48 1654 8 }
+-- DCS-7280SR3AM-48YC8 48x50GbE (SFP) & 8x100GbE (QSFP) Ethernet Switch with MACsec
+aristaDCS7280SR3AM48YC8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 3 2100 48 1654 8 }
+-- DCS-7280SR3AK-48YC8 48x50GbE (SFP) & 8x100GbE (QSFP) Ethernet Switch with MACsec and large routes
+aristaDCS7280SR3AK48YC8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7280 3735 3 2102 48 1654 8 }
+-- AWE-7230R-4TX-4S 4x RJ45 (w/2x Fail to Wire), 4x 10G SFP+
+aristaAWE7230R4TX4S OBJECT IDENTIFIER ::= { aristaProducts 1082 7230 2899 4 1958 4 3282 }
+-- AWE-7250R-16S 8x SFP+ 10G, 8 SFP+ 10G Enhanced
+aristaAWE7250R16S OBJECT IDENTIFIER ::= { aristaProducts 1082 7250 2899 16 3282 }
+-- AWE-5310 4x RJ45 (w/2x Fail to Wire), 4x 10G SFP+
+aristaAWE5310 OBJECT IDENTIFIER ::= { aristaProducts 1082 5310 }
+-- CCS-720DP-24S-M-S-2 24-port 1000BASE-T PoE & 4-port SFP+ Ethernet Switch with expanded memory and secure boot
+aristaCCS720DP24SMS2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2974 24 3282 972 3282 2 }
+-- CCS-720DT-24S-M-S-2 24-port 1000BASE-T & 4-port SFP+ Ethernet Switch with expanded memory and secure boot
+aristaCCS720DT24SMS2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2970 24 3282 972 3282 2 }
+-- CCS-720DF-48Y-M-S-2 48-port SFP & 4-port SFP28 Ethernet Switch with expanded memory and secure boot
+aristaCCS720DF48YMS2 OBJECT IDENTIFIER ::= { aristaProducts 2546 720 2952 48 2600 972 3282 2 }
+-- CCS-720XP-96ZC2-M-S 96 MGig Base-T PoE, 4-port SFP28 & 2 QSFP28 Switch with expanded memory and secure boot
+aristaCCS720XP96ZC2MS OBJECT IDENTIFIER ::= { aristaProducts 2546 720 858 96 207 2 972 3282 }
+-- DCS-7135LB-48Y4C 48x SFP28 + 4x QSFP100 Ethernet Switch with a VU9P-3 application FPGA
+aristaDCS7135LB48Y4C OBJECT IDENTIFIER ::= { aristaProducts 3011 7135 420 48 2600 4 2878 }
+-- DCS-7060X6-64DE 64x800GbE QSFP-DD & 2xSFP Ethernet Switch
+aristaDCS7060X664DE OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2983 6 64 2955 }
+-- DCS-7060X6-64PE 64x800GbE OSFP & 2xSFP Ethernet Switch
+aristaDCS7060X664PE OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2983 6 64 3255 }
+-- DCS-7060DX4-32C-RV3 32x400GbE QSFP-DD & 2xSFP+ Ethernet Switch with ORv3 support
+aristaDCS7060DX432CRV3 OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2966 4 32 2878 2594 3 }
+-- DCS-7010TX-48C-DC 48-port 1000BASE-T + 4-port SFP28 Switch with DC Power Supply
+aristaDCS7010TX48CDC OBJECT IDENTIFIER ::= { aristaProducts 3011 7010 1958 48 2878 2957 }
+-- DCS-7010TX-48C-DC-RV3 48-port 1000BASE-T + 4-port SFP28 Switch with DC Power Supply, ORv3 Support
+aristaDCS7010TX48CDCRV3 OBJECT IDENTIFIER ::= { aristaProducts 3011 7010 1958 48 2878 2957 2594 3 }
+-- AWE-7220RP-5TH-2S 2x 10GbE SFP+ Ports, 4x GbE RJ45 with PoE, 1x GbE RJ45
+aristaAWE7220RP5TH2S OBJECT IDENTIFIER ::= { aristaProducts 1082 7220 2596 5 1974 2 3282 }
+-- ZTX-7250S-16S 8x SFP+ 10G, 8 SFP+ 10G Enhanced
+aristaZTX7250S16S OBJECT IDENTIFIER ::= { aristaProducts 3413 7250 3282 16 3282 }
+-- DCS-7050SX3-24YC4C-S 24x25GbE SFP + 4x100GbE QSFP Switch
+aristaDCS7050SX324YC4CS OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 3741 3 24 1654 4 2878 3282 }
+-- DCS-7060CX5-56D8 56x100GbE QSFP, 8x400GbE QSFP-DD & 1xSFP+ Ethernet Switch
+aristaDCS7060CX556D8 OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2733 5 56 1605 8 }
+-- DCS-7060DX4-32SB-RV3 32x400GbE QSFP-DD & 2xSFP+ Ethernet Switch with ORv3 support
+aristaDCS7060DX432SBRV3 OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2966 4 32 3719 2594 3 }
+-- CCS-720XPM-48TH-6SY 48x 1G Base-T PoE, 4x SFP28 & 2x SFP+ MacSec Switch
+aristaCCS720XPM48TH6SY OBJECT IDENTIFIER ::= { aristaProducts 2546 720 4026 48 1974 6 3742 }
+-- CCS-710XP-12TH-2S 12-port 1000BASE-T PoE & 2-port SFP+ Ethernet Switch
+aristaCCS710XP12TH2S OBJECT IDENTIFIER ::= { aristaProducts 2546 710 858 12 1974 2 3282 }
+-- DCS-7050X4-48Y-4DF 48x25GbE SFP+ & 4x400GbE QSFP-DD Ethernet Switch
+aristaDCS7050X448Y4DF OBJECT IDENTIFIER ::= { aristaProducts 3011 7050 2983 4 48 2600 4 2952 }
+-- ZTX-7230S-4TX-4S 4x RJ45 (w/2x Fail to Wire), 4x 10G SFP+
+aristaZTX7230S4TX4S OBJECT IDENTIFIER ::= { aristaProducts 3413 7230 3282 4 1958 4 3282 }
+-- DCS-7060X6-32PE 32x800GbE OSFP & 2xSFP Ethernet Switch
+aristaDCS7060X632PE OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2983 6 32 3255 }
+-- DCS-7060X6-32PE-N 32x800GbE OSFP & 2xSFP Ethernet Switch with secure boot disabled
+aristaDCS7060X632PEN OBJECT IDENTIFIER ::= { aristaProducts 3011 7060 2983 6 32 3255 1359 }
 
 END
 

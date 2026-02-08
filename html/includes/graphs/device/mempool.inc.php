@@ -27,7 +27,7 @@ $colours = 'mixed-10c';
 
 $rrd_options .= " COMMENT:'" . str_pad('Size      Used    %used', $descr_len + 31, ' ', STR_PAD_LEFT) . "\\l'";
 
-foreach (dbFetchRows("SELECT * FROM `mempools` where `device_id` = ?", [$device['device_id']]) as $mempool) {
+foreach (dbFetchRows("SELECT * FROM `mempools` WHERE `device_id` = ?", [$device['device_id']]) as $mempool) {
     if (!$config['graph_colours'][$colours][$iter]) {
         $iter = 0;
     }
@@ -35,11 +35,7 @@ foreach (dbFetchRows("SELECT * FROM `mempools` where `device_id` = ?", [$device[
 
     $descr = rrdtool_escape(rewrite_entity_name($mempool['mempool_descr'], 'mempool'), $descr_len);
 
-    if (isset($mempool['mempool_table'])) {
-        $rrd_filename = get_rrd_path($device, "mempool-" . strtolower($mempool['mempool_mib']) . "-" . $mempool['mempool_table'] . "-" . $mempool['mempool_index'] . ".rrd");
-    } else {
-        $rrd_filename = get_rrd_path($device, "mempool-" . strtolower($mempool['mempool_mib']) . "-" . $mempool['mempool_index'] . ".rrd");
-    }
+    $rrd_filename = get_rrd_path($device, get_mempool_rrd($device, $mempool));
 
     if (rrd_is_file($rrd_filename)) {
         $rrd_filename_escape = rrdtool_escape($rrd_filename);

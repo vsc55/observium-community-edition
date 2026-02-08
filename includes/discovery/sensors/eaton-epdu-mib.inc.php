@@ -67,7 +67,7 @@ foreach ($inputs as $unit_id => $unit_data) {
             $value = $input_data['inputTotalVAR'];
             discover_sensor('rpower', $device, $oid, "inputTotalVAR.$input_index", 'eaton-epdu-mib', "$descr Total", 1, $value);
         }
-        
+
         if (is_array($inputs_o[$unit_id][$input_id])) {
 
             $num_phase = safe_count($inputs_o[$unit_id][$input_id]);

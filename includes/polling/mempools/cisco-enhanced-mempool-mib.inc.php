@@ -22,7 +22,7 @@ $oids = ['used' => $cemp_oid . 'Used',
          'free' => $cemp_oid . 'Free'];
 
 if (!is_array($cache_storage[$mib])) {
-    foreach ($oids as $param => $oid) {
+    foreach ($oids as $oid) {
         $cache_mempool = snmpwalk_cache_oid($device, $oid, $cache_mempool, $mib);
         if ($device['os'] == 'iosxr' && !$GLOBALS['snmp_status']) {
             // Hack for some old IOS-XR, sometime return "Timeout: No Response".

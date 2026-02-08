@@ -30,16 +30,16 @@ foreach ($results as $result) {
     if ($result['hostname'] != $result['sysName'] && $result['sysName']) {
         $device_name .= ' | ' . truncate($result['sysName'], $max_len);
     }
-    $descr      = strlen($result['location']) ? escape_html($result['location']) . ' | ' : '';
+    $descr      = strlen($result['location']) ? $result['location'] . ' | ' : '';
     $descr      .= $result['rtt_label'];
     $tab_colour = '#194B7F';
 
     $sla_search_results[] = [
-      'url'    => generate_url(['page' => 'device', 'device' => $result['device_id'], 'tab' => 'slas', 'id' => $result['sla_id']]),
-      'name'   => $result['sla_descr'],
-      'colour' => $tab_colour,
-      'icon'   => $config['icon']['sla'],
-      'data'   => ['| ' . escape_html($device_name), $descr]
+        'url'    => generate_url(['page' => 'device', 'device' => $result['device_id'], 'tab' => 'slas', 'id' => $result['sla_id']]),
+        'name'   => $result['sla_descr'],
+        'colour' => $tab_colour,
+        'icon'   => $config['icon']['sla'],
+        'data'   => [ '| ' . $device_name, $descr ]
     ];
 }
 

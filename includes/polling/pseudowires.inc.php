@@ -42,10 +42,11 @@ $table_rows = [];
 print_cli_data_field("MIBs", 2);
 
 foreach (array_keys($pseudowires_db) as $mib) {
-    // NOTE. Multiple pseudoware MIBs on single device theoretically impossible, but keep this common logic
+    // NOTE. Multiple pseudoware MIBs on a single device are theoretically impossible, but keep this common logic
     echo(" $mib ");
     $mib_lower = strtolower($mib);
-    $oids      = $config['mibs'][$mib]['pseudowire']['oids'];
+    $defs      = $config['mibs'][$mib]['pseudowire'];
+    $oids      = $defs['oids'];
 
     // Cache SNMP data
     $cache_pseudowires[$mib_lower] = [];
@@ -60,7 +61,7 @@ foreach (array_keys($pseudowires_db) as $mib) {
     print_debug_vars($cache_pseudowires[$mib_lower]);
 
     //pseudowires_db_count   += count(pseudowires_db[$mib_lower]);
-    $pseudowires_snmp_count += count($cache_pseudowires[$mib_lower]);
+    $pseudowires_snmp_count += safe_count($cache_pseudowires[$mib_lower]);
 
     foreach ($pseudowires_db[$mib] as $index => $pw) {
         $rrd_filename = "pseudowire-" . $mib_lower . '-' . $index . ".rrd";
@@ -93,13 +94,16 @@ foreach (array_keys($pseudowires_db) as $mib) {
                 //$graphs['pseudowire_pkts'] = TRUE; // not a device graph
             }
 
-            // Event
-            $pw_operstatus    = $pw_poll[$oids['OperStatus']['oid']];
-            $pw_poll['event'] = $config['mibs'][$mib]['pseudowire']['states'][$pw_operstatus]['event'];
+            // PW Event
+            $pw_operstatus = $pw_poll[$oids['OperStatus']['oid']];
+            $pw_state_type = $oids['OperStatus']['states'] ?? $oids['OperStatus']['oid']; // Defined state name or Oid name
+            $pw_array      = get_state_array($pw_state_type, $pw_operstatus, $mib);
+
+            $pw_poll['event'] = $pw_array['event'];
 
             // Last changed
             if (empty($pw['last_change'])) {
-                // If last change never set, use current time
+                // If the last change never set, use current time
                 $pw_poll['last_change'] = $pseudowire_polled_time - $pw_uptime;
             } elseif ($pw['pwOperStatus'] != $pw_operstatus) {
                 // Pseudowire changed, log and set last_change

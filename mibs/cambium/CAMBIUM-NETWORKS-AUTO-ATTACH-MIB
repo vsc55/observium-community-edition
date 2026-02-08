@@ -2,7 +2,8 @@ CAMBIUM-NETWORKS-AUTO-ATTACH-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
     MODULE-IDENTITY, NOTIFICATION-TYPE, OBJECT-TYPE, 
-    Unsigned32, Integer32, Counter32, enterprises
+    Unsigned32, Integer32, Counter32, Counter64,
+    enterprises
             FROM SNMPv2-SMI
     MODULE-COMPLIANCE, OBJECT-GROUP
             FROM SNMPv2-CONF
@@ -12,16 +13,41 @@ IMPORTS
             FROM IF-MIB
     InetAddress, InetAddressType
             FROM INET-ADDRESS-MIB
-    RowStatus, StorageType, TruthValue
+    RowStatus, StorageType, TruthValue, TimeStamp
             FROM SNMPv2-TC;
 
 cnAutoAttachMib MODULE-IDENTITY
-    LAST-UPDATED "202209210000Z"     -- September 21, 2022
+    LAST-UPDATED "202407250000Z"     -- July 25, 2024
     ORGANIZATION "Cambium Networks, Inc."
     CONTACT-INFO "cambiumnetworks.com"
     DESCRIPTION
         "This MIB module contains objects related to the 
         Auto-Attach support."
+
+    REVISION    "202407250000Z" -- July 25, 2024
+    DESCRIPTION "Ver 16: Defined additional condensed neighbor
+                 table statistics per One Network requirements.
+                 Updated per-interface Auto-VLAN server status
+                 state enumerations."
+
+    REVISION    "202311080000Z" -- November 8, 2023
+    DESCRIPTION "Ver 15: Added zero-based statistics tracking to
+                 the condensed neighbor data. Updated erroneous 
+                 port entry access. Support STP portfast, VLAN
+                 exclusion and DHCP Snooping Trust setting action
+                 extensions. Defined Time-of-Day support objects.
+                 Support limited neighbor history."
+
+    REVISION    "202304050000Z" -- April 5, 2023
+    DESCRIPTION "Ver 14: Auto-VLAN server support. Added scalars
+                 and per-port objects to control Auto-VLAN server
+                 interactions. Expanded TLV statistics tracking.
+                 Support dynamic uplink detection. Introduced
+                 per-port restricted MAC support."
+
+    REVISION    "202212200000Z" -- December 20, 2022
+    DESCRIPTION "Ver 13: Added extended VLAN list support
+                 and updated VLAN string limits."
 
     REVISION    "202209210000Z" -- September 21, 2022
     DESCRIPTION "Ver 12: Added localization support. Defined
@@ -146,7 +172,7 @@ cnAutoAttachDeviceDataCompare OBJECT-TYPE
         indicates that the character case is ignored
         during string comparison operations."
 
-    DEFVAL	   { caseSensitive }
+    DEFVAL	   { caseInsensitive }
     ::= { cnAutoAttachObjects 3 }
 
 cnAutoAttachClearPolicyStats OBJECT-TYPE
@@ -193,6 +219,7 @@ cnAutoAttachUpdatePortDesc OBJECT-TYPE
         update is determined by the attribute 
         value at the time the policy is applied."
 
+    DEFVAL	   { pbaPolicyName }
     ::= { cnAutoAttachObjects 6 }
 
 cnAutoAttachRestrictedMacMatch OBJECT-TYPE
@@ -298,20 +325,27 @@ cnAutoAttachPortEntry OBJECT-TYPE
     ::= { cnAutoAttachPortTable 1 }
 
 CnAutoAttachPortEntry ::= SEQUENCE {
-    cnAutoAttachPortIfIndex                  Integer32,
-    cnAutoAttachPortState                    INTEGER,
-    cnAutoAttachPortMsgAuthStatus            INTEGER,
-    cnAutoAttachPortMsgAuthKey               OCTET STRING,
-    cnAutoAttachPortActivePolicyName         SnmpAdminString,
-    cnAutoAttachPortPolicyApplied            Counter32,
-    cnAutoAttachPortPolicyExpired            Counter32,
-    cnAutoAttachPortPolicyErrors             Counter32,
-    cnAutoAttachPortRowStatus                RowStatus,
-    cnAutoAttachPortTlvTxEnable              BITS,
-    cnAutoAttachPortDevSettingsTlvReceived   Counter32,
-    cnAutoAttachPortDevSettingsTlvProcessed  Counter32,
-    cnAutoAttachPortDevSettingsTlvAuthFails  Counter32,
-    cnAutoAttachPortPrevPolicyName           SnmpAdminString
+    cnAutoAttachPortIfIndex                   Integer32,
+    cnAutoAttachPortState                     INTEGER,
+    cnAutoAttachPortMsgAuthStatus             INTEGER,
+    cnAutoAttachPortMsgAuthKey                OCTET STRING,
+    cnAutoAttachPortActivePolicyName          SnmpAdminString,
+    cnAutoAttachPortPolicyApplied             Counter32,
+    cnAutoAttachPortPolicyExpired             Counter32,
+    cnAutoAttachPortPolicyErrors              Counter32,
+    cnAutoAttachPortRowStatus                 RowStatus,
+    cnAutoAttachPortTlvTxEnable               BITS,
+    cnAutoAttachPortDevSettingsTlvReceived    Counter32,
+    cnAutoAttachPortDevSettingsTlvProcessed   Counter32,
+    cnAutoAttachPortDevSettingsTlvAuthFails   Counter32,
+    cnAutoAttachPortPrevPolicyName            SnmpAdminString,
+    cnAutoAttachPortAuthTlvReceived           Counter32,
+    cnAutoAttachPortAuthTlvProcessed          Counter32,
+    cnAutoAttachPortAuthTlvChanged            Counter32,
+    cnAutoAttachPortAutoVlanServerDiscovery   INTEGER,
+    cnAutoAttachPortAutoVlanServerStatus      INTEGER,
+    cnAutoAttachPortAutoVlanServerTrunkStatus INTEGER,
+    cnAutoAttachPortRestrictedMacMatch        INTEGER
 }
 
 cnAutoAttachPortIfIndex OBJECT-TYPE
@@ -473,6 +507,114 @@ cnAutoAttachPortPrevPolicyName OBJECT-TYPE
 
     ::= { cnAutoAttachPortEntry 14 }
 
+cnAutoAttachPortAuthTlvReceived OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of times a PBA Authentication TLV
+        has been received by LLDP on the port."
+
+    ::= { cnAutoAttachPortEntry 15 }
+
+cnAutoAttachPortAuthTlvProcessed OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of times a PBA Authentication TLV
+        has been processed by the PBA agent on the port."
+
+    ::= { cnAutoAttachPortEntry 16 }
+
+cnAutoAttachPortAuthTlvChanged OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of times a PBA Authentication TLV
+        that is different than the previously processed
+        Authentication TLV has been processed by the PBA 
+        agent on the port."
+
+    ::= { cnAutoAttachPortEntry 17 }
+
+cnAutoAttachPortAutoVlanServerDiscovery OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Controls Auto-VLAN server discovery
+        for the associated interface."
+
+    ::= { cnAutoAttachPortEntry 18 }
+
+cnAutoAttachPortAutoVlanServerStatus OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       notDiscovered(1),
+                       discovered(2),
+                       connected(3)
+                   }
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Exports the current Auto-VLAN server 
+        status for the associated interface.
+
+        notDiscovered(1) - no server detected
+        discovered(2) - server detected
+        connected(3) - server detected and 
+                       Auto-VLAN data exported"
+
+    ::= { cnAutoAttachPortEntry 19 }
+
+cnAutoAttachPortAutoVlanServerTrunkStatus OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Exports the current Auto-VLAN server trunk
+        status for the associated interface. Status
+        is 'enabled' when the interface mode has
+        been dynamically transitioned to Trunk mode."
+
+    ::= { cnAutoAttachPortEntry 20 }
+
+cnAutoAttachPortRestrictedMacMatch OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "When enabled, additional checks are performed
+        during evaluation of MAC address-based policies
+        to ensure that they are only applied to the 
+        port if only a single MAC address has been
+        learned or where the MAC that is matched by
+        the policy represents the directly connected
+        device.
+
+        When disabled, MAC address-based policies are
+        more freely applied to the port on which there
+        exists MAC address data matching policy criteria.
+
+        The global cnAutoAttachRestrictedMacMatch status
+        must be 'enabled(1)' for the value of this port-
+        specific setting to be honored. If the global
+        status is 'disabled(2)', the value of this
+        object is ignored."
+
+    DEFVAL	   { enabled }
+    ::= { cnAutoAttachPortEntry 21 }
+
 --
 -- Auto-Attach Rule Table support        
 --
@@ -631,7 +773,11 @@ CnAutoAttachActionEntry ::= SEQUENCE {
     cnAutoAttachActionCambiumSync       INTEGER,
     cnAutoAttachActionPortSpeed         INTEGER,
     cnAutoAttachActionPortAdr           INTEGER,
-    cnAutoAttachActionAutoVoip          INTEGER
+    cnAutoAttachActionAutoVoip          INTEGER,
+    cnAutoAttachActionExtVlanData       SnmpAdminString,
+    cnAutoAttachActionStpPortfast       INTEGER,
+    cnAutoAttachActionExcludeVlans      INTEGER,
+    cnAutoAttachActionDhcpSnoopTrust    INTEGER
 }
 
 cnAutoAttachActionName OBJECT-TYPE
@@ -653,16 +799,18 @@ cnAutoAttachActionName OBJECT-TYPE
 cnAutoAttachActionVlanData OBJECT-TYPE
     SYNTAX         SnmpAdminString (SIZE (0..100))
     MAX-ACCESS     read-create
-    STATUS         current
+    STATUS         deprecated
     DESCRIPTION
         "Specifies VLAN IDs to be associated with 
-        an interface. VLAN data specified using a
-        string format with VLAN values comma-separated
-        (e.g., '10,20,30'). A maximum of 20 VLAN IDs
-        can be specified.
+        an interface. VLAN data is specified using a
+        string containing comma-separated individual
+        VLANs and VLAN ranges (e.g., '8,10,30-35'). 
+        A maximum of 200 VLANs can be specified.
 
         A zero-length string indicates that no VLAN
-        data is specified."
+        data is specified. If non-zero, the object
+        cnAutoAttachActionExtVlanData must be 
+        zero-length."
 
     ::= { cnAutoAttachActionEntry 2 }
 
@@ -738,7 +886,8 @@ cnAutoAttachActionUplinkData OBJECT-TYPE
         "Specifies interfaces to be considered for
         VLAN membership updates when VLAN membership
         updates are initiated through processing of
-        the cnAutoAttachActionVlanData object.
+        the cnAutoAttachActionVlanData and the
+        cnAutoAttachActionExtVlanData objects.
 
         Uplink interfaces are specified using interface
         type and value notation in a string format
@@ -880,6 +1029,76 @@ cnAutoAttachActionAutoVoip OBJECT-TYPE
 
     ::= { cnAutoAttachActionEntry 15 }
 
+cnAutoAttachActionExtVlanData OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..250))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies VLAN IDs to be associated with 
+        an interface. VLAN data is specified using a
+        string containing comma-separated individual
+        VLANs and VLAN ranges (e.g., '8,10,30-35'). 
+        A maximum of 200 VLANs can be specified.
+
+        A zero-length string indicates that no VLAN
+        data is specified. If non-zero, the object
+        cnAutoAttachActionVlanData must be zero-length."
+
+    ::= { cnAutoAttachActionEntry 16 }
+
+cnAutoAttachActionStpPortfast OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       none(1),
+                       enabled(2),
+                       disabled(3)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "STP portfast setting. When 'enabled(2)', STP 
+        portfast processing will be enabled on the port.
+        If 'disabled(3)', STP portfast processing will 
+        not be enabled on the port."
+
+    ::= { cnAutoAttachActionEntry 17 }
+
+cnAutoAttachActionExcludeVlans OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "VLAN update modifier setting. When 'enabled(1)',
+        current VLAN memberships will be cleared when a 
+        policy is applied. If 'disabled(2)', current VLAN
+        memberships will not be explicitly cleared.
+
+        Setting is ignored (treated as 'disabled(2)') if
+        the switch port mode isn't Hybrid. Operations that 
+        would cause a port settings inconsistency (such
+        as the port PVID VLAN membership being cleared)
+        are silently skipped as well."
+
+    ::= { cnAutoAttachActionEntry 18 }
+
+cnAutoAttachActionDhcpSnoopTrust OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       none(1),
+                       untrusted(2),
+                       trusted(3)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "DHCP Snooping trust state setting. When 'untrusted(2)',
+        the port's DHCP Snooping trust state will be set to
+        untrusted. If 'trusted(3)', the port's DHCP Snooping
+        trust state will be set to trusted."
+
+    ::= { cnAutoAttachActionEntry 19 }
+
 --
 -- Auto-Attach Policy Table support        
 --
@@ -920,7 +1139,8 @@ CnAutoAttachPolicyEntry ::= SEQUENCE {
     cnAutoAttachPolicyExpired         Counter32,
     cnAutoAttachPolicyErrors          Counter32,
     cnAutoAttachPolicyRowStatus       RowStatus,
-    cnAutoAttachPolicyPortList        SnmpAdminString
+    cnAutoAttachPolicyPortList        SnmpAdminString,
+    cnAutoAttachPolicyTodName         SnmpAdminString
 }
 
 cnAutoAttachPolicyName OBJECT-TYPE
@@ -1044,10 +1264,10 @@ cnAutoAttachPolicyActionVlanData OBJECT-TYPE
     STATUS         current
     DESCRIPTION
         "Specifies VLAN IDs to be associated with 
-        an interface. VLAN data specified using a
-        string format with VLAN values comma-separated
-        (e.g., '10,20,30'). A maximum of 20 VLAN IDs
-        can be specified.
+        an interface. VLAN data is specified using a
+        string containing comma-separated individual
+        VLANs and VLAN ranges (e.g., '8,10,30-35'). 
+        A maximum of 50 VLANs can be specified.
         
         A zero-length string indicates that no VLAN
         data is specified.
@@ -1156,6 +1376,17 @@ cnAutoAttachPolicyPortList OBJECT-TYPE
 
     ::= { cnAutoAttachPolicyEntry 15 }
 
+cnAutoAttachPolicyTodName OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..32))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Name of the Time-of-Day specification that 
+        is referenced by the policy. The ToD spec 
+        must be defined to be referenced."
+        
+    ::= { cnAutoAttachPolicyEntry 16 }
+
 --
 -- Auto-Attach Script Table support        
 --
@@ -1203,10 +1434,10 @@ cnAutoAttachScriptActionVlanData OBJECT-TYPE
     STATUS         current
     DESCRIPTION
         "Specifies VLAN IDs to be associated with 
-        an interface. VLAN data specified using a
-        string format with VLAN values comma-separated
-        (e.g., '10,20,30'). A maximum of 20 VLAN IDs
-        can be specified.
+        an interface. VLAN data is specified using a
+        string containing comma-separated individual
+        VLANs and VLAN ranges (e.g., '8,10,30-35'). 
+        A maximum of 50 VLANs can be specified.
 
         A zero-length string indicates that no VLAN
         data is specified."
@@ -1262,15 +1493,30 @@ cnAutoAttachCondensedNbrEntry OBJECT-TYPE
     ::= { cnAutoAttachCondensedNbrTable 1 }
 
 CnAutoAttachCondensedNbrEntry ::= SEQUENCE {
-    cnAutoAttachCondensedNbrIfIndex           Integer32,
-    cnAutoAttachCondensedNbrName              SnmpAdminString,
-    cnAutoAttachCondensedNbrLldpChassisId     SnmpAdminString,
-    cnAutoAttachCondensedNbrLldpPortId        SnmpAdminString,
-    cnAutoAttachCondensedNbrLldpSystemName    SnmpAdminString,
-    cnAutoAttachCondensedNbrLldpSystemDesc    SnmpAdminString,
-    cnAutoAttachCondensedNbrLldpMgmtIpv4Addr  SnmpAdminString,
-    cnAutoAttachCondensedNbrMacAddress        OCTET STRING,
-    cnAutoAttachCondensedNbrClassification    SnmpAdminString
+    cnAutoAttachCondensedNbrIfIndex               Integer32,
+    cnAutoAttachCondensedNbrName                  SnmpAdminString,
+    cnAutoAttachCondensedNbrLldpChassisId         SnmpAdminString,
+    cnAutoAttachCondensedNbrLldpPortId            SnmpAdminString,
+    cnAutoAttachCondensedNbrLldpSystemName        SnmpAdminString,
+    cnAutoAttachCondensedNbrLldpSystemDesc        SnmpAdminString,
+    cnAutoAttachCondensedNbrLldpMgmtIpv4Addr      SnmpAdminString,
+    cnAutoAttachCondensedNbrMacAddress            OCTET STRING,
+    cnAutoAttachCondensedNbrClassification        SnmpAdminString,
+    cnAutoAttachCondensedNbrIfHCInOctets          Counter64,
+    cnAutoAttachCondensedNbrIfHCInUcastPkts       Counter64,
+    cnAutoAttachCondensedNbrIfHCInMulticastPkts   Counter64,
+    cnAutoAttachCondensedNbrIfHCInBroadcastPkts   Counter64,
+    cnAutoAttachCondensedNbrIfHCOutOctets         Counter64,
+    cnAutoAttachCondensedNbrIfHCOutUcastPkts      Counter64,
+    cnAutoAttachCondensedNbrIfHCOutMulticastPkts  Counter64,
+    cnAutoAttachCondensedNbrIfHCOutBroadcastPkts  Counter64,
+    cnAutoAttachCondensedNbrTimeStamp             TimeStamp,
+    cnAutoAttachCondensedNbrIfInErrors            Counter32,
+    cnAutoAttachCondensedNbrIfOutErrors           Counter32,
+    cnAutoAttachCondensedNbrIfCRCAlignErrors      Counter32,
+    cnAutoAttachCondensedNbrIfLinkTransitions     Counter32,
+    cnAutoAttachCondensedNbrIfUndersizePkts       Counter32,
+    cnAutoAttachCondensedNbrIfOversizePkts        Counter32
 }
 
 cnAutoAttachCondensedNbrIfIndex OBJECT-TYPE
@@ -1378,6 +1624,189 @@ cnAutoAttachCondensedNbrClassification OBJECT-TYPE
 
     ::= { cnAutoAttachCondensedNbrEntry 9 }
 
+cnAutoAttachCondensedNbrIfHCInOctets OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of octets received on the
+        interface since the neighbor was learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 10 }
+
+cnAutoAttachCondensedNbrIfHCInUcastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of packets, delivered by this
+        sub-layer to a higher (sub-)layer, which
+        were not addressed to a multicast or broadcast
+        address at this sub-layer, since the neighbor
+        was learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 11 }
+
+cnAutoAttachCondensedNbrIfHCInMulticastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of packets, delivered by this
+        sub-layer to a higher (sub-)layer, which were
+        addressed to a multicast address at this
+        sub-layer, since the neighbor was learned.
+        For a MAC layer protocol, this includes both
+        Group and Functional addresses."
+
+    ::= { cnAutoAttachCondensedNbrEntry 12 }
+
+cnAutoAttachCondensedNbrIfHCInBroadcastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of packets, delivered by this
+        sub-layer to a higher (sub-)layer, which
+        were addressed to a broadcast address at
+        this sub-layer, since the neighbor was
+        learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 13 }
+
+cnAutoAttachCondensedNbrIfHCOutOctets OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of octets transmitted out
+        of the interface, including framing characters,
+        since the neighbor was learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 14 }
+
+cnAutoAttachCondensedNbrIfHCOutUcastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets that higher-level
+        protocols requested be transmitted, and which
+        were not addressed to a multicast or broadcast
+        address at this sub-layer, including those that
+        were discarded or not sent, since the neighbor
+        was learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 15 }
+
+cnAutoAttachCondensedNbrIfHCOutMulticastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets that higher-level
+        protocols requested be transmitted, and which
+        were addressed to a multicast address at this
+        sub-layer, including those that were discarded
+        or not sent, since the neighbor was learned.
+        For a MAC layer protocol, this includes both
+        Group and Functional addresses."
+
+    ::= { cnAutoAttachCondensedNbrEntry 16 }
+
+cnAutoAttachCondensedNbrIfHCOutBroadcastPkts OBJECT-TYPE
+    SYNTAX         Counter64
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets that higher-level
+        protocols requested be transmitted, and which
+        were addressed to a broadcast address at this
+        sub-layer, including those that were discarded
+        or not sent, since the neighbor was learned."
+
+    ::= { cnAutoAttachCondensedNbrEntry 17 }
+
+cnAutoAttachCondensedNbrTimeStamp OBJECT-TYPE
+    SYNTAX         TimeStamp
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The value of sysUpTime when the current neighbor
+        was added to this table."
+
+    ::= { cnAutoAttachCondensedNbrEntry 18 }
+
+cnAutoAttachCondensedNbrIfInErrors OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of inbound packets that contained 
+        errors preventing them from being deliverable to 
+        a higher-layer protocol."
+
+    ::= { cnAutoAttachCondensedNbrEntry 19 }
+
+cnAutoAttachCondensedNbrIfOutErrors OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of outbound packets that could 
+        not be transmitted because of errors."
+
+    ::= { cnAutoAttachCondensedNbrEntry 20 }
+
+cnAutoAttachCondensedNbrIfCRCAlignErrors OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets received that had a 
+        length (excluding framing bits, but including FCS 
+        octets) of between 64 and 1518 octets, inclusive, 
+        but had either a bad Frame Check Sequence (FCS) 
+        with an integral number of octets (FCS Error) or 
+        a bad FCS with a non-integral number of octets 
+        (Alignment Error)."
+
+    ::= { cnAutoAttachCondensedNbrEntry 21 }
+
+cnAutoAttachCondensedNbrIfLinkTransitions OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The number of Link Up and Link Down transition 
+        events counted for the port."
+
+    ::= { cnAutoAttachCondensedNbrEntry 22 }
+
+cnAutoAttachCondensedNbrIfUndersizePkts OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets received that were 
+        less than 64 octets long (excluding framing bits, 
+        but including FCS octets) and were otherwise well 
+        formed."
+
+    ::= { cnAutoAttachCondensedNbrEntry 23 }
+
+cnAutoAttachCondensedNbrIfOversizePkts OBJECT-TYPE
+    SYNTAX         Counter32
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The total number of packets received that were 
+        longer than 1518 octets (excluding framing bits, 
+        but including FCS octets) and were otherwise well 
+        formed."
+
+    ::= { cnAutoAttachCondensedNbrEntry 24 }
+
 --
 -- Auto-Attach scalar attributes
 --
@@ -1476,7 +1905,9 @@ cnAutoAttachNbrClassType OBJECT-TYPE
                        camera(7),
                        cambium(8),
                        cambiumCnMatrix(9),
-                       cambiumCnPilot(10)
+                       cambiumCnPilot(10),
+                       cambiumWifiAp(11),
+                       cambiumNse(12)
                    }
     MAX-ACCESS     not-accessible
     STATUS         current
@@ -1736,6 +2167,371 @@ cnAutoAttachFileDownloadPassword OBJECT-TYPE
        string when queried."
 
     ::= { cnAutoAttachObjects 27 }
+
+cnAutoAttachAutoVlanServerTrunk OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+        "When enabled, Auto-VLAN server discovery
+        causes the interface's port mode to be
+        updated to 'Trunk', if necessary."
+
+    DEFVAL	   { disabled }
+    ::= { cnAutoAttachObjects 28 }
+
+cnAutoAttachDynamicUplinkSupport OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+        "When enabled, ports connected to dynamically
+        detected devices, whose connection is considered
+        an 'uplink' for PBA dynamic policies (e.g.,
+        an Auto-VLAN server), are added to the PBA global
+        (default) uplink list."
+
+    DEFVAL	   { enabled }
+    ::= { cnAutoAttachObjects 29 }
+
+--
+-- PBA Time-of-Day (ToD) Table support        
+--
+
+cnAutoAttachTodTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF CnAutoAttachTodEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "This table contains the Time-of-Day (ToD)
+        specifications for the PBA application.
+
+        A ToD specification, when associated with a
+        PBA policy, determines if the policy is
+        effectively enabled or disabled (with regard
+        to policy evaluation) when processing LLDP
+        and MAC-based events. Disabled policies 
+        are skipped during event processing since
+        they can't be applied to any ports.
+
+        A ToD entry specifies either week-days or
+        a start/end date and a start/end time related
+        to those days/dates. Together, these components
+        establish a window of time that, when compared
+        to the current system clock value, determines
+        if the ToD specification is considered active
+        or inactive. A policy is 'ToD enabled' if the
+        ToD specification that it is associated with
+        is active and 'ToD disabled' if it is inactive."
+
+    ::= { cnAutoAttachObjects 30 }
+
+cnAutoAttachTodEntry OBJECT-TYPE
+    SYNTAX      CnAutoAttachTodEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "Information about the ToD specifications 
+        for the PBA application."
+
+    INDEX { cnAutoAttachTodName }
+    ::= { cnAutoAttachTodTable 1 }
+
+CnAutoAttachTodEntry ::= SEQUENCE {
+    cnAutoAttachTodName          SnmpAdminString,
+    cnAutoAttachTodWeekDays      SnmpAdminString,
+    cnAutoAttachTodStartDate     SnmpAdminString,
+    cnAutoAttachTodEndDate       SnmpAdminString,
+    cnAutoAttachTodStartTime     SnmpAdminString,
+    cnAutoAttachTodEndTime       SnmpAdminString,
+    cnAutoAttachTodGroupName     SnmpAdminString,
+    cnAutoAttachTodRowStatus     RowStatus
+}
+
+cnAutoAttachTodName OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (1..32))
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "Name for the ToD specification."
+
+    ::= { cnAutoAttachTodEntry 1 }
+
+cnAutoAttachTodWeekDays OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..56))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the days of the week that a ToD entry
+        is potentially active. Used when relative (day-
+        based) timing is required. A zero length string
+        indicates that absolute (date-based) timing is
+        required (i.e., TodStartDate and TodEndDate objects
+        are not zero length).
+
+        Week-day data is specified using a comma-separated
+        list of week-day full names (e.g., 'monday,friday')
+        or abbreviations (e.g., 'su,m,tu,w,th,f,sa' or
+        'sun,mon,tue,wed,thu,fri,sat').
+
+        Relative (day-based) and absolute (date-based) 
+        timing specification data are mutually exclusive."
+
+    ::= { cnAutoAttachTodEntry 2 }
+
+cnAutoAttachTodStartDate OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0|10))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the starting date that a ToD entry
+        is potentially active. Used when absolute (date-
+        based) timing is required. A zero length string
+        indicates that relative (day-based) timing is
+        required (i.e., TodWeekDays object is not zero
+        length).
+
+        Start date data is specified using a standard
+        calendar date representation (e.g., mm/dd/yyyy).
+        Both a start date and an end date must be specified
+        for a ToD entry to be valid when absolute timing
+        is required. The start date must be before or equal
+        to the end date.
+
+        Relative (day-based) and absolute (date-based) 
+        timing specification data are mutually exclusive."
+
+    ::= { cnAutoAttachTodEntry 3 }
+
+cnAutoAttachTodEndDate OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0|10))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the ending date that a ToD entry
+        is potentially active. Used when absolute (date-
+        based) timing is required. A zero length string
+        indicates that relative (day-based) timing is
+        required (i.e., TodWeekDays object is not zero
+        length).
+
+        End date data is specified using a standard
+        calendar date representation (e.g., mm/dd/yyyy).
+        Both a start date and an end date must be specified
+        for a ToD entry to be valid when absolute timing
+        is required. The start date must be before or equal
+        to the end date.
+
+        Relative (day-based) and absolute (date-based) 
+        timing specification data are mutually exclusive."
+
+    ::= { cnAutoAttachTodEntry 4 }
+
+cnAutoAttachTodStartTime OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (5))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the starting time that a ToD entry
+        is potentially active. Required for relative
+        and absolute ToD specifications. 
+
+        Start time data is specified using a 24 hour clock
+        representation (e.g., hh:mm). Both a start time
+        and an end time must be specified for a ToD entry
+        to be valid. The start time must begin before the
+        end time."
+
+    ::= { cnAutoAttachTodEntry 5 }
+
+cnAutoAttachTodEndTime OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (5))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the ending time that a ToD entry
+        is potentially active. Required for relative
+        and absolute ToD specifications. 
+
+        End time data is specified using a 24 hour clock
+        representation (e.g., hh:mm). Both a start time
+        and an end time must be specified for a ToD entry
+        to be valid. The start time must begin before
+        the end time."
+
+    ::= { cnAutoAttachTodEntry 6 }
+
+cnAutoAttachTodGroupName OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..32))
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "The group name is used to link ToD entries.
+        ToD entries belonging to the same group (based
+        on the ToD group name attribute) are treated
+        as a single (cumulative) ToD specification
+        during evaluation when referenced by a policy."
+
+    ::= { cnAutoAttachTodEntry 7 }
+
+cnAutoAttachTodRowStatus OBJECT-TYPE
+    SYNTAX         RowStatus
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "This object allows entries to be created and deleted
+        in the cnAutoAttachTodTable."
+
+    ::= { cnAutoAttachTodEntry 8 }
+
+--
+-- Auto-Attach Condensed Neighbor History Table support
+--
+
+cnAutoAttachCondensedNbrHistTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF CnAutoAttachCondensedNbrHistEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "This table contains port-specific condensed 
+        neighbor history data tracked by the Auto-Attach
+        application."
+
+    ::= { cnAutoAttachObjects 31 }
+
+cnAutoAttachCondensedNbrHistEntry OBJECT-TYPE
+    SYNTAX      CnAutoAttachCondensedNbrHistEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "Port-specific condensed neighbor history data
+        tracked by the Auto-Attach application. Data is
+        derived from LLDP and the MAC address table at
+        the time the neighbor was originally detected."
+
+    INDEX { cnAutoAttachCondensedNbrHistIfIndex, 
+            cnAutoAttachCondensedNbrHistTimeStamp }
+    ::= { cnAutoAttachCondensedNbrHistTable 1 }
+
+CnAutoAttachCondensedNbrHistEntry ::= SEQUENCE {
+    cnAutoAttachCondensedNbrHistIfIndex               Integer32,
+    cnAutoAttachCondensedNbrHistTimeStamp             TimeStamp,
+    cnAutoAttachCondensedNbrHistName                  SnmpAdminString,
+    cnAutoAttachCondensedNbrHistLldpChassisId         SnmpAdminString,
+    cnAutoAttachCondensedNbrHistLldpSystemName        SnmpAdminString,
+    cnAutoAttachCondensedNbrHistLldpSystemDesc        SnmpAdminString,
+    cnAutoAttachCondensedNbrHistLldpMgmtIpv4Addr      SnmpAdminString,
+    cnAutoAttachCondensedNbrHistMacAddress            OCTET STRING,
+    cnAutoAttachCondensedNbrHistTimeCleared           TimeStamp
+}
+
+cnAutoAttachCondensedNbrHistIfIndex OBJECT-TYPE
+    SYNTAX         Integer32 (1..65535)
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "Interface (ifIndex) identifier attribute."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 1 }
+
+cnAutoAttachCondensedNbrHistTimeStamp OBJECT-TYPE
+    SYNTAX         TimeStamp
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "The value of sysUpTime when the previous neighbor
+        was added to the Auto-Attach Condensed Nbr table."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 2 }
+
+cnAutoAttachCondensedNbrHistName OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..20))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Interface name used to identify the port
+        for configuration and monitoring."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 3 }
+
+cnAutoAttachCondensedNbrHistLldpChassisId OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "LLDP Chassis ID data associated with the 
+        device connected to the port."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 4 }
+
+cnAutoAttachCondensedNbrHistLldpSystemName OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "LLDP System Name data associated with the 
+        device connected to the port."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 5 }
+
+cnAutoAttachCondensedNbrHistLldpSystemDesc OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "LLDP System Description data associated 
+        with the device connected to the port."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 6 }
+
+cnAutoAttachCondensedNbrHistLldpMgmtIpv4Addr OBJECT-TYPE
+    SYNTAX         SnmpAdminString (SIZE (0..15))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "LLDP Mgmt IPv4 Address data associated 
+        with the device connected to the port."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 7 }
+
+cnAutoAttachCondensedNbrHistMacAddress OBJECT-TYPE
+    SYNTAX         OCTET STRING (SIZE(0 | 17))
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The MAC address associated with the device
+        connected to the port. The MAC address is  
+        returned in xx:xx:xx:xx:xx:xx format.
+
+        If a single MAC address is associated with 
+        the port, it is returned.
+
+        If multiple MAC addresses are present, the 
+        MAC address associated with LLDP information 
+        is returned, if available. If LLDP data is
+        not available, a broadcast MAC address value
+        is returned. 
+
+        Otherwise a NULL address value (length zero)
+        is returned."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 8 }
+
+cnAutoAttachCondensedNbrHistTimeCleared OBJECT-TYPE
+    SYNTAX         TimeStamp
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The value of sysUpTime when the previous neighbor
+        was cleared from the Auto-Attach Condensed Nbr table."
+
+    ::= { cnAutoAttachCondensedNbrHistEntry 9 }
 
 --
 -- Auto-Attach notification objects

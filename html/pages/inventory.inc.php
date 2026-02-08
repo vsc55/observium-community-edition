@@ -76,7 +76,6 @@
               'name'   => 'Device',
               'width'  => '100%',
               'value'  => $vars['device_id'],
-              'groups' => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
               'values' => $form_items['devices']];
 
             // Device OS field

@@ -61,8 +61,8 @@ foreach ($options['groups'] as $type => $data) {
 $totalIn  = 0;
 $totalOut = 0;
 foreach ($totals_array as $type => $dir) {
-    $totalIn  = $totalIn + $dir['in'];
-    $totalOut = $totalOut + $dir['out'];
+    $totalIn += $dir['in'];
+    $totalOut += $dir['out'];
 }
 
 

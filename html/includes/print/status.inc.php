@@ -167,11 +167,22 @@ function generate_status_table($options, $print = FALSE) {
 
 // DOCME needs phpdoc block
 function get_status_array($options) {
-    global $config;
 
-    $boxes                  = [];
-    $max_interval           = filter_var($options['max']['interval'], FILTER_VALIDATE_INT, ['options' => ['default' => 24, 'min_range' => 1]]);
-    $max_count              = filter_var($options['max']['count'], FILTER_VALIDATE_INT, ['options' => ['default' => 200, 'min_range' => 1]]);
+    // Init
+    $boxes = [];
+    // Max interval, default is 24h
+    if (is_numeric($options['max']['interval']) && $options['max']['interval'] > 0) {
+        $max_interval = (int)$options['max']['interval'];
+    } else {
+        $max_interval = 24;
+    }
+    // Max count, default is 200
+    if (is_numeric($options['max']['count']) && $options['max']['count'] > 0) {
+        $max_count = (int)$options['max']['count'];
+    } else {
+        $max_count = 200;
+    }
+    // Always hide ignored & disabled devices
     $query_device_permitted = generate_query_permitted_ng([ 'device' ], [ 'hide_ignored' => TRUE, 'hide_disabled' => TRUE ]);
 
     // Show Device Status
@@ -187,16 +198,18 @@ function get_status_array($options) {
                 'event'       => 'Down',
                 'device_link' => generate_device_link_short($device),
                 'time'        => device_uptime($device, 'short-3'),
-                'icon'        => $config['entities']['device']['icon']
+                'icon'        => 'device'
             ];
         }
     }
 
     // Uptime
-    if ($options['uptime'] && $config['uptime_warning'] > 0 &&
-        filter_var($config['uptime_warning'], FILTER_VALIDATE_FLOAT) !== FALSE) {
+    $uptime_warning = $GLOBALS['config']['uptime_warning']; // in seconds, default is 24h
+    $uptime_warning = is_numeric($uptime_warning) && $uptime_warning > 0 ? (int)$uptime_warning : 0;
+    if ($options['uptime'] && $uptime_warning) {
         $where_array = [ '`status` = 1', '`uptime` > 0' ];
-        $where_array[] = generate_query_values(get_time() - $config['uptime_warning'] - 10, 'last_rebooted', '>');
+        $where_array[] = generate_query_values(get_time() - $uptime_warning - 10, 'last_rebooted', '>');
+
         $query = 'SELECT * FROM `devices`';
         $query   .= generate_where_clause($where_array, $query_device_permitted);
         $query   .= 'ORDER BY `hostname` ASC';
@@ -209,7 +222,7 @@ function get_status_array($options) {
                 'device_link' => generate_device_link_short($device),
                 'time'        => device_uptime($device, 'short-3'),
                 'location'    => $device['location'],
-                'icon'        => $config['entities']['device']['icon']
+                'icon'        => 'device'
             ];
         }
     }
@@ -218,7 +231,7 @@ function get_status_array($options) {
     if ($options['ports'] || $options['neighbours']) {
 
         $options['neighbours'] = $options['neighbours'] && !$options['ports']; // Disable 'neighbours' if 'ports' already enabled
-        $query_port_permitted  = generate_query_permitted([ 'port' ], [ 'port_table' => 'I', 'hide_ignored' => TRUE ]);
+        $query_port_permitted  = generate_query_permitted_ng([ 'port' ], [ 'port_table' => 'I', 'hide_ignored' => TRUE ]);
 
         $query = 'SELECT * FROM `ports` AS I ';
         if ($options['neighbours']) {
@@ -256,7 +269,7 @@ function get_status_array($options) {
                 'entity_link' => generate_port_link_short($port),
                 'time'        => format_uptime(get_time() - strtotime($port['ifLastChange'])),
                 'location'    => $device['location'],
-                'icon'        => $config['entities']['port']['icon']
+                'icon'        => 'port'
             ];
         }
     }
@@ -267,15 +280,17 @@ function get_status_array($options) {
 
         foreach ($GLOBALS['cache']['ports']['errored'] as $port_id) {
             if (in_array($port_id, $GLOBALS['cache']['ports']['ignored'])) {
+                // Skip ignored ports
                 continue;
-            } // Skip ignored ports
-            if (in_array($port['ifType'], $config['ports']['ignore_errors_iftype'])) {
+            }
+            $port = get_port_by_id_cache($port_id);
+            if (in_array($port['ifType'], $GLOBALS['config']['ports']['ignore_errors_iftype'])) { // Hrm, option exist only here
+                // Skip iftypes we ignore
                 continue;
-            } // Skip iftypes we ignore
+            }
 
-            $port   = get_port_by_id($port_id);
             $device = device_by_id_cache($port['device_id']);
-            humanize_port($port);
+            //humanize_port($port);
 
             $port['text'] = [];
             if ($port['ifInErrors_delta']) {
@@ -301,13 +316,13 @@ function get_status_array($options) {
                 'entity_link' => generate_port_link_short($port),
                 'time'        => $port['string'],
                 'location'    => $device['location'],
-                'icon'        => $config['entities']['port']['icon']
+                'icon'        => 'port'
             ];
         }
     }
 
     // BGP
-    if ($options['bgp'] && isset($config['enable_bgp']) && $config['enable_bgp']) {
+    if ($options['bgp'] && isset($GLOBALS['config']['enable_bgp']) && $GLOBALS['config']['enable_bgp']) {
         $where_array = [ '`status` = 1' ];
         $where_array[] = generate_query_values([ 'start', 'running' ], 'bgpPeerAdminStatus');
         $where_array[] = generate_query_values('established', 'bgpPeerState', '!=');
@@ -315,7 +330,7 @@ function get_status_array($options) {
         $query = 'SELECT * FROM `bgpPeers`';
         $query .= ' LEFT JOIN `devices` USING(`device_id`)';
         $query .= generate_where_clause($where_array, $query_device_permitted);
-        $query .= ' ORDER BY D.`hostname` ASC';
+        $query .= ' ORDER BY `hostname` ASC';
 
         foreach (dbFetchRows($query) as $peer) {
             humanize_bgp($peer);
@@ -337,7 +352,7 @@ function get_status_array($options) {
                 'wide'        => $peer['wide'],
                 'time'        => format_uptime($peer['bgpPeerFsmEstablishedTime'], 'short-3'),
                 'location'    => $device['location'],
-                'icon'        => $config['entities']['bgp_peer']['icon']
+                'icon'        => 'bgp_peer'
             ];
         }
     }

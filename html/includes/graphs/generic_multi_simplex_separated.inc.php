@@ -52,9 +52,13 @@ if (isset($colours) && is_string($colours) &&
     $colours                            = 'colours';
 }
 
-//if(isset($color_scheme)) {
-$scheme_colours = generate_palette($count, 'interpolateSpectral');
-//}
+// Generate scheme colors using specified interpolation function
+if (isset($colour_scheme) && function_exists($colour_scheme)) {
+    $scheme_colours = generate_palette($count, $colour_scheme);
+} elseif (!isset($scheme_colours)) {
+    // Fallback to default spectral interpolation
+    $scheme_colours = generate_palette($count, 'interpolateSpectral');
+}
 
 //r($scheme_colours);
 

@@ -17,10 +17,15 @@ include_once("includes/discovery/functions.inc.php");
 
 $ipmi = [];
 if ($ipmi['host'] = get_dev_attrib($device, 'ipmi_hostname')) {
-    $ipmi['user']      = get_dev_attrib($device, 'ipmi_username');
-    $ipmi['password']  = get_dev_attrib($device, 'ipmi_password');
-    $ipmi['port']      = get_dev_attrib($device, 'ipmi_port');
     $ipmi['interface'] = get_dev_attrib($device, 'ipmi_interface');
+    $ipmi['user']      = get_dev_attrib($device, 'ipmi_username');
+    if ($ipmi['interface'] === 'lanplus') {
+        $ipmi['key'] = get_dev_attrib($device, 'ipmi_key');
+    }
+    if (safe_empty($ipmi['key'])) {
+        $ipmi['password'] = get_dev_attrib($device, 'ipmi_password');
+    }
+    $ipmi['port']      = get_dev_attrib($device, 'ipmi_port');
     $ipmi['userlevel'] = get_dev_attrib($device, 'ipmi_userlevel');
 
     if (!is_valid_param($ipmi['port'], 'port')) {
@@ -40,11 +45,20 @@ if ($ipmi['host'] = get_dev_attrib($device, 'ipmi_hostname')) {
     if ($own_hostname !== $device['hostname'] &&
         !in_array($ipmi['host'], ['localhost', '127.0.0.1', '::1'], TRUE)) {
 
-        $remote = " -I " . escapeshellarg($ipmi['interface']) . " -p " . $ipmi['port'] . " -H " .
-                  escapeshellarg($ipmi['host']) . " -L " . escapeshellarg($ipmi['userlevel']) .
-                  " -U " . escapeshellarg($ipmi['user']) . " -P " . escapeshellarg($ipmi['password']);
+        $remote = " -I " . escapeshellarg($ipmi['interface']) .
+                  " -H " . escapeshellarg($ipmi['host']) .
+                  " -p " . $ipmi['port'] .
+                  " -L " . escapeshellarg($ipmi['userlevel']) .
+                  " -U " . escapeshellarg($ipmi['user']);
+        if (safe_empty($ipmi['key'])) {
+            $remote .= " -P " . escapeshellarg($ipmi['password']);
+        } else {
+            // LAN v2.0 Key
+            $remote .= " -k " . escapeshellarg($ipmi['key']);
+        }
     }
 
+    // FIXME. What is this? not exist in any device field..
     if (is_numeric($device['ipmi_ciper']) && $device['ipmi_ciper'] == '17') {
         $remote .= " -C " . $device['ipmi_cipher'];
     }

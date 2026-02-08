@@ -45,7 +45,7 @@ IMPORTS
                             "A list of cards reset entries."
                    ::= { cardOper 2 }
 
-               CardResetTableEntry OBJECT-TYPE
+               cardResetTableEntry OBJECT-TYPE
                    SYNTAX  CardResetTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory

@@ -160,12 +160,16 @@ foreach ($oids as $index => $entry) {
         $class = 'voltage';
     } elseif (str_icontains_array($descr, ['Status', 'Intru'])) {
         $physical_class = str_istarts($descr, 'PS') ? 'powersupply' : 'other';
-        $options        = ['entPhysicalClass' => $physical_class];
+        $options        = [ 'entPhysicalClass' => $physical_class ];
 
         // if (str_starts($value, '0x')) {
         //   $options['status_unit'] = 'hex';
         // }
         $type = str_icontains_array($descr, 'Intru') ? 'aten-state-invert' : 'aten-state';
+        if ($physical_class === 'powersupply' && safe_count($valid['status']['ATEN-IPMI-MIB']['psuStatus'])) {
+            // Already discovered by better table
+            continue;
+        }
         discover_status_ng($device, $mib, $oid_name, $oid_num, $index, $type, $descr, $value, $options);
         continue;
     } else {

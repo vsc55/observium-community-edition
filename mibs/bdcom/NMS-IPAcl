@@ -680,6 +680,426 @@ nmsIPAclMIB  MODULE-IDENTITY
 			           			"The table row status"
 			    		::= { nmsIPAcleRuleEntry 40 }
 
+-- ipv6 part
+
+               nmsIPv6MIB         OBJECT IDENTIFIER ::= { nmsIPAclMIB 5 }
+
+         nmsIPv6AclTotal OBJECT-TYPE
+              SYNTAX  INTEGER
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+              		"the total num of ipv6 access-lists."
+              ::= { nmsIPv6MIB 1 } 
+
+ --ipv6 ACL TABLE
+         nmsIPv6AclTable OBJECT-TYPE
+              SYNTAX  SEQUENCE OF NMSIPv6AclEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+              		"This table containing one entry for each
+             		IPv6 Acl on this device."
+              ::= { nmsIPv6MIB 2 } 
+                                                
+          nmsIPv6AclEntry OBJECT-TYPE
+              SYNTAX  NMSIPv6AclEntry
+              ACCESS  not-accessible
+              STATUS  mandatory
+              DESCRIPTION
+              		"An entry (conceptual row) containing information
+             		about an IPv6 Acl on this device."
+              INDEX   { nmsIPv6Aclname }
+              ::= { nmsIPv6AclTable 1 }
+
+          NMSIPv6AclEntry ::= SEQUENCE {			    
+          	    nmsIPv6Aclname           	DisplayString,
+          	    nmsIPv6AclEntrytotal        INTEGER,		
+          	    nmsIPv6AclMergeEnable	INTEGER, 
+          	    nmsIPv6AclRowStatus		RowStatus		
+			    }     
+
+		  nmsIPv6Aclname OBJECT-TYPE
+			    SYNTAX     DisplayString 
+			    ACCESS 	   read-only
+			    STATUS     mandatory
+			    DESCRIPTION
+			            "The name of this IPv6 Acl."
+			    ::= { nmsIPv6AclEntry 1 }   
+			                                                        
+			                                                        
+		  nmsIPv6AclEntrytotal OBJECT-TYPE
+			    SYNTAX    INTEGER 
+			    ACCESS 	   read-only
+			    STATUS     mandatory
+			    DESCRIPTION
+			            "The total number of this IPv6 Acl entries."
+			    ::= { nmsIPv6AclEntry 2 }  
+
+		  nmsIPv6AclMergeEnable OBJECT-TYPE
+			    SYNTAX      INTEGER{
+                        			enable(1),
+                        			disable(0)
+                        	               }
+			    ACCESS 	   read-write
+			    STATUS     mandatory
+			    DESCRIPTION
+			            "if merge enable"
+			    ::= { nmsIPv6AclEntry 3 }
+ 		
+		  nmsIPv6AclRowStatus OBJECT-TYPE
+			    SYNTAX     RowStatus 
+			    ACCESS 	   read-create
+			    STATUS     mandatory
+			    DESCRIPTION
+			            "table row status"
+			    ::= { nmsIPv6AclEntry 4 } 		  	    
+			    
+
+--STANDARD IPv6 ACL RULE TABLE
+	          nmsIPv6AclRuleTable OBJECT-TYPE
+             		    SYNTAX  SEQUENCE OF NMSIPv6AclRuleEntry
+             		    ACCESS  not-accessible
+             		    STATUS  mandatory
+            		    DESCRIPTION
+              			   ""
+              		    ::= { nmsIPv6MIB 3 } 
+
+          		nmsIPv6AclRuleEntry OBJECT-TYPE
+            		 	 SYNTAX  NMSIPv6AclRuleEntry
+            		 	 ACCESS  not-accessible
+            		 	 STATUS  mandatory
+            		 	 DESCRIPTION
+              				""
+              			 INDEX   { nmsIPv6Aclrname,nmsIPAclrentryId }
+              		    ::= { nmsIPv6AclRuleTable 1 }
+                 
+         		 NMSIPv6AclRuleEntry ::= SEQUENCE {          
+         		 		nmsIPv6Aclrname                 DisplayString,
+					    nmsIPv6AclrentryId            INTEGER,       
+					    nmsIPv6Aclrrule        	  INTEGER, 
+					    nmsIPv6Aclrprotocol		  INTEGER,
+					    nmsIPv6Aclrsrcip		  OCTET STRING,
+					    nmsIPv6Aclrsrcprefixlen       INTEGER,
+					    nmsIPv6Aclrsrcport		  INTEGER,  
+					    nmsIPv6Aclrsrcpflag	          INTEGER,
+					    nmsIPv6Aclrsrcbeginport 	  INTEGER,
+					    nmsIPv6Aclrsrcendport	  INTEGER, 
+					    nmsIPv6Aclrsrccompare	  INTEGER,
+					    nmsIPv6Aclrdesip		  OCTET STRING,
+					    nmsIPv6Aclrdesprefixlen       INTEGER,
+					    nmsIPv6Aclrdesport		  INTEGER,  
+					    nmsIPv6Aclrdespflag		  INTEGER,
+					    nmsIPv6Aclrdesbeginport 	  INTEGER,
+					    nmsIPv6Aclrdesendport	  INTEGER,   
+					    nmsIPv6Aclrdescompare  	  INTEGER,
+					    nmsIPv6Aclricmp6type	  INTEGER,
+					    nmsIPv6Aclricmp6code	  INTEGER,
+					    nmsIPv6Aclrtimerange	  DisplayString, 
+					    nmsIPv6Aclrdscp		  INTEGER,
+					    nmsIPv6Aclrflowlabel	  INTEGER, 
+					    nmsIPv6Aclrrouting		  INTEGER,
+					    nmsIPv6Aclrlog		  INTEGER,
+					    nmsIPv6Aclrisfragment	  INTEGER,
+					    nmsIPv6Aclrundetermtrans	  INTEGER, 
+					    nmsIPv6Aclrestablished	  INTEGER,
+					    nmsIPv6Aclrtcpflags		  INTEGER, 
+					    nmsIPv6Aclrrowstatus   	  RowStatus
+				 		 }
+                   
+                		 nmsIPv6Aclrname OBJECT-TYPE
+			   	 		SYNTAX     DisplayString 
+			   			ACCESS 	   read-only
+			   			STATUS     current
+			    		DESCRIPTION
+			           			"The name of this IP Acl."
+			    		::= { nmsIPv6AclRuleEntry 1 }
+
+
+		 		 nmsIPv6AclrentryId OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "Index of the entry"
+					    ::= { nmsIPv6AclRuleEntry 2 }
+                              
+		 		 nmsIPv6Aclrrule OBJECT-TYPE
+					    SYNTAX     INTEGER{    
+					    			permit (1),
+                        		   			deny (0)	
+     				    				} 
+					    ACCESS 	   read-write
+					    STATUS     mandatory
+					    DESCRIPTION
+					            "IP ACL rule"
+					    ::= { nmsIPv6AclRuleEntry 3 }
+
+		 		 nmsIPv6Aclrprotocol OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "protocol num"
+					    ::= { nmsIPv6AclRuleEntry 4 }  
+					    
+
+		 		 nmsIPv6Aclrsrcip OBJECT-TYPE
+					    SYNTAX     OCTET STRING 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source ip address"
+					    ::= { nmsIPv6AclRuleEntry 5 }
+
+		 		 nmsIPv6Aclrsrcprefixlen OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "prefix length of source ipv6 address."
+					    ::= { nmsIPv6AclRuleEntry 6 }  
+					    
+		 		 nmsIPv6Aclrsrcport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source port num."
+					    ::= { nmsIPv6AclRuleEntry 7 }  
+					    
+					    
+		 		 nmsIPv6Aclrsrcpflag OBJECT-TYPE
+					    SYNTAX     INTEGER{
+                        					none(0),
+                        					gt(1),
+                        					lt(2),
+                        					eq(3),
+                        					neq(4),
+                        					range(5)
+                        	               		      } 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source port flag"
+					    ::= { nmsIPv6AclRuleEntry 8 }  
+					    
+		 		 nmsIPv6Aclrsrcbeginport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source port range begin"
+					    ::= { nmsIPv6AclRuleEntry 9 }  
+					    
+		 		 nmsIPv6Aclrsrcendport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source port range end"
+					    ::= { nmsIPv6AclRuleEntry 10 }  
+					    
+		 		 nmsIPv6Aclrsrccompare OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "source compare flag"
+					    ::= { nmsIPv6AclRuleEntry 11 }  
+					    
+		 		 nmsIPv6Aclrdesip OBJECT-TYPE
+					    SYNTAX     OCTET STRING 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination ipv6 address"
+					    ::= { nmsIPv6AclRuleEntry 12 }  
+					    
+		 		 nmsIPv6Aclrdesprefixlen OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "prefix length of destination ipv6 address"
+					    ::= { nmsIPv6AclRuleEntry 13 }  
+					    
+		 		 nmsIPv6Aclrdesport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination port num"
+					    ::= { nmsIPv6AclRuleEntry 14 }  
+					    
+		 		 nmsIPv6Aclrdespflag OBJECT-TYPE
+					    SYNTAX     INTEGER{
+                        					none(0),
+                        					gt(1),
+                        					lt(2),
+                        					eq(3),
+                        					neq(4),
+                        					range(5)
+                        	               		      }  
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination port flag"
+					    ::= { nmsIPv6AclRuleEntry 15 }  
+					    
+		 		 nmsIPv6Aclrdesbeginport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination port range begin"
+					    ::= { nmsIPv6AclRuleEntry 16 }  
+					    
+		 		 nmsIPv6Aclrdesendport OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination port range end"
+					    ::= { nmsIPv6AclRuleEntry 17 }  
+					    
+		 		 nmsIPv6Aclrdescompare OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "destination compare flag"
+					    ::= { nmsIPv6AclRuleEntry 18 }  
+					    
+		 		 nmsIPv6Aclricmp6type OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "ICMPv6 type"
+					    ::= { nmsIPv6AclRuleEntry 19 }  
+					    
+		 		 nmsIPv6Aclricmp6code OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "ICMPv6 code"
+					    ::= { nmsIPv6AclRuleEntry 20 }  
+					    
+		 		 nmsIPv6Aclrtimerange OBJECT-TYPE
+					    SYNTAX     OCTET STRING 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "Time-range name"
+					    ::= { nmsIPv6AclRuleEntry 21 }  
+					    
+		 		 nmsIPv6Aclrdscp OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "dscp value"
+					    ::= { nmsIPv6AclRuleEntry 22 }  
+					    
+		 		 nmsIPv6Aclrflowlabel OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "ipv6 flowlabel"
+					    ::= { nmsIPv6AclRuleEntry 23 }  
+					    
+		 		 nmsIPv6Aclrrouting OBJECT-TYPE
+					    SYNTAX     INTEGER {
+                        					no(0),
+                        					yes(1)
+                        	               		      } 
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "ipv6 routing header"
+					    ::= { nmsIPv6AclRuleEntry 24 }  
+					    
+		 		 nmsIPv6Aclrlog OBJECT-TYPE
+					    SYNTAX     INTEGER{
+                        					none(0),
+                        					log(1),
+                        					loginput(2)
+                        	               		      }  
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "logging packet"
+					    ::= { nmsIPv6AclRuleEntry 25 }  
+					    
+		 		 nmsIPv6Aclrisfragment OBJECT-TYPE
+					    SYNTAX     INTEGER {
+                        					no(0),
+                        					yes(1)
+                        	               		      }
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "Check non-initial fragments"
+					    ::= { nmsIPv6AclRuleEntry 26 }  
+					    
+		 		 nmsIPv6Aclrundetermtrans OBJECT-TYPE
+					    SYNTAX     INTEGER {
+                        					no(0),
+                        					yes(1)
+                        	               		      }
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "Transport layer cannot be determined or missing"
+					    ::= { nmsIPv6AclRuleEntry 27 }  
+					    
+		 		 nmsIPv6Aclrestablished OBJECT-TYPE
+					    SYNTAX     INTEGER {
+                        					no(0),
+                        					yes(1)
+                        	               		      }
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "if an established connection"
+					    ::= { nmsIPv6AclRuleEntry 28 }  
+					    
+		 		 nmsIPv6Aclrtcpflags OBJECT-TYPE
+					    SYNTAX     INTEGER{
+                        					none(0),
+                        					fin(1),
+                        					syn(2),
+                        					rst(3),
+                        					psh(4),
+                        					ack(5),
+                        					urg(6)
+                        	               		      }  
+					    ACCESS 	   read-write
+					    STATUS     current
+					    DESCRIPTION
+					            "flags of tcp"
+					    ::= { nmsIPv6AclRuleEntry 29 }  
+					    
+		 		 nmsIPv6Aclrrowstatus OBJECT-TYPE
+					    SYNTAX     INTEGER 
+					    ACCESS 	   read-create
+					    STATUS     current
+					    DESCRIPTION
+					            "The rule table row status"
+					    ::= { nmsIPv6AclRuleEntry 30 }  
+					    
+					    
+					    
+					    
+					    
+
+
+
+
+
 
 END
 

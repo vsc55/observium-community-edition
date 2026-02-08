@@ -296,12 +296,14 @@ function process_http_php($request, $context = []) {
     // Add common http context
     $opts = [ 'http' => generate_http_context_defaults($context) ];
 
+    // disabling the TCP Nagle algorithm by default
+    $opts['socket'] = [ 'tcp_nodelay' => 'true' ];
+
     // Force IPv4 or IPv6
     if (isset($config['http_ip_version'])) {
         // Bind to IPv4 -> 0:0
         // Bind to IPv6 -> [::]:0
-        $bindto         = str_contains($config['http_ip_version'], '6') ? '[::]:0' : '0:0';
-        $opts['socket'] = [ 'bindto' => $bindto ];
+        $opts['socket']['bindto'] = str_contains($config['http_ip_version'], '6') ? '[::]:0' : '0:0';
     }
 
     // HTTPS
@@ -334,7 +336,7 @@ function process_http_php($request, $context = []) {
         $http_response_header = http_get_last_response_headers();
     }
     $head = [];
-    foreach ($http_response_header as $k => $v) {
+    foreach ($http_response_header as $v) {
         $t = explode(':', $v, 2);
         if (isset($t[1])) {
             // Date: Sat, 12 Apr 2008 17:30:38 GMT
@@ -376,6 +378,7 @@ function process_http_curl($request, $context = []) {
         //CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
         //CURLOPT_ENCODING => '',
         //CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+        //CURLOPT_TCP_NODELAY           => 1, // enabled by default
         CURLOPT_SSL_VERIFYHOST        => (bool)$config['http_ssl_verify'], // Disabled SSL Host check
         CURLOPT_SSL_VERIFYPEER        => (bool)$config['http_ssl_verify'], // Disabled SSL Cert check
     ];
@@ -397,6 +400,7 @@ function process_http_curl($request, $context = []) {
     // Headers
     if (isset($context['header'])) {
         $options[CURLOPT_HTTPHEADER] = explode("\r\n", trim($context['header']));
+        print_debug_vars($context['header']);
     }
 
     if (!safe_empty($context['content'])) {
@@ -596,7 +600,7 @@ function process_http_curl($request, $context = []) {
 
 /**
  * Process HTTP request by definition array and process it for valid status.
- * Used definition params in response key.
+ * Used definition params in a response key.
  *
  * @param string|array $def      Definition array or alert transport key (see transports definitions)
  * @param string       $response Response from get_http_request()
@@ -608,7 +612,7 @@ function test_http_request($def, $response) {
 
     if (is_string($def)) {
         // Get transport definition for responses
-        $def = $GLOBALS['config']['transports'][$def]['notification'];
+        $def = $GLOBALS['definitions']['transports'][$def]['notification'];
     }
 
     // Response is array (or xml)?
@@ -617,16 +621,31 @@ function test_http_request($def, $response) {
     // Set status by response status
     $success = get_http_last_status();
 
-    // If response return valid code and content, additional parse for specific defined tests
+    // If the response returns valid code and content, additional parse for specific defined tests
     if ($success) {
+        // Additional response validate
+        $test_response = isset($def['response_test']);
+
         // Decode if request OK
         if ($is_response_array) {
             $response = safe_json_decode($response);
+            if (!is_array($response)) {
+                $test_response = FALSE;
+                print_debug("WARNING: Expected JSON response, got text. Validation skipped.");
+            }
+        } elseif ($test_response && !safe_empty($response) && json_validate($response)) {
+            // Requested additional response validate, but API returned different type (json instead text)
+            // Currently this is actual only for Slack compatible transports
+            // Return only http status
+            // See: https://jira.observium.org/browse/OBS-5146
+            $test_response = FALSE;
+
+            print_debug("WARNING: Expected text response, got JSON. Validation skipped.");
         }
         // else additional formats?
 
         // Check if call succeeded
-        if (isset($def['response_test'])) {
+        if ($test_response) {
             // Convert single test condition to multi-level condition
             if (isset($def['response_test']['operator'])) {
                 $def['response_test'] = [$def['response_test']];
@@ -634,7 +653,7 @@ function test_http_request($def, $response) {
 
             // Compare all definition fields with response,
             // if response param not equals to expected, set not success
-            // multilevel keys should written with '->' separator, ie: $a[key][some][0] - key->some->0
+            // multilevel keys should be written with '->' separator, ie: $a[key][some][0] - key->some->0
             foreach ($def['response_test'] as $test) {
                 if ($is_response_array) {
                     $field = array_get_nested($response, $test['field']);
@@ -673,20 +692,29 @@ function test_http_request($def, $response) {
             $msg = array_get_nested($response, $def['response_fields']['message']);
             if (isset($def['response_fields']['info']) &&
                 $info = array_get_nested($response, $def['response_fields']['info'])) {
+                if (is_array($info)) {
+                    $info = implode_key_value(', ', $info, ': ');
+                }
                 $msg .= " ($info)";
             }
             if (OBS_DEBUG) {
                 print_message("%WRESPONSE ERROR%n[%y" . $msg . "%n]\n", 'console');
             }
             $GLOBALS['last_message'] = $msg;
-        } elseif (is_string($response) && $response && !get_http_last_status()) {
+        } elseif (!get_http_last_status()) {
             if (OBS_DEBUG) {
                 echo PHP_EOL;
                 print_message("%WRESPONSE STATUS%n[%r" . get_http_last_code() . "%n]", 'console');
                 print_message("%WRESPONSE ERROR%n[%y" . $response . "%n]\n", 'console');
             }
-            $GLOBALS['last_message'] = $response;
+            if (is_string($response) && $response) {
+                $GLOBALS['last_message'] = $response;
+            } else {
+                // report http error as message
+                $GLOBALS['last_message'] = 'HTTP Error: ' . $GLOBALS['response_headers']['code'] . ' ' . $GLOBALS['response_headers']['descr'];
+            }
         }
+        //var_dump(get_last_message());
     }
     print_debug_vars($response, 1);
 
@@ -697,7 +725,7 @@ function process_http_request($def, $url, $options, &$response = NULL, $request_
 
     if (is_string($def)) {
         // Get transport definition for responses
-        $def = $GLOBALS['config']['transports'][$def]['notification'];
+        $def = $GLOBALS['definitions']['transports'][$def]['notification'];
     }
 
     // Rate limit
@@ -726,7 +754,7 @@ function process_http_request($def, $url, $options, &$response = NULL, $request_
             // stop for on success
             return $request_status;
         }
-        // wait little time
+        // wait a little time
         sleep($request_sleep);
     }
 
@@ -751,6 +779,45 @@ function get_http_last_status() {
     return $GLOBALS['request_status'];
 }
 
+function param_condition(&$param, $tags) {
+    // Examples:
+    // 1a. '?param'  - itself is empty
+    // 1b. '?:param' - itself is true
+    // 2a. 'param?param_if' - param_if is empty
+    // 2b. 'param?:param_if' - param_if is true
+    if (str_contains($param, '?')) {
+        [ $param, $param_if ] = explode('?', $param, 2);
+        if (str_starts_with($param_if, ':')) {
+            // validate param is true/false
+            $if_boolean = TRUE;
+        } else {
+            // validate param is not empty (default)
+            $if_boolean = FALSE;
+        }
+        $param_if = ltrim($param_if, ':?');
+
+        // Condition for itself
+        if (safe_empty($param)) {
+            $param = $param_if;
+        }
+
+        if (!isset($tags[$param_if])) {
+            print_debug("Request parameter '$param' skipped, because condition param '$param_if' unset.");
+            return TRUE;
+        }
+        if ($if_boolean && !get_var_true($tags[$param_if])) {
+            print_debug("Request parameter '$param' skipped, because condition param '$param_if' false.");
+            return TRUE;
+        }
+        if (!$if_boolean && safe_empty($tags[$param_if])) {
+            print_debug("Request parameter '$param' skipped, because condition param '$param_if' empty.");
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 /**
  * Generate HTTP specific context with some defaults for proxy, timeout, user-agent.
  * Used in get_http_request().
@@ -767,9 +834,8 @@ function generate_http_context_defaults($context = []) {
     } // Fix context if not array passed
 
     // Defaults
-    if (!isset($context['timeout'])) {
-        $context['timeout'] = '15';
-    }
+    $context['timeout'] = $context['timeout'] ?? ($config['http_timeout'] ?? 15);
+
     // HTTP/1.1
     $context['protocol_version'] = 1.1;
     // get the entire body of the response in case of error (HTTP/1.1 400, for example)
@@ -779,7 +845,7 @@ function generate_http_context_defaults($context = []) {
 
     // User agent (required for some type of queries, ie geocoding)
     if (!isset($context['header'])) {
-        $context['header'] = ''; // Avoid 'undefined index' when concatting below
+        $context['header'] = '';
     }
     $context['header'] .= 'User-Agent: ' . OBSERVIUM_PRODUCT . '/' . OBSERVIUM_VERSION . "\r\n";
 
@@ -811,36 +877,50 @@ function generate_http_data($def, $tags = [], &$params = []) {
     }
 
     // Generate request params
+    $processed_params = []; // collect already processed, for conditional params
     foreach ((array)$request_params as $param => $entry) {
-        // Param based on expression (only true/false)
+        // Param based on expression
         // See: pushover notification def
-        if (str_contains($param, '?')) {
-            [ $param, $param_if ] = explode('?', $param, 2);
-            //print_vars($tags);
-            //print_vars($params);
-            if (!isset($tags[$param_if]) || !get_var_true($tags[$param_if])) {
-                print_debug("Request param '$param' skipped, because other param '$param_if' false or unset.");
-                continue;
-            }
+        if (param_condition($param, $tags)) {
+            continue;
         }
+
+        if (isset($processed_params[$param])) {
+            print_debug("Request parameter '$param' already added by conditional parameter, skipped.");
+            continue;
+        }
+        $processed_params[$param] = TRUE;
 
         // Try to find all keys in header like %bot_hash% matched with same key in $endpoint array
         if (is_array($entry)) {
             // i.e., teams and pagerduty
-            $params[$param] = array_merge((array)$params[$param], array_tag_replace($tags, $entry));
+            $params[$param] = array_merge((array)$params[$param], array_tag_replace_clean($tags, $entry));
+            // Convert literal \n to actual newlines for notification templates (recursive for nested arrays)
+            $params[$param] = convert_template_newlines($params[$param]);
         } elseif (!isset($params[$param]) || $params[$param] === '') {
-            $params[$param] = array_tag_replace($tags, $entry);
+            // Check if entry is a simple template (e.g., %custom_details%) with an array value
+            // If so, directly assign the array to preserve structure for JSON encoding
+            // This handles preprocessing outputs like PagerDuty custom_details and Opsgenie message_tags
+            if (preg_match('/^%([a-zA-Z0-9_]+)%$/', $entry, $matches) &&
+                isset($tags[$matches[1]]) && is_array($tags[$matches[1]])) {
+                // Direct array assignment - avoids PHP str_replace() converting array to "Array"
+                $params[$param] = $tags[$matches[1]];
+            } else {
+                $params[$param] = array_tag_replace_clean($tags, $entry);
+            }
+            // Convert literal \n to actual newlines for notification templates (recursive for nested arrays)
+            $params[$param] = convert_template_newlines($params[$param]);
         }
         // Clean empty params
         if (safe_empty($params[$param])) {
-            unset($params[$param]);
+            unset($params[$param], $processed_params[$param]);
         }
     }
 
     if (($def['method'] === 'POST' || $def['method'] === 'PUT') &&
         strtolower($def['request_format']) === 'json') {
         if (OBS_DEBUG) {
-            print_debug("\nJSON embedded params for method: ${def['method']}\n");
+            print_debug("\nJSON embedded params for method: {$def['method']}\n");
             print_vars(safe_json_encode($params));
         }
         // Encode params as json string
@@ -863,11 +943,11 @@ function generate_http_data($def, $tags = [], &$params = []) {
  * @global array       $config
  */
 function generate_http_context($def, $tags = [], $params = []) {
-    global $config;
+    global $definitions;
 
     if (is_string($def)) {
         // Get transport definition for requests
-        $def = $config['transports'][$def]['notification'];
+        $def = $definitions['transports'][$def]['notification'];
     }
 
     $context = []; // Init
@@ -878,7 +958,8 @@ function generate_http_context($def, $tags = [], $params = []) {
         $context['method'] = $def['method'];
     }
     // Request timeout
-    if (is_intnum($def['timeout']) || $def['timeout'] >= 1 || $def['timeout'] <= 300) {
+    // set timeout only when passed (but default is 15)
+    if (is_intnum($def['timeout']) && ($def['timeout'] >= 1 && $def['timeout'] <= 300)) {
         $context['timeout'] = $def['timeout'];
     }
 
@@ -918,18 +999,33 @@ function generate_http_context($def, $tags = [], $params = []) {
     }
 
     // Additional headers with contact params
-    foreach ($def['request_header'] as $key => $entries) {
-        [ $head, $tag ] = explode('?', $key, 2);
-
-        if ($tag && (!isset($tags[$tag]) || !$tags[$tag])) {
-            // see webhook json transport
+    $processed_params = []; // collect already processed, for conditional params
+    foreach ($def['request_header'] as $head => $entries) {
+        // Param condition (empty or true)
+        // See: webhook json transport
+        if (param_condition($head, $tags)) {
             continue;
         }
 
-        // Try to find all keys in header like %bot_hash% matched with same key in $endpoint array
+        if (!is_alpha($head)) {
+            print_debug("Request header '$head' is not alphabetical.");
+            continue;
+        }
+
+        if (isset($processed_params[$head])) {
+            print_debug("Request header '$head' already added by conditional parameter, skipped.");
+            continue;
+        }
+        $processed_params[$head] = TRUE;
+
+        // Try to find all keys in header like %bot_hash% matched with the same key in $endpoint array
         foreach ((array)$entries as $entry) {
-            // multiple same headers can be exist at same time.
-            $header .= $head . ': ' . array_tag_replace($tags, $entry) . "\r\n";
+            // multiple same headers can exist at the same time.
+            $entry = array_tag_replace($tags, $entry);
+            if (!safe_empty($entry)) {
+                // Skip empty headers
+                $header .= $head . ': ' . $entry . "\r\n";
+            }
         }
     }
 
@@ -947,15 +1043,14 @@ function generate_http_context($def, $tags = [], $params = []) {
  * @param array        $params (optional) Array of requested params with key => value entries (used with request method GET)
  * @param string       $url_key Definition key which used for get url, default is $def['url']
  *
- * @return string               URL which can used in get_http_request() or process_http_request()
- * @global array       $config
+ * @return string               URL, which can used in get_http_request() or process_http_request()
  */
 function generate_http_url($def, $tags = [], $params = [], $url_key = 'url') {
-    global $config;
+    global $definitions;
 
     if (is_string($def)) {
         // Get definition for transport API
-        $def = $config['transports'][$def]['notification'];
+        $def = $definitions['transports'][$def]['notification'];
     }
 
     $url = ''; // Init
@@ -989,7 +1084,7 @@ function generate_http_url($def, $tags = [], $params = [], $url_key = 'url') {
     return $url;
 }
 
-function get_http_def($http_def, $tags) {
+function get_http_def($http_def, $tags, $params = []) {
     global $config;
 
     if (!is_array($http_def)) {
@@ -997,10 +1092,10 @@ function get_http_def($http_def, $tags) {
     }
 
     // Generate context/options with encoded data
-    $options = generate_http_context($http_def, $tags);
+    $options = generate_http_context($http_def, $tags, $params);
 
     // API URL
-    $url = generate_http_url($http_def, $tags);
+    $url = generate_http_url($http_def, $tags, $params);
 
     // Request
     if (process_http_request($http_def, $url, $options, $response)) {
@@ -1008,6 +1103,29 @@ function get_http_def($http_def, $tags) {
     }
 
     return FALSE;
+}
+
+/**
+ * Convert literal \n to actual newlines in notification templates.
+ * Handles both strings and nested arrays recursively.
+ * 
+ * @param mixed $data String or array to process
+ * @return mixed Processed data with \n converted to newlines
+ */
+function convert_template_newlines($data) {
+    if (is_array($data)) {
+        // Recursively process arrays
+        foreach ($data as $key => $value) {
+            $data[$key] = convert_template_newlines($value);
+        }
+        return $data;
+    } elseif (is_string($data)) {
+        // Convert literal \n to actual newlines for template strings
+        return str_replace('\\n', PHP_EOL, $data);
+    }
+
+    // Return other types unchanged
+    return $data;
 }
 
 // EOF

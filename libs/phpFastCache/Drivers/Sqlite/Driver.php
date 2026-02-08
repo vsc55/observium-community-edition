@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,40 +8,36 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Sqlite;
+namespace Phpfastcache\Drivers\Sqlite;
 
 use PDO;
 use PDOException;
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Core\Pool\IO\IOHelperTrait;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheIOException;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface, IO\IOHelperTrait};
+use Phpfastcache\Exceptions\{PhpfastcacheCoreException, PhpfastcacheInvalidArgumentException, PhpfastcacheIOException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
- * @todo Remove "exp" column in V7
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
     use DriverBaseTrait, IOHelperTrait;
 
     /**
      *
      */
-    const FILE_DIR = 'sqlite';
-    /**
-     *
-     */
-    const INDEXING_FILE = 'indexing';
+    protected const INDEXING_FILE = 'indexing';
 
     /**
      * @var int
@@ -58,81 +55,133 @@ class Driver implements ExtendedCacheItemPoolInterface
     protected $SqliteDir = '';
 
     /**
-     * @var \PDO
+     * @var PDO
      */
     protected $indexing;
 
     /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverCheckException
-     * @throws phpFastCacheIOException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        } else {
-            if (!file_exists($this->getSqliteDir()) && !@mkdir($this->getSqliteDir(), $this->getDefaultChmod(), true)) {
-                throw new phpFastCacheIOException(sprintf('Sqlite cannot write in "%s", aborting...', $this->getPath()));
-            } else {
-                $this->driverConnect();
-            }
-        }
-    }
-
-    /**
-     * @return string
-     * @throws \phpFastCache\Exceptions\phpFastCacheCoreException
-     */
-    public function getSqliteDir()
-    {
-        return $this->SqliteDir ?: $this->getPath() . DIRECTORY_SEPARATOR . self::FILE_DIR;
-    }
-
-    /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
         return extension_loaded('pdo_sqlite') && (is_writable($this->getSqliteDir()) || @mkdir($this->getSqliteDir(), $this->getDefaultChmod(), true));
     }
 
     /**
-     * INIT NEW DB
-     * @param \PDO $db
+     * @return string
+     * @throws PhpfastcacheCoreException
      */
-    public function initDB(\PDO $db)
+    public function getSqliteDir(): string
     {
-        $db->exec('drop table if exists "caching"');
-        $db->exec('CREATE TABLE "caching" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "keyword" VARCHAR UNIQUE, "object" BLOB, "exp" INTEGER)');
-        $db->exec('CREATE UNIQUE INDEX "cleanup" ON "caching" ("keyword","exp")');
-        $db->exec('CREATE INDEX "exp" ON "caching" ("exp")');
-        $db->exec('CREATE UNIQUE INDEX "keyword" ON "caching" ("keyword")');
+        return $this->SqliteDir ?: $this->getPath();
     }
 
     /**
-     * INIT Indexing DB
-     * @param \PDO $db
+     * @return array
      */
-    public function initIndexing(\PDO $db)
+    public function __sleep(): array
     {
+        return array_diff(array_keys(get_object_vars($this)), ['indexing', 'instance']);
+    }
 
-        // delete everything before reset indexing
-        $dir = opendir($this->SqliteDir);
-        while ($file = readdir($dir)) {
-            if ($file != '.' && $file != '..' && $file != 'indexing' && $file != 'dbfastcache') {
-                unlink($this->SqliteDir . '/' . $file);
+    /**
+     * @return bool
+     * @throws PhpfastcacheIOException
+     */
+    protected function driverConnect(): bool
+    {
+        if (!file_exists($this->getSqliteDir()) && !@mkdir($this->getSqliteDir(), $this->getDefaultChmod(), true)) {
+            throw new PhpfastcacheIOException(sprintf('Sqlite cannot write in "%s", aborting...', $this->getPath()));
+        }
+        if (!file_exists($this->getPath())) {
+            if (!mkdir($this->getPath(), $this->getDefaultChmod(), true)
+            ) {
+                $this->fallback = true;
+            }
+        }
+        $this->SqliteDir = $this->getPath();
+
+        return true;
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return null|array
+     */
+    protected function driverRead(CacheItemInterface $item)
+    {
+        try {
+            $stm = $this->getDb($item->getEncodedKey())
+                ->prepare("SELECT * FROM `caching` WHERE `keyword`=:keyword LIMIT 1");
+            $stm->execute(
+                [
+                    ':keyword' => $item->getEncodedKey(),
+                ]
+            );
+            $row = $stm->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            try {
+                $stm = $this->getDb($item->getEncodedKey(), true)
+                    ->prepare("SELECT * FROM `caching` WHERE `keyword`=:keyword LIMIT 1");
+                $stm->execute(
+                    [
+                        ':keyword' => $item->getEncodedKey(),
+                    ]
+                );
+                $row = $stm->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                return null;
             }
         }
 
-        $db->exec('drop table if exists "balancing"');
-        $db->exec('CREATE TABLE "balancing" ("keyword" VARCHAR PRIMARY KEY NOT NULL UNIQUE, "db" INTEGER)');
-        $db->exec('CREATE INDEX "db" ON "balancing" ("db")');
-        $db->exec('CREATE UNIQUE INDEX "lookup" ON "balancing" ("keyword")');
+        if (isset($row['object'])) {
+            return $this->decode($row['object']);
+        }
 
+        return null;
+    }
+
+    /**
+     * @param string $keyword
+     * @param bool $reset
+     * @return PDO
+     */
+    public function getDb(string $keyword, bool $reset = false): PDO
+    {
+        /**
+         * Default is phpfastcache
+         */
+        $instant = $this->indexing($keyword);
+
+        /**
+         * init instant
+         */
+        if (!isset($this->instance[$instant])) {
+            // check DB Files ready or not
+            $tableCreated = false;
+            if ($reset || !file_exists($this->SqliteDir . '/db' . $instant)) {
+                $tableCreated = true;
+            }
+            $PDO = new PDO('sqlite:' . $this->SqliteDir . '/db' . $instant);
+            $PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            if ($tableCreated) {
+                $this->initDB($PDO);
+            }
+
+            // Added by Observium developers
+            // Improve write speed, see:
+            // http://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite
+            $PDO->exec('PRAGMA synchronous=OFF');
+            $PDO->exec('PRAGMA journal_mode=MEMORY');
+            $PDO->exec('PRAGMA temp_store=MEMORY');
+            //$PDO->exec('PRAGMA count_changes=false');
+			
+            $this->instance[$instant] = $PDO;
+            unset($PDO);
+        }
+
+        return $this->instance[$instant];
     }
 
     /**
@@ -144,16 +193,18 @@ class Driver implements ExtendedCacheItemPoolInterface
     public function indexing($keyword)
     {
         if ($this->indexing == null) {
-            $createTable = false;
+            $tableCreated = false;
             if (!file_exists($this->SqliteDir . '/indexing')) {
-                $createTable = true;
+                $tableCreated = true;
             }
 
             $PDO = new PDO("sqlite:" . $this->SqliteDir . '/' . self::INDEXING_FILE);
-            $PDO->setAttribute(PDO::ATTR_ERRMODE,
-              PDO::ERRMODE_EXCEPTION);
+            $PDO->setAttribute(
+                PDO::ATTR_ERRMODE,
+                PDO::ERRMODE_EXCEPTION
+            );
 
-            if ($createTable == true) {
+            if ($tableCreated) {
                 $this->initIndexing($PDO);
             }
 
@@ -171,12 +222,12 @@ class Driver implements ExtendedCacheItemPoolInterface
             $stm = $this->indexing->prepare("SELECT MAX(`db`) as `db` FROM `balancing`");
             $stm->execute();
             $row = $stm->fetch(PDO::FETCH_ASSOC);
-            if (!isset($row[ 'db' ])) {
+            if (!isset($row['db'])) {
                 $db = 1;
-            } elseif ($row[ 'db' ] <= 1) {
+            } elseif ($row['db'] <= 1) {
                 $db = 1;
             } else {
-                $db = $row[ 'db' ];
+                $db = $row['db'];
             }
 
             // check file size
@@ -189,199 +240,132 @@ class Driver implements ExtendedCacheItemPoolInterface
                 $db++;
             }
             $this->currentDB = $db;
-
         }
 
         // look for keyword
         $stm = $this->indexing->prepare("SELECT * FROM `balancing` WHERE `keyword`=:keyword LIMIT 1");
-        $stm->execute([
-          ':keyword' => $keyword,
-        ]);
+        $stm->execute(
+            [
+                ':keyword' => $keyword,
+            ]
+        );
         $row = $stm->fetch(PDO::FETCH_ASSOC);
-        if (isset($row[ 'db' ]) && $row[ 'db' ] != '') {
-            $db = $row[ 'db' ];
+        if (isset($row['db']) && $row['db'] != '') {
+            $db = $row['db'];
         } else {
             /*
              * Insert new to Indexing
              */
             $db = $this->currentDB;
             $stm = $this->indexing->prepare("INSERT INTO `balancing` (`keyword`,`db`) VALUES(:keyword, :db)");
-            $stm->execute([
-              ':keyword' => $keyword,
-              ':db' => $db,
-            ]);
+            $stm->execute(
+                [
+                    ':keyword' => $keyword,
+                    ':db' => $db,
+                ]
+            );
         }
 
         return $db;
     }
 
     /**
-     * @param $keyword
-     * @param bool $reset
-     * @return PDO
+     * INIT Indexing DB
+     * @param PDO $db
      */
-    public function getDb($keyword, $reset = false)
+    public function initIndexing(PDO $db)
     {
-        /**
-         * Default is fastcache
-         */
-        $instant = $this->indexing($keyword);
-
-        /**
-         * init instant
-         */
-        if (!isset($this->instance[ $instant ])) {
-            // check DB Files ready or not
-            $createTable = false;
-            if (!file_exists($this->SqliteDir . '/db' . $instant) || $reset == true) {
-                $createTable = true;
+        // delete everything before reset indexing
+        $dir = opendir($this->SqliteDir);
+        while ($file = readdir($dir)) {
+            if ($file != '.' && $file != '..' && $file != 'indexing' && $file != 'dbfastcache') {
+                unlink($this->SqliteDir . '/' . $file);
             }
-            $PDO = new PDO('sqlite:' . $this->SqliteDir . '/db' . $instant);
-            $PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-            if ($createTable == true) {
-                $this->initDB($PDO);
-            }
-
-            // Added by Observium developers
-            // Improve write speed, see:
-            // http://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite
-            $PDO->exec('PRAGMA synchronous=OFF');
-            $PDO->exec('PRAGMA journal_mode=MEMORY');
-            $PDO->exec('PRAGMA temp_store=MEMORY');
-            //$PDO->exec('PRAGMA count_changes=false');
-
-            $this->instance[ $instant ] = $PDO;
-            unset($PDO);
-
         }
 
-        return $this->instance[ $instant ];
+        $db->exec('DROP TABLE if exists "balancing"');
+        $db->exec('CREATE TABLE "balancing" ("keyword" VARCHAR PRIMARY KEY NOT NULL UNIQUE, "db" INTEGER)');
+        $db->exec('CREATE INDEX "db" ON "balancing" ("db")');
+        $db->exec('CREATE UNIQUE INDEX "lookup" ON "balancing" ("keyword")');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * INIT NEW DB
+     * @param PDO $db
+     */
+    public function initDB(PDO $db)
+    {
+        $db->exec('drop table if exists "caching"');
+        $db->exec('CREATE TABLE "caching" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "keyword" VARCHAR UNIQUE, "object" BLOB, "exp" INTEGER)');
+        $db->exec('CREATE UNIQUE INDEX "cleanup" ON "caching" ("keyword","exp")');
+        $db->exec('CREATE INDEX "exp" ON "caching" ("exp")');
+        $db->exec('CREATE UNIQUE INDEX "keyword" ON "caching" ("keyword")');
+    }
+
+    /**
+     * @param CacheItemInterface $item
      * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverWrite(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
-            $skipExisting = isset($this->config[ 'skipExisting' ]) ? $this->config[ 'skipExisting' ] : false;
-            $toWrite = true;
-
-            // check in cache first
-            $in_cache = $this->driverRead($item);
-
-            if ($skipExisting == true) {
-                if ($in_cache == null) {
-                    $toWrite = true;
-                } else {
-                    $toWrite = false;
-                }
-            }
-
-            if ($toWrite == true) {
-                $sql = "INSERT OR REPLACE INTO `caching` (`keyword`,`object`,`exp`) values(:keyword,:object,:exp)";
-                try {
-                    $stm = $this->getDb($item->getKey())
-                      ->prepare($sql);
-                    $stm->execute([
-                      ':keyword' => $item->getKey(),
-                      ':object' => $this->encode($this->driverPreWrap($item)),
-                      ':exp' => $item->getExpirationDate()->getTimestamp(),
-                    ]);
-
-                    return true;
-                } catch (\PDOException $e) {
-                    try {
-                        $stm = $this->getDb($item->getKey(), true)
-                          ->prepare($sql);
-                        $stm->execute([
-                          ':keyword' => $item->getKey(),
-                          ':object' => $this->encode($this->driverPreWrap($item)),
-                          ':exp' => $item->getExpirationDate()->getTimestamp(),
-                        ]);
-                    } catch (PDOException $e) {
-                        return false;
-                    }
-                }
-            }
-
-            return false;
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return null|array
-     */
-    protected function driverRead(CacheItemInterface $item)
-    {
-        $sql = "SELECT * FROM `caching` WHERE `keyword`=:keyword LIMIT 1";
-        try {
-            $stm = $this->getDb($item->getKey())
-              ->prepare($sql);
-            $stm->execute([
-              ':keyword' => $item->getKey(),
-            ]);
-            $row = $stm->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
             try {
-                $stm = $this->getDb($item->getKey(), true)
-                  ->prepare($sql);
-                $stm->execute([
-                  ':keyword' => $item->getKey(),
-                ]);
-                $row = $stm->fetch(PDO::FETCH_ASSOC);
+                $stm = $this->getDb($item->getEncodedKey())
+                    ->prepare("INSERT OR REPLACE INTO `caching` (`keyword`,`object`,`exp`) values(:keyword,:object,:exp)");
+                $stm->execute(
+                    [
+                        ':keyword' => $item->getEncodedKey(),
+                        ':object' => $this->encode($this->driverPreWrap($item)),
+                        ':exp' => $item->getExpirationDate()->getTimestamp(),
+                    ]
+                );
+
+                return true;
             } catch (PDOException $e) {
-                return null;
+                return false;
             }
         }
 
-        if (isset($row[ 'object' ])) {
-            return $this->decode($row[ 'object' ]);
-        }
-
-        return null;
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
             try {
-                $stm = $this->getDb($item->getKey())
-                  ->prepare("DELETE FROM `caching` WHERE (`exp` <= :U) OR (`keyword`=:keyword) ");
+                $stm = $this->getDb($item->getEncodedKey())
+                    ->prepare("DELETE FROM `caching` WHERE (`exp` <= :U) OR (`keyword`=:keyword) ");
 
-                return $stm->execute([
-                  ':keyword' => $item->getKey(),
-                  ':U' => time(),
-                ]);
+                return $stm->execute(
+                    [
+                        ':keyword' => $item->getEncodedKey(),
+                        ':U' => time(),
+                    ]
+                );
             } catch (PDOException $e) {
                 return false;
             }
         } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+            throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
         }
     }
 
     /**
      * @return bool
      */
-    protected function driverClear()
+    protected function driverClear(): bool
     {
         $this->instance = [];
         $this->indexing = null;
@@ -395,29 +379,5 @@ class Driver implements ExtendedCacheItemPoolInterface
         }
 
         return true;
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        if (!file_exists($this->getPath() . '/' . self::FILE_DIR)) {
-            if (!mkdir($this->getPath() . '/' . self::FILE_DIR, $this->getDefaultChmod(), true)
-            ) {
-                $this->fallback = true;
-            }
-        }
-        $this->SqliteDir = $this->getPath() . '/' . self::FILE_DIR;
-
-        return true;
-    }
-
-    /**
-     * @return array
-     */
-    public function __sleep()
-    {
-        return array_diff(array_keys(get_object_vars($this)), ['indexing', 'instance']);
     }
 }

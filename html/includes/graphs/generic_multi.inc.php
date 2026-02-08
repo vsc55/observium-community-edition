@@ -45,11 +45,34 @@ foreach ($rrd_list as $rrd) {
 
     if ($rrd['colour']) {
         $colour = $rrd['colour'];
-    } else {
-        if (!$config['graph_colours'][$colours][$colour_iter]) {
-            $colour_iter = 0;
+    } elseif (isset($scheme_colours)) {
+        // Use pre-generated scheme colors with overflow handling
+        if (isset($scheme_colours[$colour_iter])) {
+            $colour = ltrim($scheme_colours[$colour_iter], '#');
+        } else {
+            // Handle case where more colors needed than provided in scheme
+            $colour = ltrim($scheme_colours[$colour_iter % count($scheme_colours)], '#');
         }
-        $colour = $config['graph_colours'][$colours][$colour_iter];
+        $colour_iter++;
+    } else {
+        // Enhanced color system: generate dynamic palette when config arrays exhausted
+        if (!$config['graph_colours'][$colours][$colour_iter]) {
+            $total_series = count($rrd_list);
+            $available_colors = count($config['graph_colours'][$colours]);
+
+            if ($total_series > $available_colors) {
+                // Generate extended palette for large datasets
+                if (!isset($extended_palette)) {
+                    $extended_palette = generate_palette($total_series, 'interpolateSpectral');
+                }
+                $colour = str_replace('#', '', $extended_palette[$colour_iter % $total_series]);
+            } else {
+                $colour_iter = 0;
+                $colour = $config['graph_colours'][$colours][$colour_iter];
+            }
+        } else {
+            $colour = $config['graph_colours'][$colours][$colour_iter];
+        }
         $colour_iter++;
     }
 
@@ -76,7 +99,7 @@ foreach ($rrd_list as $rrd) {
         $rrd_options .= " CDEF:" . $id . "cmin=" . $id . "min," . $multiplier . ",*";
         $rrd_options .= " CDEF:" . $id . "cmax=" . $id . "max," . $multiplier . ",*";
 
-        $id = $id . 'c';
+        $id .= 'c';
 
         // If we've been passed a divider (divisor!) we make a CDEF for it.
     } elseif (is_numeric($divider)) {
@@ -85,7 +108,7 @@ foreach ($rrd_list as $rrd) {
         $rrd_options .= " CDEF:" . $id . "cmin=" . $id . "min," . $divider . ",/";
         $rrd_options .= " CDEF:" . $id . "cmax=" . $id . "max," . $divider . ",/";
 
-        $id = $id . 'c';
+        $id .= 'c';
 
     }
 

@@ -10,58 +10,76 @@
  *
  */
 
-function generate_sla_query($vars)
-{
+function generate_sla_query($vars) {
     $sql = 'SELECT * FROM `slas` ';
-    $sql .= generate_where_clause($GLOBALS['cache']['where']['devices_permitted'], '`deleted` = 0');
+    //$sql .= generate_where_clause($GLOBALS['cache']['where']['devices_permitted'], '`deleted` = 0');
 
-    // Build query
+    if (!isset($vars['deleted'])) {
+        // exclude deleted by default
+        $vars['deleted'] = 0;
+    }
+
+    $where_array = [];
+
+    // Build a query
     foreach ($vars as $var => $value) {
         switch ($var) {
             case "group":
             case "group_id":
                 $values = get_group_entities($value);
-                $sql    .= generate_query_values_and($values, 'slas.sla_id');
+                $where_array[] = generate_query_values($values, 'slas.sla_id');
                 break;
+
             case 'device_group_id':
             case 'device_group':
                 $values = get_group_entities($value, 'device');
-                $sql    .= generate_query_values_and($values, 'storage.device_id');
+                $where_array[] = generate_query_values($values, 'slas.device_id');
                 break;
+
             case "device":
             case "device_id":
-                $sql .= generate_query_values_and($value, 'slas.device_id');
+                $where_array[] = generate_query_values($value, 'slas.device_id');
                 break;
+
             case "id":
             case "sla_id":
-                $sql .= generate_query_values_and($value, 'slas.sla_id');
+                $where_array[] = generate_query_values($value, 'slas.sla_id');
                 break;
+
             case "owner":
-                $sql .= generate_query_values_and($value, 'slas.sla_owner');
+                $where_array[] = generate_query_values($value, 'slas.sla_owner');
                 break;
+
             case "target":
             case "sla_target":
-                $sql .= generate_query_values_and($value, 'slas.sla_target', '%LIKE%');
+                $where_array[] = generate_query_values($value, 'slas.sla_target', '%LIKE%');
                 break;
+
             case "sla_tag":
-                $sql .= generate_query_values_and($value, 'slas.sla_tag');
+                $where_array[] = generate_query_values($value, 'slas.sla_tag');
                 break;
+
             case "rtt_type":
             case "rtt_sense":
-                $sql .= generate_query_values_and($value, 'slas.' . $var);
+                $where_array[] = generate_query_values($value, 'slas.' . $var);
                 break;
+
             case "event":
             case "rtt_event":
-                $sql .= generate_query_values_and($value, 'slas.rtt_event');
+                $where_array[] = generate_query_values($value, 'slas.rtt_event');
+                break;
+
+            case "deleted":
+                $where_array[] = generate_query_values($value, 'slas.deleted');
                 break;
         }
     }
+    $sql .= generate_where_clause($where_array, $GLOBALS['cache']['where']['devices_permitted']);
 
     return $sql;
 }
 
-function print_sla_table_header($vars)
-{
+function print_sla_table_header($vars) {
     if ($vars['view'] == "graphs" || isset($vars['graph']) || isset($vars['id'])) {
         $stripe_class = "table-striped-two";
     } else {
@@ -70,16 +88,16 @@ function print_sla_table_header($vars)
 
     echo('<table class="table ' . $stripe_class . ' table-condensed ">' . PHP_EOL);
     $cols = [
-      [NULL, 'class="state-marker"'],
-      'device'      => ['Device', 'style="width: 250px;"'],
-      'descr'       => ['Description'],
-      'owner'       => ['Owner', 'style="width: 180px;"'],
-      'type'        => ['Type', 'style="width: 100px;"'],
-      ['History', 'style="width: 100px;"'],
-      'last_change' => ['Last&nbsp;changed', 'style="width: 80px;"'],
-      'event'       => ['Event', 'style="width: 60px; text-align: right;"'],
-      'sense'       => ['Sense', 'style="width: 100px; text-align: right;"'],
-      'rtt'         => ['RTT', 'style="width: 60px;"'],
+                         [ NULL, 'class="state-marker"' ],
+        'device'      => [ 'Device', 'style="width: 250px;"' ],
+        'descr'       => [ 'Description' ],
+        'owner'       => [ 'Owner', 'style="width: 180px;"' ],
+        'type'        => [ 'Type', 'style="width: 100px;"' ],
+                         [ 'History', 'style="width: 100px;"' ],
+        'last_change' => [ 'Last&nbsp;changed', 'style="width: 80px;"' ],
+        'event'       => [ 'Event', 'style="width: 60px; text-align: right;"' ],
+        'sense'       => [ 'Sense', 'style="width: 100px; text-align: right;"' ],
+        'rtt'         => [ 'RTT', 'style="width: 60px;"' ],
     ];
 
     if ($vars['page'] == "device" || $vars['popup'] == TRUE) {
@@ -91,8 +109,7 @@ function print_sla_table_header($vars)
 
 }
 
-function print_sla_table($vars)
-{
+function print_sla_table($vars) {
     $sql = generate_sla_query($vars);
 
     $slas = [];
@@ -172,8 +189,7 @@ function print_sla_table($vars)
     echo $pagination_html;
 }
 
-function humanize_sla(&$sla)
-{
+function humanize_sla(&$sla) {
     global $config;
 
     if (isset($sla['humanized'])) {
@@ -183,7 +199,7 @@ function humanize_sla(&$sla)
     $sla['sla_descr'] = 'SLA #' . $sla['sla_index'];
     if (!empty($sla['sla_target']) && ($sla['sla_target'] != $sla['sla_tag'])) {
         if (get_ip_version($sla['sla_target']) === 6) {
-            $sla_target = Net_IPv6 ::compress($sla['sla_target'], TRUE);
+            $sla_target = ip_compress($sla['sla_target']);
         } else {
             $sla_target = $sla['sla_target'];
         }
@@ -272,9 +288,7 @@ function print_sla_row($sla, $vars)
     echo generate_sla_row($sla, $vars);
 }
 
-function generate_sla_row($sla, $vars)
-{
-    global $config;
+function generate_sla_row($sla, $vars) {
 
     humanize_sla($sla);
 
@@ -305,9 +319,9 @@ function generate_sla_row($sla, $vars)
 
     $out .= '<td class="entity">' . generate_entity_link('sla', $sla) . '</td>';
     $out .= '<td>' . $sla['sla_owner'] . '</td>';
-    $out .= '<td>' . $sla['rtt_label'] . '</td>';
+    $out .= '<td>' . get_type_class_label($sla['rtt_label']) . '</td>';
     $out .= '<td>' . generate_entity_link('sla', $sla, $mini_graph, NULL, FALSE) . '</td>';
-    $out .= '<td style="white-space: nowrap">' . generate_tooltip_link(NULL, format_uptime((get_time('now') - $sla['rtt_last_change']), 'short-2') . ' ago', format_unixtime($sla['rtt_last_change'])) . '</td>';
+    $out .= '<td style="white-space: nowrap">' . generate_tooltip_link(NULL, format_uptime((get_time() - $sla['rtt_last_change']), 'short-2') . ' ago', format_unixtime($sla['rtt_last_change'])) . '</td>';
     $out .= '<td style="text-align: right;"><strong>' . generate_tooltip_link('', $sla['rtt_event'], $sla['event_descr'], $sla['event_class']) . '</strong></td>';
     $out .= '<td style="text-align: right;"><strong>' . generate_tooltip_link('', $sla['rtt_sense'], $sla['event_descr'], $sla['event_class']) . '</strong></td>';
     $out .= '<td><span class="' . $sla['sla_class'] . '">' . $sla['human_value'] . $sla['human_unit'] . '</span></td>';

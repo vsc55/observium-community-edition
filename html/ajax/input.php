@@ -49,30 +49,28 @@ if ($cache_key && $options = get_cache_session($cache_key)) {
         case 'ipv4_network':
         case 'ipv6_network':
             $ip_version        = explode('_', $vars['field'])[0];
-            $query_permitted   = generate_query_permitted_ng('ports');
-            $network_permitted = dbFetchColumn('SELECT DISTINCT(`' . $ip_version . '_network_id`) FROM `' . $ip_version . '_addresses` WHERE ' . $query_permitted);
-            $where[]           = generate_query_values($network_permitted, $ip_version . '_network_id');
+            $query  = 'SELECT `' . $ip_version . '_network` FROM `' . $ip_version . '_networks` ';
             if (!safe_empty($vars['query'])) {
                 //$query .= ' AND `' . $ip_version . '_network` LIKE ?';
                 //$params[] = '%' . $vars['query'] . '%';
                 $where[] = generate_query_values($vars['query'], $vars['field'], '%LIKE%');
             }
-            $query  = 'SELECT `' . $ip_version . '_network` FROM `' . $ip_version . '_networks` ';
-            $query .= generate_where_clause($where);
+            $network_permitted = dbFetchColumn('SELECT DISTINCT(`' . $ip_version . '_network_id`) FROM `' . $ip_version . '_addresses` WHERE ' . generate_query_permitted_ng('ports'));
+            $query .= generate_where_clause($where, generate_query_values($network_permitted, $ip_version . '_network_id'));
             $query .= ' ORDER BY `' . $ip_version . '_network`;';
             //print_vars($query);
             break;
 
         case 'ifspeed':
-            $query_permitted = generate_query_permitted('ports');
-            $query           = 'SELECT `ifSpeed`, COUNT(`ifSpeed`) as `count` FROM `ports` WHERE `ifSpeed` > 0 ' .
-                               $query_permitted . ' GROUP BY ifSpeed ORDER BY `count` DESC';
+            $query           = 'SELECT `ifSpeed`, COUNT(`ifSpeed`) as `count` FROM `ports` ' .
+                               generate_where_clause('`ifSpeed` > 0', generate_query_permitted_ng('ports')) .
+                               ' GROUP BY ifSpeed ORDER BY `count` DESC';
             $call_function   = 'formatRates';
             $call_params     = [4, 4];
             break;
 
         case 'syslog_program':
-            //$query_permitted   = generate_query_permitted();
+            //$query_permitted   = generate_query_permitted_ng();
             $query = 'SELECT DISTINCT `program` FROM `syslog`';
             if (is_intnum($vars['device_id'])) {
                 $query .= ' WHERE ' . generate_query_values($vars['device_id'], 'device_id');
@@ -81,31 +79,31 @@ if ($cache_key && $options = get_cache_session($cache_key)) {
             break;
 
         case 'bgp_peer_as':
-            $column          = 'bgpPeerRemoteAs';
-            $query_permitted = generate_query_permitted('devices');
             // Combine AS number and AS text into string: ASXXXX: My AS text
-            $query    = 'SELECT DISTINCT CONCAT(?, CONCAT_WS(?, `' . $column . '`, `astext`)) AS `' . $vars['field'] . '` FROM `bgpPeers` WHERE 1 ' . $query_permitted;
+            $query    = 'SELECT DISTINCT CONCAT(?, CONCAT_WS(?, `bgpPeerRemoteAs`, `astext`)) AS `' . $vars['field'] . '` FROM `bgpPeers` ';
             $params[] = 'AS';
             $params[] = ': ';
             if (!safe_empty($vars['query'])) {
-                $query    .= ' AND (`' . $column . '` LIKE ? OR `astext` LIKE ?)';
-                $params[] = '%' . $vars['query'] . '%';
-                $params[] = '%' . $vars['query'] . '%';
-                //$query .= generate_query_values_and($vars['query'], $vars['field'], '%LIKE%');
+                $where[]  = '(' . generate_query_values($vars['query'], 'bgpPeerRemoteAs', '%LIKE%') . ' OR ' . generate_query_values($vars['query'], 'astext', '%LIKE%') . ')';
             }
+            $query   .= generate_where_clause($where, generate_query_permitted_ng('devices'));
             break;
 
         case 'bgp_local_ip':
-        case 'bgp_peer_ip':
-            $columns         = ['local_ip' => 'bgpPeerLocalAddr',
-                                'peer_ip'  => 'bgpPeerRemoteAddr'];
-            $param           = str_replace('bgp_', '', $vars['field']);
-            $column          = $columns[$param];
+            $query  = 'SELECT DISTINCT `bgpPeerLocalAddr` FROM `bgpPeers`';
             if (!safe_empty($vars['query'])) {
-                $where[] = generate_query_values($vars['query'], $column, '%LIKE%');
+                $where[] = generate_query_values($vars['query'], 'bgpPeerLocalAddr', '%LIKE%');
             }
-            $query           = 'SELECT DISTINCT `' . $column . '` FROM `bgpPeers`';
-            $query          .= generate_where_clause($where, generate_query_permitted_ng('devices'));
+            $query .= generate_where_clause($where, generate_query_permitted_ng('devices'));
+            break;
+
+        case 'bgp_peer_ip':
+            $query  = 'SELECT DISTINCT `bgpPeerRemoteAddr` FROM `bgpPeers`';
+            if (!safe_empty($vars['query'])) {
+                $where[] = generate_query_values($vars['query'], 'bgpPeerRemoteAddr', '%LIKE%');
+            }
+
+            $query .= generate_where_clause($where, generate_query_permitted_ng('devices'));
             break;
 
         default:

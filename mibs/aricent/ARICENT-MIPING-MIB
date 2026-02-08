@@ -1,7 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpping.mib,v 1.4 2014/11/03 12:29:41 siva Exp $
-
 ARICENT-MIPING-MIB DEFINITIONS ::= BEGIN 
  
  IMPORTS 
@@ -11,14 +9,20 @@ ARICENT-MIPING-MIB DEFINITIONS ::= BEGIN
     RowStatus  FROM SNMPv2-TC; 
 
     fsMIPingMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202201250000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION
         " This mib module is for Ping with virutal routing support."
+
+    REVISION "202201250000Z"
+    DESCRIPTION
+        "Added limited continuous ping support for Web usage."
+
     REVISION "201209050000Z"
     DESCRIPTION
         " This mib module is for Ping with virutal routing support."
+
     ::= { enterprises  aricent-communication-holding-ltd(29601) iss(2) 36 }
 
     fsMIPingMIBObjects OBJECT IDENTIFIER ::= { fsMIPingMIB 1 }
@@ -58,7 +62,8 @@ ARICENT-MIPING-MIB DEFINITIONS ::= BEGIN
         fsMIPingMinTime        Integer32,
         fsMIPingSuccesses      Counter32,
         fsMIPingEntryStatus    RowStatus,
-        fsMIPingHostName       OCTET STRING
+        fsMIPingHostName       OCTET STRING,
+        fsMIPingContInterval   Integer32
 }
 
     fsMIPingIndex  OBJECT-TYPE
@@ -197,4 +202,19 @@ ARICENT-MIPING-MIB DEFINITIONS ::= BEGIN
 
      ::= { fsMIPingEntry 14 }
  
+     fsMIPingContInterval OBJECT-TYPE
+     SYNTAX      Integer32 (0..3600)
+     MAX-ACCESS  read-create
+     STATUS      current
+     DESCRIPTION
+         "Specifies the interval for continuous ping operations.
+         A value of 0 indicates that continuous ping generation 
+         is not enabled. Other values indicate that continuous 
+         ping is enabled and that a new ping attempt (based on 
+         other entry settings) will be initiated periodically 
+         per the current interval value."
+
+     DEFVAL { 0 }
+     ::= { fsMIPingEntry 15 }
+
 END

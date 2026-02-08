@@ -1,6 +1,6 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpip.mib,v 1.4 2012/09/07 09:52:05 siva Exp $
+-- $Id: fsmpip.mib,v 1.1.1.1 2018/02/08 06:06:34 siva Exp $
 
 ARICENT-MIFS-IP-MIB DEFINITIONS ::= BEGIN 
  
@@ -22,37 +22,6 @@ fsMIFsIp MODULE-IDENTITY
      DESCRIPTION " This mib module is for IP module with virtual routing
      and forwarding support."
 ::= { enterprises aricent-communication-holding-ltd(29601) iss(2) 38 }
-
---
---SCALAR_TABLE_BEGIN 
---
-   fsMIFsIpGlobalDebug OBJECT-TYPE
-      SYNTAX  Integer32
-      MAX-ACCESS read-write
-      STATUS  current
-      DESCRIPTION
-          "Enables the tracing in the selected submodule in IP. A 32 bit integer
-           is used to store the Tracing level in the specified module.
-           Different Tracing Levels -
-           BIT 0 - Initialisation and Shutdown Trace.
-           BIT 5 - OS Resource trace.
-           BIT 7 - Buffer Trace.
-     
-           Different submodule Tracing -
-           BIT 16 - Tracing in IP module.
-           BIT 17 - Tracing in ICMP submodule.
-           BIT 19 - Tracing in RIP submodule.
-           BIT 20 - Tracing in ARP submodule.
-           BIT 21 - Tracing in BOOTP submodule.
-           BIT 22 - Tracing in UDP submodule.
-     
-           The remaining bits are used.The combination of levels and submodules 
-           are allowed i.e. Tracing can be allowed at all failure and data path 
-           level in All submodules by setting the BIT appropriately.
-           For Example, setting the debug valut to 
-           0b00000000000000010000000001000000 will enable all failure trace 
-           prints in IP module."
-   ::= { fsMIFsIp 1 }
 
 --
 -- FsMiIP Tables

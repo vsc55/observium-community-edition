@@ -11,10 +11,14 @@ IMPORTS
 		FROM STONESOFT-SMI-MIB;
 
 stonesoftIPSMibModule MODULE-IDENTITY
-	LAST-UPDATED	"200701040000Z"
-	ORGANIZATION	"Stonesoft Corp"
-	CONTACT-INFO	"email: support@stonesoft.com"
-	DESCRIPTION	"MIB for Stonesoft's IPS products"
+	LAST-UPDATED	"201706190000Z"
+	ORGANIZATION	"Forcepoint LLC"
+	CONTACT-INFO	"email: mib.stonesoft@forcepoint.com"
+	DESCRIPTION	"MIB for Forcepoint NGFW in IPS mode"
+	REVISION	"201706190000Z"
+	DESCRIPTION	"Description update"
+	REVISION	"201605060000Z"
+	DESCRIPTION	"Company information update"
 	REVISION	"200701040000Z"
 	DESCRIPTION	"First public revision"
 	::= { stonesoftModules 3 }
@@ -61,7 +65,7 @@ ipsPolicyTime		OBJECT-TYPE
 ipsPolicyInstall         NOTIFICATION-TYPE
  			OBJECTS	        { ipsSecurityPolicy }
 			STATUS		current
-			DESCRIPTION 	"A IPS policy was (re)installed"
+			DESCRIPTION 	"An IPS policy was (re)installed"
 			::= {ipsEventsV2 1 }
 
 -- Conformance information
@@ -94,6 +98,4 @@ ipsGeneralNotificationsGroup NOTIFICATION-GROUP
 		"A collection of notification giving information about
 		 general events in the IPS"
 	::= { ipsGroups 2 }
-
 END
-

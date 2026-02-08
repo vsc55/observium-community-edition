@@ -421,7 +421,7 @@ foreach ($oids as $unit => $entry1) {
             $options['sensor_unit'] = 'F';
         }
 
-        if (isset($entry['pduExternalSensorStatusHighPrecisionValue'])) { // && $entry['pduExternalSensorStatusHighPrecisionValue'] > 0)
+        if (isset($entry['pduExternalSensorStatusHighPrecisionValue']) && $entry['pduExternalSensorStatusHighPrecisionValue'] != 0) {
             $scale    = 0.1;
             $oid_name = 'pduExternalSensorStatusHighPrecisionValue';
             $oid_num  = ".1.3.6.1.4.1.38446.1.6.4.1.8.$index";

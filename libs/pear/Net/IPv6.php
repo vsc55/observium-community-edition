@@ -727,27 +727,33 @@ class Net_IPv6
 
         $cip = ':' . join(':', $ipp) . ':';
 
-        preg_match_all("/(:0)(:0)+/", $cip, $zeros);
+        if ($cip === ':0:0:0:0:0:0:0:0:') {
+            // Observium dev:
+            // Derp, I do not want to research in this hard code, just a single case..
+            $cip = '::';
+        } else {
+            preg_match_all("/(:0)(:0)+/", $cip, $zeros);
 
-        if (count($zeros[0]) > 0) {
+            if (count($zeros[0]) > 0) {
 
-            $match = '';
+                $match = '';
 
-            foreach ($zeros[0] as $zero) {
+                foreach ($zeros[0] as $zero) {
 
-                if (strlen($zero) > strlen($match)) {
+                    if (strlen($zero) > strlen($match)) {
 
-                    $match = $zero;
+                        $match = $zero;
 
+                    }
                 }
+
+                $cip = preg_replace('/' . $match . '/', ':', $cip, 1);
+
             }
 
-            $cip = preg_replace('/' . $match . '/', ':', $cip, 1);
-
+            $cip = preg_replace('/((^:)|(:$))/', '', $cip);
+            $cip = preg_replace('/((^:)|(:$))/', '::', $cip);
         }
-
-        $cip = preg_replace('/((^:)|(:$))/', '', $cip);
-        $cip = preg_replace('/((^:)|(:$))/', '::', $cip);
 
         if ('' != $netmask) {
 
@@ -934,7 +940,7 @@ class Net_IPv6
 
                 for ($i = 0; $i < count($ipv4); $i++) {
 
-                    if ($ipv4[$i] >= 0 && (integer)$ipv4[$i] <= 255
+                    if ($ipv4[$i] >= 0 && (int)$ipv4[$i] <= 255
                         && preg_match("/^\d{1,3}$/", $ipv4[$i])) {
 
                         $count++;

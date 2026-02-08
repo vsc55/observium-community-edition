@@ -105,14 +105,16 @@
 <?php
 
 if (isset($config['login_message'])) {
-    echo '<div class=row><div class="col-md-6 col-md-offset-3"><div style="margin-top: 10px;text-align: center; font-weight: bold; color: #cc0000;">' . escape_html($config['login_message']) . '</div></div></div>';
+    echo '<div class=row><div class="col-md-6 col-md-offset-3"><div style="margin-top: 10px;text-align: center; font-weight: bold; color: #cc0000;">' .
+         escape_html($config['login_message']) .
+         '</div></div></div>';
 }
 
 // Check if the filesystems are full
 if (is_filesystem_full(__FILE__) || is_filesystem_full(session_save_path())) {
-    echo '<div class=row><div class="col-md-6 col-md-offset-3"><div style="margin-top: 10px;text-align: center; font-weight: bold; color: #cc0000;">';
-    print_error('Server storage seems to be full. This may affect login ability.');
-    echo '</div>';
+    echo '<div class=row><div class="col-md-6 col-md-offset-3"><div style="margin-top: 10px;">' .
+         print_box('<strong class="text-uppercase">Server storage seems to be full. This may affect login ability.</strong>', 'error') .
+         '</div></div></div>';
 }
 
 ?>

@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved
 
--- $Id: fspb.mib,v 1.17 2016/02/18 09:47:31 siva Exp $
-
 ARICENT-PROVIDERBRIDGE-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS

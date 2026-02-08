@@ -10,17 +10,40 @@
  *
  */
 
-echo generate_box_open(['box-class' => 'hidden-xl']);
+if (isset($overview_extended) && $overview_extended) {
+    // From old information_extended.inc.php
+    // FIXME. Not sure if it's required
 
-echo('<table class="table table-condensed table-striped table-hover">');
+    echo generate_box_open();
 
-if ($config['overview_show_sysDescr']) {
-    echo('<tr><td colspan=2 style="padding: 10px;"><strong><i>' . escape_html($device['sysDescr']) . "</i></strong></td></tr>");
+    echo('<table class="table table-condensed table-striped table-hover">');
+
+    if ($config['web_show_overview_extra']) {
+        echo '<tr>';
+        echo '<td colspan=2 style="padding: 10px;">';
+
+        /*
+        if (is_file($config['html_dir'] . '/images/hardware/' . trim($device['sysObjectID'], ".") . '.png')) {
+          echo '<img style="height: 100px; float: right;" src="'.$config['site_url'] . '/images/hardware/' . trim($device['sysObjectID'], ".") . '.png'.'"></img>';
+        }
+        */
+        echo '<strong><i>' . escape_html($device['sysDescr']) . '</i></strong></td></tr>';
+    }
+
+} else {
+    echo generate_box_open([ 'box-class' => 'hidden-xl' ]);
+
+    echo('<table class="table table-condensed table-striped table-hover">');
+
+    if ($config['web_show_overview_extra']) {
+        echo('<tr><td colspan=2 style="padding: 10px;"><strong><i>' . escape_html($device['sysDescr']) . "</i></strong></td></tr>");
+    }
 }
+unset($overview_extended);
 
 // Groups
-if (OBSERVIUM_EDITION !== 'community' && $_SESSION['userlevel'] >= 5 &&
-    $groups = get_entity_group_names('device', $device['device_id'])) {
+if (OBSERVIUM_EDITION !== 'community' && $config['web_show_overview_extra'] &&
+    $_SESSION['userlevel'] >= 5 && $groups = get_entity_group_names('device', $device['device_id'])) {
 
     echo('<tr>
         <td class="entity">Groups</td>
@@ -30,6 +53,16 @@ if (OBSERVIUM_EDITION !== 'community' && $_SESSION['userlevel'] >= 5 &&
         echo '<span class="label">' . $link . '</span> ';
     }
     echo('</td>
+      </tr>');
+}
+
+// External Poller
+if (OBS_DISTRIBUTED && $config['web_show_overview_extra'] &&
+    $_SESSION['userlevel'] >= 5 && $device['poller_id'] > 0) {
+    $poller = get_poller($device['poller_id']);
+    echo('<tr>
+        <td class="entity">Poller</td>
+        <td>' . generate_link($device['poller_id'] . ': ' . $poller['poller_name'], [ 'page' => 'devices', 'poller_id' => $device['poller_id'] ]) . '</td>
       </tr>');
 }
 
@@ -44,26 +77,28 @@ if ($device['hardware']) {
     if ($device['vendor']) {
         echo('<tr>
           <td class="entity">Vendor/Hardware</td>
-          <td>' . escape_html($device['vendor'] . ' ' . $device['hardware']) . '</td>
+          <td>' . generate_link($device['vendor'],   [ 'page' => 'devices', 'vendor' => $device['vendor'] ]) . ' ' .
+                  generate_link($device['hardware'], [ 'page' => 'devices', 'vendor' => $device['vendor'], 'hardware' => $device['hardware'] ]) . '</td>
         </tr>');
     } else {
         echo('<tr>
           <td class="entity">Hardware</td>
-          <td>' . escape_html($device['hardware']) . '</td>
+          <td>' . generate_link($device['hardware'], [ 'page' => 'devices', 'hardware' => $device['hardware'] ]) . '</td>
         </tr>');
     }
 } elseif ($device['vendor']) {
-    // Only Vendor exist
+    // Only Vendor exists
     echo('<tr>
         <td class="entity">Vendor</td>
-        <td>' . escape_html($device['vendor']) . '</td>
+        <td>' . generate_link($device['vendor'],   [ 'page' => 'devices', 'vendor' => $device['vendor'] ]) . '</td>
       </tr>');
 }
 
 if ($device['os'] !== 'generic') {
     echo('<tr>
         <td class="entity">Operating system</td>
-        <td>' . escape_html($device['os_text']) . ' ' . escape_html($device['version']) . ($device['features'] ? ' (' . escape_html($device['features']) . ')' : '') . ' </td>
+        <td>' . generate_link($device['os_text'], [ 'page' => 'devices', 'os' => $device['os'] ]) . ' ' .
+                generate_link($device['version'] . ($device['features'] ? ' (' . $device['features'] . ')' : ''), [ 'page' => 'devices', 'os' => $device['os'], 'version' => $device['version'] ]) . ' </td>
       </tr>');
 }
 
@@ -93,14 +128,14 @@ if ($device['sysContact']) {
 if ($device['location']) {
     echo('<tr>
         <td class="entity">Location</td>
-        <td>' . escape_html($device['location']) . '</td>
+        <td>' . generate_link($device['location'], [ 'page' => 'devices', 'location' => '"' . $device['location'] . '"' ]) . '</td>
       </tr>');
-    if (get_dev_attrib($device, 'override_sysLocation_bool') && !empty($device['real_location'])) {
-        echo('<tr>
-        <td class="entity">SNMP Location</td>
-        <td>' . escape_html($device['real_location']) . '</td>
-      </tr>');
-    }
+    // if (get_dev_attrib($device, 'override_sysLocation_bool') && !empty($device['real_location'])) {
+    //     echo('<tr>
+    //     <td class="entity">SNMP Location</td>
+    //     <td>' . escape_html($device['real_location']) . '</td>
+    //   </tr>');
+    // }
 }
 
 if ($device['asset_tag']) {
@@ -117,7 +152,7 @@ if ($device['serial']) {
       </tr>');
 }
 
-if ($device['state']['la']['5min']) {
+if ($config['web_show_overview_extra'] && $device['state']['la']['5min']) {
     if ($device['state']['la']['5min'] > 10) {
         $la_class = 'text-danger';
     } elseif ($device['state']['la']['5min'] > 4) {
@@ -133,11 +168,11 @@ if ($device['state']['la']['5min']) {
       </tr>');
 }
 
-if ($_SESSION['userlevel'] >= 5 && $device['ip']) {
+if ($config['web_show_overview_extra'] && $device['ip'] && $_SESSION['userlevel'] >= 5) {
     echo('<tr>
         <td class="entity">Cached IP</td>');
     echo('
-        <td>' . escape_html($device['ip']) . '</td>
+        <td>' . generate_link($device['ip'], [ 'page' => 'devices', 'ip' => $device['ip'] ]) . '</td>
       </tr>');
 }
 

@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved
 
--- $Id: fsmsrst.mib,v 1.8 2016/02/18 09:47:31 siva Exp $
-
 ARICENT-MIStdRSTP-MIB DEFINITIONS ::= BEGIN
 
 -- -------------------------------------------------------------

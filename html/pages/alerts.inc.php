@@ -10,14 +10,12 @@
  *
  */
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 if (!isset($vars['status'])) {
     $vars['status'] = 'failed';
 }
-if (!$vars['entity_type']) {
-    $vars['entity_type'] = "all";
-}
+// Don't force entity_type=all into vars - let it be the default behavior
 
 $navbar['class'] = "navbar-narrow";
 $navbar['brand'] = "Alert Types";
@@ -26,9 +24,9 @@ $types = dbFetchRows("SELECT DISTINCT `entity_type` FROM `alert_table` " . gener
 
 $types_count = safe_count($types);
 
-$navbar['options']['all']['url']  = generate_url($vars, ['page' => 'alerts', 'entity_type' => 'all']);
+$navbar['options']['all']['url']  = generate_url($vars, ['page' => 'alerts', 'entity_type' => NULL]);
 $navbar['options']['all']['text'] = escape_html(nicecase('all'));
-if ($vars['entity_type'] === 'all') {
+if (safe_empty($vars['entity_type'])) {
     $navbar['options']['all']['class'] = "active";
     $navbar['options']['all']['url']   = generate_url($vars, ['page' => 'alerts', 'entity_type' => NULL]);
 }

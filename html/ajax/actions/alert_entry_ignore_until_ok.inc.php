@@ -23,8 +23,10 @@ if ($_SESSION['userlevel'] >= 8) {
             //r($alert_entry);
             dbUpdate($update_array, 'alert_table', 'alert_table_id = ?', [$alert_entry['alert_table_id']]);
             $alert_device = device_by_id_cache($alert_entry['device_id']);
-            //print_message("Alert entry [{$vars['form_alert_table_id']}] for device '{$alert_device['hostname']}' suppressed.");
-            print_json_status('ok', 'alert '.$vars['form_alert_table_id'].' ignored until ok. status updated.', ['update_array' => $update_array]);
+            //print_message("Alert entry [{$vars['value']}] for device '{$alert_device['hostname']}' suppressed.");
+            print_json_status('ok', 'alert '.$vars['value'].' ignored until ok. status updated.', ['update_array' => $update_array]);
+        } else {
+            print_json_status('ok', 'alert '.$vars['value'].' already ignored or not in failed state.');
         }
 
         unset($update_array);

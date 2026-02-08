@@ -4,8 +4,8 @@
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     web
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -14,12 +14,17 @@ register_html_resource('css', 'gridstack.min.css');
 register_html_resource('js', 'lodash.min.js');
 register_html_resource('js', 'jquery-ui.min.js');
 register_html_resource('js', 'gridstack.all.js');
+register_html_resource('css', 'dashboard.css');
+register_html_resource('js', 'dashboard.js');
+
+// Register JavaScript needed for alert widget ignore functionality
+register_html_resource('js', 'bootstrap-confirmation.js');
 
 // Load map stuff so that it's available to widgets.
 // included in base css to control styles
 //register_html_resource('css', 'leaflet.css');
 register_html_resource('js', 'leaflet.js');
-// IE (pre Edge) js fetch fix
+/* Too old, we unsupport MSIE (pre Edge) js fetch fix
 $ua = detect_browser();
 if ($ua['browser'] === 'MSIE' ||
     ($ua['browser'] === 'Firefox' && version_compare($ua['version'], '61', '<'))) // Also for FF ESR60 and older
@@ -27,6 +32,7 @@ if ($ua['browser'] === 'MSIE' ||
     register_html_resource('js', 'js/compat/bluebird.min.js');
     register_html_resource('js', 'js/compat/fetch.js');
 }
+*/
 register_html_resource('js', 'leaflet-realtime.js');
 
 // Allows us to detect when things are resized.
@@ -43,578 +49,325 @@ $grid_cell_height = 20;
 $grid_h_margin    = 100;
 $grid_v_margin    = 15;
 
-if (!isset($vars['dash'])) {
-    $vars['dash'] = '1';
-
-    $dashboard = dbFetchRow("SELECT * FROM `dashboards` WHERE `dash_id` = ?", [$vars['dash']]);
-
-    if (!$dashboard) {
-        //No dashboard, so generate a standard one
-        include("includes/dashboard-generate.inc.php");
+// Build dashboard picker lists (My/Public)
+$dash_values = [];
+$current_user = (int)$_SESSION['user_id'];
+foreach (dbFetchRows("SELECT dash_id, dash_name, descr FROM `dashboards` WHERE `user_id` = ? ORDER BY `dash_order`, `dash_id`", [$current_user]) as $row) {
+    $dash_values[$row['dash_id']] = [ 'name' => $row['dash_name'], 'subtext' => (string)$row['descr'], 'group' => 'My Dashboards' ];
+}
+foreach (dbFetchRows("SELECT dash_id, dash_name, descr FROM `dashboards` WHERE `is_public` = 1 ORDER BY `dash_order`, `dash_id`", []) as $row) {
+    // Skip if already in 'My Dashboards' (owner may have public too)
+    if (!isset($dash_values[$row['dash_id']])) {
+        $dash_values[$row['dash_id']] = [ 'name' => $row['dash_name'], 'subtext' => (string)$row['descr'], 'group' => 'Public Dashboards' ];
     }
 }
 
-
-if (isset($vars['edit']) && $_SESSION['userlevel'] > 7) {
-    $is_editing = TRUE;
+// Resolve dashboard to view: accept slug or id; prefer user default, else first accessible
+if (isset($vars['dash']) && !is_numeric($vars['dash'])) {
+    $row = dbFetchRow("SELECT * FROM `dashboards` WHERE `slug` = ?", [$vars['dash']]);
+    if ($row) { $vars['dash'] = (string)$row['dash_id']; }
 }
+if (!isset($vars['dash'])) {
+    $user_id = (int)$_SESSION['user_id'];
+    $pref    = get_user_pref($user_id, 'dashboard_default');
+    if (is_numeric($pref)) {
+        $vars['dash'] = (string)$pref;
+    }
+}
+if (!isset($vars['dash'])) {
+    $vars['dash'] = dbFetchCell("SELECT `dash_id` FROM `dashboards` WHERE `is_public` = 1 OR `user_id` = ? ORDER BY `dash_id` ASC LIMIT 1", [(int)$_SESSION['user_id']]);
+}
+if (!isset($vars['dash'])) { $vars['dash'] = '1'; }
+
+
+if (isset($vars['edit']) && $_SESSION['userlevel'] > 7) { $is_editing = TRUE; }
 
 $dashboard = dbFetchRow("SELECT * FROM `dashboards` WHERE `dash_id` = ?", [$vars['dash']]);
+// Permission: view allowed if public, owner, or high-level admin
+if ($dashboard && !($dashboard['is_public'] == 1 || (int)$dashboard['user_id'] === (int)$_SESSION['user_id'] || $_SESSION['userlevel'] >= 10)) {
+    // Fallback to first accessible
+    $fallback = dbFetchRow("SELECT * FROM `dashboards` WHERE `is_public` = 1 OR `user_id` = ? ORDER BY `dash_id` ASC LIMIT 1", [(int)$_SESSION['user_id']]);
+    $dashboard = $fallback;
+    if ($dashboard) { $vars['dash'] = (string)$dashboard['dash_id']; }
+}
 
 if (is_array($dashboard)) {
 
-    if ($is_editing === TRUE) {
-        $form_items = ['types' => [
-          'map'              => 'Map',
-          'alert_table'      => 'Alert Table',
-          'alert_boxes'      => "Alert Boxes",
-          'alertlog'         => 'Alert Log',
-          //'graph'               => 'Graph', // Doesn't work adding here
-          'port_percent'     => 'Traffic Composition',
-          'status_summary'   => "Status Summary",
-          'old_status_table' => "Status Table (Old)",
-          'old_status_boxes' => "Status Boxes (Old)",
-          //'status_donuts'  => "Status Donuts",  // broke
-          'syslog'           => 'Syslog',
-          'syslog_alerts'    => 'Syslog Alerts',
-          //'wmap'             => 'Network Weathermap',
-          'eventlog'         => 'Eventlog']];
+    // Edit mode controls at top (no picker; dashboards are in navbar)
+    $owner_can_edit = ($dashboard['user_id'] !== NULL && (int)$dashboard['user_id'] === (int)$_SESSION['user_id']);
+    $in_edit_mode = (isset($vars['edit']) && ($_SESSION['userlevel'] > 7 || $owner_can_edit));
+    // No page-level navbar; use edit well below for actions
+    if ($in_edit_mode) {
+      // Simple collapsible reorder interface
+      echo '<div id="dash-reorder" style="display:none; margin-top:10px;">';
+      echo '<div class="well well-sm">';
+      echo '<div class="row">';
+      echo '<div class="col-md-12">';
+      echo '<h5 style="margin-top:0;"><i class="sprite-sort"></i> Drag to Reorder <small class="text-muted pull-right"><a href="#" onclick="dashReorderToggle(); return false;">Close</a></small></h5>';
+      echo '</div>';
+      echo '</div>';
 
-        $form = ['id'    => 'add_widget',
-                 'type'  => 'rows',
-                 'space' => '5px'];
+      // Build lists
+      $my_rows = dbFetchRows("SELECT dash_id, dash_name FROM `dashboards` WHERE `user_id` = ? ORDER BY `dash_order`, `dash_id`", [(int)$_SESSION['user_id']]);
+      $pub_rows = [];
+      if ($_SESSION['userlevel'] >= 10) {
+        $pub_rows = dbFetchRows("SELECT dash_id, dash_name, user_id FROM `dashboards` WHERE `is_public` = 1 ORDER BY `dash_order`, `dash_id`", []);
+      }
 
-        $form['row'][0]['dash_id']     = [
-          'type'  => 'hidden',
-          'name'  => 'Dashboard Name',
-          'value' => $dashboard['dash_id'],
-          'grid'  => 0
-        ];
-        $form['row'][0]['widget_type'] = [
-          'type'   => 'select',
-          'name'   => 'Widget',
-          'width'  => '100%', //'180px',
-          'grid'   => 2,
-          //'value'       => $vars['widget_type'],
-          'values' => $form_items['types']];
-        $form['row'][0]['add']         = [
-          'type'  => 'submit',
-          'class' => 'btn-success',
-          'name'  => 'Add Widget',
-          'width' => '100%', //'180px',
-          'value' => 'Add Widget',
-          'icon'  => '',
-          'grid'  => 1
-        ];
-        $form['row'][0]['dash_name']   = [
-          'type'        => 'text',
-          'width'       => '100%', //'180px',
-          'placeholder' => 'Dashboard Name',
-          'value'       => $dashboard['dash_name'],
-          'grid'        => 3
-        ];
-        $form['row'][0]['dash_delete'] = [
-          'type'    => 'submit',
-          'class'   => 'btn-danger',
-          'name'    => 'Delete Dashboard',
-          'value'   => 'Delete Dashboard',
-          'icon'    => '',
-          'grid'    => 6,
-          'right'   => TRUE,
-          'onclick' => 'dashDelete();',
-          // confirmation dialog
-          'attribs' => ['data-toggle'            => 'confirm', // Enable confirmation dialog
-                        'data-confirm-placement' => 'bottom',
-                        'data-confirm-content'   => 'Are you sure?',
-          ],
-        ];
-        print_form($form);
+      echo '<div class="row">';
 
+      // My Dashboards list - horizontal
+      if (!empty($my_rows)) {
+        echo '<div class="col-md-6">';
+        echo '<strong>My Dashboards:</strong>';
+        echo '<div id="dash-reorder-my-list" style="margin-top:5px;">';
+        foreach ($my_rows as $row) {
+          $current = ((int)$row['dash_id'] === (int)$vars['dash']) ? ' alert-info' : ' alert-default';
+          echo '<div class="alert' . $current . '" data-dash="' . (int)$row['dash_id'] . '" style="padding:5px 8px; margin:2px; cursor:move; display:inline-block;">';
+          echo '<i class="sprite-move drag-handle" style="margin-right:5px;"></i>' . escape_html($row['dash_name']);
+          echo '</div>';
+        }
+        echo '</div>';
+        echo '</div>';
+      }
+
+      // Public Dashboards list - horizontal (admin only)
+      if (!empty($pub_rows) && $_SESSION['userlevel'] >= 10) {
+        echo '<div class="col-md-6">';
+        echo '<strong>Public Dashboards:</strong>';
+        echo '<div id="dash-reorder-public-list" style="margin-top:5px;">';
+        foreach ($pub_rows as $row) {
+          if ((int)$row['user_id'] === (int)$_SESSION['user_id']) { continue; }
+          $current = ((int)$row['dash_id'] === (int)$vars['dash']) ? ' alert-info' : ' alert-default';
+          echo '<div class="alert' . $current . '" data-dash="' . (int)$row['dash_id'] . '" style="padding:5px 8px; margin:2px; cursor:move; display:inline-block;">';
+          echo '<i class="sprite-move drag-handle" style="margin-right:5px;"></i>' . escape_html($row['dash_name']);
+          echo '</div>';
+        }
+        echo '</div>';
+        echo '</div>';
+      }
+
+      echo '</div>'; // row
+      echo '</div>'; // well
+      echo '</div>'; // #dash-reorder
     }
 
+    // Owner or admin can edit
+    if ($in_edit_mode) {
+        // Build Add Widget options from widget registry ($config['widgets']) with subtext (descriptions)
+        $types_values = [];
+        if (isset($config['widgets']) && is_array($config['widgets'])) {
+            $labels = [];
+            foreach ($config['widgets'] as $key => $def) {
+                if (!empty($def['deprecated'])) { continue; }
+                if ($key === 'graph') { continue; } // added via graph page flow
+                $label = isset($def['name']) ? $def['name'] : nicecase($key);
+                $descr = isset($def['descr']) ? $def['descr'] : '';
+                $types_values[$key] = [ 'name' => $label, 'subtext' => $descr ];
+                $labels[$key] = $label; // natural sort
+            }
+            if (!empty($labels)) {
+                natcasesort($labels);
+                $sorted = [];
+                foreach ($labels as $k => $l) { $sorted[$k] = $types_values[$k]; }
+                $types_values = $sorted;
+            }
+        } else {
+            // Fallback list
+            $types_values = [
+              'map'            => [ 'name' => 'Map',            'subtext' => '' ],
+              'alert_table'    => [ 'name' => 'Alert Table',    'subtext' => '' ],
+              'alert_boxes'    => [ 'name' => 'Alert Boxes',    'subtext' => '' ],
+              'alertlog'       => [ 'name' => 'Alert Log',      'subtext' => '' ],
+              'port_percent'   => [ 'name' => 'Traffic Composition', 'subtext' => '' ],
+              'status_summary' => [ 'name' => 'Status Summary', 'subtext' => '' ],
+              'syslog'         => [ 'name' => 'Syslog',         'subtext' => '' ],
+              'syslog_alerts'  => [ 'name' => 'Syslog Alerts',  'subtext' => '' ],
+              'eventlog'       => [ 'name' => 'Eventlog',       'subtext' => '' ]
+            ];
+        }
+
+        // Compact editing bar using same pattern as syslog page
+        $form = [
+          'type'          => 'rows',
+          'space'         => '5px',
+          'submit_by_key' => TRUE,
+          'id'            => 'dashboard_editor'
+        ];
+
+        $form['row'][0]['dash_id'] = [ 'type' => 'hidden', 'value' => $dashboard['dash_id'], 'id' => 'dash_id' ];
+
+        // Name field
+        $form['row'][0]['dash_name'] = [
+          'type'        => 'text',
+          'name'        => 'Name',
+          'placeholder' => 'Dashboard Name',
+          'value'       => $dashboard['dash_name'],
+          'width'       => '100%',
+          'div_class'   => 'col-lg-2 col-md-3 col-sm-6',
+          'id'          => 'dash_name'
+        ];
+
+        // Description field
+        $form['row'][0]['dash_descr'] = [
+          'type'        => 'text',
+          'name'        => 'Description',
+          'placeholder' => 'Description',
+          'value'       => $dashboard['descr'],
+          'width'       => '100%',
+          'div_class'   => 'col-lg-2 col-md-3 col-sm-6',
+          'id'          => 'dash_descr'
+        ];
+
+        // Add widget select
+        $form['row'][0]['widget_type'] = [
+          'type'      => 'select',
+          'name'      => 'Widget',
+          'width'     => '100%',
+          'div_class' => 'col-lg-2 col-md-2 col-sm-4',
+          'subtext'   => TRUE,
+          'values'    => $types_values
+        ];
+
+        // Add button
+        $form['row'][0]['add'] = [
+          'type'      => 'submit',
+          'class'     => 'btn-success',
+          'value'     => 'Add',
+          'icon'      => $config['icon']['plus'],
+          'div_class' => 'col-lg-1 col-md-1 col-sm-2'
+        ];
+
+        // Public/Private switch
+        $form['row'][0]['dash_public'] = [
+          'type'      => 'switch-ng',
+          'name'      => 'Visibility',
+          'div_class' => 'col-lg-1 col-md-1 col-sm-3',
+          'on-text'   => 'Public',
+          'off-text'  => 'Private',
+          'value'     => ($dashboard['is_public'] ? 'on' : ''),
+          'onchange'  => 'dashSetPublic();',
+        ];
+
+        // Actions dropdown
+        $form['row'][0]['actions_dropdown'] = [
+          'type'      => 'raw',
+          'div_class' => 'col-lg-2 col-md-2 col-sm-4',
+          'value'     => '<div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                              <i class="sprite-tools"></i> Actions <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                              <li><a href="#" onclick="dashSetDefault(); return false;"><i class="sprite-star"></i> Set as Default</a></li>
+                              <li><a href="#" onclick="dashReorderToggle(); return false;"><i class="sprite-sort"></i> Reorder Dashboards</a></li>
+                              <li class="divider"></li>
+                              <li><a href="#" onclick="dashClone(); return false;"><i class="sprite-overview"></i> Clone Dashboard</a></li>
+                              <li><a href="#" onclick="dashExport(); return false;"><i class="sprite-download"></i> Export Dashboard</a></li>
+                              <li><a href="#" onclick="dashImport(); return false;"><i class="sprite-upload"></i> Import Dashboard</a></li>
+                              <li class="divider"></li>
+                              <li><a href="#" onclick="dashDelete(); return false;" class="text-danger"><i class="sprite-cancel"></i> Delete Dashboard</a></li>
+                            </ul>
+                          </div>'
+        ];
+
+
+        print_form($form);
+    }
+
+    // Error/alert container
+    echo '<div id="dashboard-alerts"></div>';
     echo '<div class="row">';
     echo '<div class="grid-stack" id="grid">';
     echo '</div>';
     echo '</div>';
+    // Expose CSRF request token for AJAX calls
+    if (isset($_SESSION['requesttoken'])) {
+        echo generate_form_element(['type' => 'hidden', 'id' => 'requesttoken', 'value' => $_SESSION['requesttoken']]);
+    }
 
     ?>
 
     <!--- <textarea id="saved-data" cols="100" rows="20" readonly="readonly"></textarea> -->
 
     <script type="text/javascript">
-
-        var dash_id = <?php echo $dashboard['dash_id']; ?>;
-
-        function isNumber(n) {
-            return !isNaN(parseFloat(n)) && isFinite(n);
-        }
-
-        $(function () {
-            var options = {
-                cellHeight: <?php echo $grid_cell_height; ?>,
-                horizontalMargin: <?php echo $grid_h_margin; ?>,
-                verticalMargin: <?php echo $grid_v_margin; ?>,
-                resizable: {
-                    autoHide: true,
-                    handles: <?php if ($is_editing === TRUE) {
-                        echo "'se, sw'";
-                    } else {
-                        echo "'none'";
-                    } ?>
-                },
-                draggable: {
-                    handle: '.drag-handle',
-                }
-            };
-            $('.grid-stack').gridstack(options);
-
-            var initial_grid = [
-
-                <?php
-
-                $data = [];
-                $widgets = dbFetchRows("SELECT * FROM `dash_widgets` WHERE `dash_id` = ? ORDER BY `y`,`x`", [$dashboard['dash_id']]);
-                foreach ($widgets as $widget) {
-                    $data[] = '{' .
-                              (is_numeric($widget['x']) ? '"x": ' . $widget['x'] . ',' : '') .
-                              (is_numeric($widget['y']) ? '"y": ' . $widget['y'] . ',' : '') .
-                              '"width": ' . $widget['width'] . ', "height": ' . $widget['height'] . ', "id": "' . $widget['widget_id'] . '"}';
-                }
-
-                echo implode(",", $data);
-
-                ?>
-
-            ];
-
-            this.grid = $('.grid-stack').data('gridstack');
-
-            var grid = $('.grid-stack').data('gridstack');
-
-            ///////////////
-            // LOAD GRID //
-            ///////////////
-
-            this.loadGrid = function () {
-                this.grid.removeAll();
-                var items = GridStackUI.Utils.sort(initial_grid);
-                var self = this;
-                _.each(items, function (node) {
-                    node.autoposition = null;
-                    self.drawWidget(node);
-                }, this);
-                return false;
-            }.bind(this);
-
-            ///////////////
-            // SAVE GRID //
-            ///////////////
-
-            this.saveGrid = function () {
-                this.initial_grid = _.map($('.grid-stack > .grid-stack-item:visible'), function (el) {
-                    el = $(el);
-                    var node = el.data('_gridstack_node');
-                    return {
-                        x: node.x,
-                        y: node.y,
-                        width: node.width,
-                        height: node.height,
-                        id: el.attr('data-gs-id'),
-                    };
-                }, this);
-                $('#saved-data').val(JSON.stringify(this.initial_grid, null, '    '));
-
-                var self = this;
-
-                // We need to get a widget id via AJAX
-                $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: {action: 'save_grid', grid: self.initial_grid},
-                    cache: false,
-                    success: function (response) {
-                        //console.log(response);
-                        //console.log(self.initial_grid);
-                    }
-                });
-
-                return false;
-            }.bind(this);
-
-            this.clearGrid = function () {
-                this.grid.removeAll();
-                return false;
-            }.bind(this);
-
-            /////////////////////
-            // DRAW THE WIDGET //
-            /////////////////////
-
-            this.drawWidget = function (node) {
-                this.grid.addWidget($('<div><div id="widget-' + node.id + '" class="grid-stack-item-content"></div>' +
-                    <?php if($is_editing == TRUE) { ?>
-                        '<div class="hover-show" style="z-index: 1000; position: absolute; top:0px; right: 10px; padding: 2px 10px; padding-right: 0px; border-bottom-left-radius: 4px; border: 1px solid #e5e5e5; border-right: none; border-top: none; background: white;">' +
-                        '  <i style="cursor: pointer; margin: 7px;" class="sprite-refresh" onclick="refreshWidget(' + node.id + ')"></i>' +
-                        '  <i style="cursor: pointer; margin: 7px;" class="sprite-tools" onclick="configWidget(' + node.id + ')"></i></i>' +
-                        '  <i style="cursor: no-drop; margin: 7px;" class="sprite-cancel" onclick="deleteWidget(' + node.id + ')"></i>' +
-                        '  <i style="cursor: move; margin: 7px; margin-right: 20px" class="sprite-move drag-handle"></i>' +
-                        '</div>' +
-                    <?php } ?>
-                        '</div>'),
-                    node.x, node.y, node.width, node.height, node.autoposition, null, null, null, null, node.id);
-            };
-
-            ////////////////
-            // ADD WIDGET //
-            ////////////////
-
-            addNewWidget = function (type, dash_id) {
-
-                // We need to get a widget id via AJAX
-                $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param([{name: 'action', value: 'add_widget'}, {name: "widget_type", value: type}, {name: "dash_id", value: dash_id}]),
-                    cache: false,
-                    success: function (response) {
-
-                        if (isNumber(response.id)) {
-
-                            // Create the initial widget array use autoposition and id from ajax
-                            var node = {
-                                width: 4,
-                                height: 3,
-                                autoposition: true,
-                                id: response.id
-                            };
-
-                            // Draw the widget
-                            self.drawWidget(node);
-
-                            // Save grid
-                            self.saveGrid();
-
-                            // Redraw widgets
-                            self.refreshAllWidgets(response.id);
-
-                        }
-                        console.log(response);
-                    }
-                });
-
-                return false;
-            }.bind(this);
-
-            /////////////////////////
-            // Refresh All Widgets //
-            /////////////////////////
-
-            refreshAllWidgets = function () {
-                $('.grid-stack-item').each(function () {
-                    refreshWidget($(this).attr('data-gs-id'));
-                });
-            };
-
-            refreshAllUpdatableWidgets = function () {
-                $('.grid-stack-item').each(function () {
-                    // Do not update a widget if its child has the do-not-update class
-                    // Do not update a widget if we're hovering over it with the mouse
-                    if (!$(this).children('div').children('div').hasClass('do-not-update') && !$(this).is(':hover')) {
-                        refreshWidget($(this).attr('data-gs-id'));
-                    }
-                });
-            };
-
-
-            refreshAllUpdatableImages = function () {
-
-                // Add or replace nocache parameter on image src and then rewrite the image.
-                var pt = /\&nocache=\d+/;
-
-                $('.image-refresh').each(function () {
-                    if (this.src) {
-                        pt.test(this.src)
-                            ? $(this).attr("src", this.src.replace(pt, "&nocache=" + Date.now()))
-                            : $(this).attr("src", this.src + "&nocache=" + Date.now());
-                    }
-                    // FIXME - find a better way to update srcset
-                    // If it already exists, we update it, if not, we insert it before the space.
-                    if (this.srcset) {
-                        pt.test(this.srcset)
-                            ? $(this).attr("srcset", this.srcset.replace(pt, "&nocache=" + Date.now()))
-                            : $(this).attr("srcset", this.srcset.replace(/\ /, "&nocache=" + Date.now() + ' '));
-                    }
-                });
-            };
-
-            ///////////////////////////
-            // Refresh single widget //
-            ///////////////////////////
-
-            refreshWidget = function (id) {
-                // This is the content div to be updated
-                var div = $('#widget-' + id);
-
-                // Generate array of parameters to send to the server.
-                var params = {
-                    width: div.innerWidth(),
-                    height: div.innerHeight(),
-                    id: id
-                };
-
-                // Run AJAX query and update div HTML with response.
-                $.ajax({
-                    type: "POST",
-                    url: "ajax/widget.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                    success: function (response) {
-                        div.html(response);
-                    }
-                });
-            };
-
-            deleteWidget = function (id) {
-                var el = $(".grid-stack-item[data-gs-id='" + id + "']");
-
-                var params = {
-                    action: 'del_widget',
-                    widget_id: id
-                };
-                // Run AJAX query and update div HTML with response.
-                $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                    success: function (response) {
-                        grid.removeWidget(el);
-                        console.log(response);
-                    }
-                });
-            };
-
-            configWidget = function (id) {
-
-                var params = {
-                    action: 'edit_widget',
-                    widget_id: id
-                };
-
-                $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                    success: function (response) {
-                        $('#config-modal-body').html(response);
-                        $('#config-modal').modal({show: true});
-                    }
-                });
-
-            };
-
-            // Captures Delete Dashboard button.
-            dashDelete = function () {
-
-                var dash_id = $('#dash_id').val();
-
-                var params = {
-                    action: 'dash_delete',
-                    dash_id: dash_id
-                };
-
-                // Run AJAX query and update div HTML with response.
-                var request = $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                });
-
-                request.success(function (json) {
-                    if (json.status === 'ok') {
-                        window.setTimeout(window.location.href = '<?php echo generate_url(['page' => 'dashboard']); ?>', 5000);
-                    }
-                });
-            };
-
-            /////////////
-            // Actions //
-            /////////////
-
-            $('#add-new-widget').click(this.addNewWidget);
-            $('#save-grid').click(this.saveGrid);
-            $('#load-grid').click(this.loadGrid);
-            $('#clear-grid').click(this.clearGrid);
-            $('#refresh-widgets').click(this.refreshAllWidgets);
-
-
-            // Captures Add Widget button.
-            $("#add_widget").submit(function (event) {
-                if ($('#widget_type').val()) {
-                    addNewWidget($('#widget_type').val(), $('#dash_id').val());
-                }
-                event.preventDefault();
-            });
-
-            // Captures Delete Dashboard button.
-            /* Moved to onclick for correct confirm
-            $("#dash_delete").click(function () {
-
-                var dash_id = $('#dash_id').val();
-
-                var params = {
-                    action: 'dash_delete',
-                    dash_id: dash_id
-                };
-
-                // Run AJAX query and update div HTML with response.
-                var request = $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                });
-
-                request.success(function (json) {
-                    if (json.status === 'ok') {
-                        window.setTimeout(window.location.href = '<?php //echo generate_url(array('page' => 'dashboard')); ?>', 5000);
-                    } else {
-                    }
-
-                });
-            });
-            */
-
-            // Captures Delete Dashboard button.
-            $("#dash_name").change(function () {
-
-                var dash_id = $('#dash_id').val();
-                var dash_name = $('#dash_name').val();
-
-                var params = {
-                    action: 'dash_rename',
-                    dash_id: dash_id,
-                    dash_name: dash_name
-                };
-
-                // Run AJAX query and update div HTML with response.
-                var request = $.ajax({
-                    type: "POST",
-                    url: "ajax/actions.php",
-                    data: jQuery.param(params),
-                    cache: false,
-                });
-
-                request.success(function (json) {
-                    if (json.status === 'ok') {
-                    } else {
-                    }
-
-                });
-            });
-
-            this.loadGrid();
-            refreshAllWidgets();
-
-            var self = this;
-
-            // FIXME - only update changed widgets
-            $('.grid-stack').on('change', function (event, items) {
-                items.forEach(function (item) {
-                    refreshWidget(item.el.attr('data-gs-id'));
-                });
-                //entity_popups();
-                //popups_from_data();
-                self.saveGrid();
-            });
-
-            setInterval(function () {
-                refreshAllUpdatableWidgets();
-            }, 20000);
-
-            setInterval(function () {
-                refreshAllUpdatableImages();
-            }, 15000);
-
-        });
-
-
-        new ResizeSensor(jQuery('#main_container'), function () {
-            //refreshAllUpdatableImages();
-            //refreshAllUpdatableWidgets();
-            refreshAllWidgets();
-        });
-
+      // Build initial grid from DB
+      var initial_grid = [
+        <?php
+          $data = [];
+          $widgets = dbFetchRows("SELECT * FROM `dash_widgets` WHERE `dash_id` = ? ORDER BY `y`,`x`", [$dashboard['dash_id']]);
+          foreach ($widgets as $widget) {
+              $node = [
+                'width'  => (int)$widget['width'],
+                'height' => (int)$widget['height'],
+                'id'     => (string)$widget['widget_id'],
+                'type'   => (string)$widget['widget_type']
+              ];
+              if (is_numeric($widget['x'])) {
+                  $node['x'] = (int)$widget['x'];
+              }
+              if (is_numeric($widget['y'])) {
+                  $node['y'] = (int)$widget['y'];
+              }
+              $data[] = json_encode($node);
+          }
+          echo implode(",", $data);
+        ?>
+      ];
+
+      // Build widget defaults map from registry (if available)
+      var widgetDefaults = {
+        <?php
+          $defs = [];
+          if (isset($config['widgets']) && is_array($config['widgets'])) {
+            // Use same sorted order as the select
+            $types_sorted = [];
+            foreach ($config['widgets'] as $k => $def) {
+              if (!empty($def['deprecated']) || $k === 'graph') { continue; }
+              $types_sorted[$k] = isset($def['name']) ? $def['name'] : nicecase($k);
+            }
+            asort($types_sorted, SORT_NATURAL | SORT_FLAG_CASE);
+            foreach (array_keys($types_sorted) as $key) {
+              $def = $config['widgets'][$key];
+              $w = isset($def['defaults']['width']) ? (int)$def['defaults']['width'] : 4;
+              $h = isset($def['defaults']['height']) ? (int)$def['defaults']['height'] : 3;
+              $min_w = array_key_exists('min_width', $def['defaults']) ? (int)$def['defaults']['min_width'] : NULL;
+              $max_w = array_key_exists('max_width', $def['defaults']) ? (int)$def['defaults']['max_width'] : NULL;
+              $min_h = array_key_exists('min_height', $def['defaults']) ? (int)$def['defaults']['min_height'] : NULL;
+              $max_h = array_key_exists('max_height', $def['defaults']) ? (int)$def['defaults']['max_height'] : NULL;
+
+              $parts = ['w: ' . $w, 'h: ' . $h];
+              if ($min_w !== NULL) { $parts[] = 'minW: ' . $min_w; }
+              if ($max_w !== NULL) { $parts[] = 'maxW: ' . $max_w; }
+              if ($min_h !== NULL) { $parts[] = 'minH: ' . $min_h; }
+              if ($max_h !== NULL) { $parts[] = 'maxH: ' . $max_h; }
+
+              $defs[] = '"' . $key . '": { ' . implode(', ', $parts) . ' }';
+            }
+          }
+          echo implode(",\n        ", $defs);
+        ?>
+      };
+
+      // Initialize dashboard
+      ObserviumDashboardInit({
+        cellHeight: <?php echo $grid_cell_height; ?>,
+        hMargin: <?php echo $grid_h_margin; ?>,
+        vMargin: <?php echo $grid_v_margin; ?>,
+        isEditing: <?php echo ((isset($vars['edit']) && ($_SESSION['userlevel'] > 7 || ($dashboard['user_id'] !== NULL && (int)$dashboard['user_id'] === (int)$_SESSION['user_id'])) ) ? 'true' : 'false'); ?>,
+        dashId: <?php echo (int)$dashboard['dash_id']; ?>,
+        slug: <?php echo json_encode((string)$dashboard['slug']); ?>,
+        initialGrid: initial_grid,
+        requesttoken: (document.getElementById('requesttoken') ? document.getElementById('requesttoken').value : ''),
+        widgetDefaults: widgetDefaults,
+        redirectUrl: '<?php echo generate_url(['page' => 'dashboard']); ?>'
+      });
     </script>
 
     <?php
 // print_vars($widgets);
     ?>
 
-    <style>
-
-        .grid-stack > .grid-stack-item > .grid-stack-item-content {
-            overflow-x: visible;
-            overflow-y: visible;
-        }
-
-        .grid-stack > .grid-stack-item > .grid-stack-item-content:hover {
-            overflow-x: visible;
-            overflow-y: visible;
-        }
-
-        .grid-stack > .grid-stack-item:hover .hover-hide {
-            display: none;
-        }
-
-        .grid-stack > .grid-stack-item .hover-show {
-            display: none;
-        }
-
-        .grid-stack > .grid-stack-item:hover .hover-show {
-            display: block;
-        }
-
-        .grid-stack > .grid-stack-item h4 {
-            margin: 3px 6px;
-        }
-
-        .grid-stack tr {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Fix Z-index breaking dropdowns inside widgets*/
-        .grid-stack > .grid-stack-item > .grid-stack-item-content {
-            z-index: unset !important;
-        }
-
-        /*
-                .box-content::-webkit-scrollbar-track
-                {
-                    background-color: #F5F5F5;
-                }
-
-                .box-content::-webkit-scrollbar
-                {
-                    width: 10px;
-                    height: 10px;
-                    background-color: #c5c5c5;
-                }
-
-                .box-content::-webkit-scrollbar-thumb
-                {
-                    border-radius: 10px;
-                    background-color: #d5d5d5;
-                    border: 2px solid #F5F5F5;
-                }
-        */
-
-
-    </style>
+    <!-- styles moved to html/css/dashboard.css -->
 
     <!-- Modal -->
     <div class="modal fade" id="config-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -645,13 +398,13 @@ if (is_array($dashboard)) {
     if ($_SESSION['userlevel'] > 7) {
         if (isset($vars['edit'])) {
             $url  = generate_url($vars, ['edit' => NULL]);
-            $text = "Enable Editing Mode";
+            $text = "Disable Editing Mode";
         } else {
             $url  = generate_url($vars, ['edit' => 'yes']);
-            $text = "Disable Editing Mode";
+            $text = "Enable Editing Mode";
         }
 
-        $footer_entry     = '<li><a href="' . $url . '"><i class="sprite-sliders"></i></a></li>';
+        $footer_entry     = '<li><a href="' . $url . '" title="' . escape_html($text) . '"><i class="sprite-sliders"></i></a></li>';
         $footer_entries[] = $footer_entry;
     }
 

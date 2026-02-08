@@ -22,7 +22,7 @@ print_debug_vars($entries);
 if (snmp_status()) {
     foreach ($entries as $mac => $data1) {
         foreach ($data1 as $vlan => $data2) {
-            foreach ($data2 as $vsi => $entry) {
+            foreach ($data2 as $entry) {
 
                 // Make sure the ifIndex is actually valid
                 if ($entry['hwDynFdbPort'] != 0 && is_array($port_ifIndex_table[$entry['hwDynFdbPort']])) {

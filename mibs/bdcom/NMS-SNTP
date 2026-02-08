@@ -6,10 +6,10 @@
                NMS-SNTP DEFINITIONS ::= BEGIN
 
                IMPORTS
-    		    MODULE-IDENTITY, OBJECT-TYPE, INTEGER,
-    		    Integer32, Unsigned32                       FROM SNMPv2-SMI
+    		    MODULE-IDENTITY, OBJECT-TYPE, 
+    		    Integer32, Unsigned32,IpAddress     FROM SNMPv2-SMI
 		    nmsMgmt         			FROM NMS-SMI    
-		    RowStatus,DisplayString,IpAddress    	FROM SNMPv2-TC;
+		    RowStatus,DisplayString    	FROM SNMPv2-TC;
 		    
 
                nmsSntp         OBJECT IDENTIFIER ::= { nmsMgmt 231 }

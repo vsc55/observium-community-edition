@@ -34,9 +34,26 @@ function nicecase($item)
     if (isset($mappings[$item])) {
         return $mappings[$item];
     }
+
+    // Handle underscore-separated words (e.g., "CHARGING_FLOAT" -> "Charging Float")
+    if (strpos($item, '_') !== false) {
+        $words = explode('_', $item);
+        $words = array_map('ucfirst', array_map('strtolower', $words));
+
+        // Handle common acronyms that should stay uppercase
+        $acronyms = ['ac', 'dc', 'ups', 'pdu', 'led', 'usb', 'tcp', 'udp', 'ip', 'snmp', 'http', 'api'];
+        foreach ($words as &$word) {
+            if (in_array(strtolower($word), $acronyms)) {
+                $word = strtoupper($word);
+            }
+        }
+
+        return implode(' ', $words);
+    }
+
     //$item = preg_replace('/([a-z])([A-Z]{2,})/', '$1 $2', $item); // turn "fixedAC" into "fixed AC"
 
-    return ucfirst((string)$item);
+    return ucfirst(strtolower((string)$item));
 }
 
 /**
@@ -47,13 +64,13 @@ function nicecase($item)
  *
  * @return string Cleaned string
  */
-function trim_quotes($string, $flags = OBS_QUOTES_TRIM)
-{
+function trim_quotes($string, $flags = OBS_QUOTES_TRIM) {
+
     $string = trim($string); // basic string clean
 
     if (is_flag_set(OBS_QUOTES_STRIP, $flags) && str_contains($string, '"')) {
-        // Just remove all (double) quotes from string
-        return str_replace(['\"', '"'], '', $string);
+        // Just remove all double quotes from string
+        return str_replace([ '\"', '"' ], '', $string);
     }
 
     if (is_flag_set(OBS_QUOTES_TRIM, $flags)) {
@@ -162,7 +179,7 @@ function humanize_alert_check(&$check)
     $check['entities'] = dbFetchRows($query, $param);
 
     $check['entity_status'] = ['up' => 0, 'down' => 0, 'unknown' => 0, 'delay' => 0, 'suppress' => 0];
-    foreach ($check['entities'] as $alert_table_id => $alert_table_entry) {
+    foreach ($check['entities'] as $alert_table_entry) {
         if ($alert_table_entry['alert_status'] == '1') {
             ++$check['entity_status']['up'];
         } elseif ($alert_table_entry['alert_status'] == '0') {
@@ -219,8 +236,7 @@ function humanize_alert_check(&$check)
  * @param array $entry
  */
 // TESTME needs unit testing
-function humanize_alert_entry(&$entry)
-{
+function humanize_alert_entry(&$entry) {
     // Exit if already humanized
     if (isset($entry['humanized']) && $entry['humanized']) {
         return;
@@ -265,22 +281,22 @@ function humanize_alert_entry(&$entry)
     if (!isset($entry['last_checked']) || $entry['last_checked'] == '0') {
         $entry['checked'] = "<i>Never</i>";
     } else {
-        $entry['checked'] = format_uptime(time() - $entry['last_checked'], 'short-3');
+        $entry['checked'] = format_uptime(get_time() - $entry['last_checked'], 'short-3');
     }
     if (!isset($entry['last_changed']) || $entry['last_changed'] == '0') {
         $entry['changed'] = "<i>Never</i>";
     } else {
-        $entry['changed'] = format_uptime(time() - $entry['last_changed'], 'short-3');
+        $entry['changed'] = format_uptime(get_time() - $entry['last_changed'], 'short-3');
     }
     if (!isset($entry['last_alerted']) || $entry['last_alerted'] == '0') {
         $entry['alerted'] = "<i>Never</i>";
     } else {
-        $entry['alerted'] = format_uptime(time() - $entry['last_alerted'], 'short-3');
+        $entry['alerted'] = format_uptime(get_time() - $entry['last_alerted'], 'short-3');
     }
     if (!isset($entry['last_recovered']) || $entry['last_recovered'] == '0') {
         $entry['recovered'] = "<i>Never</i>";
     } else {
-        $entry['recovered'] = format_uptime(time() - $entry['last_recovered'], 'short-3');
+        $entry['recovered'] = format_uptime(get_time() - $entry['last_recovered'], 'short-3');
     }
 
     if (!isset($entry['ignore_until']) || $entry['ignore_until'] == '0') {
@@ -310,8 +326,7 @@ function humanize_alert_entry(&$entry)
  * @return none
  */
 // TESTME needs unit testing
-function humanize_device(&$device)
-{
+function humanize_device(&$device) {
     global $config;
 
     // Exit if already humanized
@@ -755,14 +770,13 @@ function rewrite_breeze_type($type)
 
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function rewrite_unix_hardware($descr, $hw = NULL)
-{
+function rewrite_unix_hardware($descr, $hw = NULL) {
 
     $hardware = !empty($hw) ? trim($hw) : 'Generic';
 
     if (preg_match('/i[3456]86/i', $descr)) {
         $hardware .= ' x86 [32bit]';
-    } elseif (preg_match('/x86_64|amd64/i', $descr)) {
+    } elseif (preg_match('/x86_64|amd64|i86pc/i', $descr)) {
         $hardware .= ' x86 [64bit]';
     } elseif (stripos($descr, 'ia64') !== FALSE) {
         $hardware .= ' IA [64bit]';
@@ -772,6 +786,8 @@ function rewrite_unix_hardware($descr, $hw = NULL)
         $hardware .= ' SPARC [32bit]';
     } elseif (stripos($descr, 'sparc64') !== FALSE) {
         $hardware .= ' SPARC [64bit]';
+    } elseif (str_contains($descr, 'sun4u')) {
+        $hardware .= ' UltraSPARC [64bit]';
     } elseif (stripos($descr, 'mips64') !== FALSE) {
         $hardware .= ' MIPS [64bit]';
     } elseif (stripos($descr, 'mips') !== FALSE) {
@@ -928,8 +944,8 @@ function short_ifname($if, $len = NULL, $escape = TRUE)
  *
  * @return string
  */
-function rewrite_entity_name($string, $entity_type = NULL, $escape = TRUE)
-{
+function rewrite_entity_name($string, $entity_type = NULL, $escape = TRUE) {
+
     $string = array_str_replace($GLOBALS['config']['rewrites']['entity_name'], $string, TRUE); // case-sensitive
     $string = array_preg_replace($GLOBALS['config']['rewrites']['entity_name_regexp'], $string);
 
@@ -940,15 +956,18 @@ function rewrite_entity_name($string, $entity_type = NULL, $escape = TRUE)
     switch ($entity_type) {
         case 'port':
             return rewrite_ifname($string, $escape);
-            break;
 
         case 'processor':
-            $string = str_replace(["Routing Processor", "Route Processor", "Switching Processor"], ["RP", "RP", "SP"], $string);
+            $string = str_replace([ "Routing Processor", "Route Processor", "Switching Processor" ], [ "RP", "RP", "SP" ], $string);
             break;
 
         case 'storage':
             $string = rewrite_storage($string);
             break;
+
+        default:
+            // clean broken snmp chars (converted to points): H831CCUB_0_0....................
+            $string = snmp_fix_string($string, "descr");
     }
 
     if ($escape) {
@@ -960,8 +979,8 @@ function rewrite_entity_name($string, $entity_type = NULL, $escape = TRUE)
 
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function rewrite_storage($string)
-{
+function rewrite_storage($string) {
+
     $string = preg_replace('/.*mounted on: (.*)/', "\\1", $string);                 // JunOS
     $string = preg_replace("/(.*), type: (.*), dev: (.*)/", "\\1", $string);        // FreeBSD: '/mnt/Media, type: zfs, dev: Media'
     $string = preg_replace("/(.*) Label:(.*) Serial Number (.*)/", "\\1", $string); // Windows: E:\ Label:Large Space Serial Number 26ad0d98
@@ -1061,7 +1080,7 @@ function rewrite_vendor($string)
     }
 
     // Now try to find definition by full search in definitions
-    foreach ($config['vendors'] as $vendor_key => $entry) {
+    foreach ($config['vendors'] as $entry) {
         if (strlen($entry['name']) <= 3) {
             // In case, when vendor name too short, that seems as abbr, ie GE
             if (strcasecmp($clean_name, $entry['name']) == 0 || // Cleaned string
@@ -1141,32 +1160,32 @@ function array_key_replace($array, $string)
 }
 
 /**
- * Replace strings matched by key string with appropriate value from array: string -> replace
- * Note, by default CASE INSENSITIVE
+ * Replace multiple strings using an array of search => replacement pairs
  *
- * @param array  $array          Array with string and replace string (string -> replace)
- * @param string $string         String subject where replace
- * @param bool   $case_sensitive Case sensitive (default FALSE)
+ * This function performs bulk string replacement using an associative array where keys are
+ * the search strings and values are their replacements. By default, replacements are
+ * case-insensitive, but can be made case-sensitive via the third parameter.
  *
- * @return string           Result string with replaced strings
+ * Example: ['%name%' => 'John', '%age%' => '25'] will replace both tags in the string
+ *
+ * @param array  $array          Associative array of search => replacement pairs
+ * @param string $string         Subject string where replacements will occur
+ * @param bool   $case_sensitive Whether to perform case-sensitive matching, default: FALSE
+ *
+ * @return string                Result string with all replacements applied
  */
-function array_str_replace($array, $string, $case_sensitive = FALSE)
-{
-    $search  = [];
-    $replace = [];
+function array_str_replace($array, $string, $case_sensitive = FALSE) {
+    // Ensure we have an array to work with
+    $array = (array)$array;
 
-    foreach ((array)$array as $key => $entry) {
-        $search[]  = $key;
-        $replace[] = $entry;
-    }
-
+    // Use case-sensitive or case-insensitive replacement based on parameter
+    // Both str_replace() and str_ireplace() natively support array inputs
     if ($case_sensitive) {
-        $string = str_replace($search, $replace, $string);
-    } else {
-        $string = str_ireplace($search, $replace, $string);
+        return str_replace(array_keys($array), array_values($array), $string);
     }
 
-    return $string;
+    // Default: case-insensitive replacement
+    return str_ireplace(array_keys($array), array_values($array), $string);
 }
 
 /**
@@ -1187,74 +1206,164 @@ function array_preg_replace($array, $string)
 }
 
 /**
- * Replace tag(s) inside string with an appropriate key from array: %tag% -> $array['tag']
- * Note, not exist tags in an array will clean from string!
+ * Replace tag(s) inside string with an appropriate key from array: %tag% -> $tags['tag']
  *
- * @param array        $array     Array with keys appropriate for tags, which used for replace
- * @param string|array $string    String with tag(s) for replace (between percent sign, ie: %key%)
- * @param string       $tag_scope Scope string for detect tag(s), default: %
+ * This function searches for tags wrapped in delimiters (e.g., %tag%, @tag@) and replaces them
+ * with corresponding values from the provided array. Optionally removes any unreplaced tags.
  *
- * @return string|array           Result string with replaced tags
+ * @param array        $tags          Array with keys appropriate for tags used in replacement
+ * @param string|array $string        String with tag(s) to replace, or array of strings for recursive replacement
+ * @param string       $tag_scope     Tag delimiter/scope (allowed: %, %%, @, @@), default: %
+ * @param bool         $remove_unused Whether to remove tags that don't exist in $tags, default: FALSE
+ *
+ * @return string|array               Result string with replaced tags, or array if input was array
  */
-function array_tag_replace($array, $string, $tag_scope = '%')
-{
-    // If passed array, do tag replace recursive (for values only)
+function array_tag_replace($tags, $string, $tag_scope = '%', $remove_unused = FALSE) {
+
+    // Validate tag scope - only allow predefined delimiters to prevent regex injection
+    if (!in_array($tag_scope, [ '%', '%%', '@', '@@' ], TRUE)) {
+        return $string;
+    }
+
+    // If passed array, do tag replace recursively (for values only)
     if (is_array($string)) {
         foreach ($string as $key => $value) {
-            $string[$key] = array_tag_replace($array, $value, $tag_scope);
+            $string[$key] = array_tag_replace($tags, $value, $tag_scope, $remove_unused);
         }
         return $string;
     }
 
-    // Keep non string values as is
-    if (!is_string($string)) {
+    // Keep non-string values as is
+    // Only process if the string contains tag scope
+    if (!is_string($string) || !str_contains($string, $tag_scope)) {
         return $string;
     }
 
-    $new_array = [];
+    // Pattern matches tags containing only: alphanumeric, underscore, dot, hyphen, plus
+    $tag_pattern = $tag_scope . '([a-zA-Z0-9_\.\-\+]+)' . $tag_scope;
 
-    if (str_contains($string, $tag_scope)) {
-        // Generate a new array of tags including delimiter
-        foreach ($array as $key => $value) {
-            $new_array[$tag_scope . $key . $tag_scope] = $value;
+    // Check if a string is exactly a single tag placeholder with array value
+    // e.g., "%custom_details%" where $tags['custom_details'] is an array
+    // Return the array directly to preserve structure for JSON encoding
+    if (preg_match('/^' . $tag_pattern . '$/', $string, $matches)) {
+        if (isset($tags[$matches[1]]) && is_array($tags[$matches[1]])) {
+            return $tags[$matches[1]];
+        }
+    }
+
+    $found_tags = []; // Store original tags found before replacement
+
+    // Collect all tags from the original string before replacement
+    // This prevents false positives where replacement values contain tag-like patterns
+    if ($remove_unused) {
+        preg_match_all('/' . $tag_pattern . '/', $string, $matches);
+        $found_tags = $matches[0];
+    }
+
+    $original_string = $string; // Store original for debug comparison
+    $new_tags = [];
+
+    // Wrap array keys with tag delimiters for replacement: 'key' -> '%key%'
+    foreach ($tags as $key => $value) {
+        if (is_array($value)) {
+            // when value is array, tag replace does not make sense, because will be replaced with text 'Array'
+            if (defined('OBS_DEBUG') && OBS_DEBUG > 1) {
+                echo("DEBUG: array_tag_replace(), scope: '$tag_scope' #error:\n");
+                echo("  Tag: '$key' value passed as array, skipped\n");
+            }
+            continue;
+        }
+        $new_tags[$tag_scope . $key . $tag_scope] = $value;
+    }
+
+    // Perform the tag replacement
+    $string = array_str_replace($new_tags, $string, TRUE);
+
+    // Debug output: Show which tags were replaced
+    if (defined('OBS_DEBUG') && OBS_DEBUG > 1 && $string !== $original_string) {
+        echo("DEBUG: array_tag_replace(), scope: '$tag_scope' #1:\n");
+        echo("  Replaced tags: " . implode(', ', array_keys($new_tags)) . PHP_EOL);
+        echo("  Before: " . $original_string . PHP_EOL);
+        echo("  After:  " . $string . PHP_EOL);
+    }
+
+    // Remove any remaining unused tags that were present in the original string
+    if ($remove_unused && $found_tags) {
+        $original_string = $string; // Store original for debug comparison
+        $removed_tags = [];
+
+        foreach ($found_tags as $tag) {
+            // Only remove if the tag still exists and wasn't replaced
+            if (str_contains($string, $tag)) {
+                $string = str_replace($tag, '', $string);
+                $removed_tags[] = $tag;
+            }
         }
 
-        // Replace tags
-        $string = array_str_replace($new_array, $string, TRUE);
+        // Debug output: Show which unused tags were remove
+        if (defined('OBS_DEBUG') && OBS_DEBUG > 1 && !empty($removed_tags)) {
+            echo("DEBUG: array_tag_replace(), scope: '$tag_scope' #2:\n");
+            echo("  Removed tags: " . implode(', ', $removed_tags) . PHP_EOL);
+            echo("  Before: " . $original_string . PHP_EOL);
+            echo("  After:  " . $string . PHP_EOL);
+        }
     }
 
-    // Remove unused tags
-    if ($tag_scope !== '/') {
-        $pattern_clean = '/' . $tag_scope . '\S+?' . $tag_scope . '/';
-    } else {
-        $pattern_clean = '%/\S+?/%';
-    }
-
-    return preg_replace($pattern_clean, '', $string);
+    return $string;
 }
 
 /**
- * Mostly same as array_tag_replace() but with extra rawurlencode() for %%tag%%.
+ * Replace tag(s) inside string and remove any unused tags
  *
- * @param array $array
- * @param string $string
+ * This is a convenience wrapper around array_tag_replace() that ensures all unreplaced
+ * tags are removed from the result string. Useful when you want to guarantee clean output
+ * without leftover tag markers.
  *
- * @return string
+ * @param array        $tags      Array with keys appropriate for tags used in replacement
+ * @param string|array $string    String with tag(s) to replace, or array of strings for recursive replacement
+ * @param string       $tag_scope Tag delimiter/scope (allowed: %, %%, @, @@), default: %
+ *
+ * @return string|array           Result string with replaced tags and all unused tags removed
  */
-function array_tag_replace_encode($array, $string) {
+function array_tag_replace_clean($tags, $string, $tag_scope = '%') {
+    // Perform tag replacement with cleanup enabled
+    return array_tag_replace($tags, $string, $tag_scope, TRUE);
+}
+
+/**
+ * Replace tag(s) inside string with URL encoding support for double-delimited tags
+ *
+ * This function handles two types of tag replacements:
+ * - %%tag%% : Replaced with rawurlencode($tags['tag']) - safe for URLs
+ * - %tag%   : Replaced with $tags['tag'] as-is
+ *
+ * Unlike array_tag_replace(), this function does NOT remove unused tags to preserve
+ * URLs and other content that might contain % characters.
+ *
+ * @param array  $tags   Array with keys appropriate for tags used in replacement
+ * @param string $string String with tag(s) to replace (%%tag%% and/or %tag%)
+ *
+ * @return string        Result string with replaced and URL-encoded tags where appropriate
+ */
+function array_tag_replace_encode($tags, $string) {
+    // First pass: Handle URL-encoded tags (%%tag%%)
     if (str_contains($string, '%%')) {
-        // urlencode tags for url
-        $encoded_tags = (array)$array;
-        array_walk_recursive($encoded_tags, function (&$tag) {
+        // Create a copy of the array with all string values URL-encoded
+        $encoded_tags = (array)$tags;
+        array_walk_recursive($encoded_tags, function (&$tag): void {
             if (is_string($tag)) {
                 $tag = rawurlencode($tag);
             }
         });
+
+        // Replace %%tag%% with encoded values, don't remove unused tags
         $string = array_tag_replace($encoded_tags, $string, '%%');
         unset($encoded_tags);
     }
 
-    return array_tag_replace($array, $string);
+    // Second pass: Handle regular tags (%tag%) with original values
+    // Don't remove unused tags to avoid breaking URLs or other %content%
+    return array_tag_replace($tags, $string);
 }
 
 /**

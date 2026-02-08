@@ -1,7 +1,5 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmistdospf.mib,v 1.5 2017/03/10 12:45:34 siva Exp $
-
 ARICENT-MISTDOSPF-MIB DEFINITIONS ::= BEGIN
 
     IMPORTS
@@ -198,6 +196,8 @@ FsMIStdOspfEntry ::=
 	   PositiveInteger,
 	fsMIStdOspfDemandExtensions
 	   TruthValue,
+        fsMIStdOspfPrefixSuppression
+           TruthValue,        
         fsMIStdOspfStatus
            RowStatus
     	     }
@@ -423,6 +423,16 @@ FsMIStdOspfEntry ::=
           "OSPF Version 2, Appendix on Demand Routing"
       ::= { fsMIStdOspfEntry 15 }
 
+    fsMIStdOspfPrefixSuppression OBJECT-TYPE
+        SYNTAX   TruthValue
+        MAX-ACCESS   read-write
+        STATUS   current
+        DESCRIPTION
+           "This variable is use to hide or unhide type 3 link 
+            omitted from the router-LSA when we have point-to-point
+            network."
+      ::= { fsMIStdOspfEntry 16 }
+
     fsMIStdOspfStatus OBJECT-TYPE
 	SYNTAX	RowStatus
 	MAX-ACCESS   read-write
@@ -432,8 +442,7 @@ FsMIStdOspfEntry ::=
            try.  Setting it to 'invalid' has the effect of
            rendering it inoperative.  The internal  effect
            (row removal) is implementation dependent."
-      ::= { fsMIStdOspfEntry 16 }
-
+      ::= { fsMIStdOspfEntry 17 }
 
 --      The OSPF Area Data Structure contains information
 --      regarding the various areas. The interfaces and
@@ -1065,6 +1074,8 @@ FsMIStdOspfIfEntry ::=
         fsMIStdOspfIfAuthType
             Integer32,
         fsMIStdOspfIfCryptoAuthType
+            Integer32,
+        fsMIStdOspfIfPrefixSupressState
             Integer32
               }
 
@@ -1373,6 +1384,18 @@ FsMIStdOspfIfEntry ::=
         DEFVAL { 1 }        -- Md5, by default
         ::= {fsMIStdOspfIfEntry 21}
 
+    fsMIStdOspfIfPrefixSupressState OBJECT-TYPE
+        SYNTAX      INTEGER   { none(0), enabled(1), disabled(2) }
+
+        MAX-ACCESS  read-write
+        STATUS      current
+        DESCRIPTION
+             " This object is to enable/disable Prefix Suppression in a specific OSPF interface.
+               By default it is None. But when fsMIOspfIfPrefixSupressState is enabled/disabled,
+               internally this object will be enabled/disabled for the interface which is having Point-to-Point"
+        
+        DEFVAL { 0 }         -- None, by default
+        ::= {fsMIStdOspfIfEntry 22}
 
 --  OSPF Interface Metric Table
 

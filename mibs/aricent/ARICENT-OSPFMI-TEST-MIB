@@ -1,7 +1,5 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsosmitest.mib,v 1.4 2016/07/29 09:49:19 siva Exp $
-
 ARICENT-OSPFMI-TEST-MIB DEFINITIONS ::= BEGIN
 
 -- Enterprises MIB for testing OSPF.

@@ -10,46 +10,6 @@
  *
  */
 
-// PHP (7.3) compat functions
-
-if (PHP_VERSION_ID < 70300) {
-    /**
-     * Gets the first key of an array
-     *
-     * @param array $array
-     *
-     * @return mixed
-     */
-    function array_key_first($array) {
-        if (!is_array($array) || empty($array)) {
-            return NULL;
-        }
-
-        return array_keys($array)[0];
-    }
-
-    /**
-     * Gets the last key of an array
-     *
-     * @param array $array
-     *
-     * @return mixed
-     */
-    function array_key_last($array) {
-        if (!is_array($array) || empty($array)) {
-            return NULL;
-        }
-
-        end($array);
-        return key($array);
-        //return $array && is_array($array) ? array_keys($array)[count($array) - 1] : NULL;
-    }
-
-    function is_countable($var) {
-        return (is_array($var) || $var instanceof Countable);
-    }
-}
-
 // PHP (8.0) compat functions
 
 if (PHP_VERSION_ID < 80000) {
@@ -167,6 +127,26 @@ if (PHP_VERSION_ID < 80400) {
         }
 
         return TRUE;
+    }
+
+    function fpow(float $num, float $exponent): float {
+        return $num ** $exponent;
+    }
+}
+
+// PHP (8.5) compat functions
+
+if (PHP_VERSION_ID < 80500) {
+    function array_first(array $array) {
+        foreach ($array as $value) {
+            return $value;
+        }
+
+        return NULL;
+    }
+
+    function array_last(array $array) {
+        return $array ? current(array_slice($array, -1)) : NULL;
     }
 }
 

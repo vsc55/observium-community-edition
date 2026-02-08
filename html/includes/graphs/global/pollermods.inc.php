@@ -50,7 +50,7 @@ foreach ($modules as $mod => $mod_data) {
 
     $groups[$mod]['descr'] = $mod;
 
-    foreach ($devices as $device_id => $device) {
+    foreach ($devices as $device) {
 
         $rrd_filename = get_rrd_path($device, 'perf-pollermodule-' . $mod . '.rrd');
 

@@ -26,13 +26,33 @@ if (!ishit_cache_item($notifications_item) || !ishit_cache_item($alerts_item)) {
 
     if ($_SESSION['userlevel'] > 7) {
 
+// Check for any alert rules that were tagged as failed during a past migration.
+$failed_rules = dbFetchColumn("SELECT `alert_name` FROM `alert_tests` WHERE `alert_name` LIKE '[MIGRATION FAILED]%'");
+
+// Only create the UI alert if at least one failed rule is found.
+if (!empty($failed_rules)) {
+    // Format the list of names for clear display in the alert box.
+    $failed_list = '- ' . implode('<br />  * ', $failed_rules);
+    $failure_count = count($failed_rules);
+
+    $alerts[] = [
+        'title'    => 'Manual Action Required: Alert Rule Failures',
+        'text'     => "Found **$failure_count** alert rule(s) that could not be automatically migrated from a legacy format. " .
+                      "These rules are disabled and require manual review. Please edit or recreate the following rules:\n" .
+                      $failed_list,
+        'severity' => 'warning',
+        'markdown' => TRUE,
+    ];
+
+}
+
         if ($config['version_check']) {
             $latest = [];
             $latest['version']   = get_obs_attrib('latest_ver');      // 23.11.13200
             $latest['revision']  = get_obs_attrib('latest_rev');      // 13200
             $latest['date']      = get_obs_attrib('latest_rev_date'); // 2023-11-28
-            $latest['changelog'] = OBSERVIUM_CHANGELOG_URL . '/' . explode('-', $latest['date'])[0] .
-                                   '/#r' . $latest['revision'];       // https://changelog.observium.org/2023/#r13200
+            $latest['changelog'] = OBSERVIUM_CHANGELOG_URL . '/' . explode('-', $latest['date'])[0] . '.html'; // https://changelog.observium.org/2025.html
+//                                   '/#r' . $latest['revision'];       // https://changelog.observium.org/2023/#r13200
 
             if ($latest['revision'] > (OBSERVIUM_REV + $config['version_check_revs'])) {
                 $notifications[] = [
@@ -163,6 +183,7 @@ if (!ishit_cache_item($notifications_item) || !ishit_cache_item($alerts_item)) {
         }
         unset($db_version);
 
+/*
         // Get GLOBAL events for last 3 days
         foreach (dbFetchRows('SELECT * FROM `eventlog` WHERE `entity_type` = ? AND `timestamp` > (CURDATE() - INTERVAL 3 DAY)', ['global']) as $entry) {
             $notifications[] = [
@@ -171,7 +192,19 @@ if (!ishit_cache_item($notifications_item) || !ishit_cache_item($alerts_item)) {
                 'unixtime' => strtotime($entry['timestamp'])
             ];
         }
+*/
     }
+
+    /* FIXME. Bottom badge (without top banner)
+    if (isset($config['alerts']['disable']['all']) && $config['alerts']['disable']['all']) {
+        $notifications[] = [
+            'text'     => '<h4>All Alert Notifications Disabled</h4>' .
+                          'All alert notifications have been disabled in the configuration.',
+            'severity' => 'warning',
+            'unixtime' => get_time()
+        ];
+    }
+    */
 
     if (isset($config['alerts']['suppress']) && $config['alerts']['suppress']) {
         $notifications[] = [
@@ -179,6 +212,12 @@ if (!ishit_cache_item($notifications_item) || !ishit_cache_item($alerts_item)) {
                           'All alert notifications have been suppressed in the configuration.',
             'severity' => 'warning',
             'unixtime' => get_time()
+        ];
+
+        $alerts[] = [
+            'title'    => 'All Alert Notifications Suppressed',
+            'text'     => 'All alert notifications have been suppressed in the configuration.',
+            'severity' => 'warning'
         ];
     }
 
@@ -226,11 +265,12 @@ if ($_SESSION['userlevel'] >= 10 && (in_array($vars['tab'], ['data', 'perf', 'ed
 
     if (version_compare(PHP_VERSION, OBS_MIN_PHP_VERSION, '<')) {
         $notifications[] = [
-            'text'     => '<h4>Your PHP version is too old.</h4>
-                           Your currently installed PHP version <b>' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION . '</b>
-                           is older than the required minimum.
-                           Please upgrade your version of PHP to prevent possible incompatibilities and security problems.<br/>
-                           Currently recommended version(s): <b>7.2.x</b> and newer.',
+            'text'     => '<h4>Your PHP version is outdate.</h4>
+                           The PHP version you are using <b>' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION . '</b>
+                           is older than the minimum required.
+                           Please update PHP to avoid potential incompatibilities and security vulnerabilities.<br/>
+                           Minimum version is <b>' . OBS_MIN_PHP_VERSION . '</b>.<br/>
+                           Recommended version: <b>8.x</b> or later.',
             'severity' => 'danger',
             'unixtime' => get_time()
         ];
@@ -267,7 +307,6 @@ if ($_SESSION['userlevel'] >= 10 && (in_array($vars['tab'], ['data', 'perf', 'ed
             ];
         }
     }
-
     // Warning about obsolete config on some pages
     if (OBS_DEBUG) {
         // FIXME move to notification center?

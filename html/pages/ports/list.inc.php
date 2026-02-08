@@ -14,7 +14,8 @@
 echo(pagination($vars, $ports_count));
 
 // Populate ports array (much faster for large systems)
-//r($port_ids);
+//r($ports_count);
+//r($ports_ids);
 $where = generate_where_clause(generate_query_values($ports_ids, 'ports.port_id'));
 
 $select = "`ports`.*, `ports`.`port_id` AS `port_id`";

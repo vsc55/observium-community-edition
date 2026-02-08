@@ -17,14 +17,14 @@
         
 
     gbn8021xCmMib MODULE-IDENTITY
-        LAST-UPDATED    "2002/07/02"  -- July 2, 2002
+        LAST-UPDATED    "200207020000Z"  -- July 2, 2002
         ORGANIZATION    "QTECH LLC"
         CONTACT-INFO    "Basil Budko
                          E-mail: budko@qtech.ru"
 
         DESCRIPTION     "gbn CM Enterprise MIB definition."
 
-        REVISION        "2002/07/02"  -- July 2, 2002
+        REVISION        "200207020000Z"  -- July 2, 2002
         DESCRIPTION     "Initial MIB creation."
 
         ::= { gbnServiceAAA 1 }

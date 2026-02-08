@@ -92,7 +92,7 @@ class Colors {
 		$colors = array();
 		foreach (array('color', 'style', 'background') as $type) {
 			$code = $color[$type];
-			if (isset(self::$_colors[$type][$code])) {
+			if (isset($code) && isset(self::$_colors[$type][$code])) {
 				$colors[] = self::$_colors[$type][$code];
 			}
 		}

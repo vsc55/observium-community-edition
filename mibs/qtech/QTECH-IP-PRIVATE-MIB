@@ -182,14 +182,14 @@ qtechIPPrivateMIBGroups      OBJECT IDENTIFIER ::= { qtechIPPrivateMIBConformanc
 --           compliance statements                                  **
 --                                                                  **
 --********************************************************************
-qtechIPPrivateMIBCompliance MODULE-COMPLIANCE
-        STATUS  current
-        DESCRIPTION
-                "The compliance statement for entities which implement
-                the Qtech Ac Manager Ac"
-        MODULE  -- this module
-                MANDATORY-GROUPS { qtechAcIPPrivateMIBGroup, qtechAcIPPrivateTrapGroup }
-        ::= { qtechIPPrivateMIBCompliances 1 }
+-- qtechIPPrivateMIBCompliance MODULE-COMPLIANCE
+--        STATUS  current
+--        DESCRIPTION
+--                "The compliance statement for entities which implement
+--                the Qtech Ac Manager Ac"
+--        MODULE
+--                MANDATORY-GROUPS { qtechAcIPPrivateMIBGroup, qtechAcIPPrivateTrapGroup }
+--        ::= { qtechIPPrivateMIBCompliances 1 }
         
 
 --********************************************************************

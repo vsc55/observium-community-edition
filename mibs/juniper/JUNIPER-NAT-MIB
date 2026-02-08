@@ -160,7 +160,9 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The number of ports available with this pool."
+            "The maxmimum number of ports available with this pool.
+
+            This attribute is only applicable to NAT translations with PAT."
         ::= { jnxSrcNatStatsEntry 4 }
 
     jnxNatSrcNumPortInuse OBJECT-TYPE
@@ -178,7 +180,7 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The total number of addresses available in this pool."
+            "The maximum number of addresses available in this pool."
         ::= { jnxSrcNatStatsEntry 6 }
 
     jnxNatSrcNumAddressInUse OBJECT-TYPE
@@ -187,8 +189,7 @@
         STATUS        current
         DESCRIPTION
             "The number of addresses in use from this pool.
-            This attribute is only applicable to pools used with
-            source dynamic translations."
+            This attribute is only applicable to NAT translations without PAT." 
         ::= { jnxSrcNatStatsEntry 7 }
 
     jnxNatSrcNumSessions OBJECT-TYPE
@@ -206,7 +207,8 @@
         MAX-ACCESS    read-only
         STATUS        current
         DESCRIPTION
-            "The number of public addresses mapped"
+            "The number of public addresses mapped
+            This attribute is only applicable for NAT translations with PAT."
 
         ::= { jnxSrcNatStatsEntry 9 }
 

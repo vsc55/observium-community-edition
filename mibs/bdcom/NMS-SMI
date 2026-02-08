@@ -50,6 +50,13 @@ nmsMgmt OBJECT-IDENTITY
 	DESCRIPTION
 		"nmsMgmt is the main subtree for new mib development."
 	::= { nms 9 }  
+
+nmsGponMIB OBJECT-IDENTITY
+	STATUS	current
+	DESCRIPTION
+		"Subtree beneath mgmt which means the GPON group definition ."
+	::= { nms 10 }
+	
 nmsModules OBJECT-IDENTITY
 	STATUS	current
 	DESCRIPTION

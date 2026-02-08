@@ -11,7 +11,7 @@
 --/** All authorized reproductions must be marked with this legend.          */
 --/**                                                                        */
 --/**                                                                        */
---/**                         Copyright (c) 1994-2020                        */
+--/**                         Copyright (c) 1994-2025                        */
 --/**                         AKCP, Ltd                                      */
 --/**                         All rights reserved                            */
 --/**                                                                        */
@@ -13716,7 +13716,15 @@ IMPORTS
                ::=  {  deviceEntry 2   }
 
             deviceType OBJECT-TYPE
-               SYNTAX  INTEGER
+               SYNTAX  INTEGER {
+                  internal(0),
+                  eSensor8(1),
+                  dryContact(2),
+                  optoDryContact(3),
+                  sensor(4),
+                  x20DryContact(5),
+                  x60DryContact(6)
+               }
                ACCESS  read-only
                STATUS  mandatory
                DESCRIPTION
@@ -13732,15 +13740,27 @@ IMPORTS
                ::=  {  deviceEntry 4   }
 
             deviceStatus OBJECT-TYPE
-               SYNTAX  INTEGER
+               SYNTAX  INTEGER {
+                  offline(0),
+                  starting(1),
+                  normal(2)
+               }
                ACCESS  read-only
                STATUS  mandatory
                DESCRIPTION
                "..."
                ::=  {  deviceEntry 5   }
 
-            deviceWorstSensotStatus OBJECT-TYPE
-               SYNTAX  INTEGER
+            deviceWorstSensorStatus OBJECT-TYPE
+               SYNTAX  INTEGER {
+                  noStatus(1),
+                  normal(2),
+                  highWarning(3),
+                  highCritical(4),
+                  lowWarning(5),
+                  lowCritical(6),
+                  sensorError(7)
+               }
                ACCESS  read-only
                STATUS  mandatory
                DESCRIPTION
@@ -21227,6 +21247,8 @@ IMPORTS
                commonSensorValueFormatFloat
                   Opaque,
                commonSensorId
+                  INTEGER,
+               commonSensorValueBroadcastInterval
                   INTEGER
          }
 
@@ -21517,6 +21539,14 @@ IMPORTS
                DESCRIPTION
                "The Sensor ID of this sensor, used to identify which sensor it is in the system configuration."
                ::= { commonSensorEntry 1000 }
+
+            commonSensorValueBroadcastInterval OBJECT-TYPE
+               SYNTAX  INTEGER
+               ACCESS  read-write
+               STATUS  mandatory
+               DESCRIPTION
+               "The Sensor value broadcast inteval in seconds."
+               ::= { commonSensorEntry 1002 }
 
 --/* End of commonSensorEntry */
 
@@ -27912,7 +27942,7 @@ IMPORTS
                customStatus12(28),
                customStatus13(29),
                customStatus14(30),
-               customStatus15(31),
+               customStatus15(31)
             }
             ACCESS  read-only
             STATUS  mandatory
@@ -28833,7 +28863,7 @@ IMPORTS
             siren(12),
             relay(13),
             acvoltage(14),
-            relay(19),
+            xrelay(19),
             thermocouple(20),
             smoke(21),
             drycontact-array(22),
@@ -28870,6 +28900,7 @@ IMPORTS
             tanklevel-10m(97),
             tanklevel-15m(98),
             tanklevel-20m(99),
+            ccmirms(118),
             thermostat(128),
             virtual(129),
             sound(130),
@@ -28878,7 +28909,7 @@ IMPORTS
             power-meter(134),
             access(137),
             door(138),
-            reader(139)
+            fpreader(139)
          }
          ACCESS  read-only
          STATUS  mandatory
@@ -29662,6 +29693,14 @@ IMPORTS
             "DHCP hostname."
             ::= { config 137 }
 
+         cfgLoginPageMessage OBJECT-TYPE
+            SYNTAX  DisplayString
+            ACCESS  read-write
+            STATUS  mandatory
+            DESCRIPTION
+            "Customizable message on the login page."
+            ::= { config 335 }
+
       licenses OBJECT IDENTIFIER ::= { device 2 }
 
 --/* Begin of licenseTable */
@@ -29935,6 +29974,8 @@ IMPORTS
             commonValueFormatFloat
                Opaque,
             commonId
+               INTEGER,
+            commonSensorValueBroadcastInterval
                INTEGER
          }
 
@@ -29970,7 +30011,7 @@ IMPORTS
                siren(12),
                relay(13),
                acvoltage(14),
-               relay(19),
+               xrelay(19),
                thermocouple(20),
                smoke(21),
                drycontact-array(22),
@@ -30007,6 +30048,7 @@ IMPORTS
                tanklevel-10m(97),
                tanklevel-15m(98),
                tanklevel-20m(99),
+               ccmirms(118),
                thermostat(128),
                virtual(129),
                sound(130),
@@ -30015,7 +30057,7 @@ IMPORTS
                power-meter(134),
                access(137),
                door(138),
-               reader(139)
+               fpreader(139)
             }
             ACCESS  read-only
             STATUS  mandatory
@@ -30256,6 +30298,14 @@ IMPORTS
             DESCRIPTION
             "The Sensor ID of this sensor, used to identify which sensor it is in the system configuration."
             ::= { commonEntry 1000 }
+
+         commonSensorValueBroadcastInterval OBJECT-TYPE
+            SYNTAX  INTEGER
+            ACCESS  read-write
+            STATUS  mandatory
+            DESCRIPTION
+            "The Sensor value broadcast inteval in seconds."
+            ::= { commonEntry 1002 }
 
 --/* End of commonTable */
 

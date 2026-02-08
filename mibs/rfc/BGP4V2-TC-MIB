@@ -22,7 +22,7 @@ BGP4V2-TC-MIB DEFINITIONS ::= BEGIN
 
             DESCRIPTION
                    "Initial version."
-    --        ::= { mib-2 XXX }
+            --  ::= { mib-2 15 }
               ::= { frr 1 }
 
     frr OBJECT IDENTIFIER ::= { experimental 5 } -- FRR base oid. Added by Observium developers

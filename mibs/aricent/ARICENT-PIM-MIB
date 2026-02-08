@@ -1,6 +1,6 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fspim.mib,v 1.13 2015/04/01 14:40:07 siva Exp $
+-- $Id: fspim.mib,v 1.1.1.1 2018/02/08 06:06:34 siva Exp $
 
 -- Introduction
 
@@ -85,7 +85,7 @@ ARICENT-PIM-MIB DEFINITIONS ::= BEGIN
 IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE,
     Integer32, IpAddress, TimeTicks,
-    Counter32, enterprises, Unsigned32     FROM SNMPv2-SMI
+    Counter32, enterprises, Unsigned32 FROM SNMPv2-SMI
     TEXTUAL-CONVENTION, RowStatus, TruthValue,
     DisplayString		     FROM SNMPv2-TC;
 

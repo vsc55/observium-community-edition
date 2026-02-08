@@ -1,8 +1,7 @@
 -- Copyright (C) 2008-2016 Aricent. All Rights Reserved
 
--- $Id: fsmiy1731.mib,v 1.26 2016/03/24 10:16:12 siva Exp $
 -- ECFM-Y1731 Proprietary MIB Definition 
- 
+
 -- This MIB contains tables used to configure a switch running 
 -- ECFM-Y1731 in addition to the standard 802.1ag MIB and 
 -- ECFM Proprietary MIB.
@@ -419,7 +418,7 @@ FsY1731ErrorLogType ::= TEXTUAL-CONVENTION
                     }
 
 FsY1731TimeRepresentation ::= TEXTUAL-CONVENTION
-    DISPLAY-HINT "This object specifies the 4d:4d"
+    DISPLAY-HINT "4d:4d"
     STATUS      current
     DESCRIPTION
        "This object specifies the time stamp.

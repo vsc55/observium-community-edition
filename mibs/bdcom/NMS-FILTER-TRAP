@@ -13,7 +13,7 @@ NMS-FILTER-TRAP DEFINITIONS ::= BEGIN
 
 
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32                       FROM SNMPv2-SMI
     MODULE-COMPLIANCE, OBJECT-GROUP,
     NOTIFICATION-GROUP                          FROM SNMPv2-CONF
@@ -57,7 +57,7 @@ IMPORTS
                    DESCRIPTION
                             "A collection of filter objects in the
                             NMS device which includes the blocked content."
-                   INDEX { filterIndex }
+                   INDEX { lineIndex }
                ::= { nmsFilterTable 1 }
 
                NMSFilterEntry ::=

@@ -12,6 +12,9 @@
 
 global $config, $cache;
 
+// Init var for prevent fatal errors in array merge
+$cache = $cache ?? [];
+
 $cache_data_start = microtime(TRUE);
 $cache_item       = get_cache_item('data');
 //print_vars($cache_item->isHit());
@@ -52,6 +55,43 @@ if (!ishit_cache_item($cache_item)) {
 
     // Cache scheduled maintenance currently active
     $cache['maint'] = cache_alert_maintenance();
+
+    // Cache device group memberships for efficient counting (always enabled - minimal overhead)
+    $cache['device_groups'] = [];
+    $device_group_map = []; // Maps device_id to array of group_ids
+    if (OBSERVIUM_EDITION !== 'community') {
+        foreach (dbFetchRows("SELECT gt.`device_id`, gt.`group_id` FROM `group_table` gt JOIN `groups` g ON gt.`group_id` = g.`group_id` WHERE gt.`entity_type` = 'device' AND g.`entity_type` = 'device'") as $entry) {
+            if (!isset($device_group_map[$entry['device_id']])) {
+                $device_group_map[$entry['device_id']] = [];
+            }
+            $device_group_map[$entry['device_id']][] = $entry['group_id'];
+
+            // Initialize group stats if not already set
+            if (!isset($cache['device_groups'][$entry['group_id']])) {
+                $cache['device_groups'][$entry['group_id']] = [ 'up' => 0, 'down' => 0, 'disabled' => 0, 'ignored' => 0, 'count' => 0 ];
+            }
+        }
+    }
+
+    // Cache port group memberships for efficient counting (configurable - has query overhead)
+    $cache['port_groups'] = [];
+    if (OBSERVIUM_EDITION !== 'community' && $config['navbar_port_groups_status']) {
+        $port_group_map = []; // Maps port_id to array of group_ids
+        $port_group_query = "SELECT gt.`entity_id` as `port_id`, gt.`group_id` FROM `group_table` gt JOIN `groups` g ON gt.`group_id` = g.`group_id` WHERE gt.`entity_type` = 'port' AND g.`entity_type` = 'port'";
+        $port_group_results = dbFetchRows($port_group_query);
+
+        foreach ($port_group_results as $entry) {
+            if (!isset($port_group_map[$entry['port_id']])) {
+                $port_group_map[$entry['port_id']] = [];
+            }
+            $port_group_map[$entry['port_id']][] = $entry['group_id'];
+
+            // Initialize group stats if not already set
+            if (!isset($cache['port_groups'][$entry['group_id']])) {
+                $cache['port_groups'][$entry['group_id']] = ['up' => 0, 'down' => 0, 'shutdown' => 0, 'ignored' => 0, 'errored' => 0, 'poll_disabled' => 0, 'count' => 0];
+            }
+        }
+    }
 
 
     $select = "`device_id`, `hostname`, `status`, `disabled`, `type`, `ignore`, `ignore_until`, `last_polled_timetaken`, `last_discovered_timetaken`, `devices`.`location`";
@@ -106,6 +146,25 @@ if (!ishit_cache_item($cache_item)) {
         }
 
         $cache['devices']['stat']['count']++;
+
+        // Update device group counters for this device
+        if (isset($device_group_map[$device['device_id']])) {
+            foreach ($device_group_map[$device['device_id']] as $group_id) {
+                $cache['device_groups'][$group_id]['count']++;
+
+                if ($device['disabled']) {
+                    $cache['device_groups'][$group_id]['disabled']++;
+                } elseif ($device['ignore'] || (!is_null($device['ignore_until']) && strtotime($device['ignore_until']) > time())) {
+                    $cache['device_groups'][$group_id]['ignored']++;
+                } else {
+                    if ($device['status']) {
+                        $cache['device_groups'][$group_id]['up']++;
+                    } else {
+                        $cache['device_groups'][$group_id]['down']++;
+                    }
+                }
+            }
+        }
 
         $cache['devices']['timers']['polling']   += $device['last_polled_timetaken'];
         $cache['devices']['timers']['discovery'] += $device['last_discovered_timetaken'];
@@ -173,6 +232,346 @@ if (!ishit_cache_item($cache_item)) {
 
     $time_elapsed = elapsed_time($microtime_start);
     bdump("Devices Cache: " . round($time_elapsed, 5) . "s");
+
+
+    /*
+    // --- START REFACTORED CODE ---
+
+    $microtime_start = microtime(TRUE);
+
+// 1. Initialize cache structure
+    $cache['ports'] = [
+        'deleted'         => [],
+        'device_disabled' => [],
+        'device_ignored'  => [],
+        'poll_disabled'   => [],
+        'ignored'         => [],
+        'errored'         => [],
+    ];
+
+    $cache['ports']['stat'] = [
+        'count'           => 0,
+        'up'              => 0,
+        'down'            => 0,
+        'shutdown'        => 0,
+        'ignored'         => 0,
+        'errored'         => 0,
+        'deleted'         => 0,
+        'poll_disabled'   => 0,
+        'device_ignored'  => 0,
+        'alerts'          => 0, // Maintained from original
+    ];
+
+// 2. Fetch all required port and device data in a single query
+    $where_permitted = generate_query_permitted_ng(['device', 'port'], ['device_table' => 'd']);
+
+    //r($where_permitted);
+
+    $query = "SELECT `p`.`port_id`, `p`.`deleted`, `p`.`disabled` AS `poll_disabled`, `p`.`ignore` AS `port_ignored`,
+                 `p`.`ifAdminStatus`, `p`.`ifOperStatus`, `p`.`ifOutErrors_delta`, `p`.`ifInErrors_delta`,
+                 `d`.`disabled` AS `device_disabled`, `d`.`ignore` AS `device_ignored`
+          FROM `ports` AS `p`
+          LEFT JOIN `devices` AS `d` ON `p`.`device_id` = `d`.`device_id`
+          " . generate_where_clause([], $where_permitted);
+
+    $all_ports = dbFetchRows($query);
+
+    //r(dbError());
+    //r($all_ports);
+
+// 3. Process the single result set in PHP to populate the cache
+    foreach ($all_ports as $port) {
+        $port_id = $port['port_id'];
+
+        // Category 1: Deleted ports
+        if ($port['deleted']) {
+            $cache['ports']['deleted'][] = $port_id;
+            continue; // Exclude from all other categories and counts
+        }
+
+        // Category 2: Ports on disabled devices
+        if ($port['device_disabled']) {
+            $cache['ports']['device_disabled'][] = $port_id;
+            // If config requires hiding, exclude from main stats
+            if (!$config['web_show_disabled']) {
+                continue;
+            }
+        }
+
+        // Category 3: Ports on ignored devices
+        if ($port['device_ignored']) {
+            $cache['ports']['device_ignored'][] = $port_id;
+            continue; // Exclude from main stats
+        }
+
+        // -- From here, we count ports that are not on deleted/hidden/ignored devices --
+        $cache['ports']['stat']['count']++;
+
+        // Update port group counters for this port
+        if (isset($port_group_map[$port_id])) {
+            foreach ($port_group_map[$port_id] as $group_id) {
+                $cache['port_groups'][$group_id]['count']++;
+
+                // Category 4: Poll-disabled ports
+                if ($port['poll_disabled']) {
+                    $cache['port_groups'][$group_id]['poll_disabled']++;
+                }
+
+                // Category 5: Ignored ports - count but skip status counting
+                if ($port['port_ignored']) {
+                    $cache['port_groups'][$group_id]['ignored']++;
+                } else {
+                    // Port status counting for groups (only for non-ignored ports)
+                    if ($port['ifAdminStatus'] === 'down') {
+                        $cache['port_groups'][$group_id]['shutdown']++;
+                    } elseif ($port['ifAdminStatus'] === 'up') {
+                        if (in_array($port['ifOperStatus'], ['up', 'testing', 'monitoring'])) {
+                            $cache['port_groups'][$group_id]['up']++;
+                        } elseif (in_array($port['ifOperStatus'], ['down', 'lowerLayerDown']) && !$port['poll_disabled']) {
+                            $cache['port_groups'][$group_id]['down']++;
+                        }
+                    }
+
+                    // Check for errors for groups (only for non-ignored ports)
+                    $is_errored = ($port['ifAdminStatus'] === 'up' &&
+                        in_array($port['ifOperStatus'], ['up', 'testing']) &&
+                        ($port['ifOutErrors_delta'] > 0 || $port['ifInErrors_delta'] > 0));
+
+                    if ($is_errored) {
+                        $cache['port_groups'][$group_id]['errored']++;
+                    }
+                }
+            }
+        }
+
+        // Category 4: Poll-disabled ports
+        if ($port['poll_disabled']) {
+            $cache['ports']['poll_disabled'][] = $port_id;
+        }
+
+        // Category 5: Ignored ports (these are counted in total, but not in up/down/shutdown)
+        if ($port['port_ignored']) {
+            $cache['ports']['ignored'][] = $port_id;
+            $cache['ports']['stat']['ignored']++;
+            continue; // Exclude from up/down/shutdown/errored stats
+        }
+
+        // Tally Up/Down/Shutdown stats for non-ignored ports
+        if ($port['ifAdminStatus'] === 'down') {
+            $cache['ports']['stat']['shutdown']++;
+        } elseif ($port['ifAdminStatus'] === 'up') {
+            if (in_array($port['ifOperStatus'], ['up', 'testing', 'monitoring'])) {
+                $cache['ports']['stat']['up']++;
+            } elseif (in_array($port['ifOperStatus'], ['down', 'lowerLayerDown']) && !$port['poll_disabled']) {
+                $cache['ports']['stat']['down']++;
+            }
+        }
+
+        // Check for errors (only on administratively 'up' ports)
+        $is_errored = ($port['ifAdminStatus'] === 'up' &&
+            in_array($port['ifOperStatus'], ['up', 'testing']) &&
+            ($port['ifOutErrors_delta'] > 0 || $port['ifInErrors_delta'] > 0));
+
+        if ($is_errored) {
+            $cache['ports']['errored'][] = $port_id;
+            $cache['ports']['stat']['errored']++;
+        }
+    }
+
+// 4. Finalize counts from the populated arrays
+    $cache['ports']['stat']['deleted']        = count($cache['ports']['deleted']);
+    $cache['ports']['stat']['device_ignored'] = count($cache['ports']['device_ignored']);
+    $cache['ports']['stat']['poll_disabled']  = count($cache['ports']['poll_disabled']);
+
+    $cache['where']['ports_permitted'] = generate_query_permitted_ng(['port', 'device']);
+
+    $time_elapsed = elapsed_time($microtime_start);
+    bdump("Port Cache (Refactored): " . round($time_elapsed, 5) . "s");
+
+// --- END REFACTORED CODE ---
+
+    */
+
+    // --- START HYBRID CODE ---
+
+    $microtime_start = microtime(TRUE);
+
+// 1. Initialize the cache structure completely to avoid any PHP notices.
+    $cache['ports'] = [
+        'deleted'         => [],
+        'device_disabled' => [],
+        'device_ignored'  => [],
+        'poll_disabled'   => [],
+        'ignored'         => [],
+        'errored'         => [],
+    ];
+
+    $cache['ports']['stat'] = [
+        'count'           => 0,
+        'up'              => 0,
+        'down'            => 0,
+        'shutdown'        => 0,
+        'ignored'         => 0,
+        'errored'         => 0,
+        'deleted'         => 0,
+        'poll_disabled'   => 0,
+        'device_ignored'  => 0,
+        'device_disabled' => 0,
+        'alerts'          => 0, // Maintained from original
+    ];
+
+// =========================================================================
+// STEP 1: GET ALL STATISTICS WITH A SINGLE AGGREGATION QUERY
+// This query does all the heavy lifting in the database and returns just ONE row.
+// =================================e=========================================
+
+    $where_permitted = generate_query_permitted_ng(['device', 'port'], ['device_table' => 'd']);
+
+// This base WHERE clause applies to the entire query, filtering for permissions first.
+    $base_from_clause = "
+    FROM `ports` AS `p`
+    LEFT JOIN `devices` AS `d` ON `p`.`device_id` = `d`.`device_id`
+    " . generate_where_clause([], $where_permitted);
+
+// These conditions define the "base" set of ports that are visible and active.
+// They are used to avoid double-counting in the main stats (up, down, etc.).
+    $base_stat_conditions = "(`p`.`deleted` = 0 AND `d`.`ignore` = 0 AND `p`.`ignore` = 0)";
+    if (!$config['web_show_disabled']) {
+        // If we hide disabled devices, they are excluded from the base stats.
+        $base_stat_conditions .= " AND `d`.`disabled` = 0";
+    }
+
+    $stats_query = "SELECT
+    -- First, count categories that are always excluded from main stats.
+    SUM(CASE WHEN `p`.`deleted` = 1 THEN 1 ELSE 0 END) AS `deleted_count`,
+    SUM(CASE WHEN `p`.`deleted` = 0 AND `d`.`disabled` = 1 THEN 1 ELSE 0 END) AS `device_disabled_count`,
+    SUM(CASE WHEN `p`.`deleted` = 0 AND `d`.`ignore` = 1 THEN 1 ELSE 0 END) AS `device_ignored_count`,
+
+    -- Now, count categories based on the 'base' set of visible ports.
+    SUM(CASE WHEN " . $base_stat_conditions . " THEN 1 ELSE 0 END) AS `count`,
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`disabled` = 1 THEN 1 ELSE 0 END) AS `poll_disabled_count`,
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ignore` = 1 THEN 1 ELSE 0 END) AS `ignored_count`,
+
+    -- Main Status Counts (UP/DOWN/SHUTDOWN). These must also respect the base conditions.
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'down' THEN 1 ELSE 0 END) AS `shutdown_count`,
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND `p`.`ifOperStatus` IN ('up', 'testing', 'monitoring') THEN 1 ELSE 0 END) AS `up_count`,
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND `p`.`ifOperStatus` IN ('down', 'lowerLayerDown') AND `p`.`disabled` = 0 THEN 1 ELSE 0 END) AS `down_count`,
+
+    -- Errored Count. Also respects base conditions.
+    SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND (`p`.`ifOperStatus` = 'up' OR `p`.`ifOperStatus` = 'testing') AND (`p`.`ifOutErrors_delta` > 0 OR `p`.`ifInErrors_delta` > 0) THEN 1 ELSE 0 END) AS `errored_count`
+" . $base_from_clause;
+
+// Execute the query and fetch the single row of results.
+    $stats = dbFetchRow($stats_query);
+
+// Populate the cache from the single result row. Use null coalescing for safety.
+    $cache['ports']['stat']['deleted']         = $stats['deleted_count'] ?? 0;
+    $cache['ports']['stat']['device_disabled'] = $stats['device_disabled_count'] ?? 0;
+    $cache['ports']['stat']['device_ignored']  = $stats['device_ignored_count'] ?? 0;
+    $cache['ports']['stat']['poll_disabled']   = $stats['poll_disabled_count'] ?? 0;
+    $cache['ports']['stat']['ignored']         = $stats['ignored_count'] ?? 0;
+    $cache['ports']['stat']['count']           = $stats['count'] ?? 0;
+    $cache['ports']['stat']['shutdown']        = $stats['shutdown_count'] ?? 0;
+    $cache['ports']['stat']['up']              = $stats['up_count'] ?? 0;
+    $cache['ports']['stat']['down']            = $stats['down_count'] ?? 0;
+    $cache['ports']['stat']['errored']         = $stats['errored_count'] ?? 0;
+
+// =========================================================================
+// STEP 1.5: GET PORT GROUP STATISTICS
+// Get statistics for each port group using the same efficient approach
+// =========================================================================
+
+    if (!empty($cache['port_groups'])) {
+        $port_group_start = microtime(TRUE);
+        $group_ids = array_keys($cache['port_groups']);
+        $group_stats_query = "SELECT
+            gt.`group_id`,
+            SUM(CASE WHEN " . $base_stat_conditions . " THEN 1 ELSE 0 END) AS `count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`disabled` = 1 THEN 1 ELSE 0 END) AS `poll_disabled_count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ignore` = 1 THEN 1 ELSE 0 END) AS `ignored_count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'down' THEN 1 ELSE 0 END) AS `shutdown_count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND `p`.`ifOperStatus` IN ('up', 'testing', 'monitoring') THEN 1 ELSE 0 END) AS `up_count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND `p`.`ifOperStatus` IN ('down', 'lowerLayerDown') AND `p`.`disabled` = 0 THEN 1 ELSE 0 END) AS `down_count`,
+            SUM(CASE WHEN " . $base_stat_conditions . " AND `p`.`ifAdminStatus` = 'up' AND `p`.`ifOperStatus` IN ('up', 'testing') AND (`p`.`ifOutErrors_delta` > 0 OR `p`.`ifInErrors_delta` > 0) THEN 1 ELSE 0 END) AS `errored_count`
+            FROM `group_table` gt
+            LEFT JOIN `ports` p ON gt.`entity_id` = p.`port_id` AND gt.`entity_type` = 'port'
+            LEFT JOIN `devices` d ON p.`device_id` = d.`device_id`
+            WHERE " . generate_query_values($group_ids, 'gt.group_id') . " AND " . str_replace(['`p`.', '`d`.'], ['p.', 'd.'], $where_permitted) . "
+            GROUP BY gt.`group_id`";
+
+        foreach (dbFetchRows($group_stats_query) as $group_stat) {
+            $group_id = $group_stat['group_id'];
+            if (isset($cache['port_groups'][$group_id])) {
+                $cache['port_groups'][$group_id]['count'] = (int)$group_stat['count'];
+                $cache['port_groups'][$group_id]['up'] = (int)$group_stat['up_count'];
+                $cache['port_groups'][$group_id]['down'] = (int)$group_stat['down_count'];
+                $cache['port_groups'][$group_id]['shutdown'] = (int)$group_stat['shutdown_count'];
+                $cache['port_groups'][$group_id]['ignored'] = (int)$group_stat['ignored_count'];
+                $cache['port_groups'][$group_id]['errored'] = (int)$group_stat['errored_count'];
+                $cache['port_groups'][$group_id]['poll_disabled'] = (int)$group_stat['poll_disabled_count'];
+            }
+        }
+
+        $port_group_elapsed = elapsed_time($port_group_start);
+        bdump("Port Groups Cache: " . round($port_group_elapsed, 5) . "s");
+    }
+
+// =========================================================================
+// STEP 2: GET ID LISTS FOR UI LINKS
+// These queries are simple and only run if you need the actual lists of ports.
+// =========================================================================
+
+// Fetch DELETED port IDs
+    $cache['ports']['deleted'] = dbFetchColumn("SELECT `p`.`port_id` FROM `ports` AS `p` LEFT JOIN `devices` AS `d` ON `p`.`device_id` = `d`.`device_id` " . generate_where_clause([], $where_permitted . " AND `p`.`deleted` = 1"));
+
+// Build the WHERE clauses for ports that should be hidden from the main view
+    $where_permitted_hide   = [ $where_permitted ];
+    $where_permitted_hide[] = "`deleted` = 0";
+
+    if ($cache['ports']['stat']['device_disabled'] > 0) {
+        $disabled_devices = dbFetchColumn("SELECT `device_id` FROM `devices` WHERE `disabled` = 1");
+        if (!empty($disabled_devices)) {
+            $cache['ports']['device_disabled'] = dbFetchColumn("SELECT `port_id` FROM `ports` " . generate_where_clause($where_permitted_hide, generate_query_values($disabled_devices, 'device_id')));
+            if (!$config['web_show_disabled']) {
+                $where_permitted_hide[] = generate_query_values($disabled_devices, 'device_id', '!=');
+            }
+        }
+    }
+
+    if ($cache['ports']['stat']['device_ignored'] > 0) {
+        $ignored_devices = dbFetchColumn("SELECT `device_id` FROM `devices` WHERE `ignore` = 1");
+        if (!empty($ignored_devices)) {
+            $cache['ports']['device_ignored'] = dbFetchColumn("SELECT `port_id` FROM `ports` " . generate_where_clause($where_permitted_hide, generate_query_values($ignored_devices, 'device_id')));
+            $where_permitted_hide[] = generate_query_values($ignored_devices, 'device_id', '!=');
+        }
+    }
+
+// Fetch other lists using the progressively built WHERE clause
+    if ($cache['ports']['stat']['poll_disabled'] > 0) {
+        $cache['ports']['poll_disabled'] = dbFetchColumn("SELECT `port_id` FROM `ports`" . generate_where_clause($where_permitted_hide, "`disabled` = 1"));
+    }
+
+    if ($cache['ports']['stat']['ignored'] > 0) {
+        $cache['ports']['ignored'] = dbFetchColumn("SELECT `port_id` FROM `ports`" . generate_where_clause($where_permitted_hide, "`ignore` = 1"));
+    }
+    $where_permitted_hide[] = "`ignore` = 0"; // Add ignore=0 for the final errored query
+
+    if ($cache['ports']['stat']['errored'] > 0) {
+        $cache['ports']['errored'] = dbFetchColumn("SELECT `port_id` FROM `ports`" . generate_where_clause($where_permitted_hide, "`ifAdminStatus` = 'up' AND (`ifOperStatus` = 'up' OR `ifOperStatus` = 'testing') AND (`ifOutErrors_delta` > 0 OR `ifInErrors_delta` > 0)"));
+    }
+
+// =========================================================================
+// FINALIZATION
+// =========================================================================
+
+    $cache['where']['ports_permitted'] = generate_query_permitted_ng(['port', 'device']);
+
+    $time_elapsed = elapsed_time($microtime_start);
+    bdump("Port Cache (Hybrid): " . round($time_elapsed, 5) . "s");
+
+// --- END HYBRID CODE ---
+
+/*
 
     // Ports
 
@@ -253,6 +652,10 @@ if (!ishit_cache_item($cache_item)) {
 
     $time_elapsed = elapsed_time($microtime_start);
     bdump("Port Cache: " . round($time_elapsed, 5) . "s");
+
+    */
+
+
 
     // Sensors
 
@@ -810,18 +1213,46 @@ FROM `alert_table` ";
     }
     */
 
-    // if (isset($config['enable_eigrp']) && $config['enable_eigrp']) {
-    $cache['routing']['eigrp']['last_seen'] = get_time();
-    foreach (dbFetchRows("SELECT `device_id` FROM `eigrp_vpns`" . generate_where_clause(generate_query_permitted_ng([ 'device', 'eigrp' ]))) as $eigrp) {
-        if (!$config['web_show_disabled'] &&
-            in_array($eigrp['device_id'], (array)$cache['devices']['disabled'])) {
-            continue;
+    // EIGRP (FIXME. Pro edition only?)
+    if (isset($config['enable_eigrp']) && $config['enable_eigrp']) {
+        $query = "SELECT COUNT(*) AS `count` FROM `eigrp_vpns`";
+
+        $query_where = [];
+        if (!$config['web_show_disabled'] && $cache['where']['devices_enabled']) {
+            $query_where[] = $cache['where']['devices_enabled'];
         }
-        if (device_permitted($eigrp)) {
-            $cache['routing']['eigrp']['count']++;
-        }
+
+        $eigrp_data = dbFetchRow($query . generate_where_clause(generate_query_permitted_ng(['device', 'eigrp'])));
+
+        $cache['routing']['eigrp']['count'] = $eigrp_data['count'] ?: 0;
+        $cache['routing']['eigrp']['last_seen'] = get_time();
     }
-    // }
+
+    // BFD (Pro edition only)
+    if (OBSERVIUM_EDITION !== 'community' && $config['poller_modules']['bfd']) {
+        $query = "SELECT
+                      COUNT(*) as count,
+                      SUM(CASE WHEN `bfd_oper_status` = 'up' THEN 1 ELSE 0 END) as up,
+                      SUM(CASE WHEN `bfd_oper_status` = 'down' THEN 1 ELSE 0 END) as down,
+                      SUM(CASE WHEN `bfd_oper_status` = 'init' THEN 1 ELSE 0 END) as init,
+                      SUM(CASE WHEN `bfd_oper_status` = 'adminDown' THEN 1 ELSE 0 END) as admindown
+                  FROM `bfd_sessions`";
+
+        $query_where = [];
+        if (!$config['web_show_disabled'] && $cache['where']['devices_enabled']) {
+            $query_where[] = $cache['where']['devices_enabled'];
+        }
+
+        $bfd_data = dbFetchRow($query . generate_where_clause(generate_query_permitted_ng(['device'])));
+
+        $cache['routing']['bfd']['count'] = $bfd_data['count'] ?: 0;
+        $cache['routing']['bfd']['up'] = $bfd_data['up'] ?: 0;
+        $cache['routing']['bfd']['down'] = $bfd_data['down'] ?: 0;
+        $cache['routing']['bfd']['init'] = $bfd_data['init'] ?: 0;
+        $cache['routing']['bfd']['admindown'] = $bfd_data['admindown'] ?: 0;
+        $cache['routing']['bfd']['alerts'] = ($bfd_data['down'] ?: 0) + ($bfd_data['init'] ?: 0);
+        $cache['routing']['bfd']['last_seen'] = get_time();
+    }
 
     // CEF
     $cache['routing']['cef']['count'] = dbFetchCell("SELECT COUNT(`cef_switching_id`) FROM `cef_switching`" . generate_where_clause($cache['where']['devices_permitted']) . " GROUP BY `device_id`, `afi`;");
@@ -885,14 +1316,16 @@ FROM `alert_table` ";
     // Clear expired cache
     del_cache_expired();
 
-} // End build cache
-else {
+    // End build cache
+} else {
+    // Get cached from Fast Cache
 
     //print_vars(get_cache_data($cache_item));
     $cache = array_merge(get_cache_data($cache_item), $cache);
 
 }
 // Clean cache item
+//bdump($cache_item);
 unset($cache_item);
 //del_cache_expired();
 //print_vars(get_cache_items('__wui'));

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,176 +8,49 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Cookie;
+namespace Phpfastcache\Drivers\Cookie;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheDriverException, PhpfastcacheInvalidArgumentException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
 class Driver implements ExtendedCacheItemPoolInterface
 {
     use DriverBaseTrait;
 
-    const PREFIX = 'PFC_';
-
-    /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        }
-    }
+    protected const PREFIX = 'PFC_';
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
-        if (function_exists('setcookie')) {
-            return true;
-        } else {
-            return false;
+        if (!$this->getConfig()->isAwareOfUntrustableData()) {
+            throw new PhpfastcacheDriverException(
+                'You have to setup the config "awareOfUntrustableData" to "TRUE" to confirm that you are aware that this driver does not use reliable storage as it may be corrupted by end-user.'
+            );
         }
+        return function_exists('setcookie');
     }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        return !(!array_key_exists('phpFastCache', $_COOKIE) && !@setcookie('phpFastCache', 1, 10));
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    protected function driverWrite(CacheItemInterface $item)
-    {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            $this->driverConnect();
-            $keyword = self::PREFIX . $item->getKey();
-            $v = json_encode($this->driverPreWrap($item));
-
-            if (isset($this->config[ 'limited_memory_each_object' ]) && strlen($v) > $this->config[ 'limited_memory_each_object' ]) {
-                return false;
-            }
-
-            return setcookie($keyword, $v, $item->getExpirationDate()->getTimestamp(), '/');
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return null|array
-     * @throws \phpFastCache\Exceptions\phpFastCacheDriverException
-     */
-    protected function driverRead(CacheItemInterface $item)
-    {
-        $this->driverConnect();
-        $keyword = self::PREFIX . $item->getKey();
-        $x = isset($_COOKIE[ $keyword ]) ? json_decode($_COOKIE[ $keyword ], true) : false;
-
-        if ($x == false) {
-            return null;
-        } else {
-            if (!is_scalar($this->driverUnwrapData($x)) && !is_null($this->driverUnwrapData($x))) {
-                throw new phpFastCacheDriverException('Hacking attempt: The decoding returned a non-scalar value, Cookie driver does not allow this.');
-            }
-
-            return $x;
-        }
-    }
-
-    /**
-     * @param string $key
-     * @return int
-     */
-    protected function driverReadExpirationDate($key)
-    {
-        $this->driverConnect();
-        $keyword = self::PREFIX . $key;
-        $x = isset($_COOKIE[ $keyword ]) ? $this->decode(json_decode($_COOKIE[ $keyword ])->t) : false;
-
-        return $x ? $x - time() : $x;
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return bool
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    protected function driverDelete(CacheItemInterface $item)
-    {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            $this->driverConnect();
-            $keyword = self::PREFIX . $item->getKey();
-            $_COOKIE[ $keyword ] = null;
-
-            return @setcookie($keyword, null, -10);
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        $return = null;
-        $this->driverConnect();
-        foreach ($_COOKIE as $keyword => $value) {
-            if (strpos($keyword, self::PREFIX) !== false) {
-                $_COOKIE[ $keyword ] = null;
-                $result = @setcookie($keyword, null, -10);
-                if ($return !== false) {
-                    $return = $result;
-                }
-            }
-        }
-
-        return $return;
-    }
-
-    /********************
-     *
-     * PSR-6 Extended Methods
-     *
-     *******************/
 
     /**
      * @return DriverStatistic
      */
-    public function getStats()
+    public function getStats(): DriverStatistic
     {
         $size = 0;
         $stat = new DriverStatistic();
@@ -194,5 +68,119 @@ class Driver implements ExtendedCacheItemPoolInterface
         $stat->setSize($size);
 
         return $stat;
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return null|array
+     * @throws PhpfastcacheDriverException
+     */
+    protected function driverRead(CacheItemInterface $item)
+    {
+        $this->driverConnect();
+        $keyword = self::PREFIX . $item->getKey();
+        $x = isset($_COOKIE[$keyword]) ? json_decode($_COOKIE[$keyword], true) : false;
+
+        if ($x == false) {
+            return null;
+        }
+
+        if (!is_scalar($this->driverUnwrapData($x)) && !is_null($this->driverUnwrapData($x))) {
+            throw new PhpfastcacheDriverException('Hacking attempt: The decoding returned a non-scalar value, Cookie driver does not allow this.');
+        }
+
+        return $x;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function driverConnect(): bool
+    {
+        return !(!array_key_exists('_pfc', $_COOKIE) && !@setcookie('_pfc', '1', 10));
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverWrite(CacheItemInterface $item): bool
+    {
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            $this->driverConnect();
+            $keyword = self::PREFIX . $item->getKey();
+            $v = json_encode($this->driverPreWrap($item));
+
+            if ($this->getConfig()->getLimitedMemoryByObject() !== null && strlen($v) > $this->getConfig()->getLimitedMemoryByObject()) {
+                return false;
+            }
+
+            return setcookie($keyword, $v, $item->getExpirationDate()->getTimestamp(), '/');
+        }
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+    }
+
+    /**
+     * @param string $key
+     * @return int
+     */
+    protected function driverReadExpirationDate($key): int
+    {
+        $this->driverConnect();
+        $keyword = self::PREFIX . $key;
+        $x = isset($_COOKIE[$keyword]) ? $this->decode(json_decode($_COOKIE[$keyword])->t) : 0;
+
+        return $x ? $x - time() : $x;
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverDelete(CacheItemInterface $item): bool
+    {
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            $this->driverConnect();
+            $keyword = self::PREFIX . $item->getKey();
+            $_COOKIE[$keyword] = null;
+
+            return @setcookie($keyword, null, -10);
+        }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+    }
+
+    /********************
+     *
+     * PSR-6 Extended Methods
+     *
+     *******************/
+
+    /**
+     * @return bool
+     */
+    protected function driverClear(): bool
+    {
+        $return = null;
+        $this->driverConnect();
+        foreach ($_COOKIE as $keyword => $value) {
+            if (strpos($keyword, self::PREFIX) !== false) {
+                $_COOKIE[$keyword] = null;
+                $result = @setcookie($keyword, null, -10);
+                if ($return !== false) {
+                    $return = $result;
+                }
+            }
+        }
+
+        return $return;
     }
 }

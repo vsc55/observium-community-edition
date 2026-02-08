@@ -30,15 +30,7 @@ if (safe_empty($results)) {
     return;
 }
 
-$max_len           = 35;
-$protocol_classmap = [
-    'cdp'  => 'success',
-    'lldp' => 'warning',
-    'amap' => 'primary',
-    'mndp' => 'error',
-    'fdp'  => 'delayed',
-    'edp'  => 'suppressed'
-];
+$max_len = 35;
 
 foreach ($results as $result) {
     $result_device = device_by_id_cache($result['device_id']);
@@ -66,8 +58,6 @@ foreach ($results as $result) {
         $remote_descr             .= $result['remote_version'] . ' | ';
     }
 
-    $protocol_class = isset($protocol_classmap[$result['protocol']]) ? 'label-' . $protocol_classmap[$result['protocol']] : '';
-
     $neighbours_search_results[] = [
         'url'            => generate_device_url($result_device, ['tab' => 'ports', 'view' => 'neighbours']),
         'name'           => $name,
@@ -76,10 +66,11 @@ foreach ($results as $result) {
         'html_row_class' => $result_device['html_row_class'],
         'icon'           => get_device_icon($result_device),
         'data'           => [
-            escape_html($result_port['port_label']) . ' <span class="label ' . $protocol_class . '">' . strtoupper($result['protocol']) . '</span>',
-            html_highlight(escape_html($remote_host), $queryString),
-            '<span class="text-wrap">' . html_highlight(escape_html($remote_descr), $queryString) . '</span>',
+            html_highlight($result_port['port_label'], $queryString) . ' ' . get_type_class_label(strtoupper($result['protocol']), 'neighbour_protocol'),
+            html_highlight($remote_host, $queryString),
+            '<span class="text-wrap">' . html_highlight($remote_descr, $queryString) . '</span>',
         ],
+        'highlight'      => TRUE // Already html_highlight(), do not call again
     ];
 }
 

@@ -10,7 +10,7 @@
 NMS-POWER-EXT-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32                       FROM SNMPv2-SMI
     MODULE-COMPLIANCE, OBJECT-GROUP,
     NOTIFICATION-GROUP                          FROM SNMPv2-CONF    
@@ -26,7 +26,9 @@ IMPORTS
           power1Status OBJECT-TYPE
               SYNTAX  INTEGER {
                           down(0), 
-                          up(1)
+                          up(1),
+                          absent(2),
+                          abnormal(3)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -37,7 +39,9 @@ IMPORTS
           power2Status OBJECT-TYPE
               SYNTAX  INTEGER {
                           down(0), 
-                          up(1)
+                          up(1),
+                          absent(2),
+                          abnormal(3)
                           }
               ACCESS  not-accessible
               STATUS  mandatory
@@ -70,39 +74,39 @@ IMPORTS
                             "A list of  Power-Device entries."
                    ::= { powerExt 4 }
 
-               PowerDeviceTableEntry OBJECT-TYPE
+               powerDeviceTableEntry OBJECT-TYPE
                    SYNTAX  PowerDeviceTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
                             "A collection of Power-Device ."
-                   INDEX { PowerDeviceIndex }
+                   INDEX { powerDeviceIndex }
                ::= { PowerDeviceTable 1 }
 
                PowerDeviceTableEntry ::=
                    SEQUENCE {
-                       PowerDeviceIndex
+                       powerDeviceIndex
                            INTEGER,
-                       PowerDeviceType
+                       powerDeviceType
                            INTEGER,
-                       PowerDeviceDescr
+                       powerDeviceDescr
                        	   DisplayString,
-                       PowerDeviceStatus
+                       powerDeviceStatus
                        	   INTEGER,
-                   	   PowerShelfNum
+                       powerShelfNum
                        	   INTEGER
 
                   }
-              PowerDeviceIndex OBJECT-TYPE
+              powerDeviceIndex OBJECT-TYPE
                    SYNTAX  INTEGER
                    ACCESS  read-only
                    STATUS  mandatory
                    DESCRIPTION
                            "Index of Power-Device"
-                   ::= { PowerDeviceTableEntry 1 }
+                   ::= { powerDeviceTableEntry 1 }
 
 
-               PowerDeviceType OBJECT-TYPE
+               powerDeviceType OBJECT-TYPE
                    SYNTAX  INTEGER  { 
                                     EMPTY-SHELF(0)                                  
                                    }
@@ -111,19 +115,19 @@ IMPORTS
                    STATUS  mandatory
                    DESCRIPTION
                            "Type of Power-Device ."
-                   ::= { PowerDeviceTableEntry 2 }
+                   ::= { powerDeviceTableEntry 2 }
 
 
 
-               PowerDeviceDescr OBJECT-TYPE
+               powerDeviceDescr OBJECT-TYPE
                    SYNTAX  DisplayString
                    ACCESS  read-only
                    STATUS  mandatory
                    DESCRIPTION
                            "Text description of this Power-Device."
-                   ::= { PowerDeviceTableEntry 3 }
+                   ::= { powerDeviceTableEntry 3 }
 
-               PowerDeviceStatus OBJECT-TYPE
+               powerDeviceStatus OBJECT-TYPE
                    SYNTAX  INTEGER{ 
                                     ON(1),
                                     OFF(2)                                    
@@ -132,9 +136,9 @@ IMPORTS
                    STATUS  mandatory
                    DESCRIPTION
                            "When value is ON(1), that means Power-Device is working; when value is OFF(2) means Power-Device is out of working."
-                   ::= { PowerDeviceTableEntry 4 }
+                   ::= { powerDeviceTableEntry 4 }
                    
-                PowerShelfNum   OBJECT-TYPE
+                powerShelfNum   OBJECT-TYPE
                    SYNTAX  INTEGER{ 
                                     A(1),
                                     B(2)                                    
@@ -143,7 +147,7 @@ IMPORTS
                    STATUS  mandatory
                    DESCRIPTION
                            "Powerdevice belong to which shelf."
-                   ::= { PowerDeviceTableEntry 5 }
+                   ::= { powerDeviceTableEntry 5 }
 
           
                 

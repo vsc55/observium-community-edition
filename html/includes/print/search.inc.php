@@ -179,7 +179,7 @@ function form_grid_calculate(&$data) {
         // Default (auto) grid size for elements
         $row_grid   = (int)(12 / $row_count);
         $grid_count = 0; // Count for custom passed grid sizes
-        foreach ($row as $id => $element) {
+        foreach ($row as $element) {
             if (isset($element['div_class']) && preg_match('/col-(?:lg|md|sm)-(\d+)/', $element['div_class'], $matches)) {
                 // Class with col size passed
                 $grid_count += (int)$matches[1];
@@ -697,7 +697,7 @@ function form_horizontal_rows_fieldset($data, &$form_options, &$fieldset = []) {
  */
 function form_simple($data, $form_options, &$used_vars) {
     $string_elements = '';
-    foreach ($data['row'] as $k => $row) {
+    foreach ($data['row'] as $row) {
         foreach ($row as $id => $element) {
             $used_vars[]   = $id;
             $element['id'] = $id;
@@ -1065,9 +1065,10 @@ function generate_element_input($item) {
             }
             // add icon for show/hide password
             if ($item['show_password']) {
-                $item_begin .= ' data-toggle="password" ';
+                $item_begin .= ' data-toggle="password"' .
+                               ' data-eye-class="icon" data-eye-open-class="icon-eye-open" data-eye-close-class="icon-eye-close" ';
                 register_html_resource('js', 'bootstrap-show-password.min.js');
-                $GLOBALS['cache_html']['javascript'][] = "$('[data-toggle=\"password\"]').password();";
+                //register_html_resource('script', "$('[data-toggle=\"password\"]').password();");
             }
             //elseif (!$value_hidden && $autocomplete_off) {}
         }
@@ -1586,7 +1587,7 @@ function generate_element_select($item) {
     if ($item['data-style']) {
         $string .= ' data-style="' . $item['data-style'] . '"';
     }
-    // Enable Live search in a values list (if select values count more than 12)
+    // Enable Live search in a value list (if select values count more than 12)
     if (($count_values > 12 || $count_values == 0) && $item['live-search'] !== FALSE) {
         $string .= ' data-live-search="true"';
     }
@@ -1611,6 +1612,12 @@ function generate_element_select($item) {
     // Prepare values for optgroups
     $values   = [];
     $optgroup = [];
+
+    // Sort values by group order (if provided)
+    if (!empty($item['groups'])) {
+        $item['values'] = array_sort_by_order($item['values'], (array)$item['groups'], 'group');
+    }
+
     foreach ($item['values'] as $k => $entry) {
         $k     = (string)$k;
         $value = $item['encode'] ? var_encode($k) : escape_html($k); // Use base64+serialize encoding
@@ -1690,22 +1697,13 @@ function generate_element_select($item) {
         }
     }
 
-    // If item groups passed, use order passed from it
-    $optgroups = array_keys($optgroup);
-    if (isset($item['groups'])) {
-        $groups    = array_intersect((array)$item['groups'], $optgroups);
-        $optgroups = array_diff($optgroups, $groups);
-        $optgroups = array_merge($groups, $optgroups);
-    }
-
-    if (safe_count($optgroups) === 1) // && isset($optgroup['']))
-    {
+    if (safe_count($optgroup) === 1) {
         // Single optgroup, do not use optgroup tags
         $string .= array_shift($optgroup);
     } else {
         // Multiple optgroups implode
-        foreach ($optgroups as $group) {
-            $entry  = $optgroup[$group];
+        foreach ($optgroup as $group => $entry) {
+            //$entry  = $optgroup[$group];
             $label  = ($group !== '' ? ' label="' . $group . '"' : '');
             $string .= '<optgroup' . $label . '>' . PHP_EOL;
             $string .= $entry;
@@ -1721,7 +1719,7 @@ function generate_element_select($item) {
 function generate_element_tags($item) {
     register_html_resource('js', 'bootstrap-tagsinput.min.js');   // Enable Tags Input JS
     //register_html_resource('js',  'bootstrap-tagsinput.js');      // Enable Tags Input JS
-    register_html_resource('css', 'bootstrap-tagsinput.css');     // Enable Tags Input CSS
+    //register_html_resource('css', 'bootstrap-tagsinput.css');     // Enable Tags Input CSS -- in base LESS now
     // defaults
     $delimiter      = empty($item['delimiter']) ? ',' : $item['delimiter'];
     $script_begin   = '';

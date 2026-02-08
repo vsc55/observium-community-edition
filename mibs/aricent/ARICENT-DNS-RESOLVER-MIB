@@ -1,6 +1,6 @@
--- Copyright (C) 2011-2012 Aricent Group . All Rights Reserved
+-- Copyright (C) 2018 Aricent Group . All Rights Reserved
 
--- $Id: fsdns.mib,v 1.6 2014/10/13 12:08:08 siva Exp $
+-- $Id: fsdns.mib,v 1.7 2018/04/17 14:18:43 siva Exp $
 
   ARICENT-DNS-RESOLVER-MIB DEFINITIONS ::= BEGIN
 
@@ -13,14 +13,17 @@ IMPORTS
     dnsResCacheRREntry FROM DNS-RESOLVER-MIB;
 
   fsDns MODULE-IDENTITY
-         LAST-UPDATED "201209050000Z"
+         LAST-UPDATED "202310030000Z"
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
          CONTACT-INFO "support@aricent.com" 
          DESCRIPTION
-            " The proprietary MIB module for DNS Resolver. "
+            "The proprietary MIB module for DNS Resolver."
+      REVISION "202310030000Z"
+      DESCRIPTION
+         "Add counters: fsDnsFailedResponseData and fsDnsFailedResponseParse"
          REVISION "201209050000Z" 
          DESCRIPTION
-            " The proprietary MIB module for DNS Resolver. "
+            "The proprietary MIB module for DNS Resolver."
       ::=  { enterprises aricent-communication-holding-ltd(29601) iss(2) 99 }
 
 -- *****************************************************************************
@@ -104,7 +107,7 @@ IMPORTS
          STATUS     current
          DESCRIPTION
            "This object is used to specify the maximum number of times
-            the resolver can try to retransmit the Query to the Server "
+            the resolver can try to retransmit the Query to the Server."
          DEFVAL { 1 }
          ::= { fsDnsSystem 4 }
 
@@ -115,7 +118,7 @@ IMPORTS
          DESCRIPTION
            "This object is used to specify the time period in seconds for
             which the resolver can wait for the response for the Query
-            sent to the Server "
+            sent to the Server."
          DEFVAL { 5 }
          ::= { fsDnsSystem 5 }
 
@@ -160,7 +163,7 @@ IMPORTS
           MAX-ACCESS  not-accessible
           STATUS      current
           DESCRIPTION
-             "A table containing the Name Server List (SLIST)"
+             "This object specifies the table containing the Name Server List (SLIST)."
          ::= { fsDnsNameServer 1}
 
        fsDnsNameServerEntry OBJECT-TYPE
@@ -168,7 +171,7 @@ IMPORTS
          MAX-ACCESS    not-accessible
          STATUS        current
          DESCRIPTION
-             "Name Server List SLIST Entries "
+             "This object specifies the Name Server List SLIST Entries."
          INDEX { fsDnsNameServerIndex }
          ::= { fsDnsNameServerTable 1 }
 
@@ -185,8 +188,8 @@ IMPORTS
          MAX-ACCESS   not-accessible
          STATUS       current
          DESCRIPTION
-            " An arbitrary integer value, greater than zero, 
-              which uniquely identifies a Name Server"
+            "This object specifies an arbitrary integer value, greater than zero, 
+            which uniquely identifies a Name Server."
          ::= { fsDnsNameServerEntry 1 }
 
        fsDnsServerIPAddressType OBJECT-TYPE
@@ -194,7 +197,7 @@ IMPORTS
          MAX-ACCESS  read-create
          STATUS      current
          DESCRIPTION
-            "The type of object that represents the Name server's Ip address"
+            "This object specifies the type of object that represents the Name server's Ip address."
          ::= { fsDnsNameServerEntry 2 }
 
        fsDnsServerIPAddress OBJECT-TYPE      
@@ -202,7 +205,7 @@ IMPORTS
          MAX-ACCESS   read-create   
          STATUS       current
          DESCRIPTION
-           "The Object represents the Name server's Ip Address"
+           "This object specifies the Object represents the Name server's Ip Address."
          ::= { fsDnsNameServerEntry 3 }
 
         fsDnsNameServerRowStatus OBJECT-TYPE
@@ -210,7 +213,7 @@ IMPORTS
            MAX-ACCESS    read-create
            STATUS        current
            DESCRIPTION
-             "Specifies the Row Status of the Name Server table"
+             "This object specifies the Row Status of the Name Server table."
           ::= { fsDnsNameServerEntry 4 }
 
 -- fsDnsDomainNameTable
@@ -222,7 +225,7 @@ IMPORTS
           MAX-ACCESS  not-accessible
           STATUS      current
           DESCRIPTION
-             "A table containing the Domain Name List"
+             "This object specifies the table containing the Domain Name List."
          ::= { fsDnsDomain 1}
 
        fsDnsDomainNameEntry OBJECT-TYPE
@@ -230,7 +233,7 @@ IMPORTS
          MAX-ACCESS    not-accessible
          STATUS        current
          DESCRIPTION
-             "Domain Name List Entries "
+             "This object specifies the Domain Name List Entries."
          INDEX { fsDnsDomainNameIndex }
          ::= { fsDnsDomainNameTable 1 }
 
@@ -246,8 +249,8 @@ IMPORTS
          MAX-ACCESS   not-accessible
          STATUS       current
          DESCRIPTION
-           " An arbitrary integer value, greater than zero, 
-             which uniquely identifies a Domain Name"
+           "This object specifies an arbitrary integer value, greater than zero, 
+           which uniquely identifies a Domain Name."
          ::= { fsDnsDomainNameEntry 1 }
 
        fsDnsDomainName OBJECT-TYPE        
@@ -255,7 +258,7 @@ IMPORTS
          MAX-ACCESS  read-create
          STATUS      current
          DESCRIPTION
-            "The type of object that represents the Domain Name"
+            "This object specifies the type of object that represents the Domain Name."
          ::= { fsDnsDomainNameEntry 2 }
 
         fsDnsDomainNameRowStatus OBJECT-TYPE
@@ -263,7 +266,7 @@ IMPORTS
            MAX-ACCESS    read-create
            STATUS        current
            DESCRIPTION
-             "Specifies the Row Status of the Domain Name"
+             "This object specifies the Row Status of the Domain Name."
           ::= { fsDnsDomainNameEntry 3 }
 
 -- fsDnsQueryTable
@@ -273,7 +276,7 @@ IMPORTS
             MAX-ACCESS  not-accessible
             STATUS      current
             DESCRIPTION
-              "Displays the resolver's Pending Query Table."
+              "This object displays the resolver's Pending Query Table."
             ::= { fsDnsQuery 1}
 
        fsDnsQueryEntry  OBJECT-TYPE
@@ -281,7 +284,7 @@ IMPORTS
            MAX-ACCESS  not-accessible
            STATUS      current
            DESCRIPTION
-               "Contains the information about a pending Queries"
+               "This object specifies the information about a pending Queries."
            INDEX { fsDnsQueryIndex }
            ::= { fsDnsQueryTable 1}
 
@@ -298,8 +301,8 @@ IMPORTS
            MAX-ACCESS  not-accessible
            STATUS      current
            DESCRIPTION
-              " An arbitrary integer value, greater than zero, 
-                which uniquely identifies a Query"
+              "This object specifies an arbitrary integer value, greater than zero, 
+              which uniquely identifies a Query."
            ::= {fsDnsQueryEntry 1}   
        
        fsDnsQueryName OBJECT-TYPE 
@@ -307,7 +310,7 @@ IMPORTS
            MAX-ACCESS  read-only      
            STATUS      current
            DESCRIPTION
-              "The Query's FQDN(Fully Qualified Domain Name)"
+              "This object specifies the Query's FQDN(Fully Qualified Domain Name)."
            ::= {fsDnsQueryEntry 2}   
 
        fsDnsQueryNSAddressType OBJECT-TYPE
@@ -315,7 +318,7 @@ IMPORTS
            MAX-ACCESS   read-only
            STATUS       current
            DESCRIPTION
-                "The type of Nameserver's address to which the query was sent"
+                "This object specifies the type of Nameserver's address to which the query was sent."
            ::= {fsDnsQueryEntry 3}
  
        fsDnsQueryNSAddress OBJECT-TYPE
@@ -323,7 +326,7 @@ IMPORTS
            MAX-ACCESS  read-only
            STATUS      current
            DESCRIPTION
-              "The Nameserver's address to which the query was sent"
+              "This object specifies the Nameserver's address to which the query was sent."
            ::= {fsDnsQueryEntry 4}   
 
 -- *****************************************************************************
@@ -335,7 +338,7 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Queries sent by the resolver to the Name Server"
+           "This object specifies the number of Queries sent by the resolver to the Name Server."
          ::= { fsDnsStatistics 1}
 
        fsDnsResponseReceived OBJECT-TYPE
@@ -343,7 +346,7 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Response Received by the resolver from the Name Server"
+           "This object specifies the number of Response Received by the resolver from the Name Server."
          ::= { fsDnsStatistics 2}
 
        fsDnsDroppedResponse OBJECT-TYPE
@@ -351,7 +354,7 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Response dropped by the resolver"
+           "This object specifies the number of Response dropped by the resolver."
          ::= { fsDnsStatistics 3}
       
        fsDnsUnAnsweredQueries OBJECT-TYPE
@@ -359,8 +362,8 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Queries sent to the Name Server for which the Response is 
-            not yet received by the resolver"
+           "This object specifies the number of Queries sent to the Name Server for which the Response is 
+            not yet received by the resolver."
          ::= { fsDnsStatistics 4}
         
        fsDnsFailedQueries OBJECT-TYPE
@@ -368,8 +371,8 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Failed Queries sent to the Name Server for which response
-             was not received "
+           "This object specifies the number of Failed Queries sent to the Name Server for which response
+           was not received."
          ::= { fsDnsStatistics 5}
 
        fsDnsReTransQueries OBJECT-TYPE
@@ -377,8 +380,24 @@ IMPORTS
          MAX-ACCESS   read-only
          STATUS       current
          DESCRIPTION
-           " Number of Quereies Retransmitted to the Name Server"
+           "This object specifies the number of Queries Retransmitted to the Name Server."
          ::= { fsDnsStatistics 6}
+         
+       fsDnsFailedResponseData OBJECT-TYPE
+         SYNTAX       Counter32
+         MAX-ACCESS   read-only
+         STATUS       current
+         DESCRIPTION
+           "This object specifies the number of Failed Responses based on data packet"
+         ::= { fsDnsStatistics 7}
+
+       fsDnsFailedResponseParse OBJECT-TYPE
+         SYNTAX       Counter32
+         MAX-ACCESS   read-only
+         STATUS       current
+         DESCRIPTION
+           "This object specifies the number of Failed Responses based on parse error packet"
+         ::= { fsDnsStatistics 8}
 
 -- *******************************************************************
 --  Resolver Cache Table extension - Starts
@@ -398,7 +417,7 @@ IMPORTS
       MAX-ACCESS   not-accessible
       STATUS       current
       DESCRIPTION
-          "An entry in the fsDnsResCacheRRTable contains the
+          "This object specifies an entry in the fsDnsResCacheRRTable contains the
            additional operational characteristics of Dns Resolver
            apart from dnsResCacheRRTable."
       AUGMENTS    { dnsResCacheRREntry }
@@ -414,7 +433,7 @@ IMPORTS
        MAX-ACCESS  read-only
        STATUS      current
        DESCRIPTION
-          "Host from which RR was received."
+          "This object specifies the Host from which RR was received."
        ::= { fsDnsResCacheRREntry 1 }
 
 END

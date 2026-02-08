@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -64,71 +63,80 @@
 # uptime  4231654
 # user-msec       3423357
 
-if (!empty($agent_data['app']['powerdns_recursor'])) {
-    $app_id = discover_app($device, 'powerdns_recursor');
-
-    foreach (explode("\n", $agent_data['app']['powerdns_recursor']) as $line) {
-        [$key, $value] = explode("\t", $line, 2);
-        $powerdns_recursor[$key] = $value;
-    }
-
-    $data = [
-      'outQ_all'           => $powerdns_recursor['all-outqueries'],
-      'outQ_dont'          => $powerdns_recursor['dont-outqueries'],
-      'outQ_tcp'           => $powerdns_recursor['tcp-outqueries'],
-      'outQ_throttled'     => $powerdns_recursor['throttled-out'],
-      'outQ_ipv6'          => $powerdns_recursor['ipv6-outqueries'],
-      'outQ_noEDNS'        => $powerdns_recursor['noedns-outqueries'],
-      'outQ_noPing'        => $powerdns_recursor['noping-outqueries'],
-      'drop_reqDlgOnly'    => $powerdns_recursor['dlg-only-drops'],
-      'drop_overCap'       => $powerdns_recursor['over-capacity-drops'],
-      'timeoutOutgoing'    => $powerdns_recursor['outgoing-timeouts'],
-      'unreachables'       => $powerdns_recursor['unreachables'],
-      'answers_1s'         => $powerdns_recursor['answers-slow'],
-      'answers_1ms'        => $powerdns_recursor['answers0-1'],
-      'answers_10ms'       => $powerdns_recursor['answers1-10'],
-      'answers_100ms'      => $powerdns_recursor['answers10-100'],
-      'answers_1000ms'     => $powerdns_recursor['answers100-1000'],
-      'answers_noerror'    => $powerdns_recursor['noerror-answers'],
-      'answers_nxdomain'   => $powerdns_recursor['nxdomain-answers'],
-      'answers_servfail'   => $powerdns_recursor['servfail-answers'],
-      'caseMismatch'       => $powerdns_recursor['case-mismatches'],
-      'chainResends'       => $powerdns_recursor['chain-resends'],
-      'clientParseErrors'  => $powerdns_recursor['client-parse-errors'],
-      'ednsPingMatch'      => $powerdns_recursor['edns-ping-matches'],
-      'ednsPingMismatch'   => $powerdns_recursor['edns-ping-mismatches'],
-      'noPacketError'      => $powerdns_recursor['no-packet-error'],
-      'nssetInvalidations' => $powerdns_recursor['nsset-invalidations'],
-      'qaLatency'          => $powerdns_recursor['qa-latency'],
-      'questions'          => $powerdns_recursor['questions'],
-      'resourceLimits'     => $powerdns_recursor['resource-limits'],
-      'serverParseErrors'  => $powerdns_recursor['server-parse-errors'],
-      'spoofPrevents'      => $powerdns_recursor['spoof-prevents'],
-      'tcpClientOverflow'  => $powerdns_recursor['tcp-client-overflow'],
-      'tcpQuestions'       => $powerdns_recursor['tcp-questions'],
-      'tcpUnauthorized'    => $powerdns_recursor['unauthorized-tcp'],
-      'udpUnauthorized'    => $powerdns_recursor['unauthorized-udp'],
-      'cacheEntries'       => $powerdns_recursor['cache-entries'],
-      'cacheHits'          => $powerdns_recursor['cache-hits'],
-      'cacheMisses'        => $powerdns_recursor['cache-misses'],
-      'negcacheEntries'    => $powerdns_recursor['negcache-entries'],
-      'nsSpeedsEntries'    => $powerdns_recursor['nsspeeds-entries'],
-      'packetCacheEntries' => $powerdns_recursor['packetcache-entries'],
-      'packetCacheHits'    => $powerdns_recursor['packetcache-hits'],
-      'packetCacheMisses'  => $powerdns_recursor['packetcache-misses'],
-      'unexpectedPkts'     => $powerdns_recursor['unexpected-packets'],
-      'concurrentQueries'  => $powerdns_recursor['concurrent-queries'],
-      'tcpClients'         => $powerdns_recursor['tcp-clients'],
-      'throttleEntries'    => $powerdns_recursor['throttle-entries'],
-      'uptime'             => $powerdns_recursor['uptime'],
-      'cpuTimeSys'         => $powerdns_recursor['sys-msec'],
-      'cpuTimeUser'        => $powerdns_recursor['user-msec']];
-
-    rrdtool_update_ng($device, 'powerdns-recursor', $data, $app_id);
-
-    update_application($app_id, $data);
-
-    unset($powerdns_recursor);
+if (empty($agent_data['app']['powerdns_recursor'])) {
+    return;
 }
+
+$app_id = discover_app($device, 'powerdns_recursor');
+
+$powerdns_recursor = [];
+foreach (safe_explode("\n", $agent_data['app']['powerdns_recursor']) as $line) {
+    [ $key, $value ] = safe_explode("\t", $line, 2);
+    $powerdns_recursor[$key] = $value;
+}
+
+if (empty($powerdns_recursor)) {
+    print_debug("ERROR: Incorrect PowerDNS agent data passed.");
+    return;
+}
+
+$data = [
+    'outQ_all'           => $powerdns_recursor['all-outqueries'],
+    'outQ_dont'          => $powerdns_recursor['dont-outqueries'],
+    'outQ_tcp'           => $powerdns_recursor['tcp-outqueries'],
+    'outQ_throttled'     => $powerdns_recursor['throttled-out'],
+    'outQ_ipv6'          => $powerdns_recursor['ipv6-outqueries'],
+    'outQ_noEDNS'        => $powerdns_recursor['noedns-outqueries'],
+    'outQ_noPing'        => $powerdns_recursor['noping-outqueries'],
+    'drop_reqDlgOnly'    => $powerdns_recursor['dlg-only-drops'],
+    'drop_overCap'       => $powerdns_recursor['over-capacity-drops'],
+    'timeoutOutgoing'    => $powerdns_recursor['outgoing-timeouts'],
+    'unreachables'       => $powerdns_recursor['unreachables'],
+    'answers_1s'         => $powerdns_recursor['answers-slow'],
+    'answers_1ms'        => $powerdns_recursor['answers0-1'],
+    'answers_10ms'       => $powerdns_recursor['answers1-10'],
+    'answers_100ms'      => $powerdns_recursor['answers10-100'],
+    'answers_1000ms'     => $powerdns_recursor['answers100-1000'],
+    'answers_noerror'    => $powerdns_recursor['noerror-answers'],
+    'answers_nxdomain'   => $powerdns_recursor['nxdomain-answers'],
+    'answers_servfail'   => $powerdns_recursor['servfail-answers'],
+    'caseMismatch'       => $powerdns_recursor['case-mismatches'],
+    'chainResends'       => $powerdns_recursor['chain-resends'],
+    'clientParseErrors'  => $powerdns_recursor['client-parse-errors'],
+    'ednsPingMatch'      => $powerdns_recursor['edns-ping-matches'],
+    'ednsPingMismatch'   => $powerdns_recursor['edns-ping-mismatches'],
+    'noPacketError'      => $powerdns_recursor['no-packet-error'],
+    'nssetInvalidations' => $powerdns_recursor['nsset-invalidations'],
+    'qaLatency'          => $powerdns_recursor['qa-latency'],
+    'questions'          => $powerdns_recursor['questions'],
+    'resourceLimits'     => $powerdns_recursor['resource-limits'],
+    'serverParseErrors'  => $powerdns_recursor['server-parse-errors'],
+    'spoofPrevents'      => $powerdns_recursor['spoof-prevents'],
+    'tcpClientOverflow'  => $powerdns_recursor['tcp-client-overflow'],
+    'tcpQuestions'       => $powerdns_recursor['tcp-questions'],
+    'tcpUnauthorized'    => $powerdns_recursor['unauthorized-tcp'],
+    'udpUnauthorized'    => $powerdns_recursor['unauthorized-udp'],
+    'cacheEntries'       => $powerdns_recursor['cache-entries'],
+    'cacheHits'          => $powerdns_recursor['cache-hits'],
+    'cacheMisses'        => $powerdns_recursor['cache-misses'],
+    'negcacheEntries'    => $powerdns_recursor['negcache-entries'],
+    'nsSpeedsEntries'    => $powerdns_recursor['nsspeeds-entries'],
+    'packetCacheEntries' => $powerdns_recursor['packetcache-entries'],
+    'packetCacheHits'    => $powerdns_recursor['packetcache-hits'],
+    'packetCacheMisses'  => $powerdns_recursor['packetcache-misses'],
+    'unexpectedPkts'     => $powerdns_recursor['unexpected-packets'],
+    'concurrentQueries'  => $powerdns_recursor['concurrent-queries'],
+    'tcpClients'         => $powerdns_recursor['tcp-clients'],
+    'throttleEntries'    => $powerdns_recursor['throttle-entries'],
+    'uptime'             => $powerdns_recursor['uptime'],
+    'cpuTimeSys'         => $powerdns_recursor['sys-msec'],
+    'cpuTimeUser'        => $powerdns_recursor['user-msec']
+];
+
+rrdtool_update_ng($device, 'powerdns-recursor', $data, $app_id);
+
+update_application($app_id, $data);
+
+unset($app_id, $powerdns_recursor, $data);
 
 // EOF

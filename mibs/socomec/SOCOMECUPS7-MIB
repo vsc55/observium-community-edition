@@ -8,6 +8,14 @@
 -- vers. 7.00: new version for Net Vision 7 platform by NVO.
 -- vers. 7.10: release.
 -- vers. 7.11: OutputGlobalkW
+-- vers. 7.12: add upsSystemName upsSystemContact upsSystemLocation
+-- vers. 7.13: add upsBatterySOC
+-- vers. 7.14: add upsOutputSource type lineInteractive(9)
+-- vers. 8.00: NET VISION 8
+-- vers. 8.01: modify upsControlDelay, upsControlFirstWarning, upsControlWarningInterval, upsAgentPollRate, upsAgentBaudRate, receiverCommunityString data range.
+--             modify upsControlWeeklyShutdownTime, upsControlWeeklyRestartTime, upsControlSpecialShutdownTime, upsControlSpecialRestartTime, upsControlEcoModeStartTime, upsControlEcoModeEndTime display format.
+-- vers. 8.11: add trap upsTrapSessionLogin, upsTrapLoginUnsuccesfulTentative, upsTrapTest
+--             add upsOutputSource type lineInteractive(10)
 
 SOCOMECUPS7-MIB DEFINITIONS ::= BEGIN
 
@@ -97,6 +105,31 @@ upsIdentAgentSoftwareVersion OBJECT-TYPE
       DESCRIPTION
           "The UPS Net Vision software version."
       ::= { upsIdent 5 }
+
+upsSystemName OBJECT-TYPE
+      SYNTAX DisplayString (SIZE(0..127))
+      ACCESS read-only
+      STATUS mandatory
+      DESCRIPTION
+          "The UPS Net Vision system name."
+      ::= { upsIdent 6 }
+
+upsSystemContact OBJECT-TYPE
+      SYNTAX DisplayString (SIZE(0..127))
+      ACCESS read-only
+      STATUS mandatory
+      DESCRIPTION
+          "The UPS Net Vision system contact."
+      ::= { upsIdent 7 }
+
+upsSystemLocation  OBJECT-TYPE
+      SYNTAX DisplayString (SIZE(0..127))
+      ACCESS read-only
+      STATUS mandatory
+      DESCRIPTION
+          "The UPS Net Vision system location."
+      ::= { upsIdent 8 }
+
 
 -- ===========================================================================
 -- upsBattery
@@ -189,6 +222,17 @@ upsBatteryCurrent OBJECT-TYPE
     DESCRIPTION
             "The battry current in 0.1 Amp"
     ::= { upsBattery 8 }
+
+-- vers. 7.13
+
+upsBatterySOC OBJECT-TYPE
+    SYNTAX     INTEGER    
+    ACCESS read-only
+    STATUS     mandatory
+    DESCRIPTION
+            "The battry SOC"
+    ::= { upsBattery 9 }
+
 
 -- ===========================================================================
 -- upsInput
@@ -297,7 +341,9 @@ upsOutputSource OBJECT-TYPE
            ecoMode(5),
            onBypass(6),
            standby(7),
-           upsOff(8)
+           upsOff(8),
+           lineInteractive(9),
+           flexMode(10)
      }
      ACCESS read-only
      STATUS mandatory
@@ -1231,7 +1277,7 @@ upsControlEventStatus OBJECT-TYPE
                  ::= { shutdownParamEntry 2 }
 
 upsControlDelay OBJECT-TYPE
-        SYNTAX INTEGER (0..32767)
+        SYNTAX INTEGER (0..10080)
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
@@ -1245,7 +1291,7 @@ upsControlDelay OBJECT-TYPE
                  ::= { shutdownParamEntry 3 }
 
 upsControlFirstWarning OBJECT-TYPE
-        SYNTAX INTEGER (0..32767)
+        SYNTAX INTEGER (0..3600)
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
@@ -1256,7 +1302,7 @@ upsControlFirstWarning OBJECT-TYPE
                  ::= { shutdownParamEntry 4 }
 
 upsControlWarningInterval OBJECT-TYPE
-        SYNTAX INTEGER (0..32767)
+        SYNTAX INTEGER (0..3600)
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
@@ -1326,7 +1372,7 @@ upsControlWeeklyShutdownTime OBJECT-TYPE
         STATUS mandatory
         DESCRIPTION
          "The time that the process of shutting down the UPS will be initiated
-          in hh:mm:ss format."
+          in hh:mm format."
         ::= { upsControlWeeklyScheduleEntry 3 }
 
 upsControlWeeklyRestartDay     OBJECT-TYPE
@@ -1352,7 +1398,7 @@ upsControlWeeklyRestartTime OBJECT-TYPE
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
-                "The time the UPS will restart in hh:mm:ss format."
+                "The time the UPS will restart in hh:mm format."
         ::= { upsControlWeeklyScheduleEntry 5 }
 
 upsControlSpecialScheduleTable OBJECT-TYPE
@@ -1408,7 +1454,7 @@ upsControlSpecialShutdownTime OBJECT-TYPE
         STATUS mandatory
         DESCRIPTION
          "The time that the process of shutting down the UPS will be initiated
-          in hh:mm:ss format"
+          in hh:mm format"
         ::= { upsControlSpecialScheduleEntry 3 }
 
 upsControlSpecialRestartDay     OBJECT-TYPE
@@ -1425,7 +1471,7 @@ upsControlSpecialRestartTime OBJECT-TYPE
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
-                "The time the UPS will restart in hh:mm:ss format."
+                "The time the UPS will restart in hh:mm format."
         ::= { upsControlSpecialScheduleEntry 5 }
 
 
@@ -1489,7 +1535,7 @@ upsControlEcoModeStartTime OBJECT-TYPE
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
-         "The time that the UPS Eco/Mode will be enabled, in hh:mm:ss format."
+         "The time that the UPS Eco/Mode will be enabled, in hh:mm format."
         ::= { upsControlEcoModeScheduleEntry 3 }
 
 upsControlEcoModeEndDay     OBJECT-TYPE
@@ -1515,7 +1561,7 @@ upsControlEcoModeEndTime OBJECT-TYPE
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
-                "The time the UPS Eco/Mode will disabled,  in hh:mm:ss format."
+                "The time the UPS Eco/Mode will disabled,  in hh:mm format."
         ::= { upsControlEcoModeScheduleEntry 5 }
 
 
@@ -1802,7 +1848,7 @@ upsAgentExtHistoryLogFrequency      OBJECT-TYPE
         ::= { upsAgent 9 }
 
 upsAgentPollRate OBJECT-TYPE
-        SYNTAX INTEGER (3..999) -- in seconds
+        SYNTAX INTEGER (1..60) -- in seconds
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
@@ -1815,7 +1861,7 @@ upsAgentBaudRate OBJECT-TYPE
         ACCESS read-only
         STATUS mandatory
         DESCRIPTION
-                "The serial port communication speed. only 9600 allowed"
+                "The serial port communication speed. 2400,9600,19200,57600 allowed"
         ::= { upsAgent 11}
 
 upsAgentDhcpStatue OBJECT-TYPE
@@ -1965,7 +2011,7 @@ trapsReceiverAddr OBJECT-TYPE
         ::= { upsAgentTrapsReceiversEntry 2 }
 
 receiverCommunityString OBJECT-TYPE
-        SYNTAX DisplayString (SIZE(0..15))
+        SYNTAX DisplayString (SIZE(0..31))
         ACCESS read-write
         STATUS mandatory
         DESCRIPTION
@@ -2363,10 +2409,28 @@ emdStatusIn2Active OBJECT-TYPE
     ::= 38
 
     upsTrapEmdSecondInputRestored TRAP-TYPE
-         ENTERPRISE upsTraps
-         DESCRIPTION
-             "INFORMATION: The <customized string_2> input is restored."
+        ENTERPRISE upsTraps
+        DESCRIPTION
+            "INFORMATION: The <customized string_2> input is restored."
     ::= 39
 
-   END
+    upsTrapSessionLogin TRAP-TYPE
+        ENTERPRISE       upsTraps
+        DESCRIPTION
+            "INFORMATION: New Admin or User session opened."
+    ::= 40
+
+    upsTrapLoginUnsuccesfulTentative TRAP-TYPE
+        ENTERPRISE       upsTraps
+        DESCRIPTION
+            "WARNING: Admin or User account locked."
+    ::= 41
+
+    upsTrapTest TRAP-TYPE
+        ENTERPRISE       upsTraps
+        DESCRIPTION
+            "INFORMATION: Send test trap."
+    ::= 42
+
+    END
 

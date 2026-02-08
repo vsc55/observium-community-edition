@@ -101,13 +101,11 @@ if ($config['os'][$device['os']]['group']) {
 // Show tabs if the user has access to this device
 
 if (!device_permitted($device['device_id'])) {
-    register_html_panel('default'); // default xl panel
-
     // Print the device header (do not hide in xl for entity permitted)
     print_device_header($device);
 } else {
     // Device permitted, show full info
-    //register_html_panel(generate_device_panel($device));
+    register_html_panel(generate_device_panel($device));
 
     // Print the device header
     print_device_header($device, [ 'div-class' => 'hidden-xl' ]);
@@ -216,6 +214,16 @@ if (!device_permitted($device['device_id'])) {
         $navbar['options']['vlans'] = ['text' => 'VLANs', 'icon' => $config['icon']['vlan']];
     }
 
+    // Print STP tab if there are matching entries in the stp_bridge table
+    if (dbExist('stp_bridge', '`device_id` = ?', [$device['device_id']])) {
+        $navbar['options']['stp'] = ['text' => 'STP', 'icon' => $config['icon']['stp']];
+    }
+
+    // Print BFD tab if there are matching entries in the bfd_sessions table
+    if (dbExist('bfd_sessions', '`device_id` = ?', [$device['device_id']])) {
+        $navbar['options']['bfd'] = ['text' => 'BFD', 'icon' => $config['icon']['bfd']];
+    }
+
     // Print the SLAs tab if there are matching entries in the slas table
     //if (dbFetchCell('SELECT COUNT(*) FROM `slas` WHERE `device_id` = ? AND `deleted` = 0', array($device['device_id'])) > '0')
     if (dbExist('slas', '`device_id` = ?', [ $device['device_id'] ])) {
@@ -225,6 +233,11 @@ if (!device_permitted($device['device_id'])) {
     // Juniper Firewall MIB. Some day generify this stuff.
     if (isset($attribs['juniper-firewall-mib']) && is_device_mib($device, 'JUNIPER-FIREWALL-MIB')) {
         $navbar['options']['juniper-firewall'] = [ 'text' => 'Firewall', 'icon' => $config['icon']['firewall'] ];
+    }
+
+    // Power tab for power devices
+    if ($device['type'] === 'power') {
+        $navbar['options']['power'] = ['text' => 'Power', 'icon' => $config['icon']['power']];
     }
 
     // Print the p2p radios tab if there are matching entries in the p2p radios
@@ -244,9 +257,9 @@ if (!device_permitted($device['device_id'])) {
     //$device_ap_exist    = dbFetchCell('SELECT COUNT(wifi_ap_id)          FROM `wifi_aps`          WHERE `device_id` = ?', array($device['device_id']));
     //$device_radio_exist = dbFetchCell('SELECT COUNT(wifi_radio_id)       FROM `wifi_radios`       WHERE `device_id` = ?', array($device['device_id']));
     //$device_wlan_exist  = dbFetchCell('SELECT COUNT(wlan_id)             FROM `wifi_wlans`        WHERE `device_id` = ?', array($device['device_id']));
-    $device_ap_exist    = dbExist('wifi_aps', '`device_id` = ?', [$device['device_id']]);
-    $device_radio_exist = dbExist('wifi_radios', '`device_id` = ?', [$device['device_id']]);
-    $device_wlan_exist  = dbExist('wifi_wlans', '`device_id` = ?', [$device['device_id']]);
+    $device_ap_exist    = dbExist('wifi_aps',    '`device_id` = ?', [ $device['device_id'] ]);
+    $device_radio_exist = dbExist('wifi_radios', '`device_id` = ?', [ $device['device_id'] ]);
+    $device_wlan_exist  = dbExist('wifi_wlans',  '`device_id` = ?', [ $device['device_id'] ]);
 
     if ($device_ap_exist || $device_radio_exist || $device_wlan_exist) {
         $navbar['options']['wifi'] = ['text' => 'WiFi', 'icon' => $config['icon']['wifi']];
@@ -534,7 +547,7 @@ if (!device_permitted($device['device_id'])) {
 
         // Print the config tab if we have a device config
         if ($showconfig) {
-            $navbar['options']['showconfig'] = [ 'text' => 'Config '.nicecase($showconfig), 'icon' => $config['icon']['config'] ];
+            $navbar['options']['showconfig'] = [ 'text' => nicecase($showconfig), 'icon' => $config['icon']['config'] ];
         }
     }
 
@@ -605,11 +618,13 @@ if (!device_permitted($device['device_id'])) {
         }
 
         // Ignore / Disable / Delete
-        $navbar['options']['tools']['suboptions']['ignore'] = [
-            'icon' => $config['icon']['ignore'],
-            'text' => 'Ignore',
-            'action' => 1
-        ];
+        if ($config['devel']) {
+            $navbar['options']['tools']['suboptions']['ignore'] = [
+                'icon' => $config['icon']['ignore'],
+                'text' => 'Ignore',
+                'action' => 1
+            ];
+        }
 
         $navbar['options']['tools']['suboptions']['delete']['url']       = generate_url([ 'page' => 'device', 'device' => $device['device_id'], 'tab' => 'edit', 'section' => 'delete' ]);
         $navbar['options']['tools']['suboptions']['delete']['text']      = 'Delete Device';
@@ -721,7 +736,8 @@ if (!device_permitted($device['device_id'])) {
 // Check that the user can view the device, or is viewing a permitted port on the device
 if (device_permitted($device['device_id']) || $permit_tabs[$tab]) {
     // If this device has never been polled, print a warning here
-    if (!$device['last_polled'] || $device['last_polled'] === '0000-00-00 00:00:00') {
+    $last_polled = $device['last_polled'] && $device['last_polled'] !== '0000-00-00 00:00:00' ? strtotime($device['last_polled']) : 0;
+    if ($last_polled == '0') {
         print_warning('<h4>Device not yet polled</h4>
 This device has not yet been successfully polled. System information and statistics will not be populated and graphs will not draw.
 Please wait 5-10 minutes for graphs to draw correctly.');
@@ -732,9 +748,15 @@ Please wait 5-10 minutes for graphs to draw correctly.');
             //r($poller_start);
             if ($poller_start) {
                 print_success('<h4>Device poller in progress</h4>
-This device is being polled now. Poller started ' . format_unixtime($poller_start) . ' (' . format_uptime(time() - $poller_start) . ' ago).');
+This device is being polled now. Poller started ' . format_unixtime($poller_start) . ' (' . format_uptime(get_time() - $poller_start) . ' ago).');
             }
         }
+    } elseif (!$device['disabled'] && $device['status'] &&
+              $_SESSION['userlevel'] >= 7 && (get_time() - $last_polled > 1200)) {
+        // Warning when a device not polled for long time
+        print_warning('<h4>Device not polled for a long time (' . format_uptime(get_time() - $last_polled, 'short-2') . ' ago)</h4>
+This device not successfully polled for a long time. System information and statistics will not be populated and graphs will empty.
+Please check your Observium cronjob and logs.');
     }
 
     // If this device has never been discovered, print a warning here
@@ -744,11 +766,20 @@ This device has not yet been successfully discovered. System information and sta
 This device should be automatically discovered within 10 minutes.');
     }
     if ($_SESSION['userlevel'] >= 7) {
-        $discovery_start = dbFetchCell("SELECT `process_start` FROM `observium_processes` WHERE `device_id` = ? AND `process_name` = ?", [$device['device_id'], 'discovery.php']);
-        //r($discovery_start);
-        if ($discovery_start) {
+
+        if ($discovery_start = dbFetchCell("SELECT `process_start` FROM `observium_processes` WHERE `device_id` = ? AND `process_name` = ?", [ $device['device_id'], 'discovery.php' ])) {
+            //r($discovery_start);
             print_success('<h4>Device discovery in progress</h4>
 This device is being discovered now. Discovery started ' . format_unixtime($discovery_start) . ' (' . format_uptime(time() - $discovery_start) . ' ago).');
+        } elseif ($device['force_discovery']) {
+            if (!safe_empty($attribs['force_discovery_modules'])) {
+                // Already forced modules exist, merge it with new
+                $forced = implode(', ', safe_json_decode($attribs['force_discovery_modules']));
+            } else {
+                $forced = 'all';
+            }
+            print_message("<h4>Forced Device discovery requested</h4>
+This device is being discovered soon. Forced discovery requested for '$forced' module(s).");
         }
     }
 

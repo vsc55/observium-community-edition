@@ -54,7 +54,15 @@ aristaVxlanVtepCountersTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-        "This table contains VXLAN counters per remote VTEP."
+        "This table contains VXLAN counters per remote VTEP.
+        
+        On some of the Arista hardware platforms a subset of VTEP counters are
+        unsupported. On these platforms the value of the corresponding MIB objects
+        will be zero.
+
+        On some of the Arista hardware platforms VTEP counters are entirely
+        unsupported. On these platforms the VTEP counter table will not
+        be populated."
     ::= { aristaVxlanMibObjects 1 }
 
 aristaVxlanVtepCountersEntry OBJECT-TYPE
@@ -220,7 +228,15 @@ aristaVxlanVniCountersTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-        "This table contains VXLAN counters per VNI."
+        "This table contains VXLAN counters per VNI.
+
+        On some of the Arista hardware platforms a subset of VNI counters are
+        unsupported. On these platforms the value of the corresponding MIB objects
+        will be zero.
+
+        On some of the Arista hardware platforms VNI counters are entirely
+        unsupported. On these platforms the VNI counter table will not
+        be populated."
     ::= { aristaVxlanMibObjects 2 }
 
 aristaVxlanVniCountersEntry OBJECT-TYPE

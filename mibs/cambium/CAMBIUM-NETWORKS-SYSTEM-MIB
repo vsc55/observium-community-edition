@@ -11,13 +11,26 @@ IMPORTS
                 FROM INET-ADDRESS-MIB;
 
 cnSystem MODULE-IDENTITY
-    LAST-UPDATED "202209011200Z" -- September 1, 2022
+    LAST-UPDATED "202408201200Z" -- August 20, 2024
     ORGANIZATION
         "Cambium Networks Inc."
     CONTACT-INFO
         "Cambium Networks Support"
     DESCRIPTION
         "This module contains MIB definitions for common cnMatrix system functions."
+
+    REVISION "202408201200Z" -- August 20, 2024
+    DESCRIPTION
+        "Extended MOTD banner support by defining
+         additional MOTD banner objects supporting
+         message concatenation"
+
+    REVISION "202404041200Z" -- April 4, 2024
+    DESCRIPTION
+        "Added cambiumInternalPowerSupplyTable"
+    REVISION "202306081200Z" -- June 8, 2023
+    DESCRIPTION
+        "Added cnException"
     REVISION "202209011200Z" -- September 1, 2022
     DESCRIPTION
         "Added cnArpBroadCastRateLimit"
@@ -72,6 +85,7 @@ cnSystem MODULE-IDENTITY
 
 cnHttpClient OBJECT IDENTIFIER ::= { cnSystem 24 }
 cnCpuRateLimits OBJECT IDENTIFIER ::= { cnSystem 27 }
+cnException OBJECT IDENTIFIER ::= { cnSystem 29 }
 
 cambiumScheduledReload OBJECT-TYPE
     SYNTAX      TruthValue
@@ -397,5 +411,90 @@ cambiumPasswordEncryption OBJECT-TYPE
     DEFVAL { false }
 
     ::= { cnSystem 28 }
+
+cnExceptionDumpUrl OBJECT-TYPE
+    SYNTAX          OCTET STRING(SIZE(0..256))
+    MAX-ACCESS      read-write
+    STATUS          current
+    DESCRIPTION
+        "If not empty, core dumps will be sent to this URL. Supported format is usb:[destinationDir/]"
+    DEFVAL { "" }
+
+    ::= { cnException 1 }
+
+cambiumInternalPowerSupplyTable OBJECT-TYPE
+    SYNTAX         SEQUENCE OF CnInternalPowerSupplyTableEntry
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "Internal power supply entry"
+
+    ::= { cnSystem 30 }
+
+cnInternalPowerSupplyTableEntry OBJECT-TYPE
+    SYNTAX         CnInternalPowerSupplyTableEntry
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "Internal power supply entry"
+
+    INDEX { cnInternalPowerSupplyIndex }
+    ::= { cambiumInternalPowerSupplyTable 1 }
+
+CnInternalPowerSupplyTableEntry ::= SEQUENCE {
+    cnInternalPowerSupplyIndex      Integer32,
+    cnInternalPowerSupplyStatus     INTEGER
+}
+
+cnInternalPowerSupplyIndex OBJECT-TYPE
+    SYNTAX         Integer32(1..3)
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Internal power supply index identifier attribute"
+
+    ::= { cnInternalPowerSupplyTableEntry 1 }
+
+cnInternalPowerSupplyStatus OBJECT-TYPE
+    SYNTAX         INTEGER{
+                              ok(1),
+                              error(2)
+                          }
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Internal power supply status"
+
+    ::= { cnInternalPowerSupplyTableEntry 2 }
+
+cambiumSystemMotdBanner2 OBJECT-TYPE
+    SYNTAX         OCTET STRING(SIZE(0..500))
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+        "Displayed after login. The contents of
+         this object are concatenated with the
+         cambiumSystemMotdBanner contents for
+         display purposes."
+
+    DEFVAL { "" }
+
+    ::= { cnSystem 31 }
+
+cambiumSystemMotdBanner3 OBJECT-TYPE
+    SYNTAX         OCTET STRING(SIZE(0..500))
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+        "Displayed after login. The contents of
+         this object are concatenated with the
+         cambiumSystemMotdBanner contents and 
+         the cambiumSystemMotdBanner2 contents
+         for display purposes."
+
+    DEFVAL { "" }
+
+    ::= { cnSystem 32 }
+
 END
 

@@ -137,15 +137,16 @@ function print_storage_table_header($vars)
 
     echo('<table class="' . $table_class . '">' . PHP_EOL);
     $cols = [
-      [NULL, 'class="state-marker"'],
-      'device'     => ['Device', 'style="width: 250px;"'],
-      'mountpoint' => ['Mountpoint'],
-      'fstype'     => ['FS Type', 'style="width: 90px;"'],
-      'size'       => ['Size', 'style="width: 100px;"'],
-      'used'       => ['Used', 'style="width: 100px;"'],
-      'free'       => ['Free', 'style="width: 100px;"'],
-      ['', 'style="width: 100px;"'],
-      'usage'      => ['Usage %', 'style="width: 200px;"'],
+                        [ NULL, 'class="state-marker"' ],
+        'device'     => [ 'Device', 'style="width: 250px;"' ],
+        'mountpoint' => [ 'Mountpoint' ],
+        'mib'        => [ 'MIB::Object' ],
+        'fstype'     => [ 'FS Type', 'style="width: 90px;"' ],
+        'size'       => [ 'Size', 'style="width: 90px;"' ],
+        'used'       => [ 'Used', 'style="width: 90px;"' ],
+        'free'       => [ 'Free', 'style="width: 90px;"' ],
+                        [ '', 'style="width: 100px;"' ],
+        'usage'      => [ 'Usage %', 'style="width: 200px;"' ],
     ];
 
     if ($vars['page'] === "device") {
@@ -163,13 +164,11 @@ function print_storage_row($storage, $vars)
 
 }
 
-function generate_storage_row($storage, $vars)
-{
+function generate_storage_row($storage, $vars) {
 
-    global $config;
-
+    //r($storage);
     $table_cols = 9;
-    if ($vars['page'] !== "device" && $vars['popup'] != TRUE) {
+    if ($vars['page'] !== "device" && !get_var_true($vars['popup'])) {
         $table_cols++;
     } // Add a column for device.
 
@@ -211,12 +210,16 @@ function generate_storage_row($storage, $vars)
     $row = '<tr class="ports ' . $storage['row_class'] . '">
           <td class="state-marker"></td>';
 
-    if ($vars['page'] !== "device" && $vars['popup'] != TRUE) {
+    if ($vars['page'] !== "device" && !get_var_true($vars['popup'])) {
         $row .= '<td class="entity">' . generate_device_link($storage) . '</td>';
     }
 
-    $row .= '  <td class="entity">' . generate_entity_link('storage', $storage) . '</td>
-      <td>' . $storage['human_type'] . '</td>
+    $row .= '  <td class="entity">' . generate_entity_link('storage', $storage) . '</td>' . PHP_EOL;
+    if ($vars['page'] === "device" && $vars['tab'] !== "overview") {
+        $row .= generate_entity_mib_cell($storage, 'storage');
+        $table_cols++;
+    }
+    $row .= '      <td>' . $storage['storage_type'] . '</td>
       <td>' . $total . '</td>
       <td>' . $used . '</td>
       <td>' . $free . '</td>

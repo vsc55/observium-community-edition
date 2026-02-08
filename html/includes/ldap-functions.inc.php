@@ -40,7 +40,7 @@ function ldap_paged_entries($filter, $attributes, $dn) {
     $ldap_v3 = ($config['auth_mechanism'] === 'ad') || ($config['auth_ldap_version'] >= 3);
     $entries = [];
 
-    if ($ldap_v3 && PHP_VERSION_ID >= 70300) {
+    if ($ldap_v3) {
         // Use pagination for speedup fetch huge lists, there is new style, see:
         // https://www.php.net/manual/en/ldap.examples-controls.php (Example #5)
         $page_size = 200;

@@ -10,7 +10,7 @@
 NMS-VLAN-EXT-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32,Counter64             FROM SNMPv2-SMI
     TEXTUAL-CONVENTION, RowStatus, TimeStamp,
     TruthValue                                  FROM SNMPv2-TC
@@ -44,10 +44,9 @@ IMPORTS
                    STATUS  mandatory
                    DESCRIPTION
                            "Vlan global transport mode.Not supported in S8500 series. "
-                   ::= { nmsvlanExt 2 }
-                   
-
-               dot1qPortVlanTable OBJECT-TYPE
+                   ::= { nmsvlanExt 2 }     
+      
+              dot1qPortVlanTable OBJECT-TYPE
                    SYNTAX  SEQUENCE OF Dot1qPortVlanTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
@@ -324,7 +323,355 @@ IMPORTS
                    DESCRIPTION
                            "Dot1qTunnel enable operation.  enabled(1),disabled(2). Default value is disable."
                    ::= { nmsvlanExt 5 }
+                 
+             	dot1qVlanTable OBJECT-TYPE
+                SYNTAX  SEQUENCE OF Dot1qVlanTableEntry
+                ACCESS  not-accessible
+                STATUS  mandatory
+                DESCRIPTION
+                            "A table of dot1qVlan operation."
+                ::= { nmsvlanExt 6 }     
                    
+             	dot1qVlanTableEntry OBJECT-TYPE
+	               SYNTAX  Dot1qVlanTableEntry
+	               ACCESS  not-accessible
+	               STATUS  mandatory
+	               DESCRIPTION
+	                   "A collection of dot1qVlan operation."
+	               INDEX { dot1qVlanIndex }
+               	::= { dot1qVlanTable 1 }
+
+                Dot1qVlanTableEntry ::=
+                SEQUENCE {
+                     dot1qVlanTagged
+                       	 OCTET STRING,
+                     dot1qVlanStaticRowStatus
+            			 RowStatus
+					}    
+					
+					
+			 	 dot1qVlanTagged OBJECT-TYPE
+                   SYNTAX  OCTET STRING
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "value for port allowed vlan list."
+                   ::= { dot1qVlanTableEntry 1 }   
+                   
+                 dot1qVlanStaticRowStatus OBJECT-TYPE
+				    SYNTAX      RowStatus
+				    MAX-ACCESS  read-create
+				    STATUS      mandatory
+
+				    DESCRIPTION
+				        "This object indicates the status of this entry."
+				    ::= { dot1qVlanTableEntry 2 }
+
+                  portDttConfigTable OBJECT-TYPE
+					SYNTAX SEQUENCE OF PortDttConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+                    "dot1q-translating-tunnel configuraton Table"
+                    ::= { nmsvlanExt 9 }
+                    
+                   portDttConfigEntry OBJECT-TYPE
+					SYNTAX PortDttConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					" "
+					INDEX { ifIndex, dttStartVlanId, dttEndVlanId }
+					::= { portDttConfigTable 1 } 
+					
+				   PortDttConfigEntry ::=
+				   SEQUENCE {
+					dttStartVlanId
+					INTEGER,
+					dttEndVlanId
+					INTEGER,
+					dttSVlanId
+					INTEGER,
+					dttTeMode
+					INTEGER,
+					dttSTagCosNewValue
+					INTEGER,
+					dttRowStatus 
+					 RowStatus,
+					dttTeModeType
+					INTEGER
+					}     
+					
+					dttStartVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The starting VLAN ID, working together with endVlanId,
+					consists of a VLAN group. The VLAN ID match the VLAN group
+					will be QinQed or flated  with specified outer VLAN
+					"
+					::= { portDttConfigEntry 1 }
+					
+					dttEndVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The ending VLAN ID, working together with startVlanId,
+					consists of a VLAN range. The VLAN ID match the VLAN range
+					will be QinQed or flated with specified outer VLAN
+					"
+					::= { portDttConfigEntry 2 } 
+					
+					dttSVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					"The outer VLAN id to be QinQed or flated"
+					::= { portDttConfigEntry 3 }  
+
+	 			   dttTeMode OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   		{
+                   			dttTeModeFlat(1),
+				   			dttTeModeQinQ(2)
+                        }
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "value for port vlan translation item mode. The default value is DttTeModeQinQ(2)."
+                   ::= { portDttConfigEntry 4 }
+					
+					dttSTagCosNewValue OBJECT-TYPE
+					SYNTAX INTEGER (0..7)
+					MAX-ACCESS read-create
+					STATUS current
+					DESCRIPTION
+					"The new STAG COS value to be set"
+					DEFVAL { 0 }
+					::= { portDttConfigEntry 5 }
+
+					dttRowStatus OBJECT-TYPE
+					SYNTAX RowStatus
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					""
+					::= { portDttConfigEntry 6 }
+					
+					dttTeModeType OBJECT-TYPE
+                    SYNTAX  INTEGER
+                    	{
+                   	  		dttTeModeType1to1(1),
+				    		dttTeModeTypento1(2)
+                        }
+                    ACCESS  read-write
+                    STATUS  mandatory
+                    DESCRIPTION
+                            "value for port vlan translation item mode type."
+                    ::= { portDttConfigEntry 7 }
+                     
+                     portDttMaskConfigTable OBJECT-TYPE
+					SYNTAX SEQUENCE OF portDttMaskConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+                    "dot1q-translating-tunnel configuraton Table of mask mode, configuration order:
+                    firist the dttMaskTesMode or dttMaskSTagCosNewValue, the dttMaskSVlanId must be configurated last,
+                    if not it would return error"
+                    ::= { nmsvlanExt 10 }
+                    
+                   portDttMaskConfigEntry OBJECT-TYPE
+					SYNTAX portDttMaskConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					" "
+					INDEX { ifIndex, dttMaskStartVlanId, dttMaskEndVlanId }
+					::= { portDttMaskConfigTable 1 } 
+					
+				   portDttMaskConfigEntry ::=
+				   SEQUENCE {
+					dttMaskStartVlanId
+					INTEGER,
+					dttMaskEndVlanId
+					INTEGER,
+					dttMaskSVlanId
+					INTEGER,
+					dttMaskTesMode
+					INTEGER,
+					dttMaskSTagCosNewValue
+					INTEGER,
+					dttMaskRowStatus 
+					 RowStatus
+					}     
+					
+					dttMaskStartVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The starting VLAN ID, working together with endVlanId,
+					consists of a VLAN group. The VLAN ID match the VLAN group
+					will be QinQed or flated  with specified outer VLAN
+					"
+					::= { portDttMaskConfigEntry 1 }
+					
+					dttMaskEndVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The ending VLAN ID, working together with startVlanId,
+					consists of a VLAN range. The VLAN ID match the VLAN range
+					will be QinQed or flated with specified outer VLAN
+					"
+					::= { portDttMaskConfigEntry 2 } 
+					
+					dttMaskSVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					"The outer VLAN id to be QinQed or flated"
+					::= { portDttMaskConfigEntry 3 }  
+
+	 			   dttMaskTesMode OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   		{
+                   			dttTeModeFlat(1),
+				   			dttTeModeQinQ(2)
+                        }
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "value for port vlan translation item mode. The default value is DttTeModeQinQ(2)."
+                   ::= { portDttMaskConfigEntry 4 }
+					
+					dttMaskSTagCosNewValue OBJECT-TYPE
+					SYNTAX INTEGER (0..7)
+					MAX-ACCESS read-create
+					STATUS current
+					DESCRIPTION
+					"The new STAG COS value to be set"
+					DEFVAL { 0 }
+					::= { portDttMaskConfigEntry 5 }
+
+					dttMaskRowStatus OBJECT-TYPE
+					SYNTAX RowStatus
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					""
+					::= { portDttMaskConfigEntry 6 }
+
+                     portDttRangeConfigTable OBJECT-TYPE
+					SYNTAX SEQUENCE OF portDttRangeConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+                    "dot1q-translating-tunnel configuraton Table of range mode, configuration order is the same as Mask"
+                    ::= { nmsvlanExt 11 }
+                    
+                   portDttRangeConfigEntry OBJECT-TYPE
+					SYNTAX portDttRangeConfigEntry
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					" "
+					INDEX { ifIndex, dttRangeStartVlanId, dttRangeEndVlanId }
+					::= { portDttRangeConfigTable 1 } 
+					
+				   portDttRangeConfigEntry ::=
+				   SEQUENCE {
+					dttRangeStartVlanId
+					INTEGER,
+					dttRangeEndVlanId
+					INTEGER,
+					dttRangeSVlanId
+					INTEGER,
+					dttRangeTesMode
+					INTEGER,
+					dttRangeSTagCosNewValue
+					INTEGER,
+					dttRangeRowStatus 
+					 RowStatus
+					}     
+					
+					dttRangeStartVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The starting VLAN ID, working together with endVlanId,
+					consists of a VLAN group. The VLAN ID match the VLAN group
+					will be QinQed or flated  with specified outer VLAN
+					"
+					::= { portDttRangeConfigEntry 1 }
+					
+					dttRangeEndVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS not-accessible
+					STATUS mandatory
+					DESCRIPTION
+					"
+					The ending VLAN ID, working together with startVlanId,
+					consists of a VLAN range. The VLAN ID match the VLAN range
+					will be QinQed or flated with specified outer VLAN
+					"
+					::= { portDttRangeConfigEntry 2 } 
+					
+					dttRangeSVlanId OBJECT-TYPE
+					SYNTAX INTEGER
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					"The outer VLAN id to be QinQed or flated"
+					::= { portDttRangeConfigEntry 3 }  
+
+	 			   dttRangeTesMode OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   		{
+                   			DttTeModeFlat(1),
+				   			DttTeModeQinQ(2)
+                        }
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "value for port vlan translation item mode. The default value is DttTeModeQinQ(2)."
+                   ::= { portDttRangeConfigEntry 4 }
+					
+					dttRangeSTagCosNewValue OBJECT-TYPE
+					SYNTAX INTEGER (0..7)
+					MAX-ACCESS read-create
+					STATUS current
+					DESCRIPTION
+					"The new STAG COS value to be set"
+					DEFVAL { 0 }
+					::= { portDttRangeConfigEntry 5 }
+
+					dttRangeRowStatus OBJECT-TYPE
+					SYNTAX RowStatus
+					MAX-ACCESS read-create
+					STATUS mandatory
+					DESCRIPTION
+					""
+					::= { portDttRangeConfigEntry 6 } 
+					
+				   dot1qVlanBatchConfig OBJECT-TYPE
+                   SYNTAX  OCTET STRING
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "vlan batch operation.."
+                   ::= { nmsvlanExt 13 }
 
 
 

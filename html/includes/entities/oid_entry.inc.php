@@ -115,7 +115,7 @@ function print_oid_table($vars) {
 
     print_oid_table_header($vars, $entries);
 
-    foreach ($entries as $device_id => $entry) {
+    foreach ($entries as $entry) {
         //$device = device_by_id_cache($device_id);
 
         if (!is_numeric($entry['value'])) {

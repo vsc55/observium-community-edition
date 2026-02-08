@@ -40,8 +40,8 @@ $is_juniper = is_device_mib($device, 'JUNIPER-VLAN-MIB');
 //Q-BRIDGE-MIB::dot1qVlanStaticRowStatus.1 = INTEGER: active(1)
 
 // Base port ifIndex association
-$dot1d_baseports = snmpwalk_cache_oid($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB');
-$use_baseports   = count($dot1d_baseports) > 0;
+$dot1d_baseports = snmp_cache_table($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB');
+$use_baseports   = !safe_empty($dot1d_baseports);
 
 // Faster (and easy) way for get untagged/primary vlans
 //$dot1q_ports = snmpwalk_cache_oid($device, 'dot1qPortVlanTable', array(), 'Q-BRIDGE-MIB');
@@ -104,6 +104,8 @@ if (snmp_status() && $use_baseports) {
 } elseif ($is_juniper) {
     // For juniper Q-BRIDGE is derp, but still required for trunk ports
     // skipped here, use only dot1qPvid
+    return;
+
 } else {
 
     if ($device['os'] == 'zyxeles') {

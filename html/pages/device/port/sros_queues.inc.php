@@ -53,6 +53,8 @@ print_navbar($navbar);
     <table class="table table-striped  table-condensed">
 
         <?php
+        // Ensure generic graph row renderer knows the port context
+        $graph_array['id'] = $port['port_id'];
 
         if ($vars['subview'] == 'queues') {
 
@@ -73,7 +75,7 @@ print_navbar($navbar);
                         $graph_array['queue']  = $queue;
                         $graph_array['dir']    = $dir;
                         $graph_array['metric'] = $metric;
-                        print_graph_row_port($graph_array, $port);
+                        print_graph_row($graph_array);
                         unset($graph_array['queue']);
                         unset($graph_array['dir']);
                         unset($graph_array['metric']);
@@ -90,7 +92,7 @@ print_navbar($navbar);
                     echo('<tr><td>');
                     echo('<h3>' . $dir . ' ' . $text . '</h3>');
                     $graph_array['type'] = "port_sros_" . $dir . $type;
-                    print_graph_row_port($graph_array, $port);
+                    print_graph_row($graph_array);
                     echo('</td></tr>');
                 }
             }
@@ -102,4 +104,3 @@ print_navbar($navbar);
     </table>
 
 <?php
-

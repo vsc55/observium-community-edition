@@ -25,9 +25,9 @@
 # 2024-12-19 - Fixed ceph status parsing (Javier Pastor)
 #
 
-CEPHBIN=$(command -v ceph)
-if [[ -x "$CEPHBIN" ]]; then
-    cephdata=`$CEPHBIN -s`
+cephbin=$(command -v ceph)
+if [[ -x "$cephbin" ]]; then
+    cephdata=`$cephbin -s`
 
     echo '<<<app-ceph>>>'
     

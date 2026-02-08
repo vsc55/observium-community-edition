@@ -1,16 +1,4 @@
---******************************************************************************
 --Copyright (C) 2012 Aricent Inc . All Rights Reserved
---
---$Id: fsmidhcpRelay.mib,v 1.1 2015/06/17 04:55:23 siva Exp $
---
---Description : This file contains MIB definitions for ISS module.
---
---******************************************************************************
-
--- AricentISS MIB Definition
-
--- MIB for 'DHCP Relay MI MIB'
-
 
 ARICENT-DHCP-RLY-MI-MIB DEFINITIONS ::= BEGIN
 
@@ -21,7 +9,7 @@ RowStatus,DisplayString                    FROM SNMPv2-TC
 ifIndex                                    FROM IF-MIB;
 
 futureMIDhcpRelay MODULE-IDENTITY
-LAST-UPDATED "20141028000Z"
+LAST-UPDATED "202409190000Z"
 ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
 CONTACT-INFO
 
@@ -32,9 +20,13 @@ Phone : +1-650-391-1088
 E-mail:support@aricent.com"
 
 DESCRIPTION
+"Added interface extension table for optional vlan-based configurables and table for vlan-based servers."
+REVISION "202409190000Z"
+
+DESCRIPTION
 "The enterprise ID 29601 is assigned to Aricent Communication
 Holdings Limitied."
-REVISION "20141028000Z"
+REVISION "201410280000Z"
 
 DESCRIPTION
 "The Dhcp MI Relay agent MIB "
@@ -105,7 +97,8 @@ FsMIDhcpContextEntry ::= SEQUENCE {
                       fsMIDhcpConfigTraceLevel                      Integer32,
                       fsMIDhcpConfigDhcpCircuitOption               BITS,
                       fsMIDhcpRelayCounterReset                     INTEGER,
-                      fsMIDhcpRelayContextRowStatus    		    RowStatus                    
+                      fsMIDhcpRelayContextRowStatus    		    RowStatus,
+                      fsMIDhcpRelayRAIVPNIDSubOptionControl     INTEGER
                       }
 
 fsMIDhcpContextId OBJECT-TYPE
@@ -307,7 +300,7 @@ fsMIDhcpConfigDhcpCircuitOption OBJECT-TYPE
     one bit at a time.Currently first three bits are used and remaning bits
  	are reserved for future purpose.Default value for this option is
  	routerindex(00000001)." 
-    DEFVAL { 1 }
+    DEFVAL { { vlanid } }
     ::= { fsMIDhcpContextEntry 17 }
 
 fsMIDhcpRelayCounterReset OBJECT-TYPE 
@@ -331,6 +324,22 @@ fsMIDhcpRelayContextRowStatus OBJECT-TYPE
     DESCRIPTION
     "Row status of this table"
     ::=  { fsMIDhcpContextEntry 19 }
+
+fsMIDhcpRelayRAIVPNIDSubOptionControl OBJECT-TYPE
+	      SYNTAX  INTEGER {
+            enable (1),
+            disable (2) 
+       }
+	      MAX-ACCESS  read-write
+	      STATUS  current
+	      DESCRIPTION
+		      "This object When enabled & if the RAIOption is globally enabled along with VRF, 
+		         then the Relay Agent shall insert the VRF name in the VPN identifier sub-option,
+		         Link Selection sub-option and server identifier override sub-option, 
+		         while relaying packets from a client to server and also strips off this sub-option
+		         while relaying packets from a server to a client."
+	      DEFVAL { disable }
+    ::= { fsMIDhcpContextEntry 20 }
 
 
 -- ********************End of Context Table********************************
@@ -456,6 +465,106 @@ fsMIDhcpRelayIfRowStatus OBJECT-TYPE
 
 -- ************ END OF INTERFACE TABLE *********************************
 
-END
+--******************** INTERFACE_SERVERS_TABLE_BEGIN ***************************
 
+fsMIDhcpRelayIfServerTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF FsMIDhcpRelayIfServerEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+    "This table contains interface-specific DHCP Servers
+    to which which the Relay Agent needs to forward the packets from
+    the client. If interface-specific DHCP Servers are configured,
+    they will be used instead of globally configured ones for the packets,
+    relayed over the interface."
+    ::= { fsMIDhcpRelayTable 4 }
+
+fsMIDhcpRelayIfServerEntry OBJECT-TYPE
+    SYNTAX      FsMIDhcpRelayIfServerEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+    "DHCP Server entry."
+    INDEX {
+        fsMIDhcpContextId,
+        ifIndex,
+        fsMIDhcpRelayIfServerIpAddress
+    }
+    ::= { fsMIDhcpRelayIfServerTable 1 }
+
+FsMIDhcpRelayIfServerEntry ::= SEQUENCE {
+    fsMIDhcpRelayIfServerIpAddress             IpAddress,
+    fsMIDhcpRelayIfServerRowStatus             RowStatus
+}
+
+fsMIDhcpRelayIfServerIpAddress OBJECT-TYPE
+    SYNTAX      IpAddress
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+    "The IP Address of the DHCP server."
+    ::=  { fsMIDhcpRelayIfServerEntry 1 }
+
+fsMIDhcpRelayIfServerRowStatus OBJECT-TYPE
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "RowStatus of this entry."
+    ::=  { fsMIDhcpRelayIfServerEntry 2 }
+
+--******************** INTERFACE_SERVERS_TABLE_END ***************************
+--******************** INTERFACE_EXTENSION_TABLE_BEGIN ***************************
+
+fsMIDhcpRelayIfExtensionTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF FsMIDhcpRelayIfExtensionEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+    "This table holds optional interface-specific Relay Agent configurables,
+    excluding DHCP suboptions."
+    ::= { fsMIDhcpRelayTable 5 }
+
+fsMIDhcpRelayIfExtensionEntry OBJECT-TYPE
+    SYNTAX      FsMIDhcpRelayIfExtensionEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+    "Contains the status of DHCP Relay Agent on this interface."
+    INDEX {
+        fsMIDhcpContextId,
+        ifIndex
+    }
+    ::= { fsMIDhcpRelayIfExtensionTable 1 }
+
+FsMIDhcpRelayIfExtensionEntry ::= SEQUENCE {
+    fsMIDhcpRelayIfExtensionRelayEnabled        INTEGER,
+    fsMIDhcpRelayIfExtensionRowStatus           RowStatus
+}
+
+fsMIDhcpRelayIfExtensionRelayEnabled OBJECT-TYPE
+    SYNTAX INTEGER {
+        enable (1),
+        disable (2)
+    }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "The Relaying Agent status on this interface.
+    If disabled, DHCP broadcast packets, arriving on this interface,
+    will not be relayed."
+    ::= { fsMIDhcpRelayIfExtensionEntry 1 }
+
+fsMIDhcpRelayIfExtensionRowStatus OBJECT-TYPE
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "RowStatus of this entry."
+    ::= { fsMIDhcpRelayIfExtensionEntry 2 }
+
+
+--******************** INTERFACE_EXTENSION_TABLE_END ***************************
 -- *************** END OF DHCP RELAY MI MIB ****************************
+
+END

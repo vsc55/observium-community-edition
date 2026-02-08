@@ -15,7 +15,7 @@ IMPORTS
     QueueIndex                           FROM ARISTA-QUEUE-MIB;
     
 aristaQosMib MODULE-IDENTITY
-    LAST-UPDATED "202201110000Z"
+    LAST-UPDATED "202411050000Z"
     ORGANIZATION "Arista Networks, Inc."
     CONTACT-INFO
         "Arista Networks, Inc.
@@ -55,6 +55,12 @@ aristaQosMib MODULE-IDENTITY
 	 classified as belonging to a particular class. Actions may include
 	 modifying CoS or DSCP fields, assigning to traffic-class queues,
 	 shaping, or filtering."
+
+    REVISION      "202411050000Z"
+    DESCRIPTION   "Added aristaEcnQueuePktsLocallyMarked"
+
+    REVISION      "202408060000Z"
+    DESCRIPTION   "Added aristaQosPerIntfStatsTable"
 
     REVISION      "202201110000Z"
     DESCRIPTION   "Added aristaQosPolicerStatsTable"
@@ -678,10 +684,11 @@ aristaEcnQueueCounterEntry  OBJECT-TYPE
     ::= { aristaEcnQueueCounterTable 1 }
 
 AristaEcnQueueCounterEntry ::= SEQUENCE {
-    aristaEcnIfIndex               InterfaceIndex,
-    aristaEcnEgressQueueIndex      QueueIndex,
-    aristaEcnQueueCounterEnabled   TruthValue,
-    aristaEcnQueuePktsMarked       Counter64
+    aristaEcnIfIndex                InterfaceIndex,
+    aristaEcnEgressQueueIndex       QueueIndex,
+    aristaEcnQueueCounterEnabled    TruthValue,
+    aristaEcnQueuePktsMarked        Counter64,
+    aristaEcnQueuePktsLocallyMarked Counter64
 }
     
 aristaEcnIfIndex OBJECT-TYPE
@@ -718,6 +725,17 @@ aristaEcnQueuePktsMarked OBJECT-TYPE
 	"The number of Ecn marked packets from this egress queue. if
 	Ecn counter is not enabled, the counter value is 0"
     ::= { aristaEcnQueueCounterEntry 4 }
+
+aristaEcnQueuePktsLocallyMarked OBJECT-TYPE
+    SYNTAX      Counter64
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The number of locally marked ECN packets from this egress queue.If
+        ECN counter is not enabled, the counter value is 0.On some platforms,
+        locally marked ECN packets are not supported. On these platforms the
+        value of the corresponding MIB objects will be 0."
+    ::= { aristaEcnQueueCounterEntry 5 }
 
 -- Start of aristaQosPolicerStatsTable
 
@@ -791,19 +809,25 @@ aristaQosMibCompliance  MODULE-COMPLIANCE
 
 aristaClassMapGroup  OBJECT-GROUP
     OBJECTS         {
-    		         aristaClassMapName,
-                         aristaClassMapMatchCondition,
-                         aristaClassMapMatchType,
-                         aristaClassMapMatchName,
-                         aristaPolicyMapClassId,
-		         aristaQosPktsDropped,
-		         aristaQosPktsMatched,
-		         aristaQosPktsSent,
-		         aristaQosPolicerPktsDropped,
-		         aristaQosPolicerPktsSent,
-		         aristaQosBytesDropped,
-		         aristaQosBytesMatched,
-		         aristaQosBytesSent
+                        aristaClassMapName,
+                        aristaClassMapMatchCondition,
+                        aristaClassMapMatchType,
+                        aristaClassMapMatchName,
+                        aristaPolicyMapClassId,
+                        aristaQosPktsDropped,
+                        aristaQosPktsMatched,
+                        aristaQosPktsSent,
+                        aristaQosPolicerPktsDropped,
+                        aristaQosPolicerPktsSent,
+                        aristaQosBytesDropped,
+                        aristaQosBytesMatched,
+                        aristaQosBytesSent,
+                        aristaQosPerIntfPktsDropped,
+                        aristaQosPerIntfPktsSent,
+                        aristaQosPerIntfPktsMatched,
+                        aristaQosPerIntfBytesDropped,
+                        aristaQosPerIntfBytesSent,
+                        aristaQosPerIntfBytesMatched
                     }
     STATUS       current
     DESCRIPTION
@@ -856,11 +880,109 @@ aristaEcnCounterGroup OBJECT-GROUP
 aristaEcnQueueCounterGroup OBJECT-GROUP
    OBJECTS          {
                         aristaEcnQueueCounterEnabled,
-                        aristaEcnQueuePktsMarked
+                        aristaEcnQueuePktsMarked,
+                        aristaEcnQueuePktsLocallyMarked
                     }
    STATUS       current
    DESCRIPTION
         "The objects that represent ECN queue counter information"
    ::= { aristaQosMibGroups 6 }
+
+-- Start of aristaQosPerIntfStatsTable
+
+aristaQosPerIntfStatsTable  OBJECT-TYPE
+    SYNTAX          SEQUENCE OF AristaQosPerIntfStatsEntry
+    MAX-ACCESS      not-accessible
+    STATUS          current
+    DESCRIPTION
+	"An entry in this table contains dropped, sent and matched packet
+         and byte counters for a given class of a policy map applied in a given
+         direction for a given interface.
+
+         Byte counters are not supported for all types of policy-maps. On some
+         of the Arista hardware platforms, byte counters are entirely unsupported.
+
+         When byte counters are unavailable, the value of the corresponding
+         MIB objects will be zero."
+    ::= { aristaQosMibObjects 11 }
+
+aristaQosPerIntfStatsEntry  OBJECT-TYPE
+    SYNTAX          AristaQosPerIntfStatsEntry
+    MAX-ACCESS      not-accessible
+    STATUS          current
+    DESCRIPTION
+        "A conceptual row in the aristaQosPerIntfStatsTable."
+    INDEX           { aristaPolicyMapId, aristaPolicyMapType,
+                      aristaClassMapId, aristaServicePolicyDirection,
+                      aristaServicePolicyIfIndex }
+    ::= { aristaQosPerIntfStatsTable 1 }
+
+AristaQosPerIntfStatsEntry ::= SEQUENCE {
+    aristaQosPerIntfPktsDropped            Counter64,
+    aristaQosPerIntfPktsSent               Counter64,
+    aristaQosPerIntfPktsMatched            Counter64,
+    aristaQosPerIntfBytesDropped           Counter64,
+    aristaQosPerIntfBytesSent              Counter64,
+    aristaQosPerIntfBytesMatched           Counter64
+}
+
+aristaQosPerIntfPktsDropped  OBJECT-TYPE
+    SYNTAX          Counter64
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "The number of packets dropped by a service policy.
+         This number is zero for classes of type dataPlane,
+         with the exception of those that are associated with
+         a policer."
+    ::= { aristaQosPerIntfStatsEntry 1 }
+
+aristaQosPerIntfPktsSent  OBJECT-TYPE
+    SYNTAX          Counter64
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "The number of packets classified by a service policy and allowed
+	through."
+    ::= { aristaQosPerIntfStatsEntry 2 }
+
+aristaQosPerIntfPktsMatched  OBJECT-TYPE
+    SYNTAX          Counter64
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "The number of packets classified by a service policy.
+         Equal to the sum of aristaQosPerIntfPktsDropped and 
+         aristaQosPerIntfPktsSent."
+    ::= { aristaQosPerIntfStatsEntry 3 }
+
+aristaQosPerIntfBytesDropped  OBJECT-TYPE
+    SYNTAX             Counter64
+    MAX-ACCESS         read-only
+    STATUS             current
+    DESCRIPTION
+        "The number of bytes dropped by a service policy."
+    ::= { aristaQosPerIntfStatsEntry 4 }
+
+aristaQosPerIntfBytesSent  OBJECT-TYPE
+    SYNTAX          Counter64
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "The number of bytes classified by a service policy and
+        allowed through."
+    ::= { aristaQosPerIntfStatsEntry 5 }
+
+aristaQosPerIntfBytesMatched  OBJECT-TYPE
+    SYNTAX             Counter64
+    MAX-ACCESS         read-only
+    STATUS             current
+    DESCRIPTION
+        "The number of bytes classified by a service policy.
+         Equal to the sum of aristaQosPerIntfBytesDropped and
+         aristaQosPerIntfBytesSent."
+    ::= { aristaQosPerIntfStatsEntry 6 }
+
+
 
 END

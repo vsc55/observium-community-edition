@@ -77,6 +77,10 @@ function humanize_sensor(&$sensor)
         $sensor['sensor_symbol'] = '';
     } else {
         $sensor['human_value'] = format_value($sensor['sensor_value'], $sensor['sensor_format'], 2, 4);
+        if ($sensor['sensor_format'] === 'time60' && $sensor['sensor_value'] >= 1440) {
+            // FIXME. Runtime not sure for better way
+            $sensor['sensor_symbol'] = '';
+        }
     }
 
     if (isset($config['entity_events'][$sensor['sensor_event']])) {
@@ -506,11 +510,11 @@ function generate_sensor_row($sensor, $vars)
         $table_cols++;
     }
 
-    // FIXME -- Generify this. It's not just for sensors.
     if ($vars['page'] === "device" && $vars['tab'] !== "overview") {
-        $row .= '      <td><span class="label-group">' . (!safe_empty($sensor['sensor_mib']) ? '<span class="label label-primary"><a href="' . OBSERVIUM_MIBS_URL . '/' . $sensor['sensor_mib'] . '/" target="_blank">' . nicecase($sensor['sensor_mib']) . '</a></span>' : '') .
-                (!safe_empty($sensor['sensor_mib']) ? '<span class="label label-success"><a href="' . OBSERVIUM_MIBS_URL . '/' . $sensor['sensor_mib'] . '/#' . $sensor['sensor_object'] . '" target="_blank">' . $sensor['sensor_object'] . '</a></span>' : '') .
-                '<span class="label label-delayed">' . $sensor['sensor_index'] . '</span></span></td>' . PHP_EOL;
+        // $row .= '      <td><span class="label-group">' . (!safe_empty($sensor['sensor_mib']) ? '<span class="label label-primary"><a href="' . OBSERVIUM_MIBS_URL . '/' . $sensor['sensor_mib'] . '/" target="_blank">' . nicecase($sensor['sensor_mib']) . '</a></span>' : '') .
+        //         (!safe_empty($sensor['sensor_mib']) ? '<span class="label label-success"><a href="' . OBSERVIUM_MIBS_URL . '/' . $sensor['sensor_mib'] . '/#' . $sensor['sensor_object'] . '" target="_blank">' . $sensor['sensor_object'] . '</a></span>' : '') .
+        //         '<span class="label label-delayed">' . $sensor['sensor_index'] . '</span></span></td>' . PHP_EOL;
+        $row .= generate_entity_mib_cell($sensor, [ 'entity_type' => 'sensor' ]);
         $table_cols++;
     }
 
@@ -747,6 +751,12 @@ function print_sensor_permission_box($mode, $perms, $params = []) {
 
         foreach (array_keys($perms['sensor']) as $entity_id) {
             $sensor = get_entity_by_id_cache('sensor', $entity_id);
+
+            if (!$sensor) {
+                entity_permission_cleanup($mode, 'sensor', $entity_id, $params);
+                continue;
+            }
+
             $device = device_by_id_cache($sensor['device_id']);
 
             echo('<tr><td style="width: 1px;"></td>
@@ -830,7 +840,6 @@ function print_sensor_permission_box($mode, $perms, $params = []) {
         'width'    => '150px',
         'onchange' => "getEntityList(this.value, 'sensor_entity_id', 'sensor')",
         //'value'    => $vars['device_id'],
-        'groups'   => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
         'values'   => $form_items['devices']];
     $form['row'][0]['sensor_entity_id'] = [
         'type'   => 'multiselect',

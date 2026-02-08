@@ -265,7 +265,7 @@ function toggleOn(target_id) {
 
     //let toggle = document.getElementById(target_id); // js object
     let dom;
-    if (form_id.indexOf('[') > -1) {
+    if (target_id.indexOf('[') > -1) {
         dom = '[id^="' + target_id + '"]'; // array(s)
     } else {
         dom = '[id="' + target_id + '"]'; // element
@@ -306,7 +306,7 @@ function toggleOff(target_id) {
 
     //let toggle = document.getElementById(target_id); // js object
     let dom;
-    if (form_id.indexOf('[') > -1) {
+    if (target_id.indexOf('[') > -1) {
         dom = '[id^="' + target_id + '"]'; // array(s)
     } else {
         dom = '[id="' + target_id + '"]'; // element
@@ -600,10 +600,13 @@ function confirmAction(action, element, event) {
 
 function ajax_settings(setting, value = '') {
 
+    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
     var params = {
         action: 'settings_user',
         setting: setting,
-        value: value
+        value: value,
+        request_token: csrfToken
     };
 
     $.ajax({
@@ -625,6 +628,21 @@ function ajax_settings(setting, value = '') {
     event.preventDefault();
 
     return false;
+}
+
+function processForm(event) {
+    let element = $('form#' + event.target.id);
+    let url = element.attr('action');
+    if (!url) {
+        url = window.location.pathname;
+    }
+    //let url = window.location.pathname;
+    //let serialize = {checkboxUncheckedValue: "0"};
+    let data = JSON.stringify(element.serializeJSON({checkboxUncheckedValue: "0"}));
+    console.log(url);
+    console.log(data);
+    $.post( url, data );
+    event.preventDefault();
 }
 
 function processAjaxForm(event) {
@@ -726,9 +744,11 @@ function reload_timeout(timeout, redirect = window.location.href) {
 
 delete_ap = function (id) {
 
+    var csrfToken = $('meta[name="csrf-token"]').attr('content');
     var params = {
         action: 'delete_ap',
-        id: id
+        id: id,
+        requesttoken: csrfToken
     };
 
     // Run AJAX query and update div HTML with response.
@@ -762,10 +782,11 @@ $(document).on('blur', 'input[name^="widget-config-"]', function (event) {
         var value = $this.val();
     }
     if ($this[0].checkValidity()) {
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
         $.ajax({
             type: 'POST',
             url: 'ajax/actions.php',
-            data: {action: "update_widget_config", widget_id: id, config_field: field, config_value: value},
+            data: {action: "update_widget_config", widget_id: id, config_field: field, config_value: value, requesttoken: csrfToken},
             dataType: "json",
             success: function (data) {
                 if (data.status == 'ok') {

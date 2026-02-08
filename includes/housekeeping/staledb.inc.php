@@ -94,7 +94,7 @@ if (dbExist('autodiscovery', '`remote_device_id` IS NOT NULL AND `remote_device_
 /*
  * Probably not the best idea to remove user-generated configuration like this, this very occasionally seems to delete billing ports
  *
-$where = " WHERE " . generate_query_values_ng([ 'bill', 'group' ], 'entity_type', '!='); // Exclude pseudo-entities from permissions checks
+$where = " WHERE " . generate_query_values([ 'bill', 'group' ], 'entity_type', '!='); // Exclude pseudo-entities from permissions checks
 foreach ($config['entity_tables'] as $table) {
   $query = "SELECT DISTINCT `entity_type` FROM `$table` $where";
   foreach (dbFetchColumn($query, NULL, $test) as $entity_type) {
@@ -147,6 +147,45 @@ foreach ($graphs as $device_id => $device_graph) {
                 print_debug("Deleted " . $device_graph_count . " duplicate graph rows of type $graph for device $device_id");
             }
         }
+    }
+}
+
+// Generic entity reaping based on entity definitions and last_seen TTL
+// Uses per-entity housekeeping ages like $config['housekeeping']['bfd_session']['age']
+foreach ((array)$config['entities'] as $entity_type => $def) {
+    // Require table and parent field (defaults to device_id)
+    if (safe_empty($def['table'])) { continue; }
+    $table       = $def['table'];
+    $parent_field = $def['parent_field'] ?? 'device_id';
+
+    // Require configured age for this entity type
+    if (safe_empty($config['housekeeping'][$entity_type]['age'])) { continue; }
+    $cutoff = age_to_unixtime($config['housekeeping'][$entity_type]['age']);
+    if (!$cutoff) { continue; }
+    $cutoff_dt = date('Y-m-d H:i:s', $cutoff);
+
+    // Require last_seen column
+    if (!dbShowColumns($table, 'last_seen')) { continue; }
+
+    // Build predicate: last_seen older than cutoff and entity belongs to existing devices
+    $where = "`$parent_field` IN (" . implode(',', $devices) . ") AND `last_seen` < ?";
+    $rows = dbFetchRows("SELECT 1 FROM `$table` WHERE $where", [ $cutoff_dt ], $test);
+    $count = safe_count($rows);
+    if ($count) {
+        if ($prompt) {
+            $answer = print_prompt("$count stale '$entity_type' entities in '$table' last_seen before $cutoff_dt will be removed");
+        }
+        if ($answer) {
+            print_debug("Housekeeping '$entity_type': deleted $count stale entries from '$table'");
+            if (!$test) {
+                $table_status = dbDelete($table, $where, [ $cutoff_dt ]);
+                if ($table_status) {
+                    logfile("housekeeping.log", "Housekeeping '$entity_type': deleted $count stale entries older than $cutoff_dt");
+                }
+            }
+        }
+    } elseif ($prompt) {
+        print_message("No stale '$entity_type' entities found in '$table'.");
     }
 }
 

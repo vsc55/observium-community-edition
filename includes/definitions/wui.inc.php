@@ -252,6 +252,7 @@ $config['icon']['neighbours']        = "sprite-neighbours";
 $config['icon']['cbqos']             = "sprite-qos";
 $config['icon']['pressure']          = "sprite-pressure";
 $config['icon']['frequency']         = "sprite-frequency";
+$config['icon']['bitrate']           = "sprite-data";
 $config['icon']['dbm']               = "sprite-laser";
 $config['icon']['counter']           = "sprite-counter";
 $config['icon']['fanspeed']          = "sprite-fanspeed";
@@ -319,6 +320,8 @@ $config['icon']['ospf']              = "sprite-ospf";
 $config['icon']['eigrp']             = "sprite-eigrp";
 $config['icon']['ipsec_tunnel']      = "sprite-tunnel";
 $config['icon']['vlan']              = "sprite-vlan";
+$config['icon']['stp']               = "sprite-switching";
+$config['icon']['bfd']               = "sprite-connected";
 $config['icon']['switching']         = "sprite-switching";
 $config['icon']['crossbar']          = $config['icon']['switching'];
 
@@ -351,6 +354,8 @@ $config['icon']['bgp-internal']      = "sprite-bgp-internal";
 $config['icon']['bgp-external']      = "sprite-bgp-external";
 $config['icon']['bgp-alert']         = "sprite-bgp-alerts";
 $config['icon']['bgp-afi']           = "sprite-bgp-afi";
+
+$config['icon']['bfd']               = "sprite-connected";
 
 $config['icon']['users']             = "sprite-users";
 $config['icon']['user-self']         = "sprite-user-self";
@@ -409,6 +414,15 @@ $config['type_class']['ospfNbrState'] = [
     'full'                   => [ 'class' => 'success',    'icon' => NULL ]
 ];
 
+$config['type_class']['neighbour_protocol'] = [
+    'CDP'                    => [ 'class' => 'success',    'icon' => NULL ],
+    'LLDP'                   => [ 'class' => 'warning',    'icon' => NULL ],
+    'AMAP'                   => [ 'class' => 'primary',    'icon' => NULL ],
+    'MNDP'                   => [ 'class' => 'error',      'icon' => NULL ],
+    'FDP'                    => [ 'class' => 'delayed',    'icon' => NULL ],
+    'EDP'                    => [ 'class' => 'suppressed', 'icon' => NULL ],
+];
+
 $config['type_class']['arch'] = [
     'arm64'                  => [ 'class' => 'primary',    'icon' => NULL ],
     'amd64'                  => [ 'class' => 'success',    'icon' => NULL ],
@@ -419,7 +433,38 @@ $config['type_class']['arch'] = [
 $config['type_class']['pkg'] = [
     'rpm'                    => [ 'class' => 'important',  'icon' => NULL ],
     'deb'                    => [ 'class' => 'warning',    'icon' => NULL ],
+    'ebuild'                 => [ 'class' => 'info',       'icon' => NULL ],
     //''                       => [ 'class' => 'default',    'icon' => NULL ]
+];
+
+$config['type_class']['stp_state'] = [
+    'forwarding'             => [ 'class' => 'success',    'icon' => NULL ],
+    'learning'               => [ 'class' => 'info',       'icon' => NULL ],
+    'listening'              => [ 'class' => 'info',       'icon' => NULL ],
+    'blocking'               => [ 'class' => 'warning',    'icon' => NULL ],
+    'discarding'             => [ 'class' => 'important',  'icon' => NULL ],
+    'broken'                 => [ 'class' => 'error',      'icon' => NULL ],
+    'disabled'               => [ 'class' => 'suppressed', 'icon' => NULL ]
+];
+
+// Dashboard widget registry (names and basic metadata for Add Widget menu)
+// Note: rendering remains in html/ajax/widget.php; this registry is for discovery/labels/defaults
+$config['widgets'] = [
+  'map' => [ 'name' => 'Map', 'descr' => 'Interactive device map (Leaflet)', 'defaults' => [ 'width' => 6, 'height' => 3 ] ],
+  'alert_table' => [ 'name' => 'Alert Table', 'descr' => 'Table of current failed alerts', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'alert_boxes' => [ 'name' => 'Alert Boxes', 'descr' => 'Status boxes showing counts by severity', 'defaults' => [ 'width' => 12, 'height' => 2 ] ],
+  'alertlog' => [ 'name' => 'Alert Log', 'descr' => 'Recent alert state transitions', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'port_percent' => [ 'name' => 'Traffic Composition', 'descr' => 'Percent of traffic by classification', 'defaults' => [ 'width' => 12, 'height' => 3 ] ],
+  'status_summary' => [ 'name' => 'Status Summary', 'descr' => 'Summary of device/port/sensor states', 'defaults' => [ 'width' => 6, 'height' => 3 ] ],
+  'syslog' => [ 'name' => 'Syslog', 'descr' => 'Recent syslog messages', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'syslog_alerts' => [ 'name' => 'Syslog Alerts', 'descr' => 'Matches for configured syslog alert rules', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'eventlog' => [ 'name' => 'Eventlog', 'descr' => 'Recent Observium event log entries', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  // Graph widget is configured via graph pages; keep out of Add Widget menu for now
+  'graph' => [ 'name' => 'Graph', 'descr' => 'Custom graph added from graph page', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'status_table' => [ 'name' => 'Status Table', 'descr' => 'Table of device status warnings and notifications', 'defaults' => [ 'width' => 6, 'height' => 4 ] ],
+  'clock' => [ 'name' => 'Clock', 'descr' => 'Auto-updating clock with configurable format and timezone', 'defaults' => [ 'width' => 3, 'height' => 2, 'min_width' => 2, 'min_height' => 1 ] ],
+  // Deprecated entries (kept for display compatibility only)
+  'old_status_boxes' => [ 'name' => 'Status Boxes (Old)', 'deprecated' => TRUE ],
 ];
 
 // EOF

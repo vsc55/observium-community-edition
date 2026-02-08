@@ -58,7 +58,9 @@ session_start();
 $_SESSION['user_id']   = $user_id;
 $_SESSION['userlevel'] = $user_level;
 
-$permissions = permissions_cache($_SESSION['user_id']);
+// Pre-cache user (entity) permissions
+permissions_cache($_SESSION['user_id']);
+
 session_write_close();
 
 include($config['html_dir'] . "/includes/cache-data.inc.php"); // Need for check permissions

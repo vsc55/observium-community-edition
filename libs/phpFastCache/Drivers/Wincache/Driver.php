@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,70 +8,66 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Wincache;
+namespace Phpfastcache\Drivers\Wincache;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use DateTime;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
     use DriverBaseTrait;
 
     /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        }
-    }
-
-    /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
         return extension_loaded('wincache') && function_exists('wincache_ucache_set');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @return DriverStatistic
      */
-    protected function driverWrite(CacheItemInterface $item)
+    public function getStats(): DriverStatistic
     {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            return wincache_ucache_set($item->getKey(), $this->driverPreWrap($item), $item->getTtl());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
+        $memInfo = wincache_ucache_meminfo();
+        $info = wincache_ucache_info();
+        $date = (new DateTime())->setTimestamp(time() - $info['total_cache_uptime']);
+
+        return (new DriverStatistic())
+            ->setInfo(sprintf("The Wincache daemon is up since %s.\n For more information see RawData.", $date->format(DATE_RFC2822)))
+            ->setSize($memInfo['memory_free'] - $memInfo['memory_total'])
+            ->setData(implode(', ', array_keys($this->itemInstances)))
+            ->setRawData($memInfo);
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @return bool
+     */
+    protected function driverConnect(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @param CacheItemInterface $item
      * @return null|array
      */
     protected function driverRead(CacheItemInterface $item)
@@ -79,42 +76,42 @@ class Driver implements ExtendedCacheItemPoolInterface
 
         if ($suc === false) {
             return null;
-        } else {
-            return $val;
         }
+
+        return $val;
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @param CacheItemInterface $item
+     * @return mixed
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
+    {
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            return wincache_ucache_set($item->getKey(), $this->driverPreWrap($item), $item->getTtl());
+        }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
             return wincache_ucache_delete($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
         }
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        return wincache_ucache_clear();
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        return true;
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /********************
@@ -124,18 +121,10 @@ class Driver implements ExtendedCacheItemPoolInterface
      *******************/
 
     /**
-     * @return DriverStatistic
+     * @return bool
      */
-    public function getStats()
+    protected function driverClear(): bool
     {
-        $memInfo = wincache_ucache_meminfo();
-        $info = wincache_ucache_info();
-        $date = (new \DateTime())->setTimestamp(time() - $info[ 'total_cache_uptime' ]);
-
-        return (new DriverStatistic())
-          ->setInfo(sprintf("The Wincache daemon is up since %s.\n For more information see RawData.", $date->format(DATE_RFC2822)))
-          ->setSize($memInfo[ 'memory_free' ] - $memInfo[ 'memory_total' ])
-          ->setData(implode(', ', array_keys($this->itemInstances)))
-          ->setRawData($memInfo);
+        return wincache_ucache_clear();
     }
 }

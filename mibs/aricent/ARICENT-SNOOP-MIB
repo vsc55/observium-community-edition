@@ -1,23 +1,11 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
---*************************************************************************
---$Id: fssnp.mib,v 1.32 2015/10/17 11:52:01 siva Exp $
-
--- SNOOP Proprietary MIB Definition 
- 
--- This document explains the proprietary MIB implemented 
--- for IGMP-SNOOPING and MLD-SNOOPING features. 
- 
--- This MIB contains tables used to configure a switch running 
--- SNOOP supporting both IGMP and MLD snooping.
-
- 
    ARICENT-SNOOP-MIB DEFINITIONS ::= BEGIN 
  
    IMPORTS 
-      MODULE-IDENTITY, OBJECT-TYPE, IpAddress,
+      MODULE-IDENTITY, OBJECT-TYPE,  
       enterprises, Counter32,
-      Integer32, Unsigned32, 
+      Integer32, IpAddress, Unsigned32, 
       NOTIFICATION-TYPE                        FROM SNMPv2-SMI
       MacAddress, RowStatus,
       TEXTUAL-CONVENTION                       FROM SNMPv2-TC 
@@ -26,7 +14,7 @@
       InterfaceIndex                           FROM IF-MIB;
 
 fssnoop MODULE-IDENTITY 
-         LAST-UPDATED "201209050000Z" 
+         LAST-UPDATED "202008250000Z" 
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
          CONTACT-INFO "support@aricent.com" 
 
@@ -36,9 +24,15 @@ fssnoop MODULE-IDENTITY
           support for Provider Bridging (i.e double vlan) functionality. Added
           explicit host tracking feature support."
 
+         REVISION "202008250000Z"
+         DESCRIPTION 
+            "Added support for enabling/disabling IGMP/MLD
+             enforcement of the Router Alert option presence." 
+
          REVISION "201209050000Z"
          DESCRIPTION 
             " The proprietary MIB module for Snoop. " 
+
       ::=  { enterprises futuresoftware (2076) 105 } 
  
 -- ------------------------------------------------------------  
@@ -103,7 +97,8 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           fsSnoopInstanceGlobalLeaveConfigLevel     INTEGER,
           fsSnoopInstanceGlobalEnhancedMode	        INTEGER,
           fsSnoopInstanceGlobalReportProcessConfigLevel    INTEGER,
-          fsSnoopInstanceGlobalSparseMode           INTEGER
+          fsSnoopInstanceGlobalSparseMode           INTEGER,
+          fsSnoopInstanceControlPlaneDriven           INTEGER
         } 
  
       fsSnoopInstanceGlobalInstId OBJECT-TYPE 
@@ -215,17 +210,34 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
 		      "This object is used to enable or disable the snooping module 
                functioning in the sparse mode.
                
-               By default, the snooping module operates in the non-sparse
-               mode. In the non-sparse mode, the module will be used to 
-               forward the unknown multicast traffic when IGS is enabled 
-               in the switch. In the sparse mode (i.e Sparse mode is enabled), 
+               By default, the snooping module operates in sparse
+               mode. In the sparse mode (i.e Sparse mode is enabled), 
                the module will be used to drop the unknown multicast traffic 
-               when IGS is enabled in the switch.  
+               when IGS is enabled in the switch.
+               In the non-sparse mode, the module will be used to 
+               forward the unknown multicast traffic when IGS is enabled 
+               in the switch.
                
                Disabling this object causes the snooping module to operate in 
                the default mode."
-	DEFVAL { disable }
+	DEFVAL { enable }
 	::= { fsSnoopInstanceGlobalEntry 7 }
+ 
+     fsSnoopInstanceControlPlaneDriven OBJECT-TYPE
+             SYNTAX      INTEGER { enable (1), disable (2) }
+             MAX-ACCESS  read-write
+             STATUS      current
+             DESCRIPTION
+                               "Control plane driven approach is used to update forwarding table
+              based on the report messages. This object is used to
+              enable or disable the control plane driven approach in snooping module.
+              By default, control plane driven approach is disabled in the snooping switch.
+              If this mib object is enabled, forwarding table will be updated based on
+              report messages. If this mib object is disabled, forwarding table will be
+              updated based on data traffic."
+
+        DEFVAL { disable }
+        ::= { fsSnoopInstanceGlobalEntry 8 }
  
       fsSnoopInstanceConfigTable OBJECT-TYPE 
           SYNTAX      SEQUENCE OF FsSnoopInstanceConfigEntry 
@@ -267,7 +279,8 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           fsSnoopProxyStatus                 INTEGER,
           fsSnoopQueryFwdOnAllPorts          INTEGER,
           fsSnoopFwdGroupsCnt                INTEGER,
-	  fsSnoopDebugOption                 Integer32
+	  fsSnoopDebugOption                 Integer32,
+          fsSnoopEnforceRouterAlert          INTEGER
         } 
  
       fsSnoopInstanceConfigInstId OBJECT-TYPE 
@@ -335,8 +348,8 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           ::= { fsSnoopInstanceConfigEntry 5 } 
  
       fsSnoopPortPurgeInterval OBJECT-TYPE 
-          SYNTAX      Integer32 (130..1225) 
-          MAX-ACCESS  read-write 
+          SYNTAX      Integer32 
+          MAX-ACCESS  read-only 
           STATUS      deprecated 
           DESCRIPTION 
              "This is the interval (in seconds) after which a learnt  
@@ -348,9 +361,7 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
               be purged from the multicast group.
               This object is deprecated and corresponding functionality is met
               using the read only object fsSnoopVlanPortPurgeInterval in 
-	      fsSnoopVlanFilterXEntry. If configured, this value overrides 
-	      the value used in fsSnoopVlanFilterXTable."
-          DEFVAL  {260} 
+	      fsSnoopVlanFilterXEntry."
           ::= { fsSnoopInstanceConfigEntry 6 } 
  
       fsSnoopReportForwardInterval OBJECT-TYPE 
@@ -556,7 +567,7 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           ::= { fsSnoopInstanceConfigEntry 18 } 
 
       fsSnoopFwdGroupsCnt OBJECT-TYPE
-          SYNTAX      INTEGER
+          SYNTAX      Integer32
           MAX-ACCESS  read-only
           STATUS      current
           DESCRIPTION
@@ -592,6 +603,7 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
 		     13 - NP Debug Messgaes.
 		     14 - Buffer Debug
                      15 - ICCH debug 
+                     16 - All failure debug
 
               The remaining bits are unused. Combination of levels are
               also allowed.
@@ -604,6 +616,18 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
               bits set. For example if bits 0 and 1 are to be set ,then user
               has to give the value 3."
           ::= { fsSnoopInstanceConfigEntry 20 }
+
+      fsSnoopEnforceRouterAlert OBJECT-TYPE 
+          SYNTAX      INTEGER  { enabled(1), disabled(2) } 
+          MAX-ACCESS  read-write 
+          STATUS      current 
+          DESCRIPTION 
+             "Enables or disables IGMP/MLD enforcement of the
+              Router Alert option presence."
+
+          DEFVAL  { 1 } 
+          ::= { fsSnoopInstanceConfigEntry 21 } 
+ 
 -- ------------------------------------------------------------------ 
 -- The Snoop VLAN Group 
 -- ------------------------------------------------------------------ 
@@ -949,7 +973,8 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           fsSnoopVlanOtherQuerierPresentInterval Integer32,
  	  fsSnoopVlanQuerierIpAddress      IpAddress,
 	  fsSnoopVlanQuerierIpFlag         Integer32,
-	  fsSnoopVlanElectedQuerier        IpAddress
+	  fsSnoopVlanElectedQuerier        IpAddress,
+      fsSnoopVlanRobustnessValue       Unsigned32
           } 
 
       fsSnoopVlanFilterInstId OBJECT-TYPE 
@@ -1096,44 +1121,41 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
            ::= { fsSnoopVlanFilterEntry 12 } 
 
       fsSnoopVlanStartupQueryCount OBJECT-TYPE 
-          SYNTAX      Integer32 
+          SYNTAX      Integer32 (2..5)
           MAX-ACCESS  read-write 
           STATUS      current 
           DESCRIPTION 
              "The Startup Query Count is the number of Queries sent out on 
-             startup, separated by the Startup Query Interval. 
-             The default value is the Robustness."
+             startup, separated by the Startup Query Interval." 
           DEFVAL  { 2 } 
           ::= { fsSnoopVlanFilterEntry 13 } 
           
       fsSnoopVlanStartupQueryInterval OBJECT-TYPE 
-          SYNTAX      Integer32 (15..150) 
+          SYNTAX      Integer32
           UNITS       "seconds"
-          MAX-ACCESS  read-write 
+          MAX-ACCESS  read-only 
           STATUS      current 
           DESCRIPTION 
              "Interval between the general query messages sent by the switch 
               during startup of querier election process.
-              This value must be <= (Query Interval/4)"
-          DEFVAL  { 31 } 
+              This value is (Query Interval/4)"
           ::= { fsSnoopVlanFilterEntry 14 } 
 
       fsSnoopVlanOtherQuerierPresentInterval OBJECT-TYPE 
-          SYNTAX      Integer32 (120..1235) 
+          SYNTAX      Integer32 
           UNITS       "seconds"
-          MAX-ACCESS  read-write 
+          MAX-ACCESS  read-only 
           STATUS      current 
           DESCRIPTION 
              "The Other Querier Present Interval is the length of time that 
              must pass before a multicast router decides that there is no 
              longer another multicast router which should be the querier. 
-             This value must be >= ((Robustness Variable * Query Interval) 
+             This value is ((Robustness Variable * Query Interval) 
               + (Query Response Interval/2)).
              Maximum value for the object varies for IGS and MLDS. 
              For IGS, the max value supported is 1215. 
              For MLDS, the max value supported is 1235.
              The default value for the object is same for both IGS and MLDS."
-          DEFVAL  { 255 } 
           ::= { fsSnoopVlanFilterEntry 15 } 
 
       fsSnoopVlanQuerierIpAddress OBJECT-TYPE
@@ -1161,6 +1183,19 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           DESCRIPTION
              "This object specifies the IpAddress of elected querier."
           ::= { fsSnoopVlanFilterEntry 18 }
+
+      fsSnoopVlanRobustnessValue OBJECT-TYPE
+          SYNTAX  Unsigned32 (2..7)
+          MAX-ACCESS  read-write
+          STATUS  current
+          DESCRIPTION
+            "The Robustness Variable allows tuning for the expected packet loss on
+            a subnet.  If a subnet is expected to be lossy, the Robustness variable 
+            may be increased"
+          DEFVAL {2}
+
+          ::= { fsSnoopVlanFilterEntry 19 }
+ 
 
 -- ------------------------------------------------------------------ 
 -- Multicast Group Table
@@ -1630,11 +1665,13 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
               seconds. This timer will be restarted whenever a report 
               message is received from a host on the specific port. If 
               the timer expires, then , the learnt port entry  will 
-              be purged from the multicast group." 
+              be purged from the multicast group. 
+	      This interval is calculated based on the value of
+	      (QueryInterval * Retry Count) + Maximum Response Time"
           ::= { fsSnoopVlanFilterXEntry 7 } 
 
       fsSnoopVlanMaxResponseTime OBJECT-TYPE
-         SYNTAX     Integer32 (0..65025)
+         SYNTAX     Integer32 (1..65025)
          MAX-ACCESS read-create
          STATUS     current
          DESCRIPTION
@@ -1827,7 +1864,28 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
           fsSnoopStatsDroppedPkts           Counter32,
           fsSnoopStatsUnsuccessfulJoins     Counter32,
           fsSnoopStatsActiveJoins           Counter32,
-          fsSnoopStatsActiveGroups          Counter32
+          fsSnoopStatsActiveGroups          Counter32,
+          fsSnoopStatsRxV1Report            Counter32,
+          fsSnoopStatsRxV2Report            Counter32,
+          fsSnoopStatsTxV1Report            Counter32,
+          fsSnoopStatsTxV2Report            Counter32,
+          fsSnoopStatsDropV1GenQueries      Counter32,
+          fsSnoopStatsDropV2GenQueries      Counter32,
+          fsSnoopStatsDropV3GenQueries      Counter32,
+          fsSnoopStatsDropV2GrpQueries      Counter32,
+          fsSnoopStatsDropV3GrpQueries      Counter32,
+          fsSnoopStatsDropGrpAndSrcQueries  Counter32,
+          fsSnoopStatsDropV1Reports         Counter32,
+          fsSnoopStatsDropV2Reports         Counter32,
+          fsSnoopStatsDropSsmIsInMsgs       Counter32,
+          fsSnoopStatsDropSsmIsExMsgs         Counter32,
+          fsSnoopStatsDropSsmToInMsgs         Counter32,
+          fsSnoopStatsDropSsmToExMsgs         Counter32,
+          fsSnoopStatsDropSsmAllowMsgs        Counter32,
+          fsSnoopStatsDropSsmBlockMsgs        Counter32,
+          fsSnoopStatsDropAsmLeaves           Counter32,
+        fsSnoopStatsFwdGenQueries 	      Counter32,
+          fsSnoopStatsFwdGrpQueries           Counter32
         } 
 
       fsSnoopStatsInstId OBJECT-TYPE 
@@ -2058,6 +2116,199 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
               "Provides the total number of IGMP groups or channels active 
               on this VLAN at the given time."
            ::= { fsSnoopStatsEntry 25 }
+
+      fsSnoopStatsRxV1Report  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv1 Membership reports
+                received by the snooping switch." 
+           ::= { fsSnoopStatsEntry 26 }
+
+      fsSnoopStatsRxV2Report  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv2 Membership reports
+                received by the snooping switch."
+           ::= { fsSnoopStatsEntry 27 }
+
+      fsSnoopStatsTxV1Report  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv1 Membership reports
+                transmitted by the snooping switch."
+           ::= { fsSnoopStatsEntry 28 }
+
+      fsSnoopStatsTxV2Report  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv2 Membership reports
+                transmitted by the snooping switch."
+           ::= { fsSnoopStatsEntry 29 }
+
+
+      fsSnoopStatsDropV1GenQueries    OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv1 General Queries that are dropped 
+                by the snooping switch."
+           ::= { fsSnoopStatsEntry 30 }
+
+      fsSnoopStatsDropV2GenQueries    OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv2 General Queries that are dropped
+                by the snooping switch."
+           ::= { fsSnoopStatsEntry 31 }
+
+      fsSnoopStatsDropV3GenQueries    OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv3 General Queries that are dropped
+                by the snooping switch."
+           ::= { fsSnoopStatsEntry 32 }
+
+
+      fsSnoopStatsDropV2GrpQueries  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of Group specific Queries that are dropped
+                by the snooping switch."
+           ::= { fsSnoopStatsEntry 33 }
+
+      fsSnoopStatsDropV3GrpQueries  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of Group specific Queries that are dropped
+                by the snooping switch."
+           ::= { fsSnoopStatsEntry 34 }
+
+
+     fsSnoopStatsDropGrpAndSrcQueries  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of Group and source specific 
+                Queries that are dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 35 }
+
+     fsSnoopStatsDropV1Reports  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv1 reports that 
+                are dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 36 }
+
+    fsSnoopStatsDropV2Reports  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+               "Provides the statistics of IGMPv2 reports that
+                are dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 37 }
+
+    fsSnoopStatsDropSsmIsInMsgs  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type IS_INCLUDE dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 38 }
+
+     fsSnoopStatsDropSsmIsExMsgs  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type IS_EXCLUDE dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 39 }
+
+     fsSnoopStatsDropSsmToInMsgs   OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type TO_INCLUDE dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 40 }
+
+     fsSnoopStatsDropSsmToExMsgs  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type TO_EXCLUDE dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 41 }
+
+     fsSnoopStatsDropSsmAllowMsgs  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type ALLOW dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 42 }
+    
+     fsSnoopStatsDropSsmBlockMsgs   OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+                "Provides the statistics of IGMPv3 Membership reports
+                of type BLOCK dropped by the snooping switch."
+           ::= { fsSnoopStatsEntry 43 }
+    
+     fsSnoopStatsDropAsmLeaves  OBJECT-TYPE
+           SYNTAX      Counter32
+           MAX-ACCESS  read-only
+           STATUS      current
+           DESCRIPTION
+	   "Provides the statistics of IGMPv2 Leave messages
+	   dropped by the snooping switch."
+	   ::= { fsSnoopStatsEntry 44 }
+
+	   fsSnoopStatsFwdGenQueries  OBJECT-TYPE
+	   SYNTAX      Counter32
+	   MAX-ACCESS  read-only
+	   STATUS      current
+	   DESCRIPTION
+	   "Provides the statistics of IGMPv2 General Queries forwarded 
+	   by the snooping switch."
+	   ::= { fsSnoopStatsEntry 45 }
+
+	   fsSnoopStatsFwdGrpQueries  OBJECT-TYPE
+	   SYNTAX      Counter32
+	   MAX-ACCESS  read-only
+	   STATUS      current
+	   DESCRIPTION
+	   "Provides the statistics of IGMPv2 Group Specific General 
+	   Queries forwarded by the snooping switch."
+	   ::= { fsSnoopStatsEntry 46 }
+
 -- ------------------------------------------------
 -- Port related Configuration
 -- ------------------------------------------------
@@ -2607,7 +2858,7 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
 
       fsSnoopOlderQuerierInterval OBJECT-TYPE 
             SYNTAX     Integer32 (60..600) 
-            MAX-ACCESS read-write 
+            MAX-ACCESS read-only 
             STATUS     current 
             DESCRIPTION 
             "The time interval after which proxy assumes that there are no 
@@ -2617,9 +2868,7 @@ InnerVlanIndex ::= TEXTUAL-CONVENTION
             On time-out, if v2/v3 queriers are not present and if the port 
             is a dynamically learnt port, then it will be purged. 
             Else, proxy will reply to all the queries with consolidated
-            reports with the new oper version (v2/v3).The 
-            value configured for static router alone will be stored 
-            and restored." 
+            reports with the new oper version (v2/v3)."
             DEFVAL { 125 }
             ::= { fsSnoopRtrPortEntry 6 } 
 

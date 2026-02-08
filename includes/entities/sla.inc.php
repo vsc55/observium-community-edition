@@ -18,9 +18,18 @@
  */
 function get_sla_index($sla) {
     $index = $sla['sla_index'];
-    if (!in_array($sla['sla_mib'], [ 'CISCO-RTTMON-MIB', 'HPICF-IPSLA-MIB', 'TWAMP-MIB' ])) {
-        // Use 'owner.index' as index for all except Cisco and HPE
-        $index = $sla['sla_owner'] . '.' . $index;
+
+    // Use 'owner.index' as index for all except Cisco, HPE and TWAMP
+    switch (strtoupper($sla['sla_mib'])) {
+        case 'DISMAN-PING-MIB':
+        case 'JUNIPER-PING-MIB':
+        case 'HH3C-NQA-MIB':
+        case 'HUAWEI-DISMAN-PING-MIB':
+        case 'ZHONE-DISMAN-PING-MIB':
+        case 'H3C-NQA-MIB':
+            // DISMAN-PING based mibs have two part (named) indexes
+            $index = $sla['sla_owner'] . '.' . $index;
+            break;
     }
 
     return $index;

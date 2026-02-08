@@ -13,35 +13,6 @@
 // Common Functions
 /// FIXME. There should be functions that use only standard php (and self) functions.
 
-// FIXME. Function temporary placed here, since cache_* functions currently included in WUI only.
-// MOVEME includes/cache.inc.php
-
-/**
- * Add clear cache attrib, this will request for clearing cache in next request.
- *
- * @param string $target Clear cache target: wui or cli (default if wui)
- */
-function set_cache_clear($target = 'wui')
-{
-    if (OBS_DEBUG || (defined('OBS_CACHE_DEBUG') && OBS_CACHE_DEBUG)) {
-        print_error('<span class="text-warning">CACHE CLEAR SET.</span> Cache clear set.');
-    }
-    if (!$GLOBALS['config']['cache']['enable']) {
-        // Cache not enabled
-        return;
-    }
-
-    switch (strtolower($target)) {
-        case 'cli':
-            // Add clear CLI cache attrib. Currently not used
-            set_obs_attrib('cache_cli_clear', get_request_id());
-            break;
-        default:
-            // Add clear WUI cache attrib
-            set_obs_attrib('cache_wui_clear', get_request_id());
-    }
-}
-
 /**
  * Returns an array of predefined timestamp formats along with their names and example values.
  * The array also includes a 'Current' timestamp format based on the global `$config['timestamp_format']`.
@@ -78,26 +49,50 @@ function get_params_timestamp()
 }
 
 /**
+ * Generate RFC 4122 version 4 UUID.
+ *
+ * @param bool $dashes Whether to include dashes in the output.
+ *
+ * @return string UUID string (32 chars without dashes, 36 with dashes).
+ */
+function generate_uuid4($dashes = TRUE): string {
+    // Generate 16 cryptographically secure random bytes
+    $data = random_bytes(16);
+
+    // Set version to 0100 (UUID v4) in bits 12-15 of time_hi_and_version
+    $data[6] = chr(ord($data[6]) & 0x0F | 0x40);
+
+    // Set variant to 10xx in bits 6-7 of clock_seq_hi_and_reserved
+    $data[8] = chr(ord($data[8]) & 0x3F | 0x80);
+
+    $hex = bin2hex($data);
+
+    if ($dashes) {
+        // Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        return substr($hex, 0, 8) . '-' .
+               substr($hex, 8, 4) . '-' .
+               substr($hex, 12, 4) . '-' .
+               substr($hex, 16, 4) . '-' .
+               substr($hex, 20, 12);
+    }
+
+    return $hex;
+}
+
+/**
  * Generate and store Unique ID for current system. Store in DB at first run.
  *  IDs is RFC 4122 version 4 (without dashes, varchar(32)), i.e. c39b2386c4e8487fad4a87cd367b279d
  *
  * @return string Unique system ID
- * @throws Exception
  */
-function get_unique_id()
-{
+function get_unique_id(): string {
     if (!defined('OBS_UNIQUE_ID')) {
         $unique_id = get_obs_attrib('unique_id');
 
         if (safe_empty($unique_id)) {
             // Generate a version 4 (random) UUID object
-            $uuid4 = Ramsey\Uuid\Uuid::uuid4();
-            //$unique_id = $uuid4->toString(); // i.e. c39b2386-c4e8-487f-ad4a-87cd367b279d
-            $unique_id = $uuid4->getHex();     // i.e. c39b2386c4e8487fad4a87cd367b279d
-            if (PHP_VERSION_ID >= 80000) {
-                $unique_id = $unique_id->toString();
-            }
-            if (!OBS_DB_SKIP) {
+            $unique_id = generate_uuid4(FALSE); // i.e. c39b2386c4e8487fad4a87cd367b279d
+            if (!db_skip()) {
                 dbInsert([ 'attrib_type' => 'unique_id', 'attrib_value' => $unique_id ], 'observium_attribs');
             }
         }
@@ -113,15 +108,12 @@ function get_unique_id()
  *  IDs is RFC 4122 version 4, i.e. 25769c6c-d34d-4bfe-ba98-e0ee856f3e7a
  *
  * @return string Unique Request ID
- * @throws Exception
  */
-function get_request_id()
-{
+function get_request_id(): string {
     if (!defined('OBS_REQUEST_ID')) {
         // Generate a version 4 (random) UUID object
-        $uuid4      = Ramsey\Uuid\Uuid::uuid4();
-        $request_id = $uuid4->toString(); // i.e. 25769c6c-d34d-4bfe-ba98-e0ee856f3e7a
-        define('OBS_REQUEST_ID', $request_id);
+        // i.e. 25769c6c-d34d-4bfe-ba98-e0ee856f3e7a
+        define('OBS_REQUEST_ID', generate_uuid4());
     }
 
     return OBS_REQUEST_ID;
@@ -135,8 +127,7 @@ function get_request_id()
  *
  * @return boolean Status of DB schema update
  */
-function set_db_version($db_rev, $schema_insert = FALSE)
-{
+function set_db_version($db_rev, $schema_insert = FALSE) {
     if ($db_rev >= 211) { // Do not remove this check, since before this revision observium_attribs table not exist!
         $status = set_obs_attrib('dbSchema', $db_rev);
     } else {
@@ -151,7 +142,7 @@ function set_db_version($db_rev, $schema_insert = FALSE)
     }
 
     if ($status) {
-        $GLOBALS['cache']['db_version'] = $db_rev; // Cache new db version
+        mem_cache_set('db_version', $db_rev); // Cache new db version
     }
 
     return $status;
@@ -163,9 +154,8 @@ function set_db_version($db_rev, $schema_insert = FALSE)
  * @return string DB schema version
  */
 // TESTME needs unit testing
-function get_db_version($refresh = FALSE)
-{
-    if (!isset($GLOBALS['cache']['db_version']) || $refresh) {
+function get_db_version($refresh = FALSE) {
+    if ($refresh || !mem_cache_exists('db_version')) {
         if ($refresh) {
             reset_attribs_cache();
         }
@@ -175,24 +165,12 @@ function get_db_version($refresh = FALSE)
         }
         $db_rev = (int)$db_rev;
         if ($db_rev > 0) {
-            $GLOBALS['cache']['db_version'] = $db_rev;
-        } else {
-            // Do not cache zero value
-            return $db_rev;
+            mem_cache_set('db_version', $db_rev); // Cache new db version
         }
+        return $db_rev;
     }
-    return $GLOBALS['cache']['db_version'];
-}
 
-/**
- * Get current DB Size
- *
- * @return string DB size in bytes
- */
-// TESTME needs unit testing
-function get_db_size()
-{
-    return dbFetchCell('SELECT SUM(`data_length` + `index_length`) AS `size` FROM `information_schema`.`tables` WHERE `table_schema` = ?;', [$GLOBALS['config']['db_name']]);
+    return mem_cache_get('db_version');
 }
 
 /**
@@ -254,13 +232,7 @@ function get_local_id() {
         return file_get_contents($id_file);
     }
 
-    try {
-        $uuid4 = Ramsey\Uuid\Uuid::uuid4();
-    } catch (Exception $e) {
-        return '';
-    }
-
-    $unique_id = $uuid4->getHex();   // i.e. c39b2386c4e8487fad4a87cd367b279d
+    $unique_id = generate_uuid4(FALSE);   // i.e. c39b2386c4e8487fad4a87cd367b279d
     if (file_put_contents($id_file, $unique_id)) {
         // return generated id, only when lock file is writable, for prevent logs spamming
         return $unique_id;
@@ -270,25 +242,26 @@ function get_local_id() {
 }
 
 /**
- * Get local hostname
+ * Get cached local hostname
  *
  * @return string FQDN local hostname
  */
 function get_localhost() {
-    global $cache;
 
-    if (!isset($cache['localhost'])) {
-        $cache['localhost'] = php_uname('n');
-        if (!str_contains($cache['localhost'], '.')) {
+    if (!mem_cache_exists('localhost')) {
+        $localhost = php_uname('n');
+        if (!str_contains($localhost, '.')) {
             // try use hostname -f for get FQDN hostname
             $localhost_t = external_exec('/bin/hostname -f');
             if (str_contains($localhost_t, '.')) {
-                $cache['localhost'] = $localhost_t;
+                $localhost = $localhost_t;
             }
         }
+        mem_cache_set('localhost', $localhost);
+        return $localhost;
     }
 
-    return $cache['localhost'];
+    return mem_cache_get('localhost');
 }
 
 /**
@@ -324,7 +297,7 @@ function get_dir_size($dir)
 
     $size = 0;
 
-    foreach (get_recursive_directory_iterator($dir) as $path => $file) {
+    foreach (get_recursive_directory_iterator($dir) as $file) {
         // Check if the file is not a link to avoid potential infinite loop
         if (!$file -> isLink()) {
             $size += $file -> getSize();
@@ -620,22 +593,23 @@ function logfile($filename, $string = NULL) {
  *
  * @return  array|string
  */
-function get_versions($program = NULL)
-{
+function get_versions($program = NULL) {
     $return_version = !empty($program); // return only version string for program
 
-    if (isset($GLOBALS['cache']['versions'])) {
+    if (mem_cache_exists('versions')) {
         // Already cached
+        $versions = mem_cache_get('versions');
         if ($return_version) {
             $key = strtolower($program) . '_version';
-            if (isset($GLOBALS['cache']['versions'][$key])) {
-                return $GLOBALS['cache']['versions'][$key];
+            if (isset($versions[$key])) {
+                return $versions[$key];
             }
             // else directly request version
         } else {
-            return $GLOBALS['cache']['versions'];
+            return $versions;
         }
     }
+
     $versions = []; // Init
     if ($return_version) {
         // Return only one not cached version
@@ -650,13 +624,22 @@ function get_versions($program = NULL)
             case 'os':
                 // Local system OS version
                 if (is_executable($GLOBALS['config']['install_dir'] . '/scripts/distro')) {
-                    $os                            = explode('|', external_exec($GLOBALS['config']['install_dir'] . '/scripts/distro'), 6);
+                    $os = explode('|', external_exec($GLOBALS['config']['install_dir'] . '/scripts/distro'), 7);
+                    //print_vars($os);
+
                     $versions['os_system']         = $os[0];
                     $versions['os_version']        = $os[1];
                     $versions['os_arch']           = $os[2];
                     $versions['os_distro']         = $os[3];
                     $versions['os_distro_version'] = $os[4];
-                    $versions['os_virt']           = $os[5];
+                    $versions['os_virt']           = !empty($os[5]) ? $os[5] : $os[6]; // virt or cont
+                    if ($versions['os_virt']) {
+                        if (isset($GLOBALS['config']['virt-what'][$versions['os_virt']])) {
+                            $versions['os_virt_name'] = $GLOBALS['config']['virt-what'][$versions['os_virt']];
+                        } else {
+                            $versions['os_virt_name'] = nicecase($versions['os_virt']);
+                        }
+                    }
                     $versions['os_text']           = $os[0] . ' ' . $os[1] . ' [' . $os[2] . '] (' . $os[3] . ' ' . $os[4] . ')';
                 }
                 if ($return_version) {
@@ -666,31 +649,25 @@ function get_versions($program = NULL)
 
             case 'php':
                 // PHP
-                $php_version             = PHP_VERSION;
-                $versions['php_full']    = $php_version;
                 $versions['php_version'] = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;
                 if ($return_version) {
                     return $versions['php_version'];
                 }
+                $versions['php_text'] = PHP_VERSION;
+                $versions['php_old']  = version_compare($versions['php_version'], OBS_MIN_PHP_VERSION, '<');
 
-                $versions['php_old'] = version_compare($versions['php_version'], OBS_MIN_PHP_VERSION, '<');
                 // PHP OPcache
                 $versions['php_opcache'] = FALSE;
                 if (extension_loaded('Zend OPcache')) {
-                    $opcache     = ini_get('opcache.enable');
-                    $php_version .= ' (OPcache: ';
-                    if ($opcache && is_cli() && ini_get('opcache.enable_cli')) { // CLI
-                        $php_version             .= 'ENABLED)';
-                        $versions['php_opcache'] = 'ENABLED';
-                    } elseif ($opcache && !is_cli()) { // WUI
-                        $php_version             .= 'ENABLED)';
-                        $versions['php_opcache'] = 'ENABLED';
-                    } else {
-                        $php_version             .= 'DISABLED)';
-                        $versions['php_opcache'] = 'DISABLED';
+                    $opcache = ini_get('opcache.enable');
+                    if ($opcache && is_cli()) {
+                        $opcache = ini_get('opcache.enable_cli'); // extra ini option for cli
                     }
+                    $versions['php_opcache'] = $opcache;
                 }
-                $versions['php_text'] = $php_version;
+
+                // FastCGI
+                $versions['php_fastcgi'] = str_contains(PHP_SAPI, 'fcgi'); // fpm-fcgi, cgi-fcgi
 
                 // PHP memory_limit
                 $php_memory_limit             = unit_string_to_numeric(ini_get('memory_limit'));
@@ -700,54 +677,56 @@ function get_versions($program = NULL)
                 } else {
                     $versions['php_memory_limit_text'] = format_bytes($php_memory_limit);
                 }
+
+                // PHP math (Brick\Math)
+                if (extension_loaded('gmp')) {
+                    $versions['php_math_text'] = 'GMP';
+                } elseif (extension_loaded('bcmath')) {
+                    $versions['php_math_text'] = 'BCMATH';
+                } else {
+                    $versions['php_math_text'] = 'NATIVE';
+                }
+
                 break;
 
             case 'python':
                 /** Python
                  * I.e.:
-                 * python_version = 2.7.5
-                 * python_text    = 2.7.5
+                 * python_version = 3.10.12
+                 * python_text    = 3.10.12
                  */
-                $python_version = str_replace('Python ', '', external_exec('/usr/bin/env python --version 2>&1'));
-                $python3_default = TRUE;
+                $python_version = str_replace('Python ', '', external_exec('/usr/bin/env python3 --version 2>&1'));
+                $python3_default = FALSE;
                 if (str_contains($python_version, 'No such file or directory')) {
-                    // /usr/bin/env: 'python': No such file or directory
-                    $python_version = str_replace('Python ', '', external_exec('/usr/bin/env python3 --version 2>&1'));
-                    if (str_contains($python_version, 'No such file or directory')) {
+                    // /usr/bin/env: 'python3': No such file or directory
+                    $python2_version = str_replace('Python ', '', external_exec('/usr/bin/env python --version 2>&1'));
+                    if (str_contains($python2_version, 'No such file or directory')) {
                         // /usr/bin/env: 'python': No such file or directory
                         $python_version = 'Not found';
+                    } elseif (str_starts_with($python2_version, '2.')) {
+                        // Any python 2.x is old and unsupported now
+                        $python_version = $python2_version;
+                        $versions['python_old'] = TRUE;
                     } else {
-                        // Append info about no default python executable
-                        $python3_default = FALSE;
-                    }
-                } elseif (str_starts_with($python_version, '2.')) {
-                    // python3 not symlynk to python
-                    $python3 = str_replace('Python ', '', external_exec('/usr/bin/env python3 --version 2>&1'));
-                    if (!str_contains($python3, 'No such file or directory')) {
-                        // /usr/bin/env: 'python': No such file or directory
-                        $python_version = $python3;
-                        // Append info about no default python executable
-                        $python3_default = FALSE;
+                        $python3_default = TRUE;
                     }
                 }
                 $versions['python_version'] = $python_version;
                 if ($return_version) {
                     return $versions['python_version'];
                 }
-                if (str_starts_with($python_version, '2.')) {
-                    $versions['python_old'] = version_compare($versions['python_version'], OBS_MIN_PYTHON2_VERSION, '<');
-                } else {
+                if (!isset($versions['python_old'])) {
                     $versions['python_old'] = version_compare($versions['python_version'], OBS_MIN_PYTHON3_VERSION, '<');
                 }
                 $versions['python_text'] = $python_version;
-                if (!$python3_default) {
-                    $versions['python_text'] .= ' (python3 not used as default python)';
+                if ($python3_default) {
+                    $versions['python_text'] .= ' (python3 is not default python command)';
                 }
                 break;
 
             case 'mysql':
             case 'mariadb':
-                if (defined('OBS_DB_SKIP') && OBS_DB_SKIP) {
+                if (db_skip()) {
                     break;
                 }
                 /** MySQL
@@ -758,11 +737,7 @@ function get_versions($program = NULL)
                  * mysql_version = 10.3.23
                  * mysql_text    = 10.3.23-MariaDB-log (extension: mysqli 5.0.12-dev)
                  */
-                $mysql_client = dbClientInfo();
-                if (preg_match('/(\d+\.[\w\.\-]+)/', $mysql_client, $matches)) {
-                    $mysql_client = $matches[1];
-                }
-                $versions['mysql_client'] = $mysql_client;
+
                 $mysql_version            = dbFetchCell("SELECT version();");
                 $versions['mysql_full']   = $mysql_version;
                 $versions['mysql_version'] = explode('-', $mysql_version)[0];
@@ -782,7 +757,12 @@ function get_versions($program = NULL)
                 } else {
                     $versions['mysql_old'] = version_compare($versions['mysql_version'], OBS_MIN_MYSQL_VERSION, '<');
                 }
-                $mysql_version          .= ' (extension: ' . OBS_DB_EXTENSION . ' ' . $mysql_client . ')';
+                $mysql_client = dbClientInfo();
+                if (preg_match('/(\d+\.[\w\.\-]+)/', $mysql_client, $matches)) {
+                    $mysql_client = $matches[1];
+                }
+                $versions['mysql_client'] = (OBS_DB_MYSQLND ? 'MySQLnd' : 'MySQLi') . ' ' . $mysql_client;
+                $mysql_version          .= ' (client: ' . $versions['mysql_client'] . ')';
                 $versions['mysql_text'] = $mysql_version;
 
                 break;
@@ -821,7 +801,7 @@ function get_versions($program = NULL)
                 $versions['rrdtool_old'] = version_compare($versions['rrdtool_version'], OBS_MIN_RRD_VERSION, '<');
 
                 if (!safe_empty($GLOBALS['config']['rrdcached'])) {
-                    if (OBS_RRD_NOLOCAL) {
+                    if (OBS_RRD_REMOTE) {
                         // Remote rrdcached daemon (unknown version)
                         $rrdtool_version .= ' (rrdcached remote: ' . $GLOBALS['config']['rrdcached'] . ')';
                         // Remote RRDcached require version 1.5.5
@@ -896,6 +876,10 @@ function get_versions($program = NULL)
                 }
                 $versions['http_version'] = str_replace('Apache/', '', $versions['http_full']);
                 $versions['http_text']    = $versions['http_version'];
+                if (str_contains($versions['http_version'], ' (')) {
+                    // Remove extra info from httpd version string: 2.4.52 (Ubuntu)
+                    $versions['http_version'] = explode(' (', $versions['http_version'])[0];
+                }
                 if ($return_version) {
                     return $versions['http_version'];
                 }
@@ -949,12 +933,33 @@ function get_versions($program = NULL)
                     return $versions['curl_version'];
                 }
                 break;
+
+            case 'svn':
+                $svn_version = '';
+                $svn_text    = 'not found';
+                $svn_exec    = is_executable($GLOBALS['config']['svn']) ? $GLOBALS['config']['svn'] : '/usr/bin/env svn';
+                $svn         = external_exec($svn_exec . " -q --version");
+                if (preg_match('/^(\d\S+)/', $svn, $matches)) {
+                    $svn_version = $matches[1];
+                    $svn_text    = $svn_version;
+
+                    if (version_compare($svn_version, '1.7', '<')) {
+                        $svn_text .= ' (old)';
+                        $versions['svn_old'] = TRUE;
+                    }
+                }
+                $versions['svn_version'] = $svn_version;
+                $versions['svn_text']    = $svn_text;
+                if ($return_version) {
+                    return $versions['svn_version'];
+                }
+                break;
         }
     }
 
     // Cache for current execution
-    $GLOBALS['cache']['versions'] = $versions;
-    //print_vars($GLOBALS['cache']['versions']);
+    mem_cache_set('versions', $versions);
+    //print_vars($versions);
 
     return $versions;
 }
@@ -965,24 +970,26 @@ function get_versions($program = NULL)
  * @return NULL
  */
 function print_versions() {
-    get_versions();
 
     $observium_date  = format_unixtime(strtotime(OBSERVIUM_DATE), 'jS F Y');
 
-    $os_version      = $GLOBALS['cache']['versions']['os_text'];
-    $php_version     = $GLOBALS['cache']['versions']['php_text'];
-    $python_version  = $GLOBALS['cache']['versions']['python_text'];
-    $mysql_version   = $GLOBALS['cache']['versions']['mysql_text'];
-    $mysql_name      = $GLOBALS['cache']['versions']['mysql_name'];
-    $snmp_version    = $GLOBALS['cache']['versions']['snmp_text'];
-    $rrdtool_version = $GLOBALS['cache']['versions']['rrdtool_text'];
-    $fping_version   = $GLOBALS['cache']['versions']['fping_text'];
-    $http_version    = $GLOBALS['cache']['versions']['http_text'];
-    $curl_version    = $GLOBALS['cache']['versions']['curl_text'];
+    $versions        = get_versions();
+    $os_version      = $versions['os_text'];
+    $php_version     = $versions['php_text'];
+    $python_version  = $versions['python_text'];
+    $mysql_version   = $versions['mysql_text'];
+    $mysql_name      = $versions['mysql_name'];
+    $snmp_version    = $versions['snmp_text'];
+    $rrdtool_version = $versions['rrdtool_text'];
+    $fping_version   = $versions['fping_text'];
+    $http_version    = $versions['http_text'];
+    $curl_version    = $versions['curl_text'];
 
-    // PHP memory_limit
-    $php_memory_limit      = $GLOBALS['cache']['versions']['php_memory_limit'];
-    $php_memory_limit_text = $GLOBALS['cache']['versions']['php_memory_limit_text'];
+    // PHP info
+    $php_opcache           = $versions['php_opcache'];
+    $php_memory_limit      = $versions['php_memory_limit'];
+    $php_memory_limit_text = $versions['php_memory_limit_text'];
+    $php_math              = $versions['php_math_text'];
 
     if (is_cli()) {
         $timezone = get_timezone();
@@ -992,19 +999,19 @@ function print_versions() {
         $mysql_binlog  = dbShowVariables("LIKE 'log_bin'");
         $mysql_charset = dbShowVariables("LIKE 'character_set_connection'");
 
-        if ($GLOBALS['cache']['versions']['php_old']) {
+        if ($versions['php_old']) {
             $php_version = '%r' . $php_version;
         }
-        if ($GLOBALS['cache']['versions']['python_old']) {
+        if ($versions['python_old']) {
             $python_version = '%r' . $python_version;
         }
-        if ($GLOBALS['cache']['versions']['mysql_old']) {
+        if ($versions['mysql_old']) {
             $mysql_version = '%r' . $mysql_version;
         }
-        if ($GLOBALS['cache']['versions']['rrdtool_old']) {
+        if ($versions['rrdtool_old']) {
             $rrdtool_version = '%r' . $rrdtool_version;
         }
-        if ($GLOBALS['cache']['versions']['curl_old']) {
+        if ($versions['curl_old']) {
             $curl_version = '%r' . $curl_version;
         }
 
@@ -1023,6 +1030,9 @@ function print_versions() {
         echo PHP_EOL;
         print_cli_heading("Software versions");
         print_cli_data("OS", $os_version);
+        if ($versions['os_virt']) {
+            print_cli_data("VM", $versions['os_virt_name']);
+        }
         print_cli_data("Apache", $http_version);
         print_cli_data("PHP", $php_version);
         print_cli_data("Python", $python_version);
@@ -1035,8 +1045,10 @@ function print_versions() {
         // Additionally, in CLI always display Memory Limit, MySQL Mode and Charset info
 
         echo PHP_EOL;
-        print_cli_heading("Memory Limit", 3);
-        print_cli_data("PHP", ($php_memory_limit >= 0 && $php_memory_limit < 268435456 ? '%r' : '') . $php_memory_limit_text, 3);
+        print_cli_heading("PHP info", 3);
+        print_cli_data("OPcache", (!$php_opcache ? '%rDISABLED' : 'ENABLED'), 3);
+        print_cli_data("Memory Limit", ($php_memory_limit >= 0 && $php_memory_limit < 268435456 ? '%r' : '') . $php_memory_limit_text, 3);
+        print_cli_data("Math", ($php_math === 'NATIVE' ? '%r' : '') . $php_math, 3);
 
         echo PHP_EOL;
         print_cli_heading("DB info", 3);
@@ -1068,24 +1080,57 @@ function print_versions() {
             print_cli_heading("Poller info", 3);
             print_cli_data("ID", $poller_id, 3);
             print_cli_data("Name", $poller_name, 3);
+
+            // Show distributed pollers versions
+            if ($poller_id === 0) {
+                echo PHP_EOL;
+                print_cli_heading("Remote Pollers Versions");
+                foreach (dbFetchRows('SELECT `poller_id`, `poller_name`, `poller_version` FROM `pollers` WHERE `poller_version` IS NOT NULL') as $poller) {
+                    print_cli_data("ID ".$poller['poller_id']." ({$poller['poller_name']})", $poller['poller_version']);
+                }
+            }
         }
         echo PHP_EOL;
 
     } else {
 
+        $php_options = $versions['php_fastcgi'] ? 'FastCGI; ' : '';
+        $php_options .= 'OPcache: ';
+        if ($php_opcache) {
+            $php_options .= '<span class="text-success">Yes</span>';
+        } else {
+            $php_options .= '<span class="text-danger">No</span>';
+        }
+        $php_options .= '; FastCache: ';
+        // and fastcache (for wui only)
+        if (function_exists('get_cache_stats')) {
+            $phpfastcache = get_cache_stats();
+            if ($phpfastcache['enabled']) {
+                $php_options .= '<span class="text-success">Yes</span>, ' . $phpfastcache['driver'] . ', ' . format_bytes($phpfastcache['size']);
+            } else {
+                $php_options .= '<span class="text-danger">No</span>';
+            }
+        } else {
+            $php_options .= '<span class="text-danger">No</span>';
+        }
+        $php_options = " ($php_options)";
+
         if ($php_memory_limit >= 0 && $php_memory_limit < 268435456) {
             $php_memory_limit_text = '<span class="text-danger">' . $php_memory_limit_text . '</span>';
+        } else {
+            $php_memory_limit_text = '<span class="text-success">' . $php_memory_limit_text . '</span>';
         }
+        $php_options .= " (Memory: $php_memory_limit_text)";
 
         // Check minimum versions
-        if ($GLOBALS['cache']['versions']['php_old']) {
+        if ($versions['php_old']) {
             $php_class   = 'error';
             $php_version = generate_tooltip_link(NULL, $php_version, 'Minimum supported: ' . OBS_MIN_PHP_VERSION);
         } else {
             $php_class   = '';
             $php_version = escape_html($php_version);
         }
-        if ($GLOBALS['cache']['versions']['python_old']) {
+        if ($versions['python_old']) {
             $python_class = 'warning';
             if (str_starts_with($python_version, '2.')) {
                 $python_version = generate_tooltip_link(NULL, $python_version, 'Recommended version is greater than or equal to: ' . OBS_MIN_PYTHON2_VERSION . ' or ' . OBS_MIN_PYTHON3_VERSION);
@@ -1096,7 +1141,7 @@ function print_versions() {
             $python_class   = '';
             $python_version = escape_html($python_version);
         }
-        if ($GLOBALS['cache']['versions']['mysql_old']) {
+        if ($versions['mysql_old']) {
             $mysql_class = 'warning';
             if ($mysql_name === 'MariaDB') {
                 $mysql_version = generate_tooltip_link(NULL, $mysql_version, 'Recommended version is greater than or equal to: ' . OBS_MIN_MARIADB_VERSION);
@@ -1107,16 +1152,16 @@ function print_versions() {
             $mysql_class   = '';
             $mysql_version = escape_html($mysql_version);
         }
-        if ($GLOBALS['cache']['versions']['rrdtool_old']) {
+        if ($versions['rrdtool_old']) {
             $rrdtool_class   = 'error';
             $rrdtool_version = generate_tooltip_link(NULL, $rrdtool_version, 'Minimum supported: ' . OBS_MIN_RRD_VERSION);
         } else {
             $rrdtool_class   = '';
             $rrdtool_version = escape_html($rrdtool_version);
         }
-        if ($GLOBALS['cache']['versions']['curl_old']) {
+        if ($versions['curl_old']) {
             $curl_class = 'error';
-            if ($GLOBALS['cache']['versions']['curl_version'] == '-1') {
+            if ($versions['curl_version'] == '-1') {
                 $curl_tooltip = 'cURL module not installed';
             } else {
                 $curl_tooltip = 'cURL module too old. Minimum supported: 7.16.2';
@@ -1127,14 +1172,19 @@ function print_versions() {
             $curl_version = escape_html($curl_version);
         }
 
+        $vm_line = '';
+        if ($versions['os_virt']) {
+            $vm_line .= '<tr><td><b>VM</b></td><td>' . escape_html($versions['os_virt_name']) . '</td></tr>';
+        }
         echo generate_box_open(['title' => 'Version Information']);
         echo '
         <table class="table table-striped table-condensed-more">
           <tbody>
             <tr><td><b>' . escape_html(OBSERVIUM_PRODUCT) . '</b></td><td>' . escape_html(OBSERVIUM_VERSION_LONG) . ' (' . escape_html($observium_date) . ')</td></tr>
             <tr><td><b>OS</b></td><td>' . escape_html($os_version) . '</td></tr>
+            ' . $vm_line . '
             <tr><td><b>Apache</b></td><td>' . escape_html($http_version) . '</td></tr>
-            <tr class="' . $php_class . '"><td><b>PHP</b></td><td>' . $php_version . ' (Memory: ' . $php_memory_limit_text . ')</td></tr>
+            <tr class="' . $php_class . '"><td><b>PHP</b></td><td>' . $php_version . $php_options . '</td></tr>
             <tr class="' . $python_class . '"><td><b>Python</b></td><td>' . $python_version . '</td></tr>
             <tr class="' . $mysql_class . '"><td><b>' . $mysql_name . '</b></td><td>' . $mysql_version . '</td></tr>
             <tr><td><b>SNMP</b></td><td>' . escape_html($snmp_version) . '</td></tr>
@@ -1145,6 +1195,7 @@ function print_versions() {
         </table>' . PHP_EOL;
         echo generate_box_close();
     }
+    //r(mem_cache_stat());
 }
 
 /**
@@ -1395,99 +1446,92 @@ function format_uptime($uptime, $format = "long") {
  * @return array Timezones info
  */
 function get_timezone($refresh = FALSE) {
-    global $cache;
 
-    if ($refresh || !isset($cache['timezone'])) {
+    if ($refresh || !mem_cache_exists('timezone')) {
         $timezone = [];
+        // OS timezone
         if ($refresh) {
             // Call to external exec only when refresh (basically it's not required)
-            $timezone['system'] = external_exec('date "+%:z"');                            // return '+03:00'
+            $timezone['system'] = preg_replace('/(\d\d$)/', ':$1', external_exec('date "+%z"')); // return '+0300' and convert to '+03:00'
         }
-        if (!OBS_DB_SKIP) {
-            $timezone['mysql'] = dbFetchCell('SELECT TIMEDIFF(NOW(), UTC_TIMESTAMP);'); // return '03:00:00'
-            if ($timezone['mysql'][0] !== '-') {
-                $timezone['mysql'] = '+' . $timezone['mysql'];
-            }
-            $timezone['mysql'] = preg_replace('/:00$/', '', $timezone['mysql']);  // convert to '+03:00'
-        }
-        [$timezone['php'], $timezone['php_abbr'], $timezone['php_name'], $timezone['php_daylight']] = explode('|', date('P|T|e|I'));
+
+        // PHP timezone
+        [ $timezone['php'], $timezone['php_abbr'], $timezone['php_name'], $timezone['php_daylight'] ] = explode('|', date('P|T|e|I'));
         //$timezone['php']         = date('P');                                       // return '+03:00'
         //$timezone['php_abbr']    = date('T');                                       // return 'MSK'
         //$timezone['php_name']    = date('e');                                       // return 'Europe/Moscow'
         //$timezone['php_daylight'] = date('I');                                      // return '0'
+        // Offset from GMT in seconds
+        $sign = $timezone['php'][0];
+        [ $hours, $minutes ] = explode(':', $timezone['php']);
+        $timezone['php_offset'] = $sign . (abs($hours) * 3600 + $minutes * 60);       // return +10800
 
-        foreach (['php', 'mysql'] as $entry) {
-            if (!isset($timezone[$entry])) {
-                continue;
-            } // skip mysql if OBS_DB_SKIP
-
-            $sign = $timezone[$entry][0];
-            [$hours, $minutes] = explode(':', $timezone[$entry]);
-            $timezone[$entry . '_offset'] = $sign . (abs($hours) * 3600 + $minutes * 60); // Offset from GMT in seconds
-        }
-
-        if (OBS_DB_SKIP) {
-            // If mysql skipped, just return system/php timezones without caching
+        // If mysql skipped, just return system/php timezones without caching
+        if (db_skip()) {
             return $timezone;
         }
 
+        // DB timezone
+        $timezone['mysql'] = dbFetchCell('SELECT TIMEDIFF(NOW(), UTC_TIMESTAMP);'); // return '03:00:00'
+        if ($timezone['mysql'][0] !== '-') {
+            $timezone['mysql'] = '+' . $timezone['mysql'];
+        }
+        $timezone['mysql'] = preg_replace('/:00$/', '', $timezone['mysql']);        // convert to '+03:00'
+        // Offset from GMT in seconds
+        $sign = $timezone['mysql'][0];
+        [ $hours, $minutes ] = explode(':', $timezone['mysql']);
+        $timezone['mysql_offset'] = $sign . (abs($hours) * 3600 + $minutes * 60);   // return +10800
+
         // Get the difference in sec between mysql and php timezones
         $timezone['diff']  = (int)$timezone['mysql_offset'] - (int)$timezone['php_offset'];
-        $cache['timezone'] = $timezone;
+
+        mem_cache_set('timezone', $timezone);
+        return $timezone;
     }
 
-    return $cache['timezone'];
+    return mem_cache_get('timezone');
 }
 
+/**
+ * Generate an associative array of all available timezones, sorted by UTC offset.
+ *
+ * @param bool $refresh Force cache refresh.
+ * @return array Associative array: timezone identifier => [ 'descr' => ..., 'offset' => ... ]
+ */
 function generate_timezone_list($refresh = FALSE) {
-    global $cache;
 
-    if ($refresh || !isset($cache['timezone_list'])) {
-        /*
-        $regions = [
-            DateTimeZone::AFRICA,
-            DateTimeZone::AMERICA,
-            DateTimeZone::ANTARCTICA,
-            DateTimeZone::ARCTIC,
-            DateTimeZone::ASIA,
-            DateTimeZone::ATLANTIC,
-            DateTimeZone::AUSTRALIA,
-            DateTimeZone::EUROPE,
-            DateTimeZone::INDIAN,
-            DateTimeZone::PACIFIC,
-            DateTimeZone::UTC
-        ];
-
-        $t = [];
-        foreach($regions as $region) {
-          $t[] = DateTimeZone::listIdentifiers($region);
-        }
-        $timezones = array_merge([], ...$t);
-        */
-
+    if ($refresh || !mem_cache_exists('timezone_list')) {
         $timezone_offsets = [];
+        $now = new DateTime('now');
+
         foreach (timezone_identifiers_list() as $timezone) {
-            $tz                          = new DateTimeZone($timezone);
-            $timezone_offsets[$timezone] = $tz->getOffset(new DateTime);
+            $tz = new DateTimeZone($timezone);
+            // Use current time in timezone for the correct offset (accounts for DST)
+            $timezone_offsets[$timezone] = $tz->getOffset($now);
         }
 
-        // sort timezone by offset
-        asort($timezone_offsets);
+        // Sort by offset, then by name for stability
+        asort($timezone_offsets, SORT_NUMERIC);
 
         $timezone_list = [];
         foreach ($timezone_offsets as $timezone => $offset) {
-            $offset_prefix    = $offset < 0 ? '-' : '+';
-            $offset_formatted = gmdate('H:i', abs($offset));
+            $sign = ($offset < 0) ? '-' : '+';
+            $abs_offset = abs($offset);
+            // Offset is in seconds, convert to H:i
+            $hours = floor($abs_offset / 3600);
+            $minutes = floor(($abs_offset % 3600) / 60);
+            $offset_formatted = sprintf('%02d:%02d', $hours, $minutes);
 
-            $pretty_offset = "UTC{$offset_prefix}{$offset_formatted}";
-
-            $timezone_list[$timezone] = [ 'descr' => "({$pretty_offset}) $timezone", 'offset' => $offset ];
+            $pretty_offset = "UTC{$sign}{$offset_formatted}";
+            $descr = "($pretty_offset) $timezone";
+            $timezone_list[$timezone] = [ 'descr' => $descr, 'offset' => $offset ];
         }
 
-        $cache['timezone_list'] = $timezone_list;
+        mem_cache_set('timezone_list', $timezone_list);
+        return $timezone_list;
     }
 
-    return $cache['timezone_list'];
+    return mem_cache_get('timezone_list');
 }
 
 /**
@@ -1550,8 +1594,7 @@ function mac_zeropad($mac) {
  *
  * @return string The formatted MAC address string.
  */
-function format_mac($mac, $split_char = ':')
-{
+function format_mac($mac, $split_char = ':') {
     // Clean MAC string
     $mac = mac_zeropad($mac);
 
@@ -1588,6 +1631,63 @@ function format_mac($mac, $split_char = ':')
 }
 
 /**
+ * Get MAC address vendor from OUI database
+ *
+ * @param string $mac MAC address in any format
+ * @return string Vendor name or 'Unknown' if not found
+ */
+function get_mac_vendor($mac) {
+    global $config;
+
+    // Clean MAC and get first 6 hex digits (OUI)
+    $mac_clean = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', $mac)); // Can use mac_zeropad() here, but it's not required
+    if (strlen($mac_clean) < 6) {
+        return 'Unknown';
+    }
+
+    $oui = substr($mac_clean, 0, 6);
+
+    // Load OUI data only when we have a MAC to lookup and haven't loaded it yet
+    if (!isset($config['oui']) || !is_array($config['oui'])) {
+        include_once($config['install_dir'] . '/includes/definitions/oui.inc.php');
+    }
+
+    return $config['oui'][$oui] ?? 'Unknown';
+}
+
+/**
+ * Get MAC address vendors for multiple MACs efficiently
+ *
+ * @param array $macs Array of MAC addresses
+ * @return array Associative array of MAC => Vendor
+ */
+function get_mac_vendors_bulk($macs) {
+    global $config;
+
+    if (empty($macs)) {
+        return [];
+    }
+
+    // Load OUI data once
+    if (!isset($config['oui']) || !is_array($config['oui'])) {
+        include_once($config['install_dir'] . '/includes/definitions/oui.inc.php');
+    }
+
+    $vendors = [];
+    foreach ($macs as $mac) {
+        $mac_clean = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', $mac)); // Can use mac_zeropad() here, but it's not required
+        if (strlen($mac_clean) >= 6) {
+            $oui = substr($mac_clean, 0, 6);
+            $vendors[$mac] = $config['oui'][$oui] ?? 'Unknown';
+        } else {
+            $vendors[$mac] = 'Unknown';
+        }
+    }
+
+    return $vendors;
+}
+
+/**
  * Checks if the required exec functions are available.
  *
  * @return bool TRUE if proc_open and proc_get_status are available and not disabled, FALSE otherwise.
@@ -1611,6 +1711,50 @@ function is_exec_available()
     }
 
     return TRUE;
+}
+
+function process_os_group_def(&$config) {
+    foreach ($config['os'] as $this_os => $os_data) {
+        // Merge group properties into OS definitions, including extra groups
+        if (isset($os_data['group'])) {
+            $os_groups = (array)$os_data['group'];
+
+            if (isset($os_data['groups'])) {
+                $os_groups = array_merge($os_groups, (array)$os_data['groups']);
+            }
+            foreach ($os_groups as $this_os_group) {
+                if (!isset($config['os_group'][$this_os_group])) {
+                    continue;
+                }
+
+                foreach ($config['os_group'][$this_os_group] as $property => $value) {
+
+                    // Skip properties handled separately
+                    // use get_device_mibs(), get_device_mibs_blacklist(), check_main_module() and check_submodule()
+                    if (in_array($property, [ 'mibs', 'mib_blacklist', 'modules' ], TRUE)) {
+                        continue;
+                    }
+
+                    if (!isset($config['os'][$this_os][$property])) {
+                        $config['os'][$this_os][$property] = $value;
+                    } elseif (is_array($value) &&
+                              in_array($property, [ 'sysDescr_regex', 'port_label', 'syslog_msg', 'syslog_program', 'comments' ], TRUE)) {
+                        // Merge arrays instead of overriding
+                        $config['os'][$this_os][$property] = array_merge((array)$config['os'][$this_os][$property], $value);
+                    }
+                }
+            }
+        }
+
+        if (isset($os_data['snmpable'])) {
+            // Add all 'snmpable' to generic
+            $config['os']['generic']['snmpable'] = array_merge($config['os']['generic']['snmpable'], (array)$os_data['snmpable']);
+        }
+    }
+    $config['os']['generic']['snmpable'] = array_unique($config['os']['generic']['snmpable']);
+    if (empty($config['os']['generic']['snmpable'])) {
+        unset($config['os']['generic']['snmpable']);
+    }
 }
 
 /**
@@ -1694,7 +1838,7 @@ function pipe_read($command, &$pipes, $fullread = TRUE)
 function pipe_close($process, &$pipes)
 {
     // Close each pipe resource if it's valid
-    foreach ($pipes as $key => $pipe) {
+    foreach ($pipes as $pipe) {
         if (is_resource($pipe)) {
             fclose($pipe);
         }
@@ -1935,7 +2079,7 @@ function get_pid_info($pid, $stats = FALSE)
         return FALSE;
     }
 
-    if (!$stats && stripos(PHP_OS, 'Linux') === 0) {
+    if (!$stats && PHP_OS_FAMILY === 'Linux') {
         // Do not use call to ps on Linux and extended stat not required
         // FIXME. Need something same on BSD and other Unix platforms
 
@@ -1949,72 +2093,76 @@ function get_pid_info($pid, $stats = FALSE)
             $pid_info['COMMAND']      = trim(str_replace("\0", " ", file_get_contents("/proc/$pid/cmdline")));
             $pid_info['STARTED']      = date("r", $pid_stat['mtime']);
             $pid_info['STARTED_UNIX'] = $pid_stat['mtime'];
-        } else {
-            $pid_info = FALSE;
+
+            return $pid_info;
         }
 
-    } else {
-        // Use ps call, have troubles on high load systems!
-
-        if ($stats) {
-            // Add CPU/Mem stats
-            $options = 'pid,ppid,uid,gid,pcpu,pmem,vsz,rss,tty,stat,time,lstart,args';
-        } else {
-            $options = 'pid,ppid,uid,gid,tty,stat,time,lstart,args';
-        }
-
-        //$timezone = get_timezone(); // Get system timezone info, for correct started time conversion
-
-        $ps = external_exec('/bin/ps -ww -o ' . $options . ' -p ' . $pid, $exec_status, 1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          // Set timeout 1sec for exec
-        $ps = explode("\n", rtrim($ps));
-
-        if ($exec_status['exitcode'] === 127) {
-            print_debug("/bin/ps command not found, not possible to get process info.");
-            return NULL;
-        }
-        if ($exec_status['exitcode'] !== 0 || count($ps) < 2) {
-            print_debug("PID " . $pid . " doesn't exists");
-            //trigger_error("PID ".$pid." doesn't exists", E_USER_WARNING);
-            return FALSE;
-        }
-
-        // "  PID  PPID   UID   GID %CPU %MEM    VSZ   RSS TT       STAT     TIME                  STARTED COMMAND"
-        // "14675 10250  1000  1000  0.0  0.2 194640 11240 pts/4    S+   00:00:00 Mon Mar 21 14:48:08 2016 php ./test_pid.php"
-        //
-        // "  PID  PPID   UID   GID TT       STAT     TIME                  STARTED COMMAND"
-        // "14675 10250  1000  1000 pts/4    S+   00:00:00 Mon Mar 21 14:48:08 2016 php ./test_pid.php"
-        //print_vars($ps);
-
-        // Parse output
-        $keys    = preg_split("/\s+/", $ps[0], -1, PREG_SPLIT_NO_EMPTY);
-        $entries = preg_split("/\s+/", $ps[1], count($keys) - 1, PREG_SPLIT_NO_EMPTY);
-        $started = preg_split("/\s+/", array_pop($entries), 6, PREG_SPLIT_NO_EMPTY);
-        $command = array_pop($started);
-
-        //$started[]    = str_replace(':', '', $timezone['system']); // Add system TZ to started time
-        $started[]   = external_exec('date "+%z"');                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         // Add system TZ to started time
-        $started_rfc = array_shift($started) . ',';                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // Sun
-        // Reimplode and convert to RFC2822 started date 'Sun, 20 Mar 2016 18:01:53 +0300'
-        $started_rfc .= ' ' . $started[1];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // 20
-        $started_rfc .= ' ' . $started[0];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // Mar
-        $started_rfc .= ' ' . $started[3];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // 2016
-        $started_rfc .= ' ' . $started[2];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // 18:01:53
-        $started_rfc .= ' ' . $started[4];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                // +0300
-        //$started_rfc .= implode(' ', $started);
-        $entries[] = $started_rfc;
-
-        $entries[] = $command; // Re-add command
-        //print_vars($entries);
-        //print_vars($started);
-
-        $pid_info = [];
-        foreach ($keys as $i => $key) {
-            $pid_info[$key] = $entries[$i];
-        }
-        $pid_info['STARTED_UNIX'] = strtotime($pid_info['STARTED']);
-        //print_vars($pid_info);
-
+        print_debug("DEBUG get_pid_info(): /proc dir seems not exist on system.");
+        return FALSE;
     }
+
+    // Use ps call, have troubles on high load systems!
+
+    if ($stats) {
+        // Add CPU/Mem stats
+        $options = 'pid,ppid,uid,gid,pcpu,pmem,vsz,rss,tty,stat,time,lstart,args';
+    } else {
+        $options = 'pid,ppid,uid,gid,tty,stat,time,lstart,args';
+    }
+
+    //$timezone = get_timezone(); // Get system timezone info, for correct started time conversion
+
+    $ps = external_exec('/bin/ps -ww -o ' . $options . ' -p ' . $pid, $exec_status, 1); // Set timeout 1sec for exec
+    $ps = explode("\n", rtrim($ps));
+
+    if ($exec_status['exitcode'] === 127) {
+        print_debug("/bin/ps command not found, not possible to get process info.");
+        return NULL;
+    }
+    if ($exec_status['exitcode'] > 0 || count($ps) < 2) {
+        print_debug("PID " . $pid . " doesn't exists");
+        //trigger_error("PID ".$pid." doesn't exists", E_USER_WARNING);
+        return FALSE;
+    }
+    if ($exec_status['exitcode'] === -1) {
+        // Timeout, but probably still correct
+        print_debug("DEBUG get_pid_info(): cmd (" . '/bin/ps -ww -o ' . $options . ' -p ' . $pid . ") exit with timeout");
+    }
+    // "  PID  PPID   UID   GID %CPU %MEM    VSZ   RSS TT       STAT     TIME                  STARTED COMMAND"
+    // "14675 10250  1000  1000  0.0  0.2 194640 11240 pts/4    S+   00:00:00 Mon Mar 21 14:48:08 2016 php ./test_pid.php"
+    //
+    // "  PID  PPID   UID   GID TT       STAT     TIME                  STARTED COMMAND"
+    // "14675 10250  1000  1000 pts/4    S+   00:00:00 Mon Mar 21 14:48:08 2016 php ./test_pid.php"
+    //print_vars($ps);
+
+    // Parse output
+    $keys    = preg_split("/\s+/", $ps[0], -1, PREG_SPLIT_NO_EMPTY);
+    $entries = preg_split("/\s+/", $ps[1], count($keys) - 1, PREG_SPLIT_NO_EMPTY);
+    $started = preg_split("/\s+/", array_pop($entries), 6, PREG_SPLIT_NO_EMPTY);
+    $command = array_pop($started);
+
+    //$started[]    = str_replace(':', '', $timezone['system']); // Add system TZ to started time
+    $started[]   = external_exec('date "+%z"'); // Add system TZ to started time
+    $started_rfc = array_shift($started) . ','; // Sun
+    // Reimplode and convert to RFC2822 started date 'Sun, 20 Mar 2016 18:01:53 +0300'
+    $started_rfc .= ' ' . $started[1];          // 20
+    $started_rfc .= ' ' . $started[0];          // Mar
+    $started_rfc .= ' ' . $started[3];          // 2016
+    $started_rfc .= ' ' . $started[2];          // 18:01:53
+    $started_rfc .= ' ' . $started[4];          // +0300
+    //$started_rfc .= implode(' ', $started);
+    $entries[] = $started_rfc;
+
+    $entries[] = $command; // Re-add command
+    //print_vars($entries);
+    //print_vars($started);
+
+    $pid_info = [];
+    foreach ($keys as $i => $key) {
+        $pid_info[$key] = $entries[$i];
+    }
+    $pid_info['STARTED_UNIX'] = strtotime($pid_info['STARTED']);
+    //print_vars($pid_info);
 
     return $pid_info;
 }
@@ -2172,7 +2320,7 @@ function check_process_run($device, $pid = NULL)
 }
 
 /**
- * Determine array is associative?
+ * Determine array is associative
  *
  * @param array $array
  *
@@ -2183,14 +2331,19 @@ function is_array_assoc($array) {
 }
 
 /**
- * Determine array is sequential list?
+ * Determine array is flat sequential list
+ * Valid: [ 0, 3, 'apple' ]
+ * Not Valid: [ 0, 3, [] ]
  *
  * @param array $array
  *
  * @return boolean
  */
-function is_array_list($array) {
-    return is_array($array) && array_is_list($array);
+function is_array_flat($array) {
+    if (!is_array($array)) {
+        return FALSE;
+    }
+    return array_is_list($array) && !array_filter($array, 'is_array');
 }
 
 function is_array_numeric($array) {
@@ -2277,7 +2430,7 @@ function in_iarray($needle, $array) {
 function array_value_recursive($key, array $arr)
 {
     $val = [];
-    array_walk_recursive($arr, static function ($v, $k) use ($key, &$val) {
+    array_walk_recursive($arr, static function ($v, $k) use ($key, &$val): void {
         if ($k == $key) {
             array_push($val, $v);
         }
@@ -2346,6 +2499,25 @@ function array_filter_key($array, $keys = [], $condition = TRUE) {
         return array_filter($array, static function($key) use ($keys) { return !in_array($key, $keys, TRUE); }, ARRAY_FILTER_USE_KEY);
     }
     return array_filter($array, static function($key) use ($keys) { return in_array($key, $keys, TRUE); }, ARRAY_FILTER_USE_KEY);
+}
+
+/**
+ * Converts an associative array into a key:value string.
+ *
+ * @param array $array The associative array to process.
+ * @param string $separator Separator between key:value pairs.
+ * @param string $key_separator Separator between key and value.
+ *
+ * @return string The resulting string in key:value format.
+ */
+function implode_key_value($separator, $array, $key_separator = ":") {
+    return implode($separator, array_map(
+        function ($key, $value) use ($key_separator) {
+            return "$key$key_separator$value";
+        },
+        array_keys($array),
+        $array
+    ));
 }
 
 /**
@@ -2728,7 +2900,7 @@ function print_prompt($text, $default_yes = FALSE)
 
 /**
  * This function echoes text with style 'debug', see print_message().
- * Here checked constant OBS_DEBUG, if OBS_DEBUG not set output - empty.
+ * Here check constant OBS_DEBUG if OBS_DEBUG not set output - empty.
  *
  * @param string  $text
  * @param boolean $strip Stripe special characters (for web) or html tags (for cli)
@@ -2954,8 +3126,7 @@ function get_last_message()
     return strip_tags($text);
 }
 
-function print_cli($text, $colour = TRUE)
-{
+function print_cli($text, $colour = TRUE) {
 
     $msg = new Console_Color2();
 
@@ -2964,7 +3135,7 @@ function print_cli($text, $colour = TRUE)
         $text .= '%n';
     }
 
-    echo $msg -> convert($text, $colour);
+    echo $msg->convert($text, $colour);
 }
 
 // DOCME needs phpdoc block
@@ -3006,8 +3177,7 @@ function print_obsolete_config($filter = '')
 // Check if php extension exist, than warn or fail
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function check_extension_exists($extension, $text = FALSE, $fatal = FALSE)
-{
+function check_extension_exists($extension, $text = FALSE, $fatal = FALSE) {
     $extension = strtolower($extension);
 
     if (isset($GLOBALS['cache']['extension'][$extension])) {
@@ -3016,14 +3186,14 @@ function check_extension_exists($extension, $text = FALSE, $fatal = FALSE)
     } else {
 
         $extension_functions = [
-          'ldap'     => 'ldap_connect',
-          'mysql'    => 'mysql_connect',
-          'mysqli'   => 'mysqli_connect',
-          'mbstring' => 'mb_detect_encoding',
-          'mcrypt'   => 'mcrypt_encrypt', // CLEANME, mcrypt not used anymore (deprecated since php 7.1, removed since php 7.2)
-          'posix'    => 'posix_isatty',
-          'session'  => 'session_name',
-          'svn'      => 'svn_log'
+            'ldap'     => 'ldap_connect',
+            'mysql'    => 'mysql_connect',
+            'mysqli'   => 'mysqli_connect',
+            'mbstring' => 'mb_detect_encoding',
+            'posix'    => 'posix_isatty',
+            'session'  => 'session_name',
+            'curl'     => 'curl_init',
+            'svn'      => 'svn_log'
         ];
 
         if (isset($extension_functions[$extension])) {
@@ -3078,66 +3248,130 @@ function sgn($int)
 
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function truncate($substring, $max = 50, $rep = '...')
-{
-    if ($rep === '...' && !is_cli()) {
-        // in html use entities triple dot
-        $rep_len = 1;
-        //$rep = '&hellip;';
-        $rep = '&mldr;';
-    } else {
-        $rep_len = strlen($rep);
+function truncate($substring, $max = 50, $rep = '...') {
+
+    if (empty($rep)) {
+        return truncate_len($substring, $max);
     }
-    if (safe_empty($substring)) {
-        //$string = $rep;
+
+    // Use mb_substr if available for proper multibyte support
+    if (function_exists('mb_substr')) {
+        return mb_truncate($substring, $max, $rep);
+    }
+
+    // Handle empty or non-string values
+    if (safe_empty($substring) || is_array($substring)) {
         return $rep;
     }
-
     $string = (string)$substring;
 
-    if (strlen($string) > $max) {
-        $leave = $max - $rep_len;
-        return substr_replace($string, $rep, $leave);
+    // If input length is less than or equal to max, return as-is
+    if (strlen($string) <= $max) {
+        return $string;
     }
+
+    // Use HTML entity for ellipsis in non-CLI environments when default rep is used
+    if ($rep === '...' && !is_cli()) {
+        //$rep = '&hellip;';
+        $rep = '&mldr;';
+        $rep_len = 1;
+    } else {
+        // Replacement length (HTML entity counts as one char visually but more in bytes)
+        $rep_len = (str_starts_with($rep, '&') && str_ends_with($rep, ';')) ? 1 : strlen($rep);
+    }
+
+    $leave = $max - $rep_len;
+    return substr_replace($string, $rep, $leave);
+}
+
+/**
+ * @param $substring
+ * @param $max
+ *
+ * @return false|string
+ */
+function truncate_len($substring, $max = 255) {
+    // Handle empty or non-string values
+    if (safe_empty($substring) || is_array($substring)) {
+        return '';
+    }
+    $string = (string)$substring;
+
+    if ($max && strlen($substring) > $max) {
+        return function_exists('mb_substr') ? mb_substr($substring, 0, $max) : substr($substring, 0, $max);
+    }
+
     return $string;
 }
 
 /**
- * Truncate a string to a specified length, and replace the removed part with a replacement string.
+ * Truncate a multibyte string to a specified width, appending a replacement if truncated.
  *
  * @param string $substring The input string to be truncated.
  * @param int    $max       The maximum allowed length of the truncated string. Default is 50.
- * @param string $rep       The replacement string to be used when truncating. Default is '...'.
+ * @param string $rep       The replacement string to be used when truncating (default '...' or '&mldr;' for HTML)
  *
  * @return string The truncated string.
  */
-function truncate_ng($substring, $max = 50, $rep = '...')
-{
-    // If not in a command-line interface environment, use the HTML entity for the triple dot
-    if (!is_cli() && $rep === '...') {
+function mb_truncate($substring, $max = 50, $rep = '...') {
+    // Handle non-string input and empty
+    if (safe_empty($substring) || is_array($substring)) {
+        return $rep;
+    }
+    $substring = (string)$substring;
+
+    // If string is already within the limit, return as-is
+    if (mb_strlen($substring, 'UTF-8') <= $max) {
+        return $substring;
+    }
+
+    // Replace $rep with &mldr; in web context if default value is used
+    if ($rep === '...' && !is_cli()) {
         $rep = '&mldr;';
+        $rep_len = 1;
+    } else {
+        // Replacement length (HTML entity counts as one char visually but more in bytes)
+        $rep_len = (str_starts_with($rep, '&') && str_ends_with($rep, ';')) ? 1 : mb_strlen($rep, 'UTF-8');
     }
 
     // Truncate the string using mb_strimwidth() and add the replacement string if needed
-    return mb_strimwidth($substring, 0, $max, $rep, 'UTF-8');
+    $leave = $max - $rep_len;
+
+    return mb_substr($substring, 0, $leave, 'UTF-8') . $rep;
+    //return mb_strimwidth($substring, 0, $max, $rep, 'UTF-8');
 }
 
+function str_pad_left($string, $len, $pad_string = ' ') {
+    if (function_exists('mb_str_pad')) {
+        return mb_str_pad($string, $len, $pad_string, STR_PAD_LEFT, 'UTF-8');
+    }
+    return str_pad($string, $len, $pad_string, STR_PAD_LEFT);
+}
 
 /**
  * Escape HTML characters in a string using htmlspecialchars() while allowing specific tags and entities.
  *
  * @param string|null $string The input string to be escaped.
- * @param int         $flags  Flags to be used with htmlspecialchars(). Default is ENT_QUOTES.
  *
  * @return string|null The escaped string, or null if the input is null.
  */
-function escape_html($string, $flags = ENT_QUOTES)
-{
+function escape_html($string) {
     if (empty($string)) {
         return $string;
     }
 
-    $string = htmlspecialchars($string, $flags, 'UTF-8');
+    $escaped = htmlspecialchars($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    if (empty($escaped)) {
+        // When string has invalid code unit sequences, try decoding or use ENT_SUBSTITUTE
+        $encodings = 'ISO-8859-1,ISO-8859-5,CP1251,GB18030';
+        if (function_exists('mb_detect_encoding') && $enc = mb_detect_encoding($string, $encodings)) {
+            //var_dump($enc);
+            $string = mb_convert_encoding($string, 'UTF-8', $enc);
+            //var_dump($string);
+        }
+        $escaped = htmlspecialchars($string, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    }
+    $string = $escaped;
 
     // Un-escape allowed tags using a callback
     if (str_contains($string, '&lt;')) {
@@ -3367,53 +3601,58 @@ function format_number($value, $base = '1000', $round = 2, $sf = 3) {
 // TESTME needs unit testing
 function format_value($value, $format = '', $round = 2, $sf = 3) {
 
+    if ($value === TRUE) {
+        return 'TRUE';
+    }
+    if ($value === FALSE) {
+        return 'FALSE';
+    }
+    if (is_null($value)) {
+        return 'NULL';
+    }
+    // Only return "" for truly non-numeric, empty values
+    if (safe_empty(trim($value))) {
+        return '""';
+    }
+
     switch (strtolower((string)$format)) {
         case 'si':
         case '1000':
-            $value = format_si($value, $round, $sf);
-            break;
+            return format_si($value, $round, $sf);
+
         case 'bi':
         case '1024':
-            $value = format_bi($value, $round, $sf);
-            break;
+            return format_bi($value, $round, $sf);
 
         case 'shorttime':
-            $value = format_uptime($value, 'short');
-            break;
+            return format_uptime($value, 'short');
 
         case 'uptime':
         case 'time':
-            $value = format_uptime($value);
-            break;
+            return format_uptime($value);
 
-        default:
-            if ($value === TRUE) {
-                return 'TRUE';
+        case 'time60':
+            if ($value >= 1440) {
+                // Use format uptime for time greater than 1 day
+                return format_uptime($value * 60);
             }
-            if ($value === FALSE) {
-                return 'FALSE';
-            }
-            if (is_null($value)) {
-                return 'NULL';
-            }
-            if (safe_empty($value)) {
-                return '""';
-            }
-            $num = clean_number($value);
-            if (is_numeric($num)) {
-                $orig  = $num;
-                $value = sprintf("%01.{$round}f", $num);
-                if (abs($orig) > 0 && preg_match('/^\-?0\.0+$/', $value)) {
-                    // prevent show small values as zero
-                    // ie 0.000627 as 0.00
-                    //r($orig);
-                    //r($value);
-                    $value = format_number_short($orig, $sf);
-                    //r($value);
-                } else {
-                    $value = preg_replace(['/\.0+$/', '/(\.\d)0+$/'], '\1', $value);
-                }
-            }
+            break;
+    }
+
+    $num = clean_number($value);
+    if (is_numeric($num)) {
+        $orig  = $num;
+        $value = sprintf("%01.{$round}f", $num);
+        if (abs($orig) > 0 && preg_match('/^\-?0\.0+$/', $value)) {
+            // prevent show small values as zero
+            // ie 0.000627 as 0.00
+            //r($orig);
+            //r($value);
+            //r(format_number_short($orig, $sf));
+            return format_number_short($orig, $sf);
+        }
+
+        return preg_replace(['/\.0+$/', '/(\.\d)0+$/'], '\1', $value);
     }
 
     return $value;
@@ -3424,9 +3663,9 @@ function format_value($value, $format = '', $round = 2, $sf = 3) {
  * This version does not use scientific notation.
  *
  * Examples:
- * - 723.42 (sf=3) -> 723
- * - 72.34 (sf=3) -> 72.3
- * - 2.23 (sf=3) -> 2.23
+ * -  723.42 (sf=3) -> 723
+ * -   72.34 (sf=3) -> 72.3
+ * -    2.23 (sf=3) -> 2.23
  * - 0.00001 (sf=3) -> 0.000
  *
  * @param float|int|string $num The input number to format.
@@ -3441,12 +3680,16 @@ function format_number_short($num, $sf) {
         // passed not numeric, return original
         return $num;
     }
-    if (is_intnum($number)) {
+    if (is_intnum($number) || $number === 0.0) {
         return (int)$number ? (string)$number : '0';
     }
 
     // Next part only for float numbers
     $exponent = floor(log10(abs($number)));
+    if (!is_finite($exponent)) {
+        // prevent infinite exponent with zeroes
+        return '0';
+    }
 
     if ($exponent >= -$sf && $exponent < $sf) {
         $mantissa = $number / (10 ** $exponent);
@@ -3543,7 +3786,7 @@ function is_valid_hostname($hostname, $fqdn = FALSE) {
  * @return bool
  */
 function is_intnum($value) {
-    if (!is_numeric($value)) {
+    if (!is_numeric($value) || is_float($value)) {
         return FALSE;
     }
     $value = (string)$value;
@@ -3551,6 +3794,23 @@ function is_intnum($value) {
         $value = substr($value, 1);
     } // negative number
     return ctype_digit($value);
+}
+
+function is_string_quoted($str, $quote = '"') {
+    if (!is_string($str)) {
+        return FALSE;
+    }
+
+    // If no quote type specified, check for any valid quote
+    // if ($quote === null) {
+    //     return is_string_quoted($str, '"') || is_string_quoted($str, "'");
+    // }
+
+    // Validate quote parameter
+    if (!in_array($quote, [ '"', '\"', "'", "\'" ], TRUE)) {
+        return FALSE;
+    }
+    return str_starts_with($str, $quote) && str_ends_with($str, $quote);
 }
 
 /**
@@ -3586,10 +3846,10 @@ function is_valid_param($string, $type = '') {
         case 'revision':
             // extra words for sysLocation
             $poor_snmp_pattern = $poor_pattern_start . $poor_words_pattern . '|sim|No Asset Tag|Tag 12345' . $poor_pattern_end;
-            $poor_snmp_contains = [ ' not set', 'denied', 'No Such' ];
+            $poor_snmp_contains = [ ' not set', ' not available', 'denied', 'No Such' ];
             $valid = ctype_print($string) &&
                      !(str_istarts($string, [ 'Not Avail', 'Not Specified', 'To be filled by O.E.M.' ]) ||
-                       str_contains_array($string, $poor_snmp_contains) ||
+                       str_icontains_array($string, $poor_snmp_contains) ||
                        preg_match($poor_default_pattern, $string) ||
                        preg_match($poor_snmp_pattern, $string));
             break;
@@ -3601,6 +3861,11 @@ function is_valid_param($string, $type = '') {
 
         case 'ip':
             $valid = get_ip_version($string);
+            break;
+
+        case 'hostname':
+        case 'sysname':
+            $valid = is_valid_hostname($string);
             break;
 
         case 'location':
@@ -3669,6 +3934,34 @@ function is_valid_param($string, $type = '') {
             $valid = preg_match('/^[[:print:]]+$/u', $string); // allow any printable utf8
             break;
 
+        case 'timestamp':
+            $valid = is_valid_timestamp($string);
+            break;
+
+        case 'unixtime':
+            $valid = is_valid_unixtime($string);
+            break;
+
+        case 'lat':
+        case 'latitude':
+        case 'location_lat':
+            $valid = is_numeric($string) && $string >= -90 && $string <= 90;
+            break;
+
+        case 'lon':
+        case 'longitude':
+        case 'location_lon':
+            $valid = is_numeric($string) && $string >= -180 && $string <= 180;
+            break;
+
+        case 'snmp_version':
+            $valid = preg_match('/^v(1|2c|3)$/', $string);
+            break;
+
+        case 'snmp_transport':
+            $valid = preg_match('/^(udp|tcp)6?$/', $string);
+            break;
+
         case 'snmp_community':
             // allow all common latin and special chars
             $valid = preg_match('/^[\w\ %!@#\$%\^&\*\(\)_\-\+~`\[\]\{\}\|\\\\<>,\.\/\?;:]{1,32}$/', $string);
@@ -3682,14 +3975,32 @@ function is_valid_param($string, $type = '') {
             $valid = is_intnum($string) && $string > 0 && $string <= 10;
             break;
 
+        case 'snmp_maxrep':
+            $valid = is_intnum($string) && $string >= 0 && $string <= 5000;
+            break;
+
+        case 'snmp_authlevel':
+            $valid = in_array($string, [ 'noAuthNoPriv', 'authNoPriv', 'authPriv' ], TRUE);
+            break;
+
         case 'snmp_authalgo':
             // MD5|SHA|SHA-224|SHA-256|SHA-384|SHA-512
             $valid = preg_match('/^(md5|sha(\-?(224|256|384|512))?)$/i', $string);
             break;
 
+        case 'snmp_authname':
+            // The SNMP authname can contain up to 32 characters in length and include any combination of alphanumeric characters (uppercase letters, lowercase letters, and numbers).Spaces not allowed.
+            $valid = preg_match('/^[a-z0-9]{1,64}$/i', $string);
+            break;
+
         case 'snmp_cryptoalgo':
             // DES|AES|AES-192|AES-192-C|AES-256|AES-256-C
             $valid = preg_match('/^(des|aes(\-?(192|256)(\-?c)?)?)$/i', $string);
+            break;
+
+        case 'snmp_authpass':
+        case 'snmp_cryptopass':
+            $valid = preg_match('/^\w{8,64}$/', $string); // any string without spaces and special chars
             break;
 
         default:
@@ -3934,10 +4245,11 @@ function elapsed_time($microtime_start, $precision = NULL) {
  *
  * @param string $period Named time from now, ie: fiveminute, twelvehour, year
  * @param bool   $future If TRUE, return unix time in the future.
+ * @param bool   $gmt    Return time in GMT UTC+0 time zone. This not stored in config
  *
  * @return int
  */
-function get_time($period = 'now', $future = FALSE) {
+function get_time($period = 'now', $future = FALSE, $gmt = FALSE) {
     global $config;
 
     /*
@@ -3958,30 +4270,37 @@ function get_time($period = 'now', $future = FALSE) {
     $config['time']['threeyear']  = $config['time']['now'] - 94608000; //time() - (3 * 365 * 24 * 60 * 60);
     */
 
-    // Set times needed by loads of scripts
-    $config['time']['now'] = $config['time']['now'] ?? time();
-
     $period = empty($period) ? 'now' : strtolower(trim($period));
 
-    if ($period === 'now') {
-        return $config['time']['now'];
+    // Set times needed by loads of scripts
+    if ($gmt) {
+        // UTC+0
+        $time = gmdate('U');
+    } else {
+        // System timezone (default)
+        if ($period === 'new') {
+            $time = time();
+        } else {
+            $time = $config['time']['now'] ?? time();
+        }
+        $config['time']['now'] = $time;
     }
-    if ($period === 'new') {
-        return $config['time']['now'] = time();
+
+    if ($period === 'now' || $period === 'new') {
+        return (int)$time;
     }
-    $time = $config['time']['now'];
 
     $multipliers = [
         'one'   => 1, 'two'   => 2, 'three' => 3, 'four' => 4,  'five'   => 5,  'six'    => 6,
         'seven' => 7, 'eight' => 8, 'nine'  => 9, 'ten'  => 10, 'eleven' => 11, 'twelve' => 12
     ];
     $times = [
-      'year'   => 31536000,
-      'month'  => 2678400,
-      'week'   => 604800,
-      'day'    => 86400,
-      'hour'   => 3600,
-      'minute' => 60
+        'year'   => 31536000,
+        'month'  => 2678400,
+        'week'   => 604800,
+        'day'    => 86400,
+        'hour'   => 3600,
+        'minute' => 60
     ];
     $time_pattern = '/^(?<multiplier>' . implode('|', array_keys($multipliers)) . '|\d+)?(?<time>' . implode('|', array_keys($times)) . ')s?$/';
     //r($time_pattern);
@@ -4001,32 +4320,85 @@ function get_time($period = 'now', $future = FALSE) {
 }
 
 /**
+ * Return named unix times from now.
+ * Note, 'now' static unixtime over process run.
+ *
+ * Always return UTC+0 times
+ *
+ * @param string $period Named time from now, ie: fiveminute, twelvehour, year
+ * @param bool   $future If TRUE, return unix time in the future.
+ *
+ * @return int
+ */
+function get_time_gmt($period = 'now', $future = FALSE) {
+    return get_time($period, $future, TRUE);
+}
+
+/**
+ * Validate if the given string is a valid timestamp in 'Y-m-d H:i:s' format.
+ *
+ * @param string $timestamp
+ * @return bool
+ */
+function is_valid_timestamp($timestamp) {
+    $format = 'Y-m-d H:i:s';
+    $d = DateTime::createFromFormat($format, $timestamp);
+    return $d && $d->format($format) === $timestamp;
+}
+
+/**
+ * Validate if the given string is a valid Unix timestamp.
+ *
+ * @param string|int $unixtime
+ * @return bool
+ */
+function is_valid_unixtime($unixtime) {
+    if (!is_numeric($unixtime)) {
+        return FALSE;
+    }
+
+    // Minimum & Maximum possible unixtime, only for validate passed unixtime
+    //const OBS_MIN_UNIXTIME = 504921600;       // 01/01/1986 @ 12:00am (UTC), no network devices produced before this date :)
+    //const OBS_MAX_UNIXTIME = 7258118400;      // 01/01/2200 @ 12:00am (UTC), a message to descendants if you are still using Observium in the 23rd century :)
+
+    return ($unixtime >= 504921600 && $unixtime <= 7258118400);
+}
+
+/**
  * Format date string.
  * If passed 'now' return formatted current datetime.
  *
- * This function convert date/time string to format from
+ * This function converts date/time string to format from
  * config option $config['timestamp_format'].
- * If date/time not detected in string, function return original string.
+ * If date/time is not detected in string, function return original string.
  * Example conversions to format 'd-m-Y H:i':
  * '2012-04-18 14:25:01' -> '18-04-2012 14:25'
  * 'Star wars' -> 'Star wars'
  *
- * @param string $str
+ * @param string $str string need formatted as timestamp
+ * @param string $format custom format for timestamp, default is $config['timestamp_format']
  *
  * @return string
  */
 // TESTME needs unit testing
-function format_timestamp($str = 'now') {
-    global $config;
+function format_timestamp($str = 'now', $format = NULL) {
 
     if ($str === 'now') {
         // Use for get formatted current time
         $timestamp = get_time($str);
+    } elseif (is_valid_unixtime($str)) {
+        // seems as unixtime
+        return format_unixtime($str, $format);
     } elseif (($timestamp = strtotime($str)) === FALSE) {
         return $str;
     }
 
-    return date($config['timestamp_format'], $timestamp);
+    // FIXME. timezone?!
+
+    // if format not forced, use the config option
+    $format = empty($format) ? $GLOBALS['config']['timestamp_format'] : (string)$format;
+
+    return date($format, $timestamp);
 }
 
 /**
@@ -4068,9 +4440,8 @@ function format_unixtime($time, $format = NULL) {
     }
     //r($date);
 
-    if (safe_empty($format)) {
-        $format = $GLOBALS['config']['timestamp_format'];
-    }
+    // if format not forced, use the config option
+    $format = empty($format) ? $GLOBALS['config']['timestamp_format'] : (string)$format;
 
     return date_format($date, (string)$format);
 }
@@ -4089,17 +4460,15 @@ function format_unixtime($time, $format = NULL) {
  *
  * @return string $date
  */
-function reformat_us_date($date)
-{
-    global $config;
+function reformat_us_date($date) {
 
     $date = trim($date);
     if (preg_match('!^\d{1,2}/\d{1,2}/(\d{2}|\d{4})$!', $date)) {
         // Only date
-        $format = $config['date_format'];
+        $format = $GLOBALS['config']['date_format'];
     } elseif (preg_match('!^\d{1,2}/\d{1,2}/(\d{2}|\d{4})\s+\d{1,2}:\d{1,2}(:\d{1,2})?$!', $date)) {
         // Date + time
-        $format = $config['timestamp_format'];
+        $format = $GLOBALS['config']['timestamp_format'];
     } else {
         return $date;
     }
@@ -4111,30 +4480,30 @@ function reformat_us_date($date)
  * This function convert human written Uptime to seconds.
  * Opposite function for format_uptime().
  *
- * Also applicable for some uptime formats in MIB, like EigrpUpTimeString:
+ * Also, applicable for some uptime formats in MIB, like EigrpUpTimeString:
  *  'hh:mm:ss', reflecting hours, minutes, and seconds
- *  If the up time is greater than 24 hours, is less precise and
- *  the minutes and seconds are not reflected. Instead only the days
+ *  If the uptime is greater than 24 hours, is less precise and
+ *  the minutes and seconds are not reflected. Instead, only the days
  *  and hours are shown and the string will be formatted like this: 'xxxdxxh'
  *
  * @param string $uptime Uptime in human readable string or timetick
  *
  * @return int Uptime in seconds
  */
-function uptime_to_seconds($uptime)
-{
+function uptime_to_seconds($uptime) {
     if (str_contains($uptime, 'Wrong Type')) {
         // Wrong Type (should be Timeticks): 1632295600
-        $seconds = timeticks_to_sec($uptime);
-    } elseif (str_contains($uptime, ':') &&
-              !preg_match('/[a-zA-Z]/', $uptime)) { // exclude strings: 315 days18:50:04
-        $seconds = timeticks_to_sec($uptime);
-    } else {
-        $uptime  = preg_replace('/^[a-z]+ */i', '', $uptime); // Clean "up" string
-        $seconds = age_to_seconds($uptime);
+        return timeticks_to_sec($uptime);
     }
 
-    return $seconds;
+    if (str_contains($uptime, ':') && !preg_match('/[a-zA-Z]/', $uptime)) {
+        // timeticks, but exclude strings: 315 days18:50:04
+        return timeticks_to_sec($uptime);
+    }
+
+    $uptime = preg_replace('/^[a-z]+ */i', '', $uptime); // Clean "up" string
+
+    return age_to_seconds($uptime);
 }
 
 /**
@@ -4164,6 +4533,12 @@ function uptime_to_seconds($uptime)
 function age_to_seconds($age, $float = FALSE) {
     $age = trim($age);
 
+    // Empty string check
+    if (empty($age)) {
+        return 0;
+    }
+
+    // Handle pure numeric input
     if (is_numeric($age)) {
         if ($age > 0) {
             return $float ? (float)$age : (int)$age;
@@ -4171,42 +4546,50 @@ function age_to_seconds($age, $float = FALSE) {
         return 0;
     }
 
-    $pattern = '/^';
-    $pattern .= '(?:(?<years>\d+(?:\.\d+)*)\ ?(?:[yY][eE][aA][rR]\(?[sS]?\)?|[yY])[,\ ]*)*';         // y (years)
-    $pattern .= '(?:(?<months>\d+(?:\.\d+)*)\ ?(?:[mM][oO][nN][tT][hH]\(?[sS]?\)?|M)[,\ ]*)*';       // M (months)
-    $pattern .= '(?:(?<weeks>\d+(?:\.\d+)*)\ ?(?:[wW][eE][eE][kK]\(?[sS]?\)?|[wW])[,\ ]*)*';         // w (weeks)
-    $pattern .= '(?:(?<days>\d+(?:\.\d+)*)\ ?(?:[dD][aA][yY]\(?[sS]?\)?|[dD])[,\ ]*)*';              // d (days)
-    $pattern .= '(?:(?:';
-    $pattern .= '(?:(?<hours>\d+(?:\.\d+)*)\ ?(?:[hH][oO][uU][rR]\(?[sS]?\)?|[hH][rR][sS]|[hH])[,\ ]*)*';           // h (hours)
-    $pattern .= '(?:(?<minutes>\d+(?:\.\d+)*)\ ?(?:[mM][iI][nN][uU][tT][eE]\(?[sS]?\)?|[mM][iI][nN]|m)[,\ ]*)*';    // m (minutes)
-    $pattern .= '(?:(?<seconds>\d+(?:\.\d+)*)\ ?(?:[sS][eE][cC][oO][nN][dD]\(?[sS]?\)?|[sS][eE][cC]|[sS])[,\ ]*)*'; // s (seconds)
-    $pattern .= '(?:(?<mseconds>\d+(?:\.\d+)*)\ ?(?:[mM][iI][lL][lL][iI][sS][eE][cC][oO][nN][dD]\(?[sS]?\)?|[mM][sS][eE][cC]|[mM][sS]))*'; // ms (milliseconds)
-    $pattern .= '|(?:(?<hours>\d{1,2}):(?<minutes>\d{1,2}):(?<seconds>\d{1,2}(?:\.\d+)*))';                  // hh:mm:ss.s
-    $pattern .= '))';
-    $pattern .= '$/J';
-    //print_vars($pattern); echo PHP_EOL;
+    $seconds = 0;
 
-    if (!empty($age) && preg_match($pattern, $age, $matches)) {
-        $ages = [
-            'years'   => 31536000, // year   = 365 * 24 * 60 * 60
-            'months'  => 2628000,  // month  = year / 12
-            'weeks'   => 604800,   // week   = 7 days
-            'days'    => 86400,    // day    = 24 * 60 * 60
-            'hours'   => 3600,     // hour   = 60 * 60
-            'minutes' => 60,       // minute = 60
-            'mseconds' => 0.001,   // milliseconds = 60
-        ];
-        $seconds = isset($matches['seconds']) ? (float)$matches['seconds'] : 0;
-        foreach ($ages as $period => $scale) {
-            if (isset($matches[$period])) {
-                $seconds += (float)$matches[$period] * $scale;
-            }
-        }
-
-        return $float ? (float)$seconds : (int)$seconds;
+    // Check if string contains hh:mm:ss or hh:mm:ss.ms format
+    $hms_pattern = '/(\d{1,2}):(\d{1,2}):(\d{1,2}(?:\.\d+)*)/';
+    if (preg_match($hms_pattern, $age, $matches)) {
+        $seconds += (int)$matches[1] * 3600 + (int)$matches[2] * 60 + (float)$matches[3];
+        // Remove the matched time from the string to avoid double-counting
+        $age = preg_replace($hms_pattern, '', $age, 1);
     }
 
-    return 0;
+    // Parse milliseconds first (at end of string only) to avoid conflict with minutes
+    $ms_pattern = '/(\d+(?:\.\d+)*)\s*(?:[mM][iI][lL][lL][iI][sS][eE][cC][oO][nN][dD]\(?[sS]?\)?|[mM][sS](?:[eE][cC])?)$/';
+    if (preg_match($ms_pattern, $age, $matches)) {
+        $seconds += (float)$matches[1] * 0.001;
+        // Remove matched milliseconds from string
+        $age = preg_replace($ms_pattern, '', $age, 1);
+    }
+
+    // Time unit conversion rates
+    $units = [
+        'years'   => [ 'scale' => 31536000, 'pattern' => '(?:[yY][eE][aA][rR]\(?[sS]?\)?|[yY])' ],
+        'months'  => [ 'scale' => 2628000,  'pattern' => '(?:[mM][oO][nN][tT][hH]\(?[sS]?\)?|M)' ],
+        'weeks'   => [ 'scale' => 604800,   'pattern' => '(?:[wW][eE][eE][kK]\(?[sS]?\)?|[wW])' ],
+        'days'    => [ 'scale' => 86400,    'pattern' => '(?:[dD][aA][yY]\(?[sS]?\)?|[dD])' ],
+        'hours'   => [ 'scale' => 3600,     'pattern' => '(?:[hH](?:[oO][uU])?[rR]\(?[sS]?\)?|[hH])' ],
+        'minutes' => [ 'scale' => 60,       'pattern' => '(?:[mM][iI][nN][uU][tT][eE]\(?[sS]?\)?|[mM][iI][nN]|m)' ],
+        'seconds' => [ 'scale' => 1,        'pattern' => '(?:[sS][eE][cC][oO][nN][dD]\(?[sS]?\)?|[sS][eE][cC]|[sS])' ],
+    ];
+
+    // Extract all time components
+    foreach ($units as $def) {
+        // Pattern to match: number + optional space + unit + optional separator (comma, space, colon)
+        $pattern = '/(\d+(?:\.\d+)*)\s*' . $def['pattern'] . '[,\s:]*/';
+        if (preg_match($pattern, $age, $matches)) {
+            $seconds += (float)$matches[1] * $def['scale'];
+        }
+    }
+
+    // Validate that we actually parsed something
+    if ($seconds <= 0) {
+        return 0;
+    }
+
+    return $float ? (float)$seconds : (int)$seconds;
 }
 
 /**
@@ -4285,8 +4668,8 @@ function var_encode($var, $method = 'json')
  *
  * @return mixed
  */
-function var_decode($string, $method = 'json')
-{
+function var_decode($string, $method = 'json') {
+
     if (!is_string($string)) {
         // Decode only string vars
         return $string;
@@ -4386,8 +4769,8 @@ function get_var_false($var, $false = NULL) {
  *
  * @return array|mixed
  */
-function get_var_csv($str, $encoded = FALSE)
-{
+function get_var_csv($str, $encoded = FALSE) {
+
     if (!is_string($str)) {
         // If variable already array, keep as is
         return $str;
@@ -4395,25 +4778,22 @@ function get_var_csv($str, $encoded = FALSE)
 
     // Better to understand quoted vars
     $values = str_getcsv($str);
+
     if (count($values) === 1) {
         // not comma list, but can be quoted value
         $values = $values[0];
 
-        // Try decode var if original value not csv
+        // Try to decode var if original value not csv
         if ($encoded && $str === $values) {
-            $values = var_decode($str);
-        } else {
-            $values = var_comma_safe($values);
+            return var_decode($str);
         }
-    } else {
-        $values = var_comma_safe($values);
     }
 
-    return $values;
+    return var_comma_safe($values);
 }
 
-function var_comma_safe($value)
-{
+function var_comma_safe($value) {
+
     if (is_array($value)) {
         foreach ($value as &$entry) {
             $entry = var_comma_safe($entry);
@@ -4572,9 +4952,7 @@ function unit_string_to_numeric($str, $unit_base = NULL) {
             }
     }
 
-    $multiplier = $base ** $power;
-
-    return (float)($matches[1] * $multiplier);
+    return (float)($matches[1] * fpow($base, $power));
 }
 
 /**
@@ -4587,84 +4965,6 @@ function unit_string_to_numeric($str, $unit_base = NULL) {
 function string_to_id($string)
 {
     return hexdec(hash("crc32b", $string));
-}
-
-
-/**
- * Convert the value of sensor from known unit to defined SI unit (used in poller/discovery)
- *
- * @param float|string $value     Value
- * @param string       $unit_from Unit name/symbol for value
- * @param string       $class     Type of value
- * @param string|array $unit_to   Unit name/symbol for convert value (by default used sensor class default unit)
- *
- * @return array       Array with values converted to unit_from
- */
-function value_to_units($value, $unit_from, $class, $unit_to = []) {
-    global $config;
-
-    // Convert symbols to lib supported units
-    $unit_from = str_replace([ '<sup>', '</sup>' ], [ '^', '' ], $unit_from); // I.e. mg/m<sup>3</sup> => mg/m^3
-    $unit_from = html_entity_decode($unit_from);                              // I.e. &deg;C => °C
-
-    // Non numeric values
-    if (!is_numeric($value)) {
-        return [ $unit_from => $value ];
-    }
-
-    switch ($class) {
-        case 'temperature':
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Temperature($value, $unit_from);
-            break;
-
-        case 'pressure':
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Pressure($value, $unit_from);
-            break;
-
-        case 'power':
-        case 'dbm':
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Power($value, $unit_from);
-            break;
-
-        case 'waterflow':
-        case 'airflow':
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\VolumeFlow($value, $unit_from);
-            break;
-
-        case 'velocity':
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Velocity($value, $unit_from);
-            break;
-
-        case 'lifetime':
-        case 'uptime':
-        case 'time':
-            if (empty($unit_from)) {
-                $unit_from = 's';
-            }
-            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Time($value, $unit_from);
-            break;
-
-        default:
-            // Unknown, return original value
-            return [ $unit_from => $value ];
-    }
-
-    // Use our default unit (if not passed)
-    if (empty($unit_to) && isset($config['sensor_types'][$class]['symbol'])) {
-        $unit_to = $config['sensor_types'][$class]['symbol'];
-    }
-
-    // Convert to units
-    $units = [];
-    foreach ((array)$unit_to as $to) {
-        // Convert symbols to lib supported units
-        $tou = str_replace([ '<sup>', '</sup>' ], [ '^', '' ], $to); // I.e. mg/m<sup>3</sup> => mg/m^3
-        $tou = html_entity_decode($tou);                             // I.e. &deg;C => °C
-
-        $units[$to] = $value_from->toUnit($tou);
-    }
-
-    return $units;
 }
 
 /**
@@ -4743,24 +5043,27 @@ function is_flag_set($flag, $param, $all = FALSE)
 }
 
 /**
- * Return file extension when it exists on a system, limited extensions (default is svg and png).
+ * Return a file extension when it exists on a system, limited extensions (default is svg and png).
  *
  * @param string $file
  * @param array|string $ext_list
  * @return false|string
  */
 function is_file_ext($file, $ext_list = [ 'svg', 'png' ]) {
-    global $cache;
 
-    if (isset($cache['is_file_ext'][$file]) &&
-        in_array($cache['is_file_ext'][$file], (array)$ext_list, TRUE)) {
+    $key = 'is_file_ext|' . md5($file);
+    if (mem_cache_exists($key)) {
         // reduce is_file() calls
-        return $cache['is_file_ext'][$file];
+        $ext = mem_cache_get($key);
+        if (in_array($ext, (array)$ext_list, TRUE)) {
+            return $ext;
+        }
     }
+
     foreach ((array)$ext_list as $ext) {
         if (is_file($file . ".$ext")) {
             //if ($ext === 'svg') { r($file . ".$ext"); }
-            $cache['is_file_ext'][$file] = $ext;
+            mem_cache_set($key, $ext);
             return $ext;
         }
     }
@@ -4816,14 +5119,66 @@ function smart_quotes($string) {
     return strtr($string, $quotes);
 }
 
-// JSON escaping for JS see:
-// https://stackoverflow.com/questions/7462394/php-json-string-escape-double-quotes-for-js-output
+/**
+ * Escape string for JSON output, with smart quotes normalisation
+ * https://stackoverflow.com/questions/7462394/php-json-string-escape-double-quotes-for-js-output
+ *
+ * @param string $str String to escape
+ * @return string Escaped string without surrounding quotes
+ */
 function json_escape($str) {
     if (!is_string($str)) {
         return $str;
     }
 
-    return substr(safe_json_encode(smart_quotes($str)), 1, -1);
+    // Normalise smart quotes from Word/etc before JSON encoding
+    $str = smart_quotes($str);
+
+    // Encode to JSON
+    $encoded = safe_json_encode($str);
+
+    // Check if encoding was successful
+    if (!is_string($encoded) || $encoded === '') {
+        // Fallback: return normalised string
+        return $str;
+    }
+
+    // Remove surrounding quotes that json_encode adds to strings
+    if (str_starts_with($encoded, '"') && str_ends_with($encoded, '"')) {
+        return substr($encoded, 1, -1);
+    }
+
+    return $encoded;
+}
+
+/**
+ * Apply json_escape to array values, excluding specified keys
+ *
+ * @param array $array Array to process (modified by reference)
+ * @param array $skip_keys Keys to skip from escaping (optional)
+ * @return array Reference to the modified array
+ */
+function array_json_escape(&$array, $skip_keys = []) {
+    if (!is_array($array)) {
+        return $array;
+    }
+
+    $escaped = FALSE;
+    foreach ($array as $key => &$value) {
+        if (!in_array($key, $skip_keys, TRUE) && is_string($value)) {
+            $value = json_escape($value);
+            $escaped = TRUE;
+        } elseif (OBS_DEBUG > 1) {
+            print_debug("DEBUG: array_json_escape() skipped key '$key'");
+        }
+    }
+    unset($value); // Break the reference after foreach
+
+    if ($escaped && OBS_DEBUG > 1) {
+        print_debug("DEBUG: array_json_escape() escaped array:");
+        print_debug_vars($array);
+    }
+    return $array;
 }
 
 function safe_json_encode($var, $options = 0) {
@@ -4841,8 +5196,8 @@ function safe_json_encode($var, $options = 0) {
 
 function safe_json_decode($str, $options = 0) {
     if (!is_string($str)) {
-        // When not string passed return original variable
-        // This is not same as json_decode do, but better for us
+        // When not string passed return original variable,
+        // This is different from json_decode() do, but better for us
         if (OBS_DEBUG) {
             print_message('JSON DECODE[%rNot string passed%n]');
             echo 'JSON RAW['.PHP_EOL;
@@ -4858,7 +5213,7 @@ function safe_json_decode($str, $options = 0) {
         return $str;
     }
 
-    $options |= OBS_JSON_DECODE; // JSON_BIGINT_AS_STRING
+    $options |= OBS_JSON_DECODE;
 
     $json = @json_decode(smart_quotes($str), TRUE, 512, $options);
 
@@ -4871,13 +5226,13 @@ function safe_json_decode($str, $options = 0) {
             $str_fix = preg_replace('/[[:cntrl:]]/', '', smart_quotes($str));
             print_debug_vars($str_fix);
         } elseif (function_exists('mb_ord')) {
-            // Try fix utf errors
+            // Try to fix utf errors
             $str_fix = fix_json_unicode(smart_quotes($str));
             print_debug_vars($str_fix);
         } else {
             // https://jira.observium.org/browse/OBS-4881
             // Prevent php fatal errors in poller without mbstring
-            print_debug("WARNING! PHP module mbstring not exist. Please read Observium requirements.");
+            print_debug("WARNING! PHP extension mbstring not exist. Please read Observium requirements.");
             $str_fix = FALSE;
         }
         if ($str_fix) {
@@ -4904,12 +5259,12 @@ function safe_json_decode($str, $options = 0) {
  */
 function fix_json_unicode($string) {
     if (!function_exists('mb_ord')) {
-        // Safe return original string, for prevent php fatal errors
-        print_debug("WARNING! PHP module mbstring requered for fix_json_unicode().");
+        // Safe return original string, for prevention php fatal errors
+        print_debug("WARNING! PHP extension mbstring required for fix_json_unicode().");
         return $string;
     }
 
-    return preg_replace_callback('/([\x{0080}-\x{FFFF}])/u', function ($match) {
+    return preg_replace_callback('/([\x{0080}-\x{FFFF}])/u', static function ($match) {
         return '\\u' . str_pad(dechex(mb_ord($match[1], 'UTF-8')), 4, '0', STR_PAD_LEFT);
     }, $string);
 }
@@ -4923,8 +5278,7 @@ function safe_unserialize($str)
     return @unserialize($str, ['allowed_classes' => FALSE]);
 }
 
-function safe_count($array, $mode = COUNT_NORMAL)
-{
+function safe_count($array, $mode = COUNT_NORMAL): int {
     if (is_countable($array)) {
         return count($array, $mode);
     }
@@ -4934,15 +5288,35 @@ function safe_count($array, $mode = COUNT_NORMAL)
 
 /**
  * Report if var empty (only empty array [], string '' and NULL)
- * Note FALSE, 0 and '0' return TRUE (not empty)
+ * Note FALSE, 0, 0.0 and '0' return TRUE (not empty)
  *
  * @param $var
  *
  * @return bool
  */
-function safe_empty($var)
-{
-    return $var !== 0 && $var !== '0' && $var !== FALSE && empty($var);
+function safe_empty($var): bool {
+    return $var !== 0 && $var !== 0.0 && $var !== '0' && $var !== FALSE && empty($var);
+}
+
+/**
+ * Safe explode: returns an empty array when input is not a string.
+ *
+ * @param string     $delimiter  Delimiter boundary string.
+ * @param mixed      $string     Input value; if not string, empty array returned.
+ * @param int        $limit      Maximum number of elements to return (default: PHP_INT_MAX).
+ *
+ * @return string[]              Array of exploded string elements, or empty array on invalid input.
+ */
+function safe_explode(string $delimiter, $string, int $limit = PHP_INT_MAX): array {
+    // if (is_array($string)) {
+    //     // explode() cannot work on arrays; FIXME. return as is or recursive?
+    //     return $string;
+    // }
+    if (!is_string($string) || $string === '') {
+        return [];
+    }
+
+    return explode($delimiter, $string, $limit);
 }
 
 /**
@@ -4950,16 +5324,36 @@ function safe_empty($var)
  *  key - full file path
  *  entry->getFilename() - filename only
  *
- * @param string $dir       The path to the directory.
- * @param int    $max_depth The maximum allowed subdirectory depth. Defaults to -1, which allows for any depth.
+ * @param string      $dir         The path to the directory.
+ * @param int         $max_depth   The maximum allowed subdirectory depth. Defaults to -1, which allows for any depth.
+ * @param string|null $pattern     Optional regex pattern to filter files (e.g., '/\.inc\.php$/'). Defaults to NULL (no filtering).
+ * @param bool        $skip_hidden Whether to skip hidden files and directories (starting with .). Defaults to FALSE.
  *
- * @return RecursiveIteratorIterator Returns a RecursiveIteratorIterator object for the specified directory.
+ * @return RecursiveIteratorIterator|CallbackFilterIterator Returns an iterator object for the specified directory.
  */
-function get_recursive_directory_iterator($dir, $max_depth = -1)
-{
-    $directory = new RecursiveDirectoryIterator($dir, FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::SKIP_DOTS);
-    $iterator  = new RecursiveIteratorIterator($directory, RecursiveIteratorIterator::LEAVES_ONLY, RecursiveIteratorIterator::CATCH_GET_CHILD);
-    $iterator -> setMaxDepth($max_depth);
+function get_recursive_directory_iterator($dir, $max_depth = -1, $pattern = NULL, $skip_hidden = FALSE) {
+    $directory = new RecursiveDirectoryIterator($dir, FilesystemIterator::KEY_AS_PATHNAME |
+                                                      FilesystemIterator::CURRENT_AS_FILEINFO |
+                                                      FilesystemIterator::SKIP_DOTS);
+
+    // Filter hidden files/directories before recursion
+    if ($skip_hidden) {
+        $directory = new RecursiveCallbackFilterIterator($directory, function($current, $key, $iterator) {
+            // Skip hidden files and directories (starting with .)
+            return $current->getFilename()[0] !== '.';
+        });
+    }
+
+    $iterator = new RecursiveIteratorIterator($directory, RecursiveIteratorIterator::LEAVES_ONLY,
+                                                          RecursiveIteratorIterator::CATCH_GET_CHILD);
+    $iterator->setMaxDepth($max_depth);
+
+    // Apply regex filter to filename if provided
+    if ($pattern !== NULL) {
+        $iterator = new CallbackFilterIterator($iterator, function($current) use ($pattern) {
+            return preg_match($pattern, $current->getFilename());
+        });
+    }
 
     return $iterator;
 }
@@ -4975,10 +5369,8 @@ function get_recursive_directory_iterator($dir, $max_depth = -1)
  * If the percentage of free space is lower than the threshold, the function returns true,
  * indicating that the filesystem is considered full. Otherwise, it returns false.
  */
-function is_filesystem_full($path)
-{
-    if ($disk_total_space = disk_total_space($path))
-    {
+function is_filesystem_full($path): bool {
+    if ($disk_total_space = disk_total_space($path)) {
         $disk_free_space      = disk_free_space($path);
         $disk_full_percentage = float_div($disk_free_space, $disk_total_space) * 100;
 

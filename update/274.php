@@ -14,7 +14,7 @@ if ($row = dbFetchRow("SELECT * FROM config WHERE `config_key` = 'location_menu_
 {
   $value = safe_unserialize($row['config_value']);
   if ($value) { $newtype = 'geocoded'; } else { $newtype = 'plain'; }
-  
+
   dbInsert(array('config_key' => 'location|menu|type', 'config_value' => serialize($newtype)), 'config');
   dbDelete('config', '`config_key` = ?', array('location_menu_geocoded'));
   echo('.');

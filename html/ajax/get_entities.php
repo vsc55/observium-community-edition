@@ -3,17 +3,16 @@
 /**
  * Observium
  *
- *   This file is part of Observium.
- *
  * @package        observium
  * @subpackage     ajax
- * @author         Adam Armstrong <adama@observium.org>
- * @copyright  (C) Adam Armstrong
+ * @copyright      (C) Adam Armstrong
  *
  */
 
-include_once("../../includes/observium.inc.php");
+// FIXME - add some ability to do fancier formatting.
 
+
+include_once("../../includes/observium.inc.php");
 include($config['html_dir'] . "/includes/authenticate.inc.php");
 
 if (!$_SESSION['authenticated']) {
@@ -21,73 +20,92 @@ if (!$_SESSION['authenticated']) {
     exit;
 }
 
-if ($_SESSION['userlevel'] >= '5') {
+if ($_SESSION['userlevel'] >= 5) {
 
-    $options = [];
     $device_id = filter_input(INPUT_GET, 'device_id', FILTER_SANITIZE_NUMBER_INT);
     $entity_type = filter_input(INPUT_GET, 'entity_type', FILTER_SANITIZE_STRING);
+    $options = [];
 
-    switch ($entity_type) {
-        case "device":
-
-            include($config['html_dir'] . '/includes/cache-data.inc.php');
-            $options = generate_device_form_values(NULL, NULL, [ 'filter_mode' => 'exclude', 'subtext' => '%location%', 'show_disabled' => TRUE, 'show_icon' => TRUE ]);
-
-            break;
-
-        case "sensor":
-            foreach (dbFetchRows("SELECT * FROM `sensors` WHERE device_id = ?", [ $device_id ]) as $sensor) {
-                if (is_entity_permitted($sensor, 'sensor')) {
-
-                    $nice_class = nicecase($sensor['sensor_class']);
-                    $symbol = str_replace('&deg;', '°', $config['sensor_types'][$sensor['sensor_class']]['symbol']);
-
-                    $options[] = [
-                      'value'   => $sensor['sensor_id'],
-                      'group'   => $nice_class,
-                      'name'    => addslashes($sensor['sensor_descr']),
-                      'subtext' => round($sensor['sensor_value'],2) . $symbol,
-                      'icon'    => $config['sensor_types'][$sensor['sensor_class']]['icon'],
-                      //'class'   => 'bg-info'
-                    ];
-                }
-            }
-            break;
-
-        case "netscalervsvr":
-            // Example for netscalervsvr type
-            foreach (dbFetchRows("SELECT * FROM `netscaler_vservers` WHERE device_id = ?", [ $device_id ]) as $entity) {
-                $options[] = [
-                  'value'   => $entity['vsvr_id'],
-                  'name'    => addslashes($entity['vsvr_label']),
-                  //'subtext' => 'Extra details for netscalervsvr',
-                  //'icon'    => 'netscaler-icon',
-                  //'class'   => 'custom-class'
-                ];
-            }
-            break;
-
-        case "port":
-            // Example for port type
-            foreach (dbFetchRows("SELECT * FROM `ports` WHERE device_id = ? AND deleted = 0", [$_GET['device_id']]) as $port) {
-
-                humanize_port($port);
-
-                $port_type = $port['human_type'];
-
-                $options[] = [
-                  'value'   => $port['port_id'],
-                  'group'   => $port_type,
-                  'name'    => addslashes($port['port_label_short']),
-                  //'content' => addslashes($port['port_label_short']) . ' <span class="label">'.format_si($port['ifSpeed']).'bps</span> ',
-                  'subtext' => '['.format_si($port['ifSpeed']).'bps] ' . addslashes($port['ifAlias']),
-                  'icon'    => $port['icon'],
-                  //'class'   => 'port-class'
-                ];
-            }
-            break;
-
+    if (!isset($config['entities'][$entity_type])) {
+        echo("invalid entity_type");
+        exit;
     }
 
-    echo json_encode($options, JSON_UNESCAPED_UNICODE); // Return JSON encoded data
+    $entity_def = $config['entities'][$entity_type];
+    $table = $entity_def['table'];
+    $id_field = isset($entity_def['table_fields']['id']) ? $entity_def['table_fields']['id'] : null;
+    $device_field = isset($entity_def['table_fields']['device_id']) ? $entity_def['table_fields']['device_id'] : null;
+    $name_field = isset($entity_def['table_fields']['shortname']) ? $entity_def['table_fields']['shortname'] : (isset($entity_def['table_fields']['name']) ? $entity_def['table_fields']['name'] : null);
+    $subtext_field = isset($entity_def['table_fields']['descr']) ? $entity_def['table_fields']['descr'] : null;
+    $deleted_field = isset($entity_def['table_fields']['deleted']) ? $entity_def['table_fields']['deleted'] : null;
+    $grouping_field = isset($entity_def['grouping_field']) ? $entity_def['grouping_field'] : null;
+
+    if (!$table || !$id_field) {
+        echo("missing table or ID field");
+        exit;
+    }
+
+    // Query DB
+    $where = [];
+    $params = [];
+
+    // Special case for 'device' type: use permission clause only
+    if ($entity_type !== "device" && $device_field && is_numeric($device_id)) {
+        if (device_permitted($device_id)) {
+            $where[] = "`$device_field` = ?";
+            $params[] = $device_id;
+        } else {
+            print_error_permission("Device not permitted");
+            return;
+        }
+    }
+
+    if ($deleted_field) {
+        $where[] = "`$deleted_field` = 0";
+    }
+
+    $where_sql = generate_where_clause($where);
+    $entities = dbFetchRows("SELECT * FROM `$table` $where_sql", $params);
+    $humanize_func = "humanize_$entity_type";
+
+    foreach ($entities as $entity) {
+        if (!is_entity_permitted($entity, $entity_type)) {
+            continue;
+        }
+
+        // Apply humanize function if defined
+
+        if (function_exists($humanize_func)) {
+                $humanize_func($entity);
+        }
+        
+        $id = $entity[$id_field];
+        $name = isset($entity[$name_field]) ? $entity[$name_field] : "[unnamed]";
+        $subtext = $subtext_field && isset($entity[$subtext_field]) ? nicecase($entity[$subtext_field]) : '';
+        $group = $grouping_field && isset($entity[$grouping_field]) ? nicecase($entity[$grouping_field]) : null;
+
+        // Resolve icon via icon_field + icon_map
+        $icon = null;
+        if (isset($entity_def['icon_field'], $entity_def['icon_map'])) {
+            $key = isset($entity[$entity_def['icon_field']]) ? $entity[$entity_def['icon_field']] : null;
+            if ($key !== null && isset($entity_def['icon_map'][$key]['icon'])) {
+                $icon = $entity_def['icon_map'][$key]['icon'];
+            }
+        }
+
+        // Fallback to per-row or per-entity icon
+        if ($icon === null) {
+            $icon = isset($entity['icon']) ? $entity['icon'] : (isset($entity_def['icon']) ? $entity_def['icon'] : null);
+        }
+
+        $options[] = [
+            'value'   => $id,
+            'group'   => $group,
+            'name'    => addslashes($name),
+            'subtext' => addslashes($subtext),
+            'icon'    => $icon,
+        ];
+    }
+
+    echo safe_json_encode($options);
 }

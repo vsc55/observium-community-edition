@@ -30,7 +30,7 @@ if (isset($vars['queryString'])) {
     $queryString = trim($vars['queryString']);
 
     // Is the string length greater than 0?
-    if (strlen($queryString) > 0) {
+    if (!safe_empty($queryString)) {
         $query_param = "%$queryString%";
 
         // Start out with a clean slate
@@ -63,15 +63,21 @@ if (isset($vars['queryString'])) {
             foreach ($results['results'] as $result) {
                 $data = [];
                 foreach ($result['data'] as $str) {
-                    $str    = str_replace('| |', '|', $str);
-                    $data[] = rtrim($str, ' |');
+                    $str  = rtrim(str_replace('| |', '|', $str), ' |');
+                    if (!isset($result['highlight'])) {
+                        // default: highlight when not already highlighted (i.e. neighbours with extra html tags)
+                        $data[] = html_highlight($str, $queryString);
+                    } else {
+                        // already highlighted and escaped
+                        $data[] = $str;
+                    }
                 }
                 echo('<li class="divider" style="margin: 0px;"></li>' . PHP_EOL);
                 echo('<li style="margin: 0px;">' . PHP_EOL . '  <a href="' . $result['url'] . '">' . PHP_EOL);
                 echo('    <dl style="border-left: 10px solid ' . $result['colour'] . '; " class="dl-horizontal dl-search">' . PHP_EOL);
                 echo('  <dt style="width: 64px; text-align: center; line-height: 41.5px;">' . get_icon($result['icon']) . '</dt>' . PHP_EOL);
                 echo('    <dd>' . PHP_EOL);
-                echo('      <strong>' . html_highlight(escape_html($result['name']), $queryString) . PHP_EOL);
+                echo('      <strong>' . html_highlight($result['name'], $queryString) . PHP_EOL);
                 echo('        <small>' . implode('<br />', $data) . '</small>' . PHP_EOL);
                 echo('      </strong>' . PHP_EOL);
                 echo('    </dd>' . PHP_EOL);
@@ -81,7 +87,7 @@ if (isset($vars['queryString'])) {
             }
         }
 
-        if (!safe_count($search_results)) {
+        if (safe_empty($search_results)) {
             echo('<li class="nav-header">No search results.</li>');
         }
     }

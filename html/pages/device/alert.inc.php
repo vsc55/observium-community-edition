@@ -57,7 +57,7 @@ if ($entry = get_alert_entry_by_id($vars['alert_entry'])) {
 
     $alert_rules = cache_alert_rules();
     $alert       = $alert_rules[$entry['alert_test_id']];
-    $state       = safe_json_decode($entry['state']);
+    $state       = $entry['state'] ? safe_json_decode($entry['state']) : [];
     $conditions  = safe_json_decode($alert['conditions']);
     $entity      = get_entity_by_id_cache($entry['entity_type'], $entry['entity_id']);
 
@@ -119,8 +119,6 @@ if ($entry = get_alert_entry_by_id($vars['alert_entry'])) {
                         <td colspan=2>
                             <?php
 
-                            $state = safe_json_decode($entry['state']);
-
                             $alert['state_popup'] = '';
 
                             // FIXME - rewrite this, it's shit
@@ -136,10 +134,10 @@ if ($entry = get_alert_entry_by_id($vars['alert_entry'])) {
                                     $symbol = '';
                                     if (!safe_empty($test['value'])) {
                                         if (isset($metric_def['format'])) {
-                                            $format = isset($entity[$metric_def['format']]) ? $entity[$metric_def['format']] : $metric_def['format'];
+                                            $format = $entity[$metric_def['format']] ?? $metric_def['format'];
                                         }
                                         if (isset($metric_def['symbol'])) {
-                                            $symbol = isset($entity[$metric_def['symbol']]) ? $entity[$metric_def['symbol']] : $metric_def['symbol'];
+                                            $symbol = $entity[$metric_def['symbol']] ?? $metric_def['symbol'];
                                         }
                                     }
 

@@ -43,8 +43,17 @@ JUNIPER-IPSEC-FLOW-MON-MIB DEFINITIONS ::= BEGIN
 	         Building on the existing IKE infrastruature, the  
 	         security IKE implementation integrates the value-added 
 	         features for the security products"
-        
+
+        REVISION    "202403120000Z" -- March 12, 2024
+        DESCRIPTION
+            "Added a new type digitalSignature in jnxIkeAuthMethod and
+             Added the following fields related to new IKE digital sign auth:
+                jnxIkeTunMonLocalSignatureHashAlgo
+                jnxIkeTunMonRemoteSignatureHashAlgo
+                jnxIkeTunMonDigitalSignAuthKey"
+
         REVISION    "202103150000Z" -- March 15, 2021
+
         DESCRIPTION
             "Added the following fields related to Tunnel MTU:
                 jnxIpSecTunMonTunMtu
@@ -164,11 +173,32 @@ JUNIPER-IPSEC-FLOW-MON-MIB DEFINITIONS ::= BEGIN
                    sha512(5)
          }
 
+    JnxIkeLocalSignatureHashAlgo ::= TEXTUAL-CONVENTION
+         STATUS     current
+         DESCRIPTION
+            "The signature hash algorithm used locally in IPsec Phase-1 IKE negotiations."
+         SYNTAX INTEGER {
+                   sha1(1),
+                   sha256(2),
+                   sha384(3),
+                   sha512(4)
+         }
+
+    JnxIkeRemoteSignatureHashAlgo ::= TEXTUAL-CONVENTION
+         STATUS     current
+         DESCRIPTION
+            "The signature hash algorithm used by remote peer in IPsec Phase-1 IKE negotiations."
+         SYNTAX INTEGER {
+                   sha1(1),
+                   sha256(2),
+                   sha384(3),
+                   sha512(4)
+         }
+
     JnxIkeAuthMethod ::= TEXTUAL-CONVENTION
          STATUS     current
          DESCRIPTION
-            "The authentication method used in IPsec Phase-1 IKE
-             negotiations."
+            "The authentication method used in IPsec Phase-1 IKE negotiations."
          SYNTAX INTEGER {
                    preSharedKey           (1),
                    dssSignature           (2),
@@ -182,7 +212,18 @@ JUNIPER-IPSEC-FLOW-MON-MIB DEFINITIONS ::= BEGIN
                    xauthRevRsaEncryption  (10),
                    ecdsa256Signature      (11),
                    ecdsa384Signature      (12),
-                   ecdsa521Signature      (13)
+                   ecdsa521Signature      (13),
+                   digitalSignature       (14)
+         }
+
+    JnxIkeDigitalSignAuthKey ::= TEXTUAL-CONVENTION
+         STATUS     current
+         DESCRIPTION
+            "Signature key RSA/DSA/ECDSA used for digital-signature auth method."
+         SYNTAX INTEGER {
+                   signAuthRsa            (1),
+                   signAuthDsa            (2),
+                   signAuthEcdsa          (3)
          }
 
     JnxIkePeerRole ::= TEXTUAL-CONVENTION
@@ -692,7 +733,10 @@ JUNIPER-IPSEC-FLOW-MON-MIB DEFINITIONS ::= BEGIN
          jnxIkeTunMonResponderIkev2IPSecSaRekeyTsUnacceptableOut     Counter64,
          jnxIkeTunMonResponderIkev2IPSecSaRekeyResDhComputeKeyFail   Counter64,
          jnxIkeTunMonGwName                                          DisplayString,
-         jnxIkeTunMonTunType                                         JnxIkeTunType
+         jnxIkeTunMonTunType               JnxIkeTunType,
+         jnxIkeTunMonLocalSignatureHashAlgo      JnxIkeLocalSignatureHashAlgo,
+         jnxIkeTunMonRemoteSignatureHashAlgo     JnxIkeRemoteSignatureHashAlgo,
+         jnxIkeTunMonDigitalSignAuthKey          JnxIkeDigitalSignAuthKey
       }
 
 
@@ -1139,6 +1183,30 @@ JUNIPER-IPSEC-FLOW-MON-MIB DEFINITIONS ::= BEGIN
          DESCRIPTION
             "The Tunnel type. It can be regular (1) or ha-link (2)"
          ::= { jnxIkeTunnelMonEntry 44 }
+
+      jnxIkeTunMonLocalSignatureHashAlgo OBJECT-TYPE
+         SYNTAX         JnxIkeLocalSignatureHashAlgo
+         MAX-ACCESS     read-only
+         STATUS         current
+         DESCRIPTION
+            "The signature hash algorithm used locally in IPsec Phase-1 IKE negotiations."
+         ::= { jnxIkeTunnelMonEntry 45 }
+
+      jnxIkeTunMonRemoteSignatureHashAlgo OBJECT-TYPE
+         SYNTAX         JnxIkeRemoteSignatureHashAlgo
+         MAX-ACCESS     read-only
+         STATUS         current
+         DESCRIPTION
+            "The signature hash algorithm used by remote peer in IPsec Phase-1 IKE negotiations."
+         ::= { jnxIkeTunnelMonEntry 46 }
+
+      jnxIkeTunMonDigitalSignAuthKey OBJECT-TYPE
+         SYNTAX         JnxIkeDigitalSignAuthKey
+         MAX-ACCESS     read-only
+         STATUS         current
+         DESCRIPTION
+            "Signature key RSA/DSA/ECDSA used for digital-signature auth method."
+         ::= { jnxIkeTunnelMonEntry 47 }
    -- +++++++++++++++++++++++++++++++++++++++++++++++++++++++
    -- The IKEv2 global Statistics
    -- Provides global statistics for all IKE tunnels, active and previous.

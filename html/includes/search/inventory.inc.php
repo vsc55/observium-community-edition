@@ -45,12 +45,13 @@ foreach ($results as $result) {
     $tab_colour = '#194B7F'; // FIXME: This colour pulled from functions.inc.php humanize_device, maybe set it centrally in definitions?
 
     $status_search_results[] = [
-        'url'  => generate_device_url($result, ['tab' => 'entphysical']),
-        'name' => $name, 'colour' => $tab_colour,
-        'icon' => $config['icon']['inventory'],
-        'data' => [
-            escape_html($device_name),
-            html_highlight(escape_html($model) . ' | SN: ' . escape_html($result['entPhysicalSerialNum']), $queryString)
+        'url'    => generate_device_url($result, ['tab' => 'entphysical']),
+        'name'   => $name,
+        'colour' => $tab_colour,
+        'icon'   => $config['icon']['inventory'],
+        'data'   => [
+            $device_name,
+            $model . ' | SN: ' . $result['entPhysicalSerialNum']
         ]
     ];
 

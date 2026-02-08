@@ -1,9 +1,9 @@
 -- Copyright (C) 2008-2012 Aricent Group . All Rights Reserved
 
--- $Id: fscfmext.mib,v 1.6 2012/09/07 09:52:05 siva Exp $
 -- ECFM Extension as given in 802.1ap MIB Definition 
 -- This MIB contains the tables used to configure CFM entities on a 802.1ah
 -- switch.
+
 ARICENT-ECFM-EXT-MI-MIB DEFINITIONS ::= BEGIN 
 IMPORTS 
     MODULE-IDENTITY, OBJECT-TYPE,
@@ -1538,7 +1538,7 @@ fsMIEcfmExtMepTransmitLtmFlags OBJECT-TYPE
        "The flags field for LTMs transmitted by the MEP."
     REFERENCE
        "802.1ag clause 12.14.7.4.2:b and 20.37.1"
-    DEFVAL {0}
+    DEFVAL { {useFDBonly} }
     ::= { fsMIEcfmExtMepEntry 37 }
 
 fsMIEcfmExtMepTransmitLtmTargetMacAddress OBJECT-TYPE

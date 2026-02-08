@@ -39,10 +39,10 @@ $colours = 'mixed';
 
 $rrd_options .= " COMMENT:'" . str_pad('Size      Used    %used', $descr_len + 31, ' ', STR_PAD_LEFT) . "\\l'";
 
+// FIXME. Permitted devices?
+foreach (dbFetchRows("SELECT * FROM `mempools`" . generate_where_clause(generate_query_values($var['id'], 'mempool_id'))) as $mempool) {
 
-foreach ($vars['id'] as $mempool_id) {
-
-    $mempool = dbFetchRow("SELECT * FROM `mempools` WHERE `mempool_id` = ?", [$mempool_id]);
+    //$mempool = dbFetchRow("SELECT * FROM `mempools` WHERE `mempool_id` = ?", [$mempool_id]);
     $device  = device_by_id_cache($mempool['device_id']);
     if (!$config['graph_colours'][$colours][$iter]) {
         $iter = 0;
@@ -51,11 +51,7 @@ foreach ($vars['id'] as $mempool_id) {
 
     $descr = rrdtool_escape(rewrite_entity_name($mempool['mempool_descr'], 'mempool'), $descr_len);
 
-    if (isset($mempool['mempool_table'])) {
-        $rrd_filename = get_rrd_path($device, "mempool-" . strtolower($mempool['mempool_mib']) . "-" . $mempool['mempool_table'] . "-" . $mempool['mempool_index'] . ".rrd");
-    } else {
-        $rrd_filename = get_rrd_path($device, "mempool-" . strtolower($mempool['mempool_mib']) . "-" . $mempool['mempool_index'] . ".rrd");
-    }
+    $rrd_filename = get_rrd_path($device, get_mempool_rrd($device, $mempool));
 
     if (rrd_is_file($rrd_filename)) {
         $rrd_filename_escape = rrdtool_escape($rrd_filename);

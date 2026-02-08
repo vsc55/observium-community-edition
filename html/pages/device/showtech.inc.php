@@ -41,10 +41,23 @@ if (!is_entity_write_permitted($device['device_id'], 'device')) {
 
         echo "Last Polled: <b>" . format_unixtime($pstart) . '</b> (took ' . $ptime . 's) - <a href="' . generate_url(['page' => 'device', 'device' => $device['device_id'], 'tab' => 'perf']) . '">Details</a>';
 
-        $dtime  = array_values($device['state']['discovery_history'])[0]; // note for self: PHP 5.4+
-        $dstart = array_keys($device['state']['discovery_history'])[0];
-
-        echo "<p>Last discovered: <b>" . format_unixtime($dstart) . '</b> (took ' . $dtime . 's) - <a href="' . generate_url(['page' => 'device', 'device' => $device['device_id'], 'tab' => 'perf']) . '">Details</a></p>';
+        // Get most recent discovery run from database
+        $latest_discovery = dbFetchRow("
+            SELECT discovery_time, SUM(time_taken) as total_time
+            FROM discovery_perf_history 
+            WHERE device_id = ?
+            GROUP BY discovery_time 
+            ORDER BY discovery_time DESC 
+            LIMIT 1
+        ", [$device['device_id']]);
+        
+        if ($latest_discovery) {
+            $dtime  = $latest_discovery['total_time'];
+            $dstart = strtotime($latest_discovery['discovery_time']);
+            echo "<p>Last discovered: <b>" . format_unixtime($dstart) . '</b> (took ' . $dtime . 's) - <a href="' . generate_url(['page' => 'device', 'device' => $device['device_id'], 'tab' => 'perf']) . '">Details</a></p>';
+        } else {
+            echo "<p>Last discovered: <b>No discovery data available</b> - <a href=\"" . generate_url(['page' => 'device', 'device' => $device['device_id'], 'tab' => 'perf']) . '">Details</a></p>';
+        }
 
         echo generate_box_close();
 

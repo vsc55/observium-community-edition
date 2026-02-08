@@ -10,9 +10,13 @@
  *
  */
 
-function generate_processor_query($vars)
-{
+function generate_processor_query($vars) {
+
     $sql = "SELECT * FROM `processors`";
+    if (($vars['page'] === 'device') && !isset($vars['sort'])) {
+        // sort by mib/type on device page
+        $vars['sort'] = 'mib';
+    }
     if (!isset($vars['sort']) || $vars['sort'] == 'hostname' || $vars['sort'] == 'device' || $vars['sort'] == 'device_id') {
         $sql .= ' LEFT JOIN `devices` USING(`device_id`)';
     }
@@ -42,28 +46,21 @@ function generate_processor_query($vars)
         }
     }
 
-    switch ($vars['sort_order']) {
-        case 'descr':
-            $sort_order = 'DESC';
-            $sort_neg   = 'ASC';
-            break;
-        case 'reset':
-            unset($vars['sort'], $vars['sort_order']);
-        // no break here
-        default:
-            $sort_order = 'ASC';
-            $sort_neg   = 'DESC';
-    }
-
     switch ($vars['sort']) {
         case 'usage':
-            $sql .= ' ORDER BY `processor_usage` ' . $sort_neg;
+            //$sql .= ' ORDER BY `processor_usage` ' . $sort_neg;
+            $sql .= generate_query_sort('processor_usage', get_sort_order($vars));
             break;
         case 'descr':
-            $sql .= ' ORDER BY `processor_descr` ' . $sort_order;
+            //$sql .= ' ORDER BY `processor_descr` ' . $sort_order;
+            $sql .= generate_query_sort('processor_descr', get_sort_order($vars));
+            break;
+        case 'mib':
+            $sql .= generate_query_sort([ 'processor_mib', 'processor_object', 'processor_type', 'processor_index:integer' ], get_sort_order($vars));
             break;
         default:
-            $sql .= ' ORDER BY `hostname` ' . $sort_order . ', `processor_descr` ' . $sort_order;
+            //$sql .= ' ORDER BY `hostname` ' . $sort_order . ', `processor_descr` ' . $sort_order;
+            $sql .= generate_query_sort([ 'hostname', 'processor_descr' ], get_sort_order($vars));
             break;
     }
 
@@ -71,8 +68,7 @@ function generate_processor_query($vars)
 }
 
 
-function print_processor_table($vars)
-{
+function print_processor_table($vars) {
 
     $sql = generate_processor_query($vars);
 
@@ -106,8 +102,7 @@ function print_processor_table($vars)
 
 }
 
-function print_processor_table_header($vars)
-{
+function print_processor_table_header($vars) {
     if ($vars['view'] == "graphs") {
         $table_class = OBS_CLASS_TABLE_STRIPED_TWO;
     } else {
@@ -116,32 +111,33 @@ function print_processor_table_header($vars)
 
     echo('<table class="' . $table_class . '">' . PHP_EOL);
     $cols = [
-      [NULL, 'class="state-marker"'],
-      'device' => ['Device', 'style="width: 200px;"'],
-      'descr'  => ['Processor'],
-      ['', 'style="width: 100px;"'],
-      'usage'  => ['Usage', 'style="width: 250px;"'],
+                    [ NULL, 'class="state-marker"' ],
+        'device' => [ 'Device', 'style="width: 200px;"' ],
+        'descr'  => [ 'Processor' ],
+        'mib'    => [ 'MIB::Object' ],
+                    [ '', 'style="width: 100px;"' ], // graph
+        'usage'  => [ 'Usage', 'style="width: 250px;"' ],
     ];
 
     if ($vars['page'] == "device") {
         unset($cols['device']);
+    }
+    if (!($vars['page'] === "device" && $vars['tab'] !== "overview")) {
+        unset($cols['mib']);
     }
 
     echo(get_table_header($cols, $vars));
     echo('<tbody>' . PHP_EOL);
 }
 
-function print_processor_row($processor, $vars)
-{
+function print_processor_row($processor, $vars) {
     echo generate_processor_row($processor, $vars);
 }
 
-function generate_processor_row($processor, $vars)
-{
-    global $config;
+function generate_processor_row($processor, $vars) {
 
     $table_cols = 4;
-    if ($vars['page'] != "device" && $vars['popup'] != TRUE) {
+    if ($vars['page'] !== "device" && !get_var_true($vars['popup'])) {
         $table_cols++;
     } // Add a column for device.
 
@@ -183,12 +179,17 @@ function generate_processor_row($processor, $vars)
     $row = '<tr class="' . $processor['html_row_class'] . '">
           <td class="state-marker"></td>';
 
-    if ($vars['page'] != "device" && $vars['popup'] != TRUE) {
+    if ($vars['page'] !== "device" && !get_var_true($vars['popup'])) {
         $row .= '<td class="entity">' . generate_device_link($processor) . '</td>';
     }
 
-    $row .= '  <td class="entity">' . generate_entity_link('processor', $processor) . '</td>
-      <td>' . overlib_link($link_graph, $mini_graph, $overlib_content) . '</td>
+    $row .= '  <td class="entity">' . generate_entity_link('processor', $processor) . '</td>' . PHP_EOL;
+    if ($vars['page'] === "device" && $vars['tab'] !== "overview") {
+        $row .= generate_entity_mib_cell($processor, [ 'entity_type' => 'processor' ]);
+        $table_cols++;
+    }
+
+    $row .= '      <td>' . overlib_link($link_graph, $mini_graph, $overlib_content) . '</td>
       <td><a href="' . $link_graph . '">
         ' . print_percentage_bar(400, 20, $perc, $perc . "%", "ffffff", $background['left'], (100 - $perc) . "%", "ffffff", $background['right']) . '
         </a>

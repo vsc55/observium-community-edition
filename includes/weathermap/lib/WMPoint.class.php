@@ -103,8 +103,8 @@ class WMPoint
             return $this;
         }
 
-        $this->x = $this->x + $fraction * $v->dx;
-        $this->y = $this->y + $fraction * $v->dy;
+        $this->x += $fraction * $v->dx;
+        $this->y += $fraction * $v->dy;
 
         return $this;
     }

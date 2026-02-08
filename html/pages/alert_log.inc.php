@@ -4,15 +4,15 @@
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     web
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
 
 // Alert test display and editing page.
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 ?>
 
@@ -40,7 +40,6 @@ include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
               'width'     => '100%',
               'div_class' => 'col-lg-2 col-md-2 col-sm-2',
               'value'     => $vars['device_id'],
-              'groups'    => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
               'values'    => $form_items['devices']];
 
             // Add device_id limit for other fields

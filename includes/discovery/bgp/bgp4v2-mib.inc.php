@@ -29,7 +29,7 @@ $vendor_mib = $mib;
 
 $vendor_bgp = snmpwalk_cache_oid($device, $def['oids']['PeerRemoteAs']['oid'], [], $vendor_mib, NULL, OBS_SNMP_ALL_NUMERIC_INDEX);
 if (safe_empty($vendor_bgp)) {
-    $vendor_mib = FALSE; // Unset vendor_mib since not found on device
+    $vendor_mib = FALSE; // Unset vendor_mib since not found on a device
 
     return;
 }
@@ -71,7 +71,7 @@ if (!isset($def['index'][$vendor_oid]) && !safe_empty($vendor_oid)) {
 }
 // PeerRemoteAddrType
 $vendor_oid = $def['oids']['PeerRemoteAddrType']['oid'];
-if (!isset($def['index'][$vendor_oid])) {
+if (!isset($def['index'][$vendor_oid]) && !safe_empty($vendor_oid)) {
     $vendor_bgp = snmpwalk_cache_oid($device, $vendor_oid, $vendor_bgp, $vendor_mib, NULL, OBS_SNMP_ALL_NUMERIC_INDEX);
 }
 // PeerIndex
@@ -132,14 +132,14 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
         $index = $vendor_entry[$vendor_oid];
     }
     $peer = [
-      'mib'          => $mib,
-      'index'        => $index,
-      'identifier'   => $vendor_entry[$def['oids']['PeerIdentifier']['oid']],
-      'local_ip'     => $local_ip,
-      'local_as'     => $local_as,
-      'ip'           => $peer_ip === '0.0.0.0' ? '' : $peer_ip,
-      'as'           => $peer_as,
-      'admin_status' => $vendor_entry[$def['oids']['PeerAdminStatus']['oid']]
+        'mib'          => $mib,
+        'index'        => $index,
+        'identifier'   => $vendor_entry[$def['oids']['PeerIdentifier']['oid']],
+        'local_ip'     => $local_ip,
+        'local_as'     => $local_as,
+        'ip'           => $peer_ip === '0.0.0.0' ? '' : $peer_ip,
+        'as'           => $peer_as,
+        'admin_status' => $vendor_entry[$def['oids']['PeerAdminStatus']['oid']]
     ];
     if ($check_vrfs) {
         $peer['virtual_name'] = $vrf_name;
@@ -183,7 +183,7 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
     }
 
     // AFI/SAFI
-    $vendor_oid = isset($def['index']['afi']) ? $def['index']['afi'] : $def['oids']['PeerRemoteAddrType']['oid'];
+    $vendor_oid = $def['index']['afi'] ?? $def['oids']['PeerRemoteAddrType']['oid'];
     $afi        = $vendor_entry[$vendor_oid];
 
     if (isset($def['index']['safi'])) {
@@ -200,7 +200,7 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
         // This mib has only one possible AFI/SAFI
         if (isset($vendor_counters[$index . '.0'])) {
             //$peer_afis[$peer_ip][$afi][$safi] = 1;
-            $peer_afis[$peer_ip][] = ['afi' => 'ipv4', 'safi' => 'unicast'];
+            $peer_afis[$peer_ip][] = [ 'afi' => 'ipv4', 'safi' => 'unicast' ];
         }
         continue;
     }
@@ -219,8 +219,10 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
             //$peer_afis[$peer_ip][$afi][$safi] = 1;
             $peer_afis[$peer_ip][] = ['afi' => $afi, 'safi' => $safi, 'index' => $index];
             //discovery_bgp_afisafi($device, $entry, $afi, $safi, $af_list);
+            print_debug("Found AFI/SAFI with index '$index.$afi_num.$i' [$afi.$safi]");
+            print_debug_vars($vendor_counters["$index.$afi_num.$i"]);
         } else {
-            print_debug("Did not find AFI/SAFI with index $index.$afi_num.$i");
+            print_debug("Did not find AFI/SAFI with index '$index.$afi_num.$i'");
         }
     }
 }

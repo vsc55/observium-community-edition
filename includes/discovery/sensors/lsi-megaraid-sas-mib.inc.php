@@ -52,7 +52,7 @@ _> state sensor: lsi-megaraid-sas-pd-state
 */
 
 // Fix up enclosure indexes
-foreach ($cache['megaraid']['encl'] as $oldindex => $data) {
+foreach ($cache['megaraid']['encl'] as $data) {
     $cache['megaraid']['enclosure'][$data['enclosureIndex']] = $data;
 }
 

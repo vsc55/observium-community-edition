@@ -1,7 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpipvx.mib,v 1.4 2012/09/07 09:52:05 siva Exp $
-
 ARICENT-MIFS-IPVX-MIB DEFINITIONS ::= BEGIN
    IMPORTS
       MODULE-IDENTITY, OBJECT-TYPE, 

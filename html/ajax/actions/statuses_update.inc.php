@@ -17,7 +17,7 @@ $update_entities = [];
 foreach ($vars['status'] as $status_id => $status_update) {
 
     $update_array = [];
-    if (is_entity_write_permitted('status', $status_id)) {
+    if (is_entity_write_permitted($status_id, 'status')) {
         $status = get_status_by_id($status_id);
 
         $device_id = $status['device_id'];

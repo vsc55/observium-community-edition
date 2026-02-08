@@ -147,8 +147,8 @@ DESCRIPTION
 "
 该进程对应的文件传输动作
 noOperation(1) - 表示没有任何传输操作，用于默认设置和其他操作完成后恢复值
-put(2) - 上传文件
-get(3) - 下载文件
+put(2) - 上传文件至pc
+get(3) - 下载文件至设备
 halt(4) - 停止文件传送"
 ::= { fileTransferEntry 8 }
 transferStatus OBJECT-TYPE
@@ -281,6 +281,18 @@ The attribute of the file"
 ::= { fileInfoManagementEntry 6 }
 
 
+fileUpdate OBJECT-TYPE
+SYNTAX DisplayString
+MAX-ACCESS read-write
+STATUS current
+DESCRIPTION
+"
+Update peer msu's file or all line card's file or a special line card's file. That is not for running MSU.
+Setting value will be BIN file name such as 'switch.bin', and setting response value will be 1(success), 
+2(failed, file is operating),3(failed, setting value failed). When we get this OID the value will be 
+1(file is starting synchronized successfully), 2(file is synchronized successfully), 3(file is being synchronized), 
+4(file is synchronized failed)."
+::= { fileTransferManagement 3 }
 
         
               

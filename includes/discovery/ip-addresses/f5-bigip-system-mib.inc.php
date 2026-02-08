@@ -47,7 +47,7 @@ foreach (dbFetchRows($query, [$device['device_id'], 0]) as $entry) {
 }
 
 // Rewrite F5-BIGIP-SYSTEM-MIB array
-foreach ($oid_data as $ip_name => $entry) {
+foreach ($oid_data as $entry) {
     if ($entry['sysSelfIpUnitId'] != '0') {
         continue;
     } // Skip all except self Unit addresses

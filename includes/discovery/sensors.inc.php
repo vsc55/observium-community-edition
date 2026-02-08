@@ -10,7 +10,6 @@
  *
  */
 
-$cache_snmp       = [];
 $valid['sensor']  = [];
 $valid['status']  = [];
 $valid['counter'] = [];
@@ -49,6 +48,7 @@ foreach (get_device_mibs_permitted($device) as $mib) {
 
 // Run sensor discovery scripts (also discovers state sensors as status entities)
 $include_dir = "includes/discovery/sensors";
+$include_dir_os = TRUE;
 include($config['install_dir'] . "/includes/include-dir-mib.inc.php");
 
 // Run status-specific discovery scripts
@@ -118,6 +118,38 @@ if (is_array($config['counters']['static'])) {
 print_debug_vars($valid['sensor']);
 foreach (array_keys($config['sensor_types']) as $type) {
     check_valid_sensors($device, $type, $GLOBALS['valid']['sensor']);
+}
+
+// Detect static status sensors
+
+if (is_array($config['status']['static'])) {
+    print_cli_data_field('Static Status');
+    foreach ($config['status']['static'] as $status_config) {
+        if ($status_config['device_id'] == $device['device_id']) {
+            $value = snmp_get_oid($device, $status_config['oid']);
+            if (snmp_status()) {
+                $value = snmp_fix_numeric($value);
+                if (is_numeric($value)) {
+                    $options = ['poller_type' => 'snmp'];
+                    $fields  = ['entPhysicalClass', 'entPhysicalIndex', 'measured_class', 'measured_entity'];
+                    foreach ($fields as $field) {
+                        if (isset($status_config[$field])) {
+                            $options[$field] = $status_config[$field];
+                        }
+                    }
+
+                    // Use 'STATIC' MIB for custom static status types
+                    // get_state_array() will handle the state lookup via fast paths
+                    $mib = '';
+                    if (isset($status_config['states']) || isset($config['status']['static_states'][$status_config['type']])) {
+                        $mib = 'STATIC';
+                    }
+
+                    discover_status_ng($device, $mib, 'static', $status_config['oid'], $status_config['oid'], $status_config['type'], $status_config['descr'], $value, $options);
+                }
+            }
+        }
+    }
 }
 
 print_debug_vars($valid['status']);

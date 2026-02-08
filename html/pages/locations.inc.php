@@ -41,8 +41,8 @@ $cols = [
   'total'    => ['Devices:&nbsp;Total', 'style="width: 50px; text-align: right;"']
 ];
 
-foreach (array_keys($cache['devices']['types']) as $type) {
-    $cols[$type] = [nicecase($type), 'style="width: 40px;"'];
+foreach (array_keys((array)$cache['devices']['types']) as $type) {
+    $cols[$type] = [ nicecase($type), 'style="width: 40px;"' ];
 }
 echo get_table_header($cols); //, $vars); // Currently sorting is not available
 
@@ -77,7 +77,7 @@ foreach (get_locations() as $location) {
           <td class="state-marker"></td>
           <td class="entity">' . generate_link($location, ['page' => 'devices', 'location' => $value]) . '</td>
           <td style="text-align: right;"><strong class="label label-success">' . $num . '</strong></td>' . PHP_EOL);
-    foreach (array_keys($cache['devices']['types']) as $type) {
+    foreach (array_keys((array)$cache['devices']['types']) as $type) {
         $location_count = dbFetchCell('SELECT COUNT(*) FROM `devices`' . $location_where . ' AND `type` = ?', [$type]);
         if ($location_count > 0) {
             $location_count = '<span class="label">' . $location_count . '</span>';

@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /opt/observium/
+#cd /opt/observium/
 
 # 4.1.1
 #/usr/bin/lessc -m=always --source-map=html/css/observium.map html/css/bootstrap/less/bootstrap.less html/css/observium.css

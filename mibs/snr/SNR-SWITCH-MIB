@@ -1,6 +1,6 @@
 SNR-SWITCH-MIB DEFINITIONS ::= BEGIN
 
---2.1.82
+--2.1.127
 IMPORTS
     OBJECT-TYPE 		  FROM SNMPv2-SMI 
     TEXTUAL-CONVENTION,RowStatus,TimeStamp, TruthValue  FROM SNMPv2-TC   	
@@ -443,6 +443,15 @@ Ipv6Address ::= TEXTUAL-CONVENTION
 --xxx.100.40
     fdbMacInfo               	  OBJECT IDENTIFIER ::= { os 40 }    
 
+--xxx.100.41
+	fdbMacQuery               	  OBJECT IDENTIFIER ::= { os 41 } 
+
+--xxx.100.42
+	vplsMacCntQuery               OBJECT IDENTIFIER ::= { os 42 } 
+	
+--xxx.100.43
+	isolatePortCfgQuery               OBJECT IDENTIFIER ::= { os 43 } 
+
 --xxx.100.200
     lldpPrivateInfo             OBJECT IDENTIFIER ::= { os 200 }    
 
@@ -552,7 +561,8 @@ SysPowerStateEntry
                 sysPowerState		  INTEGER,
                 sysPowerValue		  INTEGER,
                 sysPowerType	  	  INTEGER,
-                sysPowerStatus		  INTEGER
+                sysPowerStatus		  INTEGER,
+				sysPowerSupplyType    INTEGER
             }
             
 --xxx.100.1.7.1.1
@@ -608,7 +618,20 @@ sysPowerStatus OBJECT-TYPE
          STATUS  current
          DESCRIPTION "Power Status"
             ::= { sysPowerStateEntry 5 }  
-                         
+
+--xxx.100.1.7.1.6
+sysPowerSupplyType OBJECT-TYPE
+         SYNTAX  INTEGER
+         {
+            na(0),
+            ac(1),
+            dc(2)
+         }
+         MAX-ACCESS  read-only
+         STATUS  current
+         DESCRIPTION "Power supply type 0-na 1-ac 2-dc"
+            ::= { sysPowerStateEntry 6 }  
+			
 --xxx.100.1.8
 sysSlotTable OBJECT-TYPE 
     SYNTAX  SEQUENCE OF SysSlotEntry
@@ -1298,7 +1321,52 @@ switchMemoryUsage OBJECT-TYPE
     DESCRIPTION
         "The memory usage of switch."
     ::= { switchInfo  11 } 
-    
+	
+ --xxx.100.1.11.12
+switchFlashOccupiedSize OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The occupied flash size of switch."
+    ::= { switchInfo  12 } 
+	
+ --xxx.100.1.11.13
+switchFlashFreeSize OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The free flash size of switch."
+    ::= { switchInfo  13 } 
+
+--xxx.100.1.11.14
+switchFlashSizeInBytes OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The flash capacity of switch."
+    ::= { switchInfo  14 }  
+
+--xxx.100.1.11.15
+switchFlashOccupiedSizeInBytes OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The occupied flash size of switch."
+    ::= { switchInfo  15 }
+
+--xxx.100.1.11.16
+switchFlashFreeSizeInBytes OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The free flash size of switch."
+    ::= { switchInfo  16 } 
+	
 --xxx.100.1.12
 sysFanTable OBJECT-TYPE 
     SYNTAX  SEQUENCE OF SysFanEntry
@@ -1375,6 +1443,15 @@ sysFanSpeed OBJECT-TYPE
 	"Status of Fan. Status: Low(1), Medium-Low(2), Medium(3), Medium-High(4), High(5), none(0) is readonly"
     ::= { sysFanEntry  4 }    
 
+--xxx.100.1.12.1.1.10
+sysFanSpeedRpm OBJECT-TYPE
+        SYNTAX  INTEGER
+    MAX-ACCESS  read-only
+        STATUS  current
+        DESCRIPTION
+        "Rpm of fan"
+    ::= { sysFanEntry  10 }
+
 --xxx.100.1.13
 switchBootImgPrimary OBJECT-TYPE
     SYNTAX      DisplayString(SIZE(1..128))
@@ -1440,7 +1517,8 @@ SysSlotBootInfoEntry
                 sysBootInfoIndex           INTEGER,
                 sysBootImgPrimary          DisplayString,
                 sysBootImgSecondary        DisplayString,
-                sysBootStartupCfg          DisplayString
+                sysBootStartupCfg          DisplayString,
+				sysBootImgCurrent          DisplayString
             } 
 sysBootInfoIndex     OBJECT-TYPE
     SYNTAX      INTEGER
@@ -1473,7 +1551,14 @@ sysBootStartupCfg OBJECT-TYPE
   DESCRIPTION
       "Set or get filename of boot startup config ,and the length of filename is between 1 and 128."
   ::= { sysSlotBootInfoEntry  4}        
-             
+--xxx.100.1.17.5 
+sysBootImgCurrent OBJECT-TYPE
+    SYNTAX      DisplayString(SIZE(1..128))
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "Filename of boot img for current,and the length of filename is between 1 and 128."
+    ::= { sysSlotBootInfoEntry  5}              
     
 --xxx.100.1.18
  sysSetBootPassword     OBJECT IDENTIFIER ::= { priSystem 18 }    
@@ -1630,7 +1715,7 @@ priPowerPresent OBJECT-TYPE
         SYNTAX      INTEGER
         MAX-ACCESS  read-only
         STATUS      current
-        DESCRIPTION "get power's status of present(1:present; 0: not present; 2-unknown)."
+        DESCRIPTION "get power's status of present(1:present; 0: not present; 2-unknown,not use)."
         ::= { priPowerEntry 2 }
 
 --xxx.100.1.23.1.3
@@ -1638,21 +1723,122 @@ priPowerSupply OBJECT-TYPE
         SYNTAX      INTEGER 
         MAX-ACCESS  read-only
         STATUS      current
-        DESCRIPTION "get power's supply status(1:up; 0:shutdown;2-unknown)."
+        DESCRIPTION "get power's supply status(1:up; 0:shutdown;2-unknown,not use)."
         ::= { priPowerEntry 3 } 
         
 --xxx.100.1.23.2
---priPowerStatus OBJECT-TYPE
---        SYNTAX      INTEGER
---        {
---          ac(1),
---          dc(2)
---        }
---        MAX-ACCESS  read-only
---        STATUS      current
---        DESCRIPTION "get power status(1:ac; 2:dc)."
---        ::= { priPowerTable 2 }
- 
+priPowerStatus OBJECT-TYPE
+        SYNTAX      INTEGER
+        {
+          ac(1),
+          dc(2)
+        }
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "get power status(1:ac; 2:dc)."
+        ::= { priPowerTable 2 }
+
+--xxx.100.1.29
+ cpuRxInfo     OBJECT IDENTIFIER ::= { priSystem 29 }    
+
+--xxx.100.1.29.1	
+cpuRxTable OBJECT-TYPE
+        SYNTAX      SEQUENCE OF CpuRxEntry
+        MAX-ACCESS  not-accessible
+        STATUS      current
+        DESCRIPTION "Table of descriptive and status information about
+                     cpu-rx all in this system."
+        ::= { cpuRxInfo 1 }
+        
+--xxx.100.1.29.2.1
+cpuRxEntry OBJECT-TYPE
+        SYNTAX      CpuRxEntry
+        MAX-ACCESS  not-accessible
+        STATUS      current
+        DESCRIPTION "An entry in the table, containing information
+                     about  cpu-rx all in this system."
+        INDEX       { cpuRxMember, cpuRxSlot ,cpuRxProtoType }
+        ::= { cpuRxTable 1 }
+
+CpuRxEntry ::= SEQUENCE
+{
+    cpuRxMember			     INTEGER,
+    cpuRxSlot                        INTEGER,
+    cpuRxProtoType                   DisplayString,
+    cpuRxRatelimit                   INTEGER,
+    cpuRxTotPkts                     INTEGER,
+    cpuRxDropPkts                    INTEGER,
+    cpuRxDelaycount            	     INTEGER,
+    cpuRxCurState                    DisplayString
+}
+
+--xxx.100.1.29.2.1.1		
+cpuRxMember OBJECT-TYPE
+        SYNTAX      INTEGER (1..16)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "vsf member."
+        ::= { cpuRxEntry 1 }
+		
+--xxx.100.1.29.2.1.2
+cpuRxSlot OBJECT-TYPE
+        SYNTAX      INTEGER (1..32)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "vsf slot number."
+        ::= { cpuRxEntry 2 }
+		
+		      
+--xxx.100.1.29.2.1.3
+cpuRxProtoType OBJECT-TYPE 
+        SYNTAX      DisplayString(SIZE(1..32))
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "protocol type."
+        ::= { cpuRxEntry 3 }
+
+--xxx.100.1.29.2.1.4
+cpuRxRatelimit OBJECT-TYPE
+		SYNTAX      INTEGER (1..1200)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "cpu rx protocol rate-limit."
+        ::= { cpuRxEntry 4 }
+
+--xxx.100.1.29.2.1.5
+cpuRxTotPkts  OBJECT-TYPE
+        SYNTAX      INTEGER 
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "cpu rx protocol total packets."
+        ::= { cpuRxEntry 5 }
+
+--xxx.100.1.29.2.1.6
+cpuRxDropPkts OBJECT-TYPE
+        SYNTAX      INTEGER
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "cpu rx protocol drop packets."
+        ::= { cpuRxEntry 6 }
+
+
+--xxx.100.1.29.2.1.7
+cpuRxDelaycount   OBJECT-TYPE
+        SYNTAX      INTEGER
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "cpu rx protocol delay count."
+        ::= { cpuRxEntry 7 }
+
+
+--xxx.100.1.29.2.1.8
+cpuRxCurState   OBJECT-TYPE
+        SYNTAX      DisplayString 
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION "cpu rx protocol current status."
+        ::= { cpuRxEntry 8 }
+
  --xxx.100.1.30
  vsfInfo     OBJECT IDENTIFIER ::= { priSystem 30 }    
 
@@ -1896,6 +2082,11 @@ vsfPriority OBJECT-TYPE
 --xxx.100.1.30.2.1.6
 vsfRole   OBJECT-TYPE
         SYNTAX      INTEGER
+			{
+				master(1),
+				standby-master(2),
+				slave(4)
+			}
         MAX-ACCESS  read-only
         STATUS      current
         DESCRIPTION "vsf member role:1-master, 2-standby-master, 4-slave"
@@ -2020,6 +2211,82 @@ rpsPowerVoltage OBJECT-TYPE
   DESCRIPTION
       "show rps power voltage."
   ::= { priSystem  101}   
+  
+--xxx.100.1.105
+sysVlanMac OBJECT-TYPE
+    SYNTAX  MacAddress
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+       "The MAC Address of the switch's VLAN CPU"
+    ::= { priSystem  105 }
+ --xxx.100.1.106
+switchBootImgCurrent OBJECT-TYPE
+    SYNTAX      DisplayString(SIZE(1..128))
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "Filename of boot img for current time,and the length of filename is between 1 and 128."
+    ::= { priSystem  106}
+
+ --xxx.100.1.107
+sysUpTime OBJECT-TYPE
+    SYNTAX      Counter64
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "The time (in hundredths of a second) since the
+		network management portion of the system was last
+		re-initialized."
+    ::= { priSystem  107}
+
+ --xxx.100.1.108
+sysReloadAfterTime OBJECT-TYPE
+    SYNTAX      TimeTicks
+    MAX-ACCESS  read-write
+    STATUS  current
+    DESCRIPTION
+        "Reboot switch after a time interval, Time range greater than or equal to 6 seconds and less than 31 days."
+    ::= { priSystem  108}
+
+ --xxx.100.1.109
+sysReloadAfterNowTime OBJECT-TYPE
+    SYNTAX      TimeTicks
+    MAX-ACCESS  read-only
+    STATUS  current
+    DESCRIPTION
+        "System will be rebooted after time from now on."
+    ::= { priSystem  109}
+
+sysReloadAfterCancel OBJECT-TYPE
+	SYNTAX  INTEGER
+			{    
+			  active(1)
+			}
+	MAX-ACCESS  write-only
+	STATUS  current
+	DESCRIPTION
+		"System reload after cancel."
+	::= { priSystem  110}    
+
+--xxx.100.1.200
+        switchModel  OBJECT-TYPE
+            SYNTAX DisplayString (SIZE(0..255))
+            MAX-ACCESS read-only
+            STATUS current
+            DESCRIPTION
+					"Switch model name"
+            ::= { priSystem 200 }
+
+--xxx.100.1.201
+         reloadAfter OBJECT-TYPE
+            SYNTAX Counter64
+            MAX-ACCESS read-only
+            STATUS current
+            DESCRIPTION
+					"Reload after"
+            ::= { priSystem 201 }
+
 --********************************************************************************************************
 --********************************************************************************************************  
         
@@ -2596,7 +2863,7 @@ priPortTable OBJECT-TYPE
                 portTrunkAllowedvlan  OCTET STRING,
                 portHybridTaggedAllowedvlan  OCTET STRING,                
                 portHybridUntaggedAllowedvlan  OCTET STRING,
-                portBandWidthUsage  INTEGER,
+                portBandWidthUsage  OCTET STRING,
                 lastFiveMinInPktsPerSec  Counter32,  
                 lastFiveMinOutPktsPerSec  Counter32,        
                 lastFiveSecInPktsPerSec  Counter32,                 
@@ -2605,7 +2872,11 @@ priPortTable OBJECT-TYPE
                 portBlockMode             Counter32, 
                 portBlockState            Counter32,
                 portComboMediaType  INTEGER,   --add 2015/10/13
-				portDiscardPktType		INTEGER
+				portDiscardPktType		INTEGER,
+                lastFiveMinInBitsPerSec  Counter64,  
+                lastFiveMinOutBitsPerSec  Counter64,        
+                lastFiveSecInBitsPerSec  Counter64,                 
+                lastFiveSecOutBitsPerSec  Counter64
             }
 
 --xxx.100.3.2.1.1
@@ -2736,7 +3007,7 @@ priPortTable OBJECT-TYPE
 	        MAX-ACCESS  read-write
  	        STATUS      current
 	        DESCRIPTION 
-	        	"The recevice bandwidth of the port. Its unit is kbs.
+	        	"The receive bandwidth of the port. Its unit is kbs.
 	        	The command 'bandwidth control 50 both' in console mode equals
 	        	setting both receiveBandwidth and transmitBandwidth to 50 kbs.
 	        	Set 0 is no bandwidth."
@@ -2881,11 +3152,12 @@ priPortTable OBJECT-TYPE
         SYNTAX      INTEGER
         MAX-ACCESS  read-write
         STATUS      current
-        DESCRIPTION "This object indicates the VCT action of the port,only the value 1 is permitted 
+        DESCRIPTION "This object indicates the VCT action of the port, the value 1(standard mode) and value 2(shutdown mode) is permitted 
                     when SET this entry though you can GET 1(processing) and 0(succeed);
-                    The specified port will be shutdown when one sets 1 to this entry,and then it will return 
-                    to no shutdown after operate the virtual-cable-test. You can get the status of VCT from
-                    the entry vctLastStatus."
+                    The specified port will be shutdown when one sets 1 to this entry by standard mode,and then it will return 
+                    to no shutdown after operate the virtual-cable-test. You can get the status of VCT from the entry vctLastStatus.
+					The specified port will be shutdown when one sets 2 to this entry by shutdown mode,and then it will return 
+                    to operate the virtual-cable-test. You can get the status of VCT from the entry vctLastStatus."
 	        ::= { priPortEntry 18 }	  
 --xxx.100.3.2.1.19
 	vctLastStatus OBJECT-TYPE 
@@ -2924,7 +3196,7 @@ priPortTable OBJECT-TYPE
 	          
 --xxx.100.3.2.1.23
             portBandWidthUsage  OBJECT-TYPE
-            SYNTAX      INTEGER (0..100)                            
+            SYNTAX      OCTET STRING                            
 	          MAX-ACCESS  read-only
  	          STATUS      current
 	          DESCRIPTION 
@@ -3027,7 +3299,43 @@ portDiscardPktType  OBJECT-TYPE
 	        DESCRIPTION 
 	        	"port mode: 1 is tag,2 is untag;
 							3 is set no tag,4 is set no untag."
-	        ::= { priPortEntry 32 }				  
+	        ::= { priPortEntry 32 }		
+
+--xxx.100.3.2.1.35
+            lastFiveMinInBitsPerSec  OBJECT-TYPE
+            SYNTAX      Counter64                            
+	          MAX-ACCESS  read-only
+ 	          STATUS      current
+	          DESCRIPTION 
+	        	"last five minutes input bits/Sec."
+	          ::= { priPortEntry 35 }	   	
+	          
+--xxx.100.3.2.1.36
+            lastFiveMinOutBitsPerSec  OBJECT-TYPE
+            SYNTAX      Counter64                            
+	          MAX-ACCESS  read-only
+ 	          STATUS      current
+	          DESCRIPTION 
+	        	"last five minutes output bits/Sec."
+	          ::= { priPortEntry 36 }	 	 
+	          
+--xxx.100.3.2.1.37
+            lastFiveSecInBitsPerSec  OBJECT-TYPE
+            SYNTAX      Counter64                            
+	          MAX-ACCESS  read-only
+ 	          STATUS      current
+	          DESCRIPTION 
+	        	"last five seconds input bits/Sec."
+	          ::= { priPortEntry 37 }	     
+	          
+--xxx.100.3.2.1.38
+            lastFiveSecOutBitsPerSec  OBJECT-TYPE
+            SYNTAX      Counter64                            
+	          MAX-ACCESS  read-only
+ 	          STATUS      current
+	          DESCRIPTION 
+	        	"last five seconds output bits/Sec."
+	          ::= { priPortEntry 38 }				
 --********************************************************************************************************
 --xxx.100.3.3
 stormControlTable OBJECT-TYPE
@@ -4152,77 +4460,77 @@ portLEDTimeRangeTable OBJECT-TYPE
             ::= { portLEDConfig 3 }  
 --********************************************************************************************************  
 --xxx.100.3.12
- portTruckAllowedVlanTable OBJECT-TYPE
-    SYNTAX  SEQUENCE OF PortTruckAllowedVlanEntry
+ portTrunkAllowedVlanTable OBJECT-TYPE
+    SYNTAX  SEQUENCE OF PortTrunkAllowedVlanEntry
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
-        "Truck port alllowed vlan table"
+        "Trunk port alllowed vlan table"
     ::= { priPorts   12 }
  --xxx.100.3.12.1
-    portTruckAllowedVlanEntry OBJECT-TYPE
-        SYNTAX  PortTruckAllowedVlanEntry
+    portTrunkAllowedVlanEntry OBJECT-TYPE
+        SYNTAX  PortTrunkAllowedVlanEntry
         MAX-ACCESS  not-accessible
         STATUS  current
         DESCRIPTION
-            " Truck port alllowed vlan entry"
-        INDEX   {portTruckPortIndex}
-        ::= { portTruckAllowedVlanTable 1 }
+            " Trunk port alllowed vlan entry"
+        INDEX   {portTrunkPortIndex}
+        ::= { portTrunkAllowedVlanTable 1 }
 
-    PortTruckAllowedVlanEntry
+    PortTrunkAllowedVlanEntry
         ::= SEQUENCE
             {    
-                portTruckPortIndex                   INTEGER,
-                portTruckAllowedVlan	             OCTET STRING,
-                portTruckAllowedVlanAdd              OCTET STRING, 
-           		portTruckAllowedVlanExcept           OCTET STRING,   
-           		portTruckAllowedVlanRemove           OCTET STRING,
-           		portTruckAllowedVlanAll              INTEGER 
+                portTrunkPortIndex                   INTEGER,
+                portTrunkAllowedVlan	             OCTET STRING,
+                portTrunkAllowedVlanAdd              OCTET STRING, 
+           		portTrunkAllowedVlanExcept           OCTET STRING,   
+           		portTrunkAllowedVlanRemove           OCTET STRING,
+           		portTrunkAllowedVlanAll              INTEGER 
             }
 --xxx.100.3.12.1.1   
-	portTruckPortIndex OBJECT-TYPE
+	portTrunkPortIndex OBJECT-TYPE
 	   SYNTAX      INTEGER
        MAX-ACCESS  not-accessible
        STATUS      current
        DESCRIPTION
-               "port index of truck mode"
-       ::= { portTruckAllowedVlanEntry 1 }     
+               "port index of Trunk mode"
+       ::= { portTrunkAllowedVlanEntry 1 }     
 --xxx.100.3.12.1.2
-    portTruckAllowedVlan OBJECT-TYPE
+    portTrunkAllowedVlan OBJECT-TYPE
        SYNTAX      OCTET STRING
        MAX-ACCESS  read-write
        STATUS      current
        DESCRIPTION
                "VLAN IDs of the allowed VLANs when this port is in trunking mode."
-       ::= { portTruckAllowedVlanEntry 2 } 
+       ::= { portTrunkAllowedVlanEntry 2 } 
 
 --xxx.100.3.12.1.3   
-    portTruckAllowedVlanAdd OBJECT-TYPE
+    portTrunkAllowedVlanAdd OBJECT-TYPE
        SYNTAX      OCTET STRING
        MAX-ACCESS  read-write
        STATUS      current
        DESCRIPTION
                "Add VLANs to the current list."
-       ::= { portTruckAllowedVlanEntry 3 }  
+       ::= { portTrunkAllowedVlanEntry 3 }  
            
 --xxx.100.3.12.1.4
-	portTruckAllowedVlanExcept OBJECT-TYPE
+	portTrunkAllowedVlanExcept OBJECT-TYPE
        SYNTAX      OCTET STRING
        MAX-ACCESS  read-write
        STATUS      current
        DESCRIPTION
                "All VLANs except the following."
-       ::= { portTruckAllowedVlanEntry 4}
+       ::= { portTrunkAllowedVlanEntry 4}
 --xxx.100.3.12.1.5
-    portTruckAllowedVlanRemove OBJECT-TYPE
+    portTrunkAllowedVlanRemove OBJECT-TYPE
        SYNTAX      OCTET STRING
        MAX-ACCESS  read-write
        STATUS      current
        DESCRIPTION
                "Remove VLANs from the current list."
-       ::= { portTruckAllowedVlanEntry 5 }
+       ::= { portTrunkAllowedVlanEntry 5 }
 --xxx.100.3.12.1.6       
-	portTruckAllowedVlanAll OBJECT-TYPE 
+	portTrunkAllowedVlanAll OBJECT-TYPE 
 		SYNTAX    INTEGER
 				  {
 				  	none(0),
@@ -4232,7 +4540,7 @@ portLEDTimeRangeTable OBJECT-TYPE
 		STATUS     current
 		DESCRIPTION
 				"Allow all(1) vlans or none vlans."
-		::={portTruckAllowedVlanEntry 6}   
+		::={portTrunkAllowedVlanEntry 6}   
 --********************************************************************************************************  
 --xxx.100.3.13
  portHybridTaggedAllowedVlanTable OBJECT-TYPE
@@ -4240,7 +4548,7 @@ portLEDTimeRangeTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
-        "Truck port alllowed vlan table"
+        "Trunk port alllowed vlan table"
     ::= { priPorts   13 }
  --xxx.100.3.13.1
     portHybridTaggedAllowedVlanEntry OBJECT-TYPE
@@ -4248,7 +4556,7 @@ portLEDTimeRangeTable OBJECT-TYPE
         MAX-ACCESS  not-accessible
         STATUS  current
         DESCRIPTION
-            " Truck port alllowed vlan entry"
+            " Trunk port alllowed vlan entry"
         INDEX   { portHybridTaggedPortIndex }
         ::= { portHybridTaggedAllowedVlanTable 1 }
 
@@ -4324,7 +4632,7 @@ portLEDTimeRangeTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
-        "Truck port alllowed vlan table"
+        "Trunk port alllowed vlan table"
     ::= { priPorts   14 }
  --xxx.100.3.14.1
     portHybridUntaggedAllowedVlanEntry OBJECT-TYPE
@@ -4332,7 +4640,7 @@ portLEDTimeRangeTable OBJECT-TYPE
         MAX-ACCESS  not-accessible
         STATUS  current
         DESCRIPTION
-            " Truck port alllowed vlan entry"
+            " Trunk port alllowed vlan entry"
         INDEX   { portHybridUntaggedPortIndex }
         ::= { portHybridUntaggedAllowedVlanTable 1 }
 
@@ -5374,7 +5682,7 @@ priIgmpSnoopingVlanTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
-        " IopgmpSnoing configuration in vlan."
+        " IgmpSnooping priority configuration in vlan."
     ::= { priIgmpSnoopingMib   2 }
 
 --xxx.100.8.2.1
@@ -5454,7 +5762,7 @@ priIgmpSnoopingvlanID OBJECT-TYPE
             SYNTAX      INTEGER (1..65535)            
             MAX-ACCESS  read-write
             STATUS      current
-            DESCRIPTION "set the maximum IGMP group the port can join"
+            DESCRIPTION "set the maximum IGMP group the vlan can join"
             ::= { priIgmpSnoopingVlanEntry 5 } 
             
 --xxx.100.8.2.1.6
@@ -5581,7 +5889,7 @@ priIgmpSnoopingLimitPortTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS  current
     DESCRIPTION
-        " IopgmpSnoing limits configuration per port in vlan."
+        " IgmpSnooping limits configuration per port in vlan."
     ::= { priIgmpSnoopingMib   4 }
 
 --xxx.100.8.4.1
@@ -5590,7 +5898,7 @@ priIgmpSnoopingLimitPortTable OBJECT-TYPE
         MAX-ACCESS  not-accessible
         STATUS  current
         DESCRIPTION
-            " IgmpSnooping limits confition per port in vlan."
+            " IgmpSnooping limits configuration per port in vlan."
         INDEX   { priIgmpSnoopingLimitVlanID, priIgmpSnoopingLimitPortIndex}
         ::= { priIgmpSnoopingLimitPortTable 1 }
 
@@ -5676,12 +5984,13 @@ priIgmpSnoopingPortCtrlPktTable OBJECT-TYPE
 			STATUS  current
 			DESCRIPTION
 				" IgmpSnooping control packet per port."
-			INDEX   { priIgmpSnoopingPortCtrlPktDrop}
+			INDEX   { portIndex }
 			::= { priIgmpSnoopingPortCtrlPktTable 1 }
 
 	PriIgmpSnoopingPortCtrlPktEntry
 			::= SEQUENCE
 		{
+			portIndex                                  INTEGER,
 			priIgmpSnoopingPortCtrlPktDrop             INTEGER                                          
 		}
 --xxx.100.8.5.1.1
@@ -5721,12 +6030,13 @@ priIgmpSnoopingPortAuthTable OBJECT-TYPE
         DESCRIPTION
             " IgmpSnooping: A list of manageable entities for IGMP Access Authentication.
             The configuration is done per port."
-        INDEX   { priIgmpSnoopingPortAuthEnable}
+        INDEX   { portIndex }
         ::= { priIgmpSnoopingPortAuthTable 1 }
 
     PriIgmpSnoopingPortAuthEntry
         ::= SEQUENCE
             {
+				portIndex                                 INTEGER,
     			priIgmpSnoopingPortAuthEnable             INTEGER,
 				priIgmpSnoopingPortAuthFreeRule           OCTET STRING
             }
@@ -5745,7 +6055,7 @@ priIgmpSnoopingPortAuthEnable OBJECT-TYPE
         ::= { priIgmpSnoopingPortAuthEntry 1 }
 --xxx.100.8.6.1.2
 priIgmpSnoopingPortAuthFreeRule OBJECT-TYPE
-        SYNTAX      OCTET STRING(SIZE(0..255))
+        SYNTAX      OCTET STRING (SIZE (0..255))
         MAX-ACCESS  read-only
         STATUS      current
         DESCRIPTION "get the igmpsnooping authentication group control"
@@ -6529,7 +6839,7 @@ ipExternAclTable OBJECT-TYPE
                ipExternSubIndex     INTEGER,
                ipExternPriority     INTEGER,               
                ipExternAct		      INTEGER,
-               ipExternProtocal     Integer32,
+               ipExternProtocol     Integer32,
                ipExternSrcIp		    IpAddress,
                ipExternSrcIpWild    IpAddress,
                ipExternDstIp        IpAddress,
@@ -6585,7 +6895,7 @@ ipExternAclTable OBJECT-TYPE
             ::= { ipExternAclEntry 4 }
 
 --xxx.100.10.1.3.4.1.5
-        ipExternProtocal OBJECT-TYPE
+        ipExternProtocol OBJECT-TYPE
             SYNTAX Integer32(0..255|65535)           
             MAX-ACCESS  read-write
             STATUS  current
@@ -6747,7 +7057,7 @@ ipExternAclTable OBJECT-TYPE
             MAX-ACCESS  read-write
             STATUS  current
             DESCRIPTION
-                "The source port number of the TCP or UDP protocol. If the
+                "The destination port number of the TCP or UDP protocol. If the
         numIpExternDestOP object in the same row is range(5), this
         object will be the starting port number of the port range.
         This object cannot be configured if numIpExternStatus in the 
@@ -6761,7 +7071,7 @@ ipExternAclTable OBJECT-TYPE
     	   MAX-ACCESS read-write
     	   STATUS current
     	   DESCRIPTION
-        	"The source port number of the TCP or UDP protocol. If the
+        	"The destination port number of the TCP or UDP protocol. If the
         numIpExternDestOP object in the same row is range(5), this
         object will be the ending port number of the port range.
         This object cannot be configured if numIpExternStatus in the 
@@ -7494,7 +7804,7 @@ macIpExternAclTable OBJECT-TYPE
                macIpExternSubIndex     INTEGER,
                macIpExternPriority     INTEGER,               
                macIpExternAct		      INTEGER,
-               macIpExternProtocal     Integer32,
+               macIpExternProtocol     Integer32,
                macIpExternSrcMac		     DisplayString,
                macIpExternSrcMacWild    DisplayString,
                macIpExternDstMac       DisplayString,
@@ -7514,7 +7824,9 @@ macIpExternAclTable OBJECT-TYPE
                macIpExternTos           INTEGER,
                macIpExternStatus         INTEGER,
                macIpExternVlanId         INTEGER,
-               macIpExternVlanIdWild     INTEGER
+               macIpExternVlanIdWild     INTEGER,
+			   macIpExternIcmpType     INTEGER,
+			   macIpExternIcmpCode     INTEGER
             }
             
 --xxx.100.10.1.3.9.1.1
@@ -7558,7 +7870,7 @@ macIpExternAclTable OBJECT-TYPE
             ::= { macIpExternAclEntry 4 }
 
 --xxx.100.10.1.3.9.1.5
-        macIpExternProtocal OBJECT-TYPE
+        macIpExternProtocol OBJECT-TYPE
             SYNTAX Integer32(0..255|65535)           
             MAX-ACCESS  read-write
             STATUS  current
@@ -7672,7 +7984,7 @@ macIpExternAclTable OBJECT-TYPE
                 "Indicates how a packet's source TCP/UDP port number is
         to be compared.
         
-        If the macIpExternProtocal object in the same row does not
+        If the macIpExternProtocol object in the same row does not
         indicate TCP or UDP, this object has to be 'noOperator(0)' and
         cannot be changed while this row is active, i.e., the value of
         macIpExternStatus in the same row has the value 'active(1)'.
@@ -7829,6 +8141,25 @@ macIpExternAclTable OBJECT-TYPE
     	   DESCRIPTION
         	"The vlan Id mask"
             ::= { macIpExternAclEntry 25 } 
+			
+--xxx.100.10.1.3.9.1.26
+        macIpExternIcmpType OBJECT-TYPE
+    	   SYNTAX INTEGER
+    	   MAX-ACCESS read-write
+    	   STATUS current
+    	   DESCRIPTION
+        	"The Icmp Type cfg <0-255>,default is -1"
+            ::= { macIpExternAclEntry 26 } 
+			
+--xxx.100.10.1.3.9.1.27
+        macIpExternIcmpCode OBJECT-TYPE
+    	   SYNTAX INTEGER
+    	   MAX-ACCESS read-write
+    	   STATUS current
+    	   DESCRIPTION
+        	"The Icmp Code cfg <0-255>,default is -1"
+            ::= { macIpExternAclEntry 27 } 
+
 --********************************************************************************************************
 --xxx.100.10.1.4.1
 aclActiveTable OBJECT-TYPE
@@ -8233,11 +8564,11 @@ tacacsServerHostEntry OBJECT-TYPE
         ::= SEQUENCE
             {
             	tacacsServerHostIndex		INTEGER,
-                tacacsServerHostIP		IpAddress,
+                tacacsServerHostIP			DisplayString,
                 tacacsServerHostPort		INTEGER,	                
                 tacacsServerHostPrimary		INTEGER,
                 tacacsServerHostStatus		INTEGER,  
-                tacacsServerHostKey		DisplayString,
+                tacacsServerHostKey			DisplayString,
                 tacacsServerHostTimeout		INTEGER                    
             }
             
@@ -8249,10 +8580,10 @@ tacacsServerHostIndex OBJECT-TYPE
         ::= { tacacsServerHostEntry 1 }
 
 tacacsServerHostIP OBJECT-TYPE
-        SYNTAX      IpAddress
+        SYNTAX      DisplayString (SIZE(1..39))
         MAX-ACCESS  read-write
         STATUS      current
-        DESCRIPTION "IP address of TACACS server."
+        DESCRIPTION "IP or IPv6 address of TACACS server."
         ::= { tacacsServerHostEntry 2 }
         
 tacacsServerHostPort OBJECT-TYPE
@@ -8286,7 +8617,7 @@ tacacsServerHostStatus OBJECT-TYPE
         ::= { tacacsServerHostEntry 5 }
         
 tacacsServerHostKey OBJECT-TYPE
-        SYNTAX      DisplayString (SIZE(1..16))
+        SYNTAX      DisplayString (SIZE(1..64))
         MAX-ACCESS  read-write
         STATUS      current
         DESCRIPTION "Key for TACACS. Input space(' ') to clear this key"
@@ -8309,7 +8640,7 @@ tacacsServerTimeout OBJECT-TYPE
         ::= { tacacsMgt 2 }
 
 tacacsServerKey OBJECT-TYPE
-        SYNTAX      DisplayString (SIZE(1..16))
+        SYNTAX      DisplayString (SIZE(1..64))
         MAX-ACCESS  read-write
         STATUS      current
         DESCRIPTION "Key for TACACS. Input space(' ') to clear this key"
@@ -8605,11 +8936,13 @@ radiusAutServerHostAccessMode OBJECT-TYPE
                     {
                     none(0),
             	    	dot1x(1),
-               		  telnet(2)
+               		  telnet(2),
+                          mab(3),
+                          igmp(4)
                     }          
         MAX-ACCESS  read-write
         STATUS      current
-        DESCRIPTION "Configuration access mode of none, dot1x or telnet "
+        DESCRIPTION "Configuration access mode of none, dot1x, telnet, mab or igmp "
         ::= { radiusAuthenServerHostEntry 6 }          
 
 radiusAuthenServerHostStatus OBJECT-TYPE
@@ -8764,7 +9097,7 @@ consoleLoginMethod OBJECT-TYPE
 	for example: if you want to configure 'local tacacs radius',you should configure '132',and if you want to restore the default configuration,you should not enter any characters."
             ::= { authenLineConf 1 } 		
 
---xxx.100.11.6.2
+--xxx.100.10.6.2
 vtyLoginMethod OBJECT-TYPE
     SYNTAX  DisplayString (SIZE (0..16))
             MAX-ACCESS  read-write
@@ -8774,7 +9107,7 @@ vtyLoginMethod OBJECT-TYPE
 	for example: if you want to configure 'local tacacs radius',you should configure '132',and if you want to restore the default configuration,you should not enter any characters."
             ::= { authenLineConf 2 } 
 
---xxx.100.11.6.3
+--xxx.100.10.6.3
 webLoginMethod OBJECT-TYPE
     SYNTAX  DisplayString (SIZE (0..16))
             MAX-ACCESS  read-write
@@ -17208,7 +17541,75 @@ dvmrpPruneExpiryTime OBJECT-TYPE
             if any."
     ::= { dvmrpPruneEntry 4 }
 
+--********************************************************************************************************
+--********************************************************************************************************        
 
+
+bgpMgt           OBJECT IDENTIFIER ::= { l3 6 }    
+                 
+                bgpVrfIPv4UnicastPeerTable OBJECT-TYPE
+                    SYNTAX     SEQUENCE OF BgpVrfIpv4UnicastPeerEntry
+                    MAX-ACCESS not-accessible
+                    STATUS     current
+                    DESCRIPTION
+                            "BGP vrf ipv4 peer table.  This table contains,
+                            one entry per BGP vrf ipv4 peer, information about
+                            the connections with BGP vrf ipv4 peers."
+                    ::= { bgpMgt 1 }
+                    
+               bgpVrfIpv4UnicastPeerEntry OBJECT-TYPE
+                    SYNTAX     BgpVrfIpv4UnicastPeerEntry
+                    MAX-ACCESS not-accessible
+                    STATUS     current
+                    DESCRIPTION
+                            "Entry containing information about the
+                            connection with a BGP vrf ipv4 peer."
+                    INDEX { bgpVrfNameIpv4UnicastPeer, bgpVrfIpv4UnicastPeerRemoteAddr }
+                    ::= { bgpVrfIPv4UnicastPeerTable 1 }
+
+                BgpVrfIpv4UnicastPeerEntry ::= SEQUENCE 
+						{
+                        bgpVrfNameIpv4UnicastPeer
+                            DisplayString,
+                        bgpVrfIpv4UnicastPeerRemoteAddr
+                            IpAddress,
+                        bgpVrfIpv4UnicastPeerState
+                            INTEGER
+                        }
+
+                bgpVrfNameIpv4UnicastPeer OBJECT-TYPE
+                    SYNTAX      DisplayString(SIZE(1..64))
+                    MAX-ACCESS  read-only
+                    STATUS      current
+                    DESCRIPTION "The name of bgp vrf ipv4 Unicast."
+                    ::= { bgpVrfIpv4UnicastPeerEntry 1 }
+                                        
+                bgpVrfIpv4UnicastPeerRemoteAddr OBJECT-TYPE
+                    SYNTAX     IpAddress
+                    MAX-ACCESS read-only
+                    STATUS     current
+                    DESCRIPTION
+                            "The vrf remote IPv4 address of this entry's BGP
+                            peer."
+                    ::= { bgpVrfIpv4UnicastPeerEntry 2 }
+
+                bgpVrfIpv4UnicastPeerState OBJECT-TYPE
+                    SYNTAX     INTEGER {
+                                        idle(1),
+                                        connect(2),
+                                        active(3),
+                                        opensent(4),
+                                        openconfirm(5),
+                                        established(6)
+                               }
+                    MAX-ACCESS read-only
+                    STATUS     current
+                    DESCRIPTION
+                            "The BGP vrf ipv4 peer connection state."
+                    ::= { bgpVrfIpv4UnicastPeerEntry 3 }
+
+--********************************************************************************************************
+--********************************************************************************************************
 
 
 ripMgt              OBJECT IDENTIFIER ::= { l3 3 }
@@ -17787,7 +18188,231 @@ ospfNetworkAreaStatus OBJECT-TYPE
          Setting it to invalid(0) destroys an entry." 
        ::= { ospfNetworkAreaAddressEntry 4 }   
        
-                          
+
+
+ospfNbrTable OBJECT-TYPE
+        SYNTAX   SEQUENCE OF OspfNbrEntry
+        MAX-ACCESS   not-accessible
+        STATUS   current
+        DESCRIPTION
+           "A table of non-virtual neighbor information."
+       REFERENCE
+          "OSPF Version 2, Section 10  The  Neighbor  Data
+          Structure"
+      ::= { ospfMgt 20 }
+
+
+ospfNbrEntry OBJECT-TYPE
+        SYNTAX   OspfNbrEntry
+        MAX-ACCESS   not-accessible
+        STATUS   current
+        DESCRIPTION
+           "The information regarding a single neighbor."
+       REFERENCE
+          "OSPF Version 2, Section 10  The  Neighbor  Data
+          Structure"
+      INDEX {ospfNbrProcessId, ospfNbrIpAddr, ospfNbrAddressLessIndex }
+      ::= { ospfNbrTable 1 }
+
+OspfNbrEntry ::=
+    SEQUENCE {
+		ospfNbrProcessId
+			INTEGER,
+        ospfNbrIpAddr
+            IpAddress,
+        ospfNbrAddressLessIndex
+            InterfaceIndex,
+        ospfNbrRtrId
+            IpAddress,
+        ospfNbrOptions
+            Integer32,
+        ospfNbrPriority
+            INTEGER,
+        ospfNbrState
+            INTEGER,
+        ospfNbrEvents
+            Counter32,
+        ospfNbrLsRetransQLen
+            Gauge32,
+        ospfNbmaNbrStatus
+            RowStatus,
+        ospfNbmaNbrPermanence
+            INTEGER,
+        ospfNbrHelloSuppressed
+            TruthValue
+              }
+
+    ospfNbrProcessId OBJECT-TYPE
+        SYNTAX   INTEGER
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "ospf process id."
+       ::= { ospfNbrEntry 1 }
+
+    ospfNbrIpAddr OBJECT-TYPE
+        SYNTAX   IpAddress
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "The IP address this neighbor is using  in  its
+           IP  Source  Address.  Note that, on addressless
+           links, this will not be 0.0.0.0,  but  the  ad-
+           dress of another of the neighbor's interfaces."
+       ::= { ospfNbrEntry 2 }
+
+
+    ospfNbrAddressLessIndex OBJECT-TYPE
+        SYNTAX   InterfaceIndex
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "On an interface having an  IP  Address,  zero.
+           On  addressless  interfaces,  the corresponding
+           value of ifIndex in the Internet Standard  MIB.
+           On  row  creation, this can be derived from the
+           instance."
+       ::= { ospfNbrEntry 3 }
+
+
+    ospfNbrRtrId OBJECT-TYPE
+        SYNTAX   IpAddress
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "A 32-bit integer (represented as a type  IpAd-
+           dress)  uniquely  identifying  the  neighboring
+           router in the Autonomous System."
+       DEFVAL   { '00000000'H }    -- 0.0.0.0
+       ::= { ospfNbrEntry 4 }
+
+
+    ospfNbrOptions OBJECT-TYPE
+        SYNTAX   Integer32
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "A Bit Mask corresponding to the neighbor's op-
+           tions field.
+
+           Bit 0, if set, indicates that the  system  will
+           operate  on  Type of Service metrics other than
+           TOS 0.  If zero, the neighbor will  ignore  all
+           metrics except the TOS 0 metric.
+
+           Bit 1, if set, indicates  that  the  associated
+           area  accepts and operates on external informa-
+           tion; if zero, it is a stub area.
+
+           Bit 2, if set, indicates that the system is ca-
+           pable  of routing IP Multicast datagrams; i.e.,
+           that it implements the Multicast Extensions  to
+           OSPF.
+
+           Bit 3, if set, indicates  that  the  associated
+           area  is  an  NSSA.  These areas are capable of
+           carrying type 7 external advertisements,  which
+           are  translated into type 5 external advertise-
+           ments at NSSA borders."
+       REFERENCE
+          "OSPF Version 2, Section 12.1.2 Options"
+      DEFVAL { 0 }
+      ::= { ospfNbrEntry 5 }
+
+
+    ospfNbrPriority OBJECT-TYPE
+        SYNTAX   INTEGER
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "The priority of this neighbor in the designat-
+           ed router election algorithm.  The value 0 sig-
+           nifies that the neighbor is not eligible to be-
+           come  the  designated router on this particular
+           network."
+       DEFVAL { 1 }
+       ::= { ospfNbrEntry 6 }
+
+
+    ospfNbrState OBJECT-TYPE
+        SYNTAX   INTEGER    {
+                    down (1),
+                    attempt (2),
+                    init (3),
+                    twoWay (4),
+                    exchangeStart (5),
+                    exchange (6),
+                    loading (7),
+                    full (8)
+                  }
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "The State of the relationship with this Neigh-
+           bor."
+       REFERENCE
+          "OSPF Version 2, Section 10.1 Neighbor States"
+      DEFVAL   { down }
+      ::= { ospfNbrEntry 7 }
+
+
+    ospfNbrEvents OBJECT-TYPE
+        SYNTAX   Counter32
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "The number of times this neighbor relationship
+           has changed state, or an error has occurred."
+       ::= { ospfNbrEntry 8 }
+
+
+    ospfNbrLsRetransQLen OBJECT-TYPE
+        SYNTAX   Gauge32
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "The  current  length  of  the   retransmission
+           queue."
+       ::= { ospfNbrEntry 9 }
+
+
+    ospfNbmaNbrStatus OBJECT-TYPE
+        SYNTAX   RowStatus
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "This variable displays the status of  the  en-
+           try.  Setting it to 'invalid' has the effect of
+           rendering it inoperative.  The internal  effect
+           (row removal) is implementation dependent."
+       ::= { ospfNbrEntry 10 }
+
+
+    ospfNbmaNbrPermanence OBJECT-TYPE
+        SYNTAX   INTEGER    {
+                    dynamic (1),        -- learned through protocol
+                    permanent (2)       -- configured address
+                  }
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "This variable displays the status of  the  en-
+           try.   'dynamic'  and  'permanent' refer to how
+           the neighbor became known."
+       DEFVAL { permanent }
+       ::= { ospfNbrEntry 11 }
+
+
+    ospfNbrHelloSuppressed OBJECT-TYPE
+        SYNTAX   TruthValue
+        MAX-ACCESS   read-only
+        STATUS   current
+        DESCRIPTION
+           "Indicates whether Hellos are being  suppressed
+           to the neighbor"
+       ::= { ospfNbrEntry 12 }
+
+       
 --********************************************************************************************************
 --********************************************************************************************************  
 
@@ -19913,12 +20538,133 @@ ntpEntObjectsGroup2 OBJECT-GROUP
 --        "A collection of notifications for the NTP MIB"
 --    ::= { ntpEntGroups 3 }
  
+--
+-- ntpClient
+--
+ntpClient OBJECT IDENTIFIER ::= { ntpSnmpMIB 7 }
+
+--xxx.100.25.7.1
+ntpEnable OBJECT-TYPE
+    SYNTAX  INTEGER{
+                disable(0),
+                enable(1)
+            }
+            MAX-ACCESS  read-write
+            STATUS  current
+            DESCRIPTION
+                "Enable or disable ntp client."
+            ::= {ntpClient 1 }
+
+--xxx.100.25.7.2		
+ntpSynInterval OBJECT-TYPE
+    SYNTAX  INTEGER (1..3600)
+            MAX-ACCESS  read-write
+            STATUS  current
+            DESCRIPTION
+                "set ntp query interval."
+            ::= {ntpClient 2 } 
+			
+-- The NTP Server List Table
+--xxx.100.25.7.3
+ntpServerTable OBJECT-TYPE
+    SYNTAX     SEQUENCE OF NtpServerEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+           "The ntp server list table which consists of a sequence of 'ntpServerEntry' items which describe
+           the configured ntp server IP information."
+    ::= { ntpClient 3 }
+    
+--xxx.100.25.7.3.1
+ntpServerEntry OBJECT-TYPE
+    SYNTAX     NtpServerEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+            "An entry in the ntpServerTable containing the ntp server IP."
+    INDEX      { ntpServer }
+    ::= {ntpServerTable 1 }
+
+NtpServerEntry
+        ::= SEQUENCE
+            {
+                ntpServer		    IpAddress,
+                ntpServerStatus	    INTEGER
+            }
+            
+--xxx.100.25.7.3.1.1
+ntpServer   OBJECT-TYPE
+            SYNTAX      IpAddress 
+            MAX-ACCESS  read-write
+            STATUS      current
+            DESCRIPTION
+                "The ntp server IP address."
+            ::= { ntpServerEntry 1}                         
+
+--xxx.100.25.7.3.1.3.2          
+ntpServerStatus OBJECT-TYPE
+            SYNTAX  INTEGER
+            	    {
+               		  active(1),
+               		  destroy(2)
+            	    }
+            MAX-ACCESS  read-write
+            STATUS  current
+            DESCRIPTION
+                "Current state of the ntp server."
+            ::= { ntpServerEntry  2 }                                                      
+            
 --********************************************************************************************************
 --********************************************************************************************************              
 
 -- (xxx.100.26)   priPoeConfig group
   		    
 --xxx.100.26.1
+
+poeGlobalConfigTable OBJECT-TYPE
+        SYNTAX  SEQUENCE OF PoeGlobalConfigEntry
+        MAX-ACCESS  not-accessible
+        STATUS  current
+        DESCRIPTION
+            " The power inline global configuration table"
+        ::= { priPoeConfig 1 }
+        
+--xxx.100.26.1.1
+    poeGlobalConfigEntry OBJECT-TYPE
+        SYNTAX  PoeGlobalConfigEntry
+        MAX-ACCESS  not-accessible
+        STATUS  current
+        DESCRIPTION
+            " The power inline global configuration."
+        INDEX   { poeSlotIndex }
+        ::= { poeGlobalConfigTable 1 }        
+
+    PoeGlobalConfigEntry
+        ::= SEQUENCE
+            {
+                poeSlotIndex               INTEGER,
+                poeSystemEnable              INTEGER,
+                poeMaxPower	           INTEGER,
+                poePoliceEnable	           INTEGER,  
+                poeLegacyEnable        INTEGER,
+		poeDisconnect		INTEGER,
+                poeCurrentPower      INTEGER,
+                poePortMode		   INTEGER,
+                poeSoftwareVersion		   DisplayString,
+		poeHardwareVersion		   DisplayString
+            }
+            
+--xxx.100.26.1.1.1
+poeSlotIndex OBJECT-TYPE
+        SYNTAX      INTEGER
+        MAX-ACCESS  not-accessible
+        STATUS      current
+        DESCRIPTION 
+            "The power inline member index."
+        ::= { poeGlobalConfigEntry 1 }	
+        
+		
+--xxx.100.26.1.1.2		
 poeSystemEnable OBJECT-TYPE
     SYNTAX  INTEGER
 	    {
@@ -19929,18 +20675,18 @@ poeSystemEnable OBJECT-TYPE
     STATUS  current
     DESCRIPTION
         " The power inline global switch. Enable expresses it is turned on, while disable indicates that off."
-    ::= { priPoeConfig   1 }
+    ::= { poeGlobalConfigEntry   2 }
     
---xxx.100.26.2
+--xxx.100.26.1.1.3
 poeMaxPower OBJECT-TYPE
     SYNTAX  INTEGER (37..780) 
     MAX-ACCESS  read-write
     STATUS  current
     DESCRIPTION
         " The power inline global available power whitch cannot be exceeded by the total power of all PDs."
-    ::= { priPoeConfig   2 } 
+    ::= { poeGlobalConfigEntry   3 } 
     
---xxx.100.26.3
+--xxx.100.26.1.1.4
 poePoliceEnable OBJECT-TYPE
     SYNTAX  INTEGER
 	    {
@@ -19951,9 +20697,9 @@ poePoliceEnable OBJECT-TYPE
     STATUS  current
     DESCRIPTION
         " The power inline power mamagement switch. Enable expresses it is in priority-policy mode, while disable indicates that in first-in-first-get mode."
-    ::= { priPoeConfig   3 }  
+    ::= { poeGlobalConfigEntry   4 }  
     
---xxx.100.26.4
+--xxx.100.26.1.1.5
 poeLegacyEnable OBJECT-TYPE
     SYNTAX  INTEGER
 	    {
@@ -19964,9 +20710,9 @@ poeLegacyEnable OBJECT-TYPE
     STATUS  current
     DESCRIPTION
         " The power inline nonstandard PD detect switch. Enable expresses nonstandard PD can be detected, while disable indicates that cannot be detected."
-    ::= { priPoeConfig   4 } 
+    ::= { poeGlobalConfigEntry   5 } 
     
---xxx.100.26.5
+--xxx.100.26.1.1.6
 poeDisconnect OBJECT-TYPE
     SYNTAX  INTEGER
 	    {
@@ -19977,18 +20723,18 @@ poeDisconnect OBJECT-TYPE
     STATUS  current
     DESCRIPTION
         " The power inline disconnection mode."
-    ::= { priPoeConfig  5 }   
+    ::= { poeGlobalConfigEntry  6 }   
     
---xxx.100.26.6
+--xxx.100.26.1.1.7
 poeCurrentPower OBJECT-TYPE
     SYNTAX  INTEGER
     MAX-ACCESS  read-only
     STATUS  current
     DESCRIPTION
         " The power inline current export power. It is a real time value."
-    ::= { priPoeConfig   6 } 
+    ::= { poeGlobalConfigEntry   7 } 
     
---xxx.100.26.7
+--xxx.100.26.1.1.8
 poePortMode OBJECT-TYPE
         SYNTAX      INTEGER
  	    {
@@ -19999,36 +20745,36 @@ poePortMode OBJECT-TYPE
         STATUS      current
         DESCRIPTION 
         " The power inline power supply mode."
-        ::= { priPoeConfig 7 }        
+        ::= { poeGlobalConfigEntry 8 }        
     
---xxx.100.26.8
+--xxx.100.26.1.1.9
 poeSoftwareVersion OBJECT-TYPE
     SYNTAX  DisplayString (SIZE(1..32))
     MAX-ACCESS  read-only
     STATUS  current
     DESCRIPTION
         " The power inline software version."
-    ::= { priPoeConfig   8 }  
+    ::= { poeGlobalConfigEntry   9 }  
     
---xxx.100.26.9
+--xxx.100.26.1.1.10
 poeHardwareVersion OBJECT-TYPE
     SYNTAX  DisplayString (SIZE(1..32))
     MAX-ACCESS  read-only
     STATUS  current
     DESCRIPTION
         " The power inline hardware version."
-    ::= { priPoeConfig   9 }
+    ::= { poeGlobalConfigEntry   10 }
                                   
---xxx.100.26.10
+--xxx.100.26.2
     poePortConfigTable OBJECT-TYPE
         SYNTAX  SEQUENCE OF PoePortConfigEntry
         MAX-ACCESS  not-accessible
         STATUS  current
         DESCRIPTION
             " The power inline port configuration table"
-        ::= { priPoeConfig 10 }
+        ::= { priPoeConfig 2 }
         
---xxx.100.26.10.1
+--xxx.100.26.2.1
     poePortConfigEntry OBJECT-TYPE
         SYNTAX  PoePortConfigEntry
         MAX-ACCESS  not-accessible
@@ -20052,7 +20798,7 @@ poeHardwareVersion OBJECT-TYPE
                 poePortPdClass		   INTEGER
             }
             
---xxx.100.26.10.1.1
+--xxx.100.26.2.1.1
 poePortIndex OBJECT-TYPE
         SYNTAX      INTEGER
         MAX-ACCESS  not-accessible
@@ -20061,7 +20807,7 @@ poePortIndex OBJECT-TYPE
             "The power inline port index."
         ::= { poePortConfigEntry 1 }	
         
---xxx.100.26.10.1.2
+--xxx.100.26.2.1.2
 poePortStatus OBJECT-TYPE
         SYNTAX      INTEGER
  	    {		         	
@@ -20076,7 +20822,7 @@ poePortStatus OBJECT-TYPE
         auto-mode,enableStatic(2) turn on the force-mode."
         ::= { poePortConfigEntry 2 } 
         
---xxx.100.26.10.1.3
+--xxx.100.26.2.1.3
 poePortPriority OBJECT-TYPE
         SYNTAX      INTEGER
  	    {
@@ -20090,7 +20836,7 @@ poePortPriority OBJECT-TYPE
         " The power inline port priority."
         ::= { poePortConfigEntry 3 }  
         
---xxx.100.26.10.1.4
+--xxx.100.26.2.1.4
 poePortMaxPower OBJECT-TYPE
         SYNTAX      INTEGER (1..63000)       
         MAX-ACCESS  read-write
@@ -20099,7 +20845,7 @@ poePortMaxPower OBJECT-TYPE
         " The power inline port available power whitch cannot be exceeded by the connected PD."
         ::= { poePortConfigEntry 4 } 
         
---xxx.100.26.10.1.5
+--xxx.100.26.2.1.5
 poePortCurrentPower OBJECT-TYPE
         SYNTAX      INTEGER        
         MAX-ACCESS  read-only
@@ -20108,7 +20854,7 @@ poePortCurrentPower OBJECT-TYPE
         " The power inline port used power. It is a real time value."
         ::= { poePortConfigEntry 5 }    
         
---xxx.100.26.10.1.6
+--xxx.100.26.2.1.6
 poePortCurrentCurrent OBJECT-TYPE
         SYNTAX      INTEGER        
         MAX-ACCESS  read-only
@@ -20117,7 +20863,7 @@ poePortCurrentCurrent OBJECT-TYPE
         " The power inline port export current. It is a real time value."
         ::= { poePortConfigEntry 6 }  
         
---xxx.100.26.10.1.7
+--xxx.100.26.2.1.7
 poePortCurrentVoltage OBJECT-TYPE
         SYNTAX      INTEGER        
         MAX-ACCESS  read-only
@@ -20126,7 +20872,7 @@ poePortCurrentVoltage OBJECT-TYPE
         " The power inline port export voltage. It is a real time value."
         ::= { poePortConfigEntry 7 }
         
---xxx.100.26.10.1.8
+--xxx.100.26.2.1.8
 poePortPdStatus OBJECT-TYPE
         SYNTAX      INTEGER
         {
@@ -20143,7 +20889,7 @@ poePortPdStatus OBJECT-TYPE
         faulty(3):error, deny(4):power is low or high, force(5):force power."
         ::= { poePortConfigEntry 8 } 
         
---xxx.100.26.10.1.9
+--xxx.100.26.2.1.9
 poePortPdClass OBJECT-TYPE
         SYNTAX      INTEGER        
         MAX-ACCESS  read-only
@@ -24600,7 +25346,266 @@ fdbMacCounterTimeStamp   OBJECT-TYPE
 
 --zhengmr end 
 
+-----------------------------------------------------------------------------------
+--wangysn 2022.05.07
+--xxx.100.41 fdbMacQuery       
+--***************************************
+--fdbMacQuery
+--***************************************
+ 
+--xxx.100.41.1  fdbMacQueryIndexMacVlan
+fdbMacQueryIndexMacVlan OBJECT-TYPE
+        SYNTAX  INTEGER
+        MAX-ACCESS  read-write
+        STATUS      current
+        DESCRIPTION "Config fdb mac query vlan index."
+        ::= { fdbMacQuery 1 }    
+
+ --xxx.100.41.2  fdbMacQueryIndexPortName
+fdbMacQueryIndexPortName OBJECT-TYPE
+        SYNTAX      DisplayString(SIZE (1..64))
+        MAX-ACCESS  read-write
+        STATUS      current
+        DESCRIPTION "Config fdb mac query portname index."
+        ::= { fdbMacQuery 2 }    
+
+--xxx.100.41.3  fdbMacQueryTable
+fdbMacQueryTable  OBJECT-TYPE
+    SYNTAX     SEQUENCE OF FdbMacQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+           " Fdb mac address information table."
+    ::= { fdbMacQuery 3 }
+--xxx.100.41.3.1    
+fdbMacQueryEntry OBJECT-TYPE
+    SYNTAX     FdbMacQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+            "Fdb mac address information entry."
+	INDEX {fdbMacQueryMacAddress}
+    ::= { fdbMacQueryTable 1 }
+
+FdbMacQueryEntry
+	::= SEQUENCE
+		{
+			fdbMacQueryMacAddress			DisplayString,
+			fdbMacQueryMacPort				DisplayString,       
+			fdbMacQueryMacVlan				INTEGER		
+		}
+
+
+--xxx.100.41.3.1.1
+fdbMacQueryMacAddress  OBJECT-TYPE
+            SYNTAX      DisplayString(SIZE (1..64))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Fdb mac address."
+            ::= { fdbMacQueryEntry 1 }
+			
+--xxx.100.41.3.1.2
+fdbMacQueryMacPort  OBJECT-TYPE
+            SYNTAX      DisplayString(SIZE (1..64))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Fdb mac port name."
+            ::= { fdbMacQueryEntry 2 }	
+
+--xxx.100.41.3.1.3
+fdbMacQueryMacVlan  OBJECT-TYPE
+            SYNTAX      INTEGER
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Fdb mac vlan."
+            ::= { fdbMacQueryEntry 3 }				
+
+--wangysn end 
+
 --********************************************************************************************************
+
+--********************************************************************************************************
+--wangysn 2023.03.13
+--xxx.100.42 vplsMacCntQuery       
+--***************************************
+--vplsMacCntQuery
+--***************************************
+
+ --xxx.100.42.1  vplsMacCntQueryIndexName
+vplsMacCntQueryIndexName OBJECT-TYPE
+        SYNTAX      DisplayString(SIZE (1..64))
+        MAX-ACCESS  read-write
+        STATUS      current
+        DESCRIPTION "Config vpls mac count query vpnname index."
+        ::= { vplsMacCntQuery 1 }    
+
+--xxx.100.42.2  vplsMacCntQueryTable
+vplsMacCntQueryTable  OBJECT-TYPE
+    SYNTAX     SEQUENCE OF VplsMacCntQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+           " vpls mac count information table."
+    ::= { vplsMacCntQuery 2 }
+--xxx.100.42.2.1    
+vplsMacCntQueryEntry OBJECT-TYPE
+    SYNTAX     VplsMacCntQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+            "vpls mac count information entry."
+	INDEX {vplsMacCntQueryVfiName}
+    ::= { vplsMacCntQueryTable 1 }
+
+VplsMacCntQueryEntry
+	::= SEQUENCE
+		{
+			vplsMacCntQueryVfiName			DisplayString,
+			vplsMacCntQueryVfiMacCnt		INTEGER,       
+			vplsMacCntQueryVfiLocalMacCnt	INTEGER,		
+			vplsMacCntQueryVfiRemoteMacCnt	INTEGER		
+		}
+
+--xxx.100.42.2.1.1
+vplsMacCntQueryVfiName  OBJECT-TYPE
+            SYNTAX      DisplayString(SIZE (1..64))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "vfi name."
+            ::= { vplsMacCntQueryEntry 1 }
+			
+--xxx.100.42.2.1.2
+vplsMacCntQueryVfiMacCnt  OBJECT-TYPE
+            SYNTAX      INTEGER
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Vfi total mac count."
+            ::= { vplsMacCntQueryEntry 2 }	
+
+--xxx.100.42.2.1.3
+vplsMacCntQueryVfiLocalMacCnt  OBJECT-TYPE
+            SYNTAX      INTEGER
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Vfi local mac count."
+            ::= { vplsMacCntQueryEntry 3 }				
+
+--xxx.100.42.2.1.4
+vplsMacCntQueryVfiRemoteMacCnt  OBJECT-TYPE
+            SYNTAX      INTEGER
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "Vfi remote mac count."
+            ::= { vplsMacCntQueryEntry 4 }		
+
+--wangysn end 
+--********************************************************************************************************
+
+--********************************************************************************************************
+--wangysn 2023.03.15
+--xxx.100.43 isolatePortCfgQuery       
+--***************************************
+--isolatePortCfgQuery
+--***************************************
+
+ --xxx.100.43.1  isolatePortCfgQueryApply
+isolatePortCfgQueryApply OBJECT-TYPE
+		SYNTAX      INTEGER
+                    {
+						all(1),
+						l2(2),
+						l3(3)
+                    }
+        MAX-ACCESS  read-write
+        STATUS      current
+        DESCRIPTION "Config isolate-port isolate mode,default all."
+        ::= { isolatePortCfgQuery 1 }    
+
+--xxx.100.43.2  isolatePortCfgQueryTable
+isolatePortCfgQueryTable  OBJECT-TYPE
+    SYNTAX     SEQUENCE OF IsolatePortCfgQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+           " isolate-port information table."
+    ::= { isolatePortCfgQuery 2 }
+--xxx.100.43.2.1    
+isolatePortCfgQueryEntry OBJECT-TYPE
+    SYNTAX     IsolatePortCfgQueryEntry
+    MAX-ACCESS not-accessible
+    STATUS     current
+    DESCRIPTION
+            "isolate-port information entry."
+	INDEX {isolatePortCfgQueryGroupIndex,isolatePortCfgQueryGroupPortIndex}
+    ::= { isolatePortCfgQueryTable 1 }
+
+IsolatePortCfgQueryEntry
+	::= SEQUENCE
+		{
+			isolatePortCfgQueryGroupIndex			INTEGER,
+			isolatePortCfgQueryGroupPortIndex		INTEGER,
+			isolatePortCfgQueryGroupName			DisplayString,
+			isolatePortCfgQueryGroupSwitchport		DisplayString,       
+			isolatePortCfgQueryGroupStatus			INTEGER	
+		}
+
+--xxx.100.43.2.1.1
+isolatePortCfgQueryGroupIndex OBJECT-TYPE
+        SYNTAX      INTEGER
+        MAX-ACCESS  not-accessible
+        STATUS      current
+        DESCRIPTION "isolate-port group index "
+        ::= { isolatePortCfgQueryEntry 1 }
+
+--xxx.100.43.2.1.2
+isolatePortCfgQueryGroupPortIndex OBJECT-TYPE
+        SYNTAX      INTEGER
+        MAX-ACCESS  not-accessible
+        STATUS      current
+        DESCRIPTION "isolate-port group port index"
+        ::= { isolatePortCfgQueryEntry 2 }
+
+--xxx.100.43.2.1.3
+isolatePortCfgQueryGroupName  OBJECT-TYPE
+            SYNTAX      DisplayString(SIZE (1..64))
+            MAX-ACCESS  read-write
+            STATUS      current
+            DESCRIPTION
+                "isolate-port group name, name length 1-32."
+            ::= { isolatePortCfgQueryEntry 3 }
+			
+--xxx.100.43.2.1.4
+isolatePortCfgQueryGroupSwitchport  OBJECT-TYPE
+            SYNTAX      DisplayString(SIZE (1..64))
+            MAX-ACCESS  read-write
+            STATUS      current
+            DESCRIPTION
+                "isolate-port group switchport."
+            ::= { isolatePortCfgQueryEntry 4 }
+
+--xxx.100.43.2.1.5
+isolatePortCfgQueryGroupStatus  OBJECT-TYPE
+			SYNTAX      INTEGER
+						{            	    
+							active(1),
+							destroy(2)
+						}  
+            MAX-ACCESS  read-write
+            STATUS      current
+            DESCRIPTION
+                "isolate-port group status."
+            ::= { isolatePortCfgQueryEntry 5 }
+
+--wangysn end 
+--********************************************************************************************************
+
 --******************************************************************************************************** 
 --xxx.100.200 Private LLDP Info
 
@@ -25094,6 +26099,26 @@ rateViolationNoShutdownPort NOTIFICATION-TYPE
                             ::= { portGroup 3 } 
 --******************************************************************************************************** 
 --trap  
+--xxx.101.107 
+    macNotification              OBJECT IDENTIFIER ::= { notifications 107 }    
+--******************************************************************************************************** 
+--xxx.101.107.1
+    macNotificationAdd NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "MAC address added on this port."
+                            ::= { macNotification 1 }
+--xxx.101.107.2  
+    macNotificationDelete NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "MAC address removed from this port."
+                            ::= { macNotification 2 } 
+--xxx.101.107.3  
+    macNotificationMove NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "MAC address moved to another port."
+                            ::= { macNotification 3 } 
+--******************************************************************************************************** 
+--trap  
 --xxx.101.110 
     transceiverMonitor  OBJECT 	IDENTIFIER ::= { notifications 110 }    
 --******************************************************************************************************** 
@@ -25202,7 +26227,7 @@ rateViolationNoShutdownPort NOTIFICATION-TYPE
 --xxx.101.114 
     dyingGasp  OBJECT 	IDENTIFIER ::= { notifications 114 }    
 --******************************************************************************************************** 
---xxx.101.110.1
+--xxx.101.114.1
     dyingGaspEvent NOTIFICATION-TYPE
                             STATUS current
                             DESCRIPTION "dying gasp."
@@ -25210,12 +26235,53 @@ rateViolationNoShutdownPort NOTIFICATION-TYPE
 --xxx.101.116
     copyRunningConfig  OBJECT 	IDENTIFIER ::= { notifications 116 }    
 --******************************************************************************************************** 
---xxx.101.110.1
+--xxx.101.116.1
     copyRunningConfigEvent NOTIFICATION-TYPE
                             STATUS current
                             DESCRIPTION "copy running config event."
                             ::= { copyRunningConfig 1 }  
- 
+
+--******************************************************************************************************** 
+--xxx.101.117
+    systemStartReady  OBJECT 	IDENTIFIER ::= { notifications 117 }    
+--******************************************************************************************************** 
+--xxx.101.117.1
+    systemStartReadyEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "system Start Ready event."
+                            ::= { systemStartReady 1 }  
+
+--******************************************************************************************************** 
+--xxx.101.118
+    boardFail  OBJECT 	IDENTIFIER ::= { notifications 118 }    
+--******************************************************************************************************** 
+--xxx.101.118.1
+    boardFailEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "board Fail event."
+                            ::= { boardFail 1 }  
+
+--******************************************************************************************************** 
+--xxx.101.119
+    powerFail  OBJECT 	IDENTIFIER ::= { notifications 119 }    
+--******************************************************************************************************** 
+--xxx.101.119.1
+    powerFailEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "power Fail event."
+                            ::= { powerFail 1 }  
+
+--********************************************************************************************************  
+--trap  
+--xxx.101.120
+    stp                    OBJECT IDENTIFIER ::= { notifications 120 }      
+--******************************************************************************************************** 
+--xxx.101.120.1
+stpPortStateChangeEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "stp,rstp,mstp port state change event."
+                            ::= { stp 1 } 
+
 --********************************************************************************************************  
 --trap  
 --xxx.101.121
@@ -25320,6 +26386,100 @@ reloadInfoTrapOID      NOTIFICATION-TYPE
                             DESCRIPTION "reload information"
                             ::= { reloadInfo 1 }
 --********************************************************************************************************
+--nqaalram  information
+--xxx.101.132
+    nqaAlarm            OBJECT IDENTIFIER ::= { notifications 132 }
+--xxx.101.132.1
+nqaProbeOverthresoldTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "nqa probe overthresold"
+                            ::= { nqaAlarm 1 }
+--xxx.101.132.2
+nqaProbeFailureTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "nqa probe failure"
+                            ::= { nqaAlarm 2 }
+--xxx.101.132.3
+nqaProbeResultChgTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "nqa probe result change"
+                            ::= { nqaAlarm 3 }
+--********************************************************************************************************
+--vsfalarm  information
+--xxx.101.133
+    vsfAlarm            OBJECT IDENTIFIER ::= { notifications 133 }
+--xxx.101.133.1
+vsfSlotPushInTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "vsf slot push in."
+                            ::= { vsfAlarm 1 }
+--xxx.101.133.2
+vsfSlotPullOutTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "vsf slot pull out."
+                            ::= { vsfAlarm 2 }
+--xxx.101.133.3
+vsfSwitchOverTrapOID NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "vsf switchover success."
+                            ::= { vsfAlarm 3 }
 
- END
+ --********************************************************************************************************  
+ --trap  
+--xxx.101.134 
+    ifPacketError  OBJECT 	IDENTIFIER ::= { notifications 134 }    
+--******************************************************************************************************** 
+--xxx.101.134.1
+    ifBerEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "if ber."
+                            ::= { ifPacketError 1 } 
+
+--xxx.101.134.2
+    ifPacketLoseRateEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "if Packet Lose Rate."
+                            ::= { ifPacketError 2 } 
+
+--xxx.101.134.3
+    ifCrcErrorRisingEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "if Crc Error Rising."
+                            ::= { ifPacketError 3 } 
+
+ --********************************************************************************************************  
+ --trap  
+--xxx.101.135 
+    cpuUsedPer  OBJECT 	IDENTIFIER ::= { notifications 135 }    
+--******************************************************************************************************** 
+--xxx.101.135.1
+    cpuUsedPerEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "cpu Used Per."
+                            ::= { cpuUsedPer 1 } 
+
+--********************************************************************************************************       
+--trap  
+--xxx.101.136 
+    memUsedPer  OBJECT 	IDENTIFIER ::= { notifications 136 }    
+--******************************************************************************************************** 
+--xxx.101.136.1
+    memUsedPerEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "mem Used Per."
+                            ::= { memUsedPer 1 }   							
+ 
+--********************************************************************************************************
+--trap  
+--xxx.101.137 
+    elementLocationState  OBJECT 	IDENTIFIER ::= { notifications 137 }    
+--******************************************************************************************************** 
+--xxx.101.137.1
+    elementLocationStateEvent NOTIFICATION-TYPE
+                            STATUS current
+                            DESCRIPTION "element Location State to down."
+                            ::= { elementLocationState 1 }   							
+ 
+--********************************************************************************************************
+END
  

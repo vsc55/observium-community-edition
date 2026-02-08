@@ -1,9 +1,7 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fscfmmi.mib,v 1.18 2013/01/18 11:52:08 siva Exp $
-
 -- ECFM Proprietary MIB Definition 
- 
+
 -- This MIB contains tables used to configure a switch running 
 -- ECFM in addition to the standard MIB.
  
@@ -3034,7 +3032,7 @@ fsMIEcfmMepTransmitLtmFlags OBJECT-TYPE
        "The flags field for LTMs transmitted by the MEP."
     REFERENCE
        "802.1ag clause 12.14.7.4.2:b and 20.37.1"
-    DEFVAL {0}
+    DEFVAL { {useFDBonly} }
     ::= { fsMIEcfmMepEntry 37 }
 
 fsMIEcfmMepTransmitLtmTargetMacAddress OBJECT-TYPE

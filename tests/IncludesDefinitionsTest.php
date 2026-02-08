@@ -1,20 +1,9 @@
 <?php
 
-//define('OBS_DEBUG', 1);
+// Test-specific setup (bootstrap.php handles common setup)
+// Load any specific includes needed for this test suite
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
-
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-//include(dirname(__FILE__) . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/functions.inc.php');
+require_once(__DIR__ . '/bootstrap.php');
 
 class IncludesDefinitionsTest extends \PHPUnit\Framework\TestCase {
 
@@ -38,11 +27,11 @@ class IncludesDefinitionsTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame('PREG_NO_ERROR', $preg_error);
     }
 
-    public function providerOsRegex() {
+    public static function providerOsRegex() {
         global $config;
 
         $array = [];
-        foreach ([ 'os_group', 'os', 'mibs'] as $type) {
+        foreach ([ 'os_group', 'os', 'mibs' ] as $type) {
             foreach ($config[$type] as $name => $entry) {
                 foreach ($entry as $param => $def) {
                     if (in_array($param, [ 'sysDescr', 'sysDescr_regex', 'port_label', 'syslog_msg', 'syslog_program', 'comments' ])) {
@@ -52,11 +41,61 @@ class IncludesDefinitionsTest extends \PHPUnit\Framework\TestCase {
                         }
                     } elseif ($param === 'discovery') {
                         // discovery definition, additional array level
-                        foreach ($def as $disovery) {
-                            foreach ($disovery as $discovery_param => $patterns) {
-                                if (in_array($discovery_param, [ 'sysObjectID', 'os', 'os_group', 'type', 'vendor' ])) { continue; } // All except sysObjectID is regexp
+                        foreach ($def as $discovery) {
+                            foreach ($discovery as $discovery_param => $patterns) {
+                                if (in_array($discovery_param, [ 'sysObjectID', 'os', 'os_group', 'type', 'vendor' ])) {
+                                    // All except sysObjectID is regexp
+                                    continue;
+                                }
                                 foreach ((array)$patterns as $pattern) {
                                     $array[] = [ $type, $name, $param . '->' . $discovery_param, $pattern ];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $array;
+    }
+
+    /**
+     * @dataProvider providerOsOid
+     * @group regex
+     */
+    public function testOsOid($type, $name, $param, $needle) {
+
+        // patterns same as in match_oid_num()
+        $test = preg_match('/^(?:\.?(\d+(\.\d+)+)|\.\d+)\.?$/', $needle);
+        if (!$test) {
+            $test = preg_match('/^(?<start>\.?)\d+(?:\.(\d+|[\d\[\]\-]+|[\d\(\)\|]+|[\d\*]+))*(?<end>\.)?$/', $needle);
+        }
+
+        $this->assertTrue((bool)$test);
+    }
+
+    public static function providerOsOid() {
+        global $config;
+
+        $array = [];
+        foreach ([ 'os_group', 'os' ] as $type) {
+            foreach ($config[$type] as $name => $entry) {
+                foreach ($entry as $param => $def) {
+                    if (in_array($param, [ 'sysObjectID', 'snmpable' ])) {
+                        // simple definitions with Numeric Oid for match_oid_num()
+                        foreach ($def as $oid) {
+                            $array[] = [ $type, $name, $param, $oid ];
+                        }
+                    } elseif ($param === 'discovery') {
+                        // discovery definition, additional array level
+                        foreach ($def as $discovery) {
+                            foreach ($discovery as $discovery_param => $oids) {
+                                if (!in_array($discovery_param, [ 'sysObjectID' ])) {
+                                    continue;
+                                }
+                                foreach ((array)$oids as $oid) {
+                                    $array[] = [ $type, $name, $param . '->' . $discovery_param, $oid ];
                                 }
                             }
                         }
@@ -86,7 +125,7 @@ class IncludesDefinitionsTest extends \PHPUnit\Framework\TestCase {
         }
     }
 
-    public function providerDefinitionPatterns() {
+    public static function providerDefinitionPatterns() {
         $array = [];
 
         $pattern = OBS_PATTERN_IPV4_FULL;
@@ -366,7 +405,7 @@ class IncludesDefinitionsTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame($result, (bool)$test);
     }
 
-    public function providerDefinitionXss() {
+    public static function providerDefinitionXss() {
         $array = [];
 
         // Examples:

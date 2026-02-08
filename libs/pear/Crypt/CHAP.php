@@ -199,7 +199,7 @@ class Crypt_CHAP_MSv1 extends Crypt_CHAP
     {
         $uni = '';
         $str = (string) $str;
-        for ($i = 0; $i < strlen($str); $i++) {
+        for ($i = 0, $iMax = strlen($str); $i < $iMax; $i++) {
             $a = ord($str[$i]) << 8;
             $uni .= sprintf("%X", $a);
         }
@@ -258,35 +258,15 @@ class Crypt_CHAP_MSv1 extends Crypt_CHAP
 
         $hash = str_pad($hash, 21, "\0");
 
-        if (!extension_loaded('mcrypt') && extension_loaded('openssl')) {
-            // added openssl routines for dapphp/radius
-            $key   = $this->_desAddParity(substr($hash, 0, 7));
-            $resp1 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+        // added openssl routines for dapphp/radius
+        $key   = $this->_desAddParity(substr($hash, 0, 7));
+        $resp1 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
 
-            $key   = $this->_desAddParity(substr($hash, 7, 7));
-            $resp2 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+        $key   = $this->_desAddParity(substr($hash, 7, 7));
+        $resp2 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
 
-            $key   = $this->_desAddParity(substr($hash, 14, 7));
-            $resp3 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
-        } else {
-            $td = mcrypt_module_open(MCRYPT_DES, '', MCRYPT_MODE_ECB, '');
-            $iv = mcrypt_create_iv (mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
-            $key = $this->_desAddParity(substr($hash, 0, 7));
-            mcrypt_generic_init($td, $key, $iv);
-            $resp1 = mcrypt_generic($td, $this->challenge);
-            mcrypt_generic_deinit($td);
-
-            $key = $this->_desAddParity(substr($hash, 7, 7));
-            mcrypt_generic_init($td, $key, $iv);
-            $resp2 = mcrypt_generic($td, $this->challenge);
-            mcrypt_generic_deinit($td);
-
-            $key = $this->_desAddParity(substr($hash, 14, 7));
-            mcrypt_generic_init($td, $key, $iv);
-            $resp3 = mcrypt_generic($td, $this->challenge);
-            mcrypt_generic_deinit($td);
-            mcrypt_module_close($td);
-        }
+        $key   = $this->_desAddParity(substr($hash, 14, 7));
+        $resp3 = openssl_encrypt($this->challenge, 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
 
         return $resp1 . $resp2 . $resp3;
     }
@@ -299,7 +279,7 @@ class Crypt_CHAP_MSv1 extends Crypt_CHAP
      */
     function lmPasswordHash($password = null)
     {
-        $plain = isset($password) ? $password : $this->password;
+        $plain = $password ?? $this->password;
 
         $plain = substr(strtoupper($plain), 0, 14);
         while (strlen($plain) < 14) {
@@ -317,23 +297,11 @@ class Crypt_CHAP_MSv1 extends Crypt_CHAP
      */
     function _desHash($plain)
     {
-        if (!extension_loaded('mcrypt') && extension_loaded('openssl')) {
-            // added openssl routines for dapphp/radius
-            $key = $this->_desAddParity($plain);
-            $hash = openssl_encrypt('KGS!@#$%', 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+        // added openssl routines for dapphp/radius
+        $key = $this->_desAddParity($plain);
+        $hash = openssl_encrypt('KGS!@#$%', 'des-ecb', $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
 
-            return $hash;
-        } else {
-            $key = $this->_desAddParity($plain);
-            $td = mcrypt_module_open(MCRYPT_DES, '', MCRYPT_MODE_ECB, '');
-            $iv = mcrypt_create_iv (mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
-            mcrypt_generic_init($td, $key, $iv);
-            $hash = mcrypt_generic($td, 'KGS!@#$%');
-            mcrypt_generic_deinit($td);
-            mcrypt_module_close($td);
-
-            return $hash;
-        }
+        return $hash;
     }
 
     /**
@@ -364,7 +332,7 @@ class Crypt_CHAP_MSv1 extends Crypt_CHAP
                 241,241,242,242,244,244,247,247,248,248,251,251,253,253,254,254);
 
         $bin = '';
-        for ($i = 0; $i < strlen($key); $i++) {
+        for ($i = 0, $iMax = strlen($key); $i < $iMax; $i++) {
             $bin .= sprintf('%08s', decbin(ord($key[$i])));
         }
 

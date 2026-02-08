@@ -73,7 +73,7 @@ kn1000                OBJECT IDENTIFIER ::= { kvmoverip 9  }
 kn9016-9008           OBJECT IDENTIFIER ::= { kvmoverip 10 }
 kn1108v-1116v-trap    OBJECT IDENTIFIER ::= { kvmoverip 11 }
 cn8600-trap           OBJECT IDENTIFIER ::= { kvmoverip 12 }
-knGeneric             OBJECT IDENTIFIER ::= { kvmoverip 13 }
+KNGeneric             OBJECT IDENTIFIER ::= { kvmoverip 13 }
 --kvmoverip layers ends
 
 --poweroverip layers begins

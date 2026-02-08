@@ -147,7 +147,7 @@ foreach ($cefs as $entity => $afis) {
 dbProcessMulti('cef_prefix');
 dbProcessMulti('cef_switching');
 
-foreach ($cefs_db as $cef_id => $ceftmp) {
+foreach ($cefs_db as $ceftmp) {
     dbDelete('cef_switching', '`cef_switching_id` =  ?', [$ceftmp['cef_switching_id']]);
     echo('-');
 }

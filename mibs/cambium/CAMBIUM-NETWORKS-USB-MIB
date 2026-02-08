@@ -14,12 +14,15 @@ IMPORTS
             FROM SNMPv2-TC;
 
 cnUsbMib MODULE-IDENTITY
-    LAST-UPDATED "201903140000Z"     -- March 14, 2019
+    LAST-UPDATED "202406100000Z"     -- June 10, 2024
     ORGANIZATION "Cambium Networks, Inc."
-    CONTACT-INFO "cnnetworks.com"
+    CONTACT-INFO "cambiumnetworks.com"
     DESCRIPTION
-        "This MIB module contains objects related to the 
-        transceiver information support."
+        "This MIB module defines status and control objects
+        related to inserted USB devices."
+
+    REVISION    "202406100000Z" -- June 10, 2024
+    DESCRIPTION "Ver 2: Updated DESCRIPTION clause."
 
     REVISION    "201903140000Z" -- March 14, 2019
     DESCRIPTION "Ver 1:  Initial version."

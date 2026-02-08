@@ -1,24 +1,26 @@
--- Copyright (C) 2008-2012 Aricent Group . All Rights Reserved
+-- Copyright (C) 2018 Aricent Group . All Rights Reserved
 
--- $Id: fssntp.mib,v 1.15 2016/03/11 11:27:10 siva Exp $
+-- $Id: fssntp.mib,v 1.17 2018/05/10 11:04:52 siva Exp $
 
 FSSNTP-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
     OBJECT-TYPE,MODULE-IDENTITY,
-    IpAddress,  Counter32,Unsigned32,Integer32,TimeTicks, enterprises FROM SNMPv2-SMI
-    DisplayString,RowStatus,TruthValue FROM SNMPv2-TC
+    IpAddress,  Counter32,Unsigned32,Integer32, enterprises FROM SNMPv2-SMI
+    DisplayString,RowStatus FROM SNMPv2-TC
     InetAddressType, InetAddress  FROM INET-ADDRESS-MIB;              -- [RFC4001] 
 
 fsSntpMIB MODULE-IDENTITY
-     LAST-UPDATED "202012110000Z"
+     LAST-UPDATED "202301260000Z"
      ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
      CONTACT-INFO "support@aricent.com"
-     DESCRIPTION " This mib module is for SNTP  "
+     DESCRIPTION " This mib module is for SNTP."
+     REVISION "202301260000Z"
+     DESCRIPTION " Were updated mib objects fsSntpAuthKeyType and fsSntpAuthKeyType."
+     REVISION "202301100000Z"
+     DESCRIPTION " Was added mib object fsSntpAuthKeyType."
      REVISION "201209050000Z"
-     DESCRIPTION " This mib module is for SNTP  "
-     REVISION "202012110000Z"
-     DESCRIPTION " Marked fsSntpUnicastServerType as obsolete "
+     DESCRIPTION " This mib module is for SNTP."
      ::= { enterprises futuresoftware(2076) 149} 
 
 fsSntp              OBJECT IDENTIFIER ::= { fsSntpMIB 1 }
@@ -35,10 +37,10 @@ fsSntpGlobalTrace     OBJECT-TYPE
 	MAX-ACCESS    read-write
 	STATUS	      current
 	DESCRIPTION
-		" This is used to enable Trace Statements in SNTP Module.
+		"This object is used to enable Trace Statements in SNTP Module.
 		A four byte integer value is specified for enabling the level
 		of tracing.Each Bit in the four byte integer variable represents
-		a level of Trace. The bits represents the levels as
+		a level of trace. The bits represents the levels as
 		follows: 0 - Init and Shutdown, 1 - Management, 2 - Data Path,
 		3 - Control Plane, 4 - packet Dump, 5 - All resources except
 		buffer, 6 - All Failures, 7 - Buffer.  The remaining
@@ -56,7 +58,7 @@ fsSntpGlobalDebug	 OBJECT-TYPE
 	MAX-ACCESS    read-write
 	STATUS	      current
 	DESCRIPTION
-		" This is used to enable Debug statements in SNTP module.
+		"This object is used to enable Debug statements in SNTP module.
                   A Four byte integer value is specified for enabling the 
                   level of debugging. Each bit in the four byte integer 
                   variable represents a level of debugging. The combination of 
@@ -70,9 +72,9 @@ fsSntpAdminStatus OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "To enable or disable the sntp client module. All configuration will be 
-        acitve only when the SNTP module is enabled"
-    DEFVAL  { disabled } 
+        "This object is used to enable or disable the sntp client module. 
+		All configuration will be acitve only when the SNTP module is enabled."
+    DEFVAL  { enabled }
     ::= { fsSntpScalars 3 }
 
 fsSntpClientVersion  OBJECT-TYPE
@@ -80,10 +82,10 @@ fsSntpClientVersion  OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "The SNTP client module can run in any one version 1, version 2,
-        version 3 or version 4. All the SNTP requests are sent out with the
-        current configured version number. When required, the administrator
-        can change the current version number"
+        "This object specifies that the SNTP client module can run in any one 
+		version 1, version 2,version 3 or version 4. 
+		All the SNTP requests are sent out with the current configured version number. When required, the administrator
+        can change the current version number."
     DEFVAL { version4 }
     ::= { fsSntpScalars 4 }
 
@@ -92,7 +94,9 @@ fsSntpClientAddressingMode  OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " unicast:
+        "This object specifies the Sntp Client Addressing modes
+
+		unicast:
         - SNTP client operates in a point-to-point fashion.  A unicast 
         client sends a request to a designated server at its unicast address
         and expects a reply from which it can determine the time and, 
@@ -134,7 +138,7 @@ fsSntpClientPort     OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "The SNTP client module by default listens on well-know port number 123. 
+        "This object specifies that the SNTP client module by default listens on well-know port number 123. 
          When required, the Administrator can change the SNTP Client port value
          to non-default."
     DEFVAL {123}
@@ -145,7 +149,7 @@ fsSntpTimeDisplayFormat OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " The administrator can view the system time in 12 hr AM/PM or 24 
+        "This object specifies that the administrator can view the system time in 12 hr AM/PM or 24 
         hours format. "
     DEFVAL  { hours } 
     ::= { fsSntpScalars 7 }
@@ -155,8 +159,8 @@ fsSntpAuthKeyId OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "Key Identifier  is an integer identifying the cryptographic key used
-        to generate the message-authentication code"
+        "This object specifies that Key Identifier  is an integer identifying the cryptographic key used
+        to generate the message-authentication code."
      ::= { fsSntpScalars 8 }
 
 fsSntpAuthAlgorithm OBJECT-TYPE
@@ -164,21 +168,20 @@ fsSntpAuthAlgorithm OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "When the NTP authentication scheme is implemented, the Key Identifier
+        "This object specifies, when the NTP authentication scheme is implemented, the Key Identifier
         and Message Digest fields contain the message authentication code (MAC)
-        information. Message Digest-5 (MD5) is the Authentication 
-	algorithm that can be used. Default
-        Authentication supported is none" 
+        information. Message Digest-5 (MD5) is the Authentication algorithm that 
+		can be used. Default Authentication supported is none." 
     DEFVAL  { none } 
      ::= { fsSntpScalars  9 }
  
 fsSntpAuthKey  OBJECT-TYPE
-    SYNTAX     OCTET STRING (SIZE(0..16))
+    SYNTAX     OCTET STRING (SIZE(0..34))
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "Authentication key is cryptographic key that is used to implement NTP
-        Authentication "
+        "This object specifies that Authentication key is cryptographic key that is used to implement NTP
+        Authentication."
      ::= { fsSntpScalars  10 }
 
 fsSntpTimeZone OBJECT-TYPE
@@ -186,10 +189,10 @@ fsSntpTimeZone OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "To set the system time zone with respect to UTC. ie plus indicates
+        "This object is used to set the system time zone with respect to UTC. ie plus indicates
         forward time zone ( ahead of UTC Time eg: +05:30) and minus indicates
         backward time zone (behind UTC time eg: -03:30). The valid format is
-        (+/-)HH:MM"
+        (+/-)HH:MM."
     ::= { fsSntpScalars 11 }
 
  fsSntpDSTStartTime OBJECT-TYPE
@@ -197,7 +200,7 @@ fsSntpTimeZone OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " Daylight saving time (DST) is a system of setting clocks ahead so
+        "This object specifies that Daylight saving time (DST) is a system of setting clocks ahead so
         that both sunrise and sunset occur at a later hour. The effect is
         additional daylight in the evening. Many countries observe DST, 
         although most have their own rules and regulations for when it begins
@@ -205,7 +208,7 @@ fsSntpTimeZone OBJECT-TYPE
         conditions start DST should be lesser than end DST and end DST
         should be revised accordingly after start DST configuration. The Valid 
         format  [weekofmonth-weekofday-month,HH:MM]. 
-        Example:- Third-Mon-Apr,17:30 "   
+        Example:- Third-Mon-Apr,17:30."   
     ::= { fsSntpScalars 12 }
 
  
@@ -214,13 +217,13 @@ fsSntpTimeZone OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " Daylight saving time (DST) is a system of setting clocks ahead so
+        "This object specifies that Daylight saving time (DST) is a system of setting clocks ahead so
         that both sunrise and sunset occur at a later hour. The effect is
         additional daylight in the evening. Many countries observe DST, 
         although most have their own rules and regulations for when it begins
         and ends. The dates of DST may change from year to year. The Valid 
         format  [weekofmonth-weekofday-month,HH:MM].
-        Example:- Last-Sun-Nov,16:20 "   
+        Example:- Last-Sun-Nov,16:20."   
    ::= { fsSntpScalars 13 }
 
 fsSntpClientUptime OBJECT-TYPE
@@ -228,7 +231,7 @@ fsSntpClientUptime OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "The uptime of the SNTP client entity in seconds."
+        "This object specifies the uptime of the SNTP client entity in seconds."
     ::= { fsSntpScalars 14 }
 
 fsSntpClientStatus OBJECT-TYPE
@@ -237,13 +240,14 @@ fsSntpClientStatus OBJECT-TYPE
                             notSynchronized(2),
                             noneConfigured(3),
                             syncToLocal(4),
-                            syncToRemoteServer(5),
+                            syncToPrimaryServer(5),
+                            syncToSecondaryServer(6),
                             unknown(99)
                         }
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "The status of the SNTP client as integer value."
+        "This object specifies the status of the SNTP client as integer value."
     ::= { fsSntpScalars 15 }
 
 fsSntpServerReplyRxCount OBJECT-TYPE
@@ -251,7 +255,7 @@ fsSntpServerReplyRxCount OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS	    current
     DESCRIPTION
-        "Number of SNTP server replies that has received by SNTP client."
+        "This object specifies the number of SNTP server replies that has received by SNTP client."
     ::= { fsSntpScalars 16 }
 
 fsSntpClientReqTxCount OBJECT-TYPE
@@ -259,7 +263,7 @@ fsSntpClientReqTxCount OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "Number of requests the SNTP client has Transmitted."
+        "This object specifies the number of requests the SNTP client has Transmitted."
     ::= { fsSntpScalars 17 }
 
 fsSntpPktInDiscardCount OBJECT-TYPE
@@ -267,9 +271,20 @@ fsSntpPktInDiscardCount OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "Number of replies the SNTP client has rejected."
+        "This object specifies the number of replies the SNTP client has rejected."
     ::= { fsSntpScalars 18 }
 
+    fsSntpAuthKeyType OBJECT-TYPE
+    SYNTAX INTEGER {
+            unencrypted-password (0),
+            type-7 (7)
+            }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "This is used to indicate how the authentification key type must be interpreted."
+    DEFVAL { unencrypted-password }
+    ::= { fsSntpScalars 19 }
 
 -- Unicast Objects
 
@@ -278,7 +293,7 @@ fsSntpServerAutoDiscovery  OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " The SNTP servers can be configured or discovered. When Auto Discover
+        "This object specifies that the SNTP servers can be configured or discovered. When Auto Discover
         is disabled, the SNTP client gets the time from the configured servers.
         When Auto Discover is enabled, the SNTP client gets the time from servers
         learnt through DHPC client. This is valid only in Unicast
@@ -292,7 +307,7 @@ fsSntpUnicastPollInterval OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of seconds between successive SNTP request transmissions. The
+        "This object specifies the number of seconds between successive SNTP request transmissions. The
 	Poll interval value is expressed as exponent of two."
     DEFVAL { 64 } 
     ::= {fsSntpUnicast 2 }
@@ -303,8 +318,8 @@ fsSntpUnicastPollTimeout OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of seconds to wait for a response from a SNTP server
-        before considering the attempt to have 'timed out' "
+        "This object specifies the number of seconds to wait for a response from a SNTP server
+        before considering the attempt to have 'timed out'."
     DEFVAL { 5 }
     ::= {fsSntpUnicast 3 }
 
@@ -313,7 +328,7 @@ fsSntpUnicastPollRetry OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of times to retry a request to a SNTP server
+        "This object specifies the number of times to retry a request to a SNTP server
         that has not successfully responded.  For example, assume this object
         has been SET to a value of 2.  When the SNTP client queries a given
         server it will send 1 SNTP request frame. If that original attempt
@@ -331,7 +346,7 @@ fsSntpUnicastServerTable OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-            "The table contains configured SNTP/NTP servers in the system."
+        "This object specifies the table contains configured SNTP/NTP servers in the system."
     ::= {fsSntpUnicast 5 }
 
 fsSntpUnicastServerEntry  OBJECT-TYPE
@@ -339,7 +354,7 @@ fsSntpUnicastServerEntry  OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-            " Each entry in the table contains necessary information to
+        "This object specifies that each entry in the table contains necessary information to
             send SNTP request to the servers."
          INDEX {fsSntpUnicastServerAddrType, fsSntpUnicastServerAddr }
     ::= { fsSntpUnicastServerTable 1 }
@@ -360,8 +375,8 @@ fsSntpUnicastServerAddrType OBJECT-TYPE
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
-        "The Address type of the unicast server in the Unicast Addressing mode.
-        It can be IPv4 or IPv6 unicast address or DNS"
+        "This object specifies the Address type of the unicast server in the Unicast Addressing mode.
+        It can be IPv4 or IPv6 unicast address or DNS."
     ::= { fsSntpUnicastServerEntry 1 }
 
 fsSntpUnicastServerAddr OBJECT-TYPE
@@ -379,7 +394,7 @@ fsSntpUnicastServerVersion OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "the sntp version supported by the server"
+        "This object specifies the sntp version supported by the server."
     ::= { fsSntpUnicastServerEntry 3 }
 
 fsSntpUnicastServerPort OBJECT-TYPE
@@ -387,21 +402,19 @@ fsSntpUnicastServerPort OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "the sntp port on which the server is UP"
+        "This object specifies the sntp port on which the server is UP."
     ::= { fsSntpUnicastServerEntry 4 }
 
 fsSntpUnicastServerType OBJECT-TYPE
     SYNTAX      INTEGER { primary  (1), secondary (2) }
     MAX-ACCESS  read-write
-    STATUS      obsolete
+    STATUS      current
     DESCRIPTION
-        "In Unicast addressing mode, we can have primary and secondary servers.
+        "This object specifies, In Unicast addressing mode, we can have primary and secondary servers.
         This flag is to distinguish between primary and secondary server.
         SNTP client sends request to different servers until it receives
         successful response. This flag tells the order in which to query the
-        servers.
-
-        Since 202012110000Z this field marked as obsolete."
+        servers."
     ::= { fsSntpUnicastServerEntry 5 }
 
 fsSntpUnicastServerLastUpdateTime OBJECT-TYPE
@@ -409,7 +422,7 @@ fsSntpUnicastServerLastUpdateTime OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "The local time when the system time was successful"
+        "This object specifies the local time when the system time was successful."
     ::= { fsSntpUnicastServerEntry 6 }
 
 fsSntpUnicastServerTxRequests OBJECT-TYPE
@@ -417,7 +430,7 @@ fsSntpUnicastServerTxRequests OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "The number of SNTP request sent in the Unicast addressing mode."
+        "This object specifies the number of SNTP request sent in the Unicast addressing mode."
     ::= { fsSntpUnicastServerEntry 7 }
 
 fsSntpUnicastServerRowStatus OBJECT-TYPE
@@ -425,8 +438,8 @@ fsSntpUnicastServerRowStatus OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION  
-        " The activation of a row adds server entry. The destruction of a row
-        removes server entry"
+        "This object specifies that the activation of a row adds server entry. The destruction of a row
+        removes server entry."
     ::= {fsSntpUnicastServerEntry 8}
 
 -- Broadcast objects
@@ -436,9 +449,9 @@ fsSntpSendRequestInBcastMode	OBJECT-TYPE
     MAX-ACCESS	read-write
     STATUS	current
     DESCRIPTION
-        "when enabled the sntp request will be sent to the broadcast server to
+        "This object specifies, when enabled the sntp request will be sent to the broadcast server to
         calculate the dealy time. This is valid only in broadcast
-        addressing mode"
+        addressing mode."
     DEFVAL { disabled }
     ::= { fsSntpBroadcast 1 }
 
@@ -448,9 +461,9 @@ fsSntpPollTimeoutInBcastMode OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of seconds to wait for a response from a SNTP server before
+        "This object specifies the number of seconds to wait for a response from a SNTP server before
         considering the attempt to have 'timed out'. This is valid only in
-        broadcast addressing mode "
+        broadcast addressing mode."
     DEFVAL { 5 }
     ::= {fsSntpBroadcast 2 }
 
@@ -460,9 +473,9 @@ fsSntpDelayTimeInBcastMode	OBJECT-TYPE
     MAX-ACCESS	read-write
     STATUS	current
     DESCRIPTION
-        " The broadcast server may send reply for the request. When the SNTP
+        "This object specifies that the broadcast server may send reply for the request. When the SNTP
         client does get response from the boradcast server,
-        this value is taken as delay time "
+        this value is taken as delay time."
     DEFVAL { 8000 }
     ::= { fsSntpBroadcast 3 }
 
@@ -471,7 +484,7 @@ fsSntpPrimaryServerAddrInBcastMode OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        " The primary server IP address learnt in Broadcast addressing mode "
+        "This object specifies the primary server IP address learnt in Broadcast addressing mode."
     ::= { fsSntpBroadcast 4 }
 
 fsSntpSecondaryServerAddrInBcastMode OBJECT-TYPE
@@ -479,7 +492,7 @@ fsSntpSecondaryServerAddrInBcastMode OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        " The secondary server IP address learnt in Broadcast addressing mode"
+        "This object specifies the secondary server IP address learnt in Broadcast addressing mode."
     ::= {fsSntpBroadcast 5 }
 
 
@@ -490,7 +503,7 @@ fsSntpSendRequestInMcastMode	OBJECT-TYPE
     MAX-ACCESS	read-write
     STATUS	current
     DESCRIPTION
-        " when enabled the sntp request will be sent to the multicast server to
+        "This object specifies, when enabled the sntp request will be sent to the multicast server to
         calculate the dealy time."
     DEFVAL { disabled }
     ::= { fsSntpMulticast 1 }
@@ -501,8 +514,8 @@ fsSntpPollTimeoutInMcastMode OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of seconds to wait for a response from a SNTP
-        server before considering the attempt to have 'timed out'"
+        "This object specifies the number of seconds to wait for a response from a SNTP
+        server before considering the attempt to have 'timed out'."
     DEFVAL { 5 }
     ::= {fsSntpMulticast 2 }
 
@@ -512,8 +525,8 @@ fsSntpDelayTimeInMcastMode	OBJECT-TYPE
     MAX-ACCESS	read-write
     STATUS	current
     DESCRIPTION
-        " this is taken as delay time  when there is no response from the
-        multicast server  "
+        "This object specifies that this time is taken as delay time  when there is no response from the
+        multicast server."
     DEFVAL { 8000 }
     ::= { fsSntpMulticast 3 }
 
@@ -522,7 +535,7 @@ fsSntpGrpAddrTypeInMcastMode OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " The multicast group address can be configured by the administrator."
+        "This object specifies that the multicast group address can be configured by the administrator."
     ::= {fsSntpMulticast  4 }
 
 fsSntpGrpAddrInMcastMode OBJECT-TYPE
@@ -530,7 +543,7 @@ fsSntpGrpAddrInMcastMode OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        " The multicast group address can be configured by the administrator."
+        "This object specifies that the multicast group address can be configured by the administrator."
     ::= {fsSntpMulticast 5 }
 
 fsSntpPrimaryServerAddrTypeInMcastMode OBJECT-TYPE
@@ -538,8 +551,8 @@ fsSntpPrimaryServerAddrTypeInMcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        "The address type of the primary server learnt in Multicast addressing
-        mode"
+        "This object specifies the address type of the primary server learnt in Multicast addressing
+        mode."
     ::= {fsSntpMulticast  6 }
 
 fsSntpPrimaryServerAddrInMcastMode OBJECT-TYPE
@@ -547,7 +560,7 @@ fsSntpPrimaryServerAddrInMcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        " The primary server IP address learnt in Multicast addressing mode "
+        "This object specifies the primary server IP address learnt in Multicast addressing mode."
     ::= { fsSntpMulticast  7 }
 
 fsSntpSecondaryServerAddrTypeInMcastMode OBJECT-TYPE
@@ -555,8 +568,8 @@ fsSntpSecondaryServerAddrTypeInMcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        "The address type of the secondary server learnt in Multicast 
-        addressing mode"
+        "This object specifies the address type of the secondary server learnt in Multicast 
+        addressing mode."
     ::= { fsSntpMulticast  8 }
 
 fsSntpSecondaryServerAddrInMcastMode OBJECT-TYPE
@@ -564,7 +577,7 @@ fsSntpSecondaryServerAddrInMcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        " The secondary server IP address learnt in Multicast addressing mode "
+        "This object specifies the secondary server IP address learnt in Multicast addressing mode."
     ::= { fsSntpMulticast  9 }
 
 -- Anycast Objects
@@ -590,7 +603,7 @@ fsSntpAnycastPollTimeout OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of seconds to wait for a response from a SNTP server 
+        "This object specifies the number of seconds to wait for a response from a SNTP server 
         before considering the attempt to have 'timed out'."
     DEFVAL { 5 }
     ::= {fsSntpAnycast 2 }
@@ -600,14 +613,14 @@ fsSntpAnycastPollRetry OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "The number of times to retry a request to a SNTP server
+        "This object specifies the number of times to retry a request to a SNTP server
         that has not successfully responded.
         For example, assume this object has been SET to a value of 2.
         When the SNTP client queries a given server it will send 1 SNTP
         request frame.  If that original attempt fails, the client will
         retry up to a maximum of 2 more times before giving up and 
         attempting the new server by sending request to the broadcast 
-	or multicast address"
+	    or multicast address."
     DEFVAL { 3 }
     ::= { fsSntpAnycast 3 }
 
@@ -616,7 +629,7 @@ fsSntpServerTypeInAcastMode  OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "To set the type of servers to be used in Manycast addressing mode
+        "This object is used to set the type of servers to be used in Manycast addressing mode
 	 i.e to find a manycast server the client can send the request to either
 	 broadcast or multicast address."
     DEFVAL  { broadcast } 
@@ -627,8 +640,8 @@ fsSntpGrpAddrTypeInAcastMode OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "The address type of the server configured by the administrator
-	 i.e the address is either IPv4 address or IPv6 address"
+        "This object specifies the address type of the server configured by the administrator
+	 i.e the address is either IPv4 address or IPv6 address."
     ::= {fsSntpAnycast  5 }
 
 fsSntpGrpAddrInAcastMode OBJECT-TYPE
@@ -636,7 +649,7 @@ fsSntpGrpAddrInAcastMode OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-        "The multicast group address can be configured by the administrator.
+        "This object specifies that the  multicast group address can be configured by the administrator.
 	 i.e to which address the client will send the requesr packet to find 
 	 out the manycast server."
     ::= {fsSntpAnycast 6 }
@@ -647,7 +660,7 @@ fsSntpPrimaryServerAddrTypeInAcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        "The address type of the primary server learnt in Manycast addressing
+        "This object specifies the address type of the primary server learnt in Manycast addressing
         mode i.e IPv4 address or IPv6 address."
     ::= {fsSntpAnycast  7 }
 
@@ -656,7 +669,7 @@ fsSntpPrimaryServerAddrInAcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     current
     DESCRIPTION
-        "The primary server IP address learnt in Manycast addressing mode 
+        "This object specifies the primary server IP address learnt in Manycast addressing mode 
 	 after sending the request packet to the broadcast or multicast address."
     ::= { fsSntpAnycast  8 }
 
@@ -665,7 +678,7 @@ fsSntpSecondaryServerAddrTypeInAcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     obsolete
     DESCRIPTION
-        "The address type of the secondary server learnt in Manycast addressing mode"
+        "This object specifies the address type of the secondary server learnt in Manycast addressing mode."
     ::= { fsSntpAnycast  9 }
 
 fsSntpSecondaryServerAddrInAcastMode OBJECT-TYPE
@@ -673,8 +686,8 @@ fsSntpSecondaryServerAddrInAcastMode OBJECT-TYPE
     MAX-ACCESS read-only
     STATUS     obsolete
     DESCRIPTION
-        " The IP address of secondary server, learnt in Manycast addressing 
-        mode "
+        "This object specifies the IP address of secondary server, learnt in Manycast addressing 
+        mode."
     ::= { fsSntpAnycast  10 }
 
 END

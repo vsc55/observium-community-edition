@@ -62,7 +62,7 @@ foreach ($cdp_array as $ifIndex => $port_neighbours) {
     $port = get_port_by_index_cache($device, $ifIndex);
     //$port = dbFetchRow("SELECT * FROM `ports` WHERE `device_id` = ? AND `ifIndex` = ?", array($device['device_id'], $ifIndex));
 
-    foreach ($port_neighbours as $cdpCacheDeviceIndex => $cdp_entry) {
+    foreach ($port_neighbours as $cdp_entry) {
         // Init
         $remote_mac      = NULL;
         $remote_hostname = '';

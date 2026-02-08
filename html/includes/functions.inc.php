@@ -18,7 +18,7 @@ $alerts        = [];
 // FIXME. Will replaced soon
 // Load caching only for WUI (not used by default)
 if (!is_cli()) {
-    include_once($config['install_dir'] . '/includes/cache.inc.php');
+    include_once($config['html_dir'] . '/includes/cache.inc.php');
 }
 
 include_once($config['html_dir'] . '/includes/sessions.inc.php');
@@ -29,7 +29,7 @@ include_once($config['html_dir'] . '/includes/colours.inc.php');
 $print_functions = [
   'addresses', 'events', 'mac_addresses', 'rows', 'status', 'arptable', 'fdbtable', 'navbar',
   'search', 'syslogs', 'inventory', 'alert', 'authlog', 'dot1xtable', 'alert_log', 'logalert',
-  'common', 'routing', 'neighbours', 'vlan'
+  'common', 'routing', 'neighbours', 'vlan', 'trap_log'
 ];
 if (OBSERVIUM_EDITION !== 'community') {
     $print_functions[] = 'billing';
@@ -61,94 +61,103 @@ foreach ($config['entities'] as $entity_type => $item) {
  *
  * @return string Modified buffer
  */
-function html_callback($buffer)
-{
-    global $config;
-    global $cache_html;
+function html_callback($buffer) {
 
     // Do not disclose version to unauthorized requests
     $version_param = $_SESSION['authenticated'] ? '?v=' . OBSERVIUM_VERSION : '';
 
     // Define template strings for registered CSS/JS links and other elements
     $templates = [
-      'css'    => '    <link href="%%STRING%%' . $version_param . '" rel="stylesheet" type="text/css" />' . PHP_EOL,
-      'style'  => '    <style type="text/css">' . PHP_EOL . '%%STRING%%' . PHP_EOL . '  </style>' . PHP_EOL,
-      'js'     => '    <script type="text/javascript" src="%%STRING%%' . $version_param . '"></script>' . PHP_EOL,
-      'script' => '  <script type="text/javascript">' . PHP_EOL .
-                  '  <!-- Begin' . PHP_EOL . '%%STRING%%' . PHP_EOL .
-                  '  // End -->' . PHP_EOL . '  </script>' . PHP_EOL,
-      // key-value
-      'meta-equiv' => '    <meta http-equiv="%%STRING_name%%" content="%%STRING_content%%" />' . PHP_EOL,
-      'meta'       => '    <meta name="%%STRING_name%%" content="%%STRING_content%%" />' . PHP_EOL,
+        'css'    => '    <link href="%%STRING%%' . $version_param . '" rel="stylesheet" type="text/css" />' . PHP_EOL,
+        'style'  => '    <style type="text/css">' . PHP_EOL . '%%STRING%%' . PHP_EOL . '  </style>' . PHP_EOL,
+        'js'     => '    <script type="text/javascript" src="%%STRING%%' . $version_param . '"></script>' . PHP_EOL,
+        'script' => '  <script type="text/javascript">' . PHP_EOL .
+                    '  <!-- Begin' . PHP_EOL . '%%STRING%%' . PHP_EOL .
+                    '  // End -->' . PHP_EOL . '  </script>' . PHP_EOL,
+        // key-value
+        'meta-equiv' => '    <meta http-equiv="%%STRING_name%%" content="%%STRING_content%%" />' . PHP_EOL,
+        'meta'       => '    <meta name="%%STRING_name%%" content="%%STRING_content%%" />' . PHP_EOL,
     ];
 
     // Process and replace resources in the buffer
+    $cache_resources = (array) mem_cache_get('html_resources');
     foreach ($templates as $type => $template) {
         $uppercase_type = strtoupper($type);
-        if (isset($GLOBALS['cache_html']['resources'][$type])) {
-            $resource_string = '<!-- ' . $uppercase_type . ' BEGIN -->' . PHP_EOL;
-            if ($type === 'meta-equiv' || $type === 'meta') {
-                foreach ($GLOBALS['cache_html']['resources'][$type] as $name => $content) {
-
-                    //bdump($content);
-                    $resource_string .= str_replace([ '%%STRING_name%%', '%%STRING_content%%' ], [ $name, $content ], $template);
-                }
-            } else {
-                foreach (array_unique($GLOBALS['cache_html']['resources'][$type]) as $content) {
-                    $resource_string .= str_replace('%%STRING%%', $content, $template);
-                }
-            }
-            $resource_string .= '    <!-- ' . $uppercase_type . ' END -->' . PHP_EOL;
-            $buffer = str_replace('<!-- ##' . $uppercase_type . '_CACHE## -->' . PHP_EOL, $resource_string, $buffer);
-        } else {
+        if (!isset($cache_resources[$type])) {
             // Clean template string
             $buffer = str_replace('<!-- ##' . $uppercase_type . '_CACHE## -->', '', $buffer);
+            continue;
         }
+
+        $resource_string = '<!-- ' . $uppercase_type . ' BEGIN -->' . PHP_EOL;
+        if ($type === 'meta-equiv' || $type === 'meta') {
+            foreach ($cache_resources[$type] as $name => $content) {
+
+                //bdump($content);
+                $resource_string .= str_replace([ '%%STRING_name%%', '%%STRING_content%%' ], [ $name, $content ], $template);
+            }
+        } else {
+            foreach (array_unique($cache_resources[$type]) as $content) {
+                $resource_string .= str_replace('%%STRING%%', $content, $template);
+            }
+        }
+        $resource_string .= '    <!-- ' . $uppercase_type . ' END -->' . PHP_EOL;
+        $buffer = str_replace('<!-- ##' . $uppercase_type . '_CACHE## -->' . PHP_EOL, $resource_string, $buffer);
     }
 
 
-    // Replace placeholders in the buffer with actual values
-    $replacements = [
-      '##TITLE##'      => html_callback_build_title(),
-      '##PAGE_PANEL##' => $GLOBALS['cache_html']['page_panel'],
-      '##UI_ALERTS##'  => implode(PHP_EOL, (array)$GLOBALS['cache_html']['ui_alerts']),
-    ];
-
-    // Return the modified HTML page source
-    return array_str_replace($replacements, $buffer, TRUE);
+    // Replace placeholders in the buffer with actual values (case-sensitive)
+    return strtr($buffer, [
+        '##TITLE##'      => html_callback_build_title(),
+        '##PAGE_PANEL##' => mem_cache_get('html_page_panel'),
+        '##UI_ALERTS##'  => implode(PHP_EOL, (array) mem_cache_get('html_alerts')),
+    ]);
 }
 
 /**
  * Set the title of the page based on various criteria.
  */
-function html_callback_build_title()
-{
-    global $config;
-    global $vars;
-    global $cache_html;
+function html_callback_build_title() {
 
-    if (!is_array($cache_html['title'])) {
+    global $config, $vars;
+
+    $cache_title =& mem_cache_key('html_title');
+
+    if (empty($cache_title)) {
         // Title not set by any page, fall back to nicecase'd page name:
         if ($vars['page'] && $_SESSION['authenticated']) {
-            $cache_html['title'] = [nicecase($vars['page'])];
+            $cache_title = (array) nicecase($vars['page']);
         } else {
             // Main page or no page specified, leave the title empty
-            $cache_html['title'] = [];
+            $cache_title = [];
         }
     }
 
     // If a suffix is set, append it to the title
     if ($config['page_title_suffix']) {
-        $cache_html['title'][] = $config['page_title_suffix'];
+        $cache_title[] = $config['page_title_suffix'];
     }
 
     // If a prefix is set, prepend it to the title
     if ($config['page_title_prefix']) {
-        array_unshift($cache_html['title'], $config['page_title_prefix']);
+        array_unshift($cache_title, $config['page_title_prefix']);
     }
 
     // Build the title with separators
-    return escape_html(implode($config['page_title_separator'], $cache_html['title']));
+    return escape_html(implode($config['page_title_separator'], $cache_title));
+}
+
+/**
+ * Register an HTML title section
+ *
+ * Registers title section for use in the html <title> tag.
+ * Calls can be stacked, and will be concatenated later by the HTML callback function.
+ *
+ * @param string $title Section title content
+ */
+function register_html_title($title) {
+    $cache_title =& mem_cache_key('html_title');
+    $cache_title[] = $title;
 }
 
 /**
@@ -170,33 +179,22 @@ function register_html_resource($type, $content)
         $content = $type . '/' . $content;
     }
 
-    // Insert into global variable, used in html callback function
-    $GLOBALS['cache_html']['resources'][$type][] = $content;
-}
-
-/**
- * Register an HTML title section
- *
- * Registers title section for use in the html <title> tag.
- * Calls can be stacked, and will be concatenated later by the HTML callback function.
- *
- * @param string $title Section title content
- */
-// TESTME needs unit testing
-function register_html_title($title)
-{
-    $GLOBALS['cache_html']['title'][] = $title;
+    $cache_resources =& mem_cache_key('html_resources');
+    // Insert into cache variable, used in html callback function
+    $cache_resources[$type][] = $content;
 }
 
 function register_html_meta($name, $content, $tag = 'name') {
     if (safe_empty($content) || !is_alpha($name)) {
         return;
     }
+
+    $cache_resources =& mem_cache_key('html_resources');
     if ($tag !== 'name') {
         // http-equiv is multiplied
-        $GLOBALS['cache_html']['resources']['meta-equiv'][$name] = escape_html($content);
+        $cache_resources['meta-equiv'][$name] = escape_html($content);
     } else {
-        $GLOBALS['cache_html']['resources']['meta'][$name] = escape_html($content);
+        $cache_resources['meta'][$name] = escape_html($content);
     }
 }
 
@@ -214,13 +212,14 @@ function register_html_alert($text, $title = NULL, $severity = 'info') {
     }
 
     // FIXME handle severity parameter with colour or icon?
-    $ui_alerts = '<div width="100%" class="alert alert-' . $severity . '">';
+    $ui_alert = '<div width="100%" class="alert alert-' . $severity . '">';
     if (!safe_empty($title)) {
-        $ui_alerts .= '<h4>' . $title . '</h4>';
+        $ui_alert .= '<h4>' . $title . '</h4>';
     }
-    $ui_alerts .= $text . '</div>';
+    $ui_alert .= $text . '</div>';
 
-    $GLOBALS['cache_html']['ui_alerts'][] = $ui_alerts;
+    $ui_alerts =& mem_cache_key('html_alerts');
+    $ui_alerts[] = $ui_alert;
 }
 
 /**
@@ -233,7 +232,7 @@ function register_html_alert($text, $title = NULL, $severity = 'info') {
  */
 // TESTME needs unit testing
 function register_html_panel($html = '') {
-    if (!isset($GLOBALS['cache_html']['page_panel']) && (empty($html) || $html === 'default')) {
+    if (!mem_cache_exists('html_page_panel') && (empty($html) || $html === 'default')) {
         // register default (ajax) panel
 
         // Load a default panel after whole page (only when visible)
@@ -248,26 +247,26 @@ function register_html_panel($html = '') {
     // Just rename data attrib for panel placeholder from default
     register_html_resource('script', "$(document).ready(function (e) { $('#myAffix[data-panel=default]').attr('data-panel', 'register'); });");
 
-    $GLOBALS['cache_html']['page_panel'] = $html;
+    // Cache requested html panel for current page
+    mem_cache_set('html_page_panel', $html);
 }
 
-function http_match_referer($pattern) {
+/**
+ * @param string|array $patterns
+ * @return bool
+ */
+function http_match_referer($patterns) {
     if ($_SERVER['HTTP_SEC_FETCH_SITE'] !== 'same-origin') {
         return FALSE;
     }
 
-    if (is_array_list($pattern)) {
-        $match = FALSE;
-        foreach ($pattern as $patt) {
-            if ($match = preg_match($patt, $_SERVER['HTTP_REFERER'])) {
-                break;
-            }
+    foreach ((array)$patterns as $pattern) {
+        if (preg_match($pattern, $_SERVER['HTTP_REFERER'])) {
+            return TRUE;
         }
-    } else {
-        $match = preg_match($pattern, $_SERVER['HTTP_REFERER']);
     }
 
-    return (bool)$match;
+    return FALSE;
 }
 
 /**
@@ -387,10 +386,15 @@ function get_vars($vars_order = [], $auth = FALSE) {
 
                                 // Better to understand quoted vars
                                 $vars[$name] = get_var_csv($value, $auth);
-
-                                if (is_string($vars[$name]) && preg_match(OBS_PATTERN_XSS, $vars[$name])) {
-                                    // Prevent any <script> html tag inside vars, exclude any possible XSS with scripts
-                                    unset($vars[$name]);
+                                if (is_string($vars[$name])) {
+                                    if (preg_match(OBS_PATTERN_XSS, $vars[$name])) {
+                                        // Prevent any <script> html tag inside vars, exclude any possible XSS with scripts
+                                        unset($vars[$name]);
+                                    } elseif (!isset($vars['quoted']) &&
+                                        is_string_quoted($value) && str_contains($vars[$name], ',')) {
+                                        // Append quoted var for correctly generate_url()
+                                        $vars['quoted'] = 1;
+                                    }
                                 }
                             }
                             //$vars_got['URI'] = 1;
@@ -425,9 +429,15 @@ function get_vars($vars_order = [], $auth = FALSE) {
 
                         // Better to understand quoted vars
                         $vars[$name] = get_var_csv($value, $auth);
-                        if (is_string($vars[$name]) && preg_match(OBS_PATTERN_XSS, $vars[$name])) {
-                            // Prevent any <script> html tag inside vars, exclude any possible XSS with scripts
-                            unset($vars[$name]);
+                        if (is_string($vars[$name])) {
+                            if (preg_match(OBS_PATTERN_XSS, $vars[$name])) {
+                                // Prevent any <script> html tag inside vars, exclude any possible XSS with scripts
+                                unset($vars[$name]);
+                            } elseif (!isset($vars['quoted']) &&
+                                      is_string_quoted($value) && str_contains($vars[$name], ',')) {
+                                // Append quoted var for correctly generate_url()
+                                $vars['quoted'] = 1;
+                            }
                         }
                         //$vars_got['GET'] = 1;
                     }
@@ -628,7 +638,7 @@ function datetime_preset($preset)
         case 'lquarter':
             $quarter = ceil(date('m') / 3); // Current quarter
             if ($preset === 'lquarter') {
-                $quarter = $quarter - 1; // Previous quarter
+                $quarter -= 1; // Previous quarter
             }
             $year = date('Y');
             if ($quarter < 1) {
@@ -732,7 +742,7 @@ function detect_browser($user_agent = NULL)
     if (isset($GLOBALS['config']['devel']) && $GLOBALS['config']['devel']) {
         bdump($GLOBALS['cache']['detect_browser']);
     }
-    
+
     return $GLOBALS['cache']['detect_browser'];
 }
 
@@ -750,6 +760,7 @@ function get_browser_type($user_agent = NULL) {
         // Set custom User-Agent
         $detect->setUserAgent($user_agent);
     }
+    //bdump($detect);
 
     // Detect Browser type
     if ($detect->isMobile()) {
@@ -937,11 +948,7 @@ function pagination(&$vars, $total, $options = []) {
     if ($total > 99 || $total > $per_page ||
         (isset($GLOBALS['config']['web_always_paginate']) && $GLOBALS['config']['web_always_paginate'] === 1)) {
 
-        if ($total > 9999) {
-            $total_text = format_si($total);
-        } else {
-            $total_text = $total;
-        }
+        $total_text = ($total > 9999) ? format_si($total) : $total;
 
         $pagination .= '<div class="row">' . PHP_EOL .
                        '  <div class="col-lg-1 col-md-2 col-sm-2" style="display: inline-block;">' . PHP_EOL .
@@ -1070,23 +1077,39 @@ function generate_url($vars, $new_vars = []) {
     $url = !safe_empty($vars['page']) ? urlencode($vars['page']) : '';
     unset($vars['page']);
 
-    if (!str_ends($url, '/')) {
+    if (!str_ends_with($url, '/')) {
         $url .= '/';
     }
 
+    $quoted = isset($vars['quoted']) && get_var_true($vars['quoted']);
+
     foreach ($vars as $var => $value) {
-        if ($var === "username" || $var === "password") {
+        if ($var === "username" || $var === "password" || $var === "quoted") {
             // Ignore these vars. They shouldn't end up in URLs.
             continue;
         }
+
         if (is_array($value)) {
             // Keep a numeric array list as a comma list
-            $value_implode = is_array_numeric($value) ? implode(',', $value) : var_encode($value);
-            $url .= urlencode($var) . '=' . $value_implode . '/';
+            $value_encode = is_array_numeric($value) ? implode(',', $value) : var_encode($value);
         } elseif (!is_numeric($var) && !safe_empty($value) && !str_contains($var, "opt")) {
+            if ($quoted && str_contains($value, ',')) {
+                //bdump($value);
+                // values with comma converted to array,
+                // ie: peer_as=AS1736%3A%20MU-AS%2C%20US
+                // reference page: /routing/protocol=bgp/peer_as=AS1736%3A%20MU-AS%2C%20US/view=graphs/graph=prefixes_ipv4unicast/
+                $value = '"' . $value . '"';
+                //bdump($value);
+            }
             // rawurlencode() according change in r12351
-            $url .= urlencode($var) . '=' . rawurlencode(str_replace([ '%', '/' ], [ '%05', '%7F' ], $value)) . '/'; // %7F converted back to / in get_vars()
+            $value_encode = rawurlencode(str_replace([ '%', '/' ], [ '%05', '%7F' ], $value)); // %7F converted back to / in get_vars()
+        } else {
+            if ($GLOBALS['config']['debug']) {
+                bdump("generate_url() skipped: $var = $value");
+            }
+            continue;
         }
+        $url .= urlencode($var) . '=' . $value_encode . '/';
     }
 
     // If we're being generated outside the web interface, prefix the generated URL to make it work properly.
@@ -1330,68 +1353,22 @@ function get_percentage_colours($percentage)
  *
  * @return string Returns string with link, when hover on this link show popup message based on type
  */
-function generate_popup_link($type, $text = NULL, $vars = [], $class = NULL, $escape = TRUE)
-{
+function generate_popup_link($type, $text = NULL, $vars = [], $class = NULL, $escape = TRUE) {
     if (!is_string($type) || !is_string($text)) {
         return '';
     }
 
-    if ($type === 'ip') {
-        $addresses = [];
-        // Find networks
-        if (preg_match_all(OBS_PATTERN_IP_NET_FULL, $text, $matches)) {
-            $addresses += $matches['ip_network'];
-        }
-        // Find single addresses
-        if (preg_match_all(OBS_PATTERN_IP_FULL, $text, $matches)) {
-            $addresses += $matches['ip'];
-        }
-        //r($addresses);
-        if (!safe_empty($addresses)) {
-            $return = $escape ? escape_html($text) : $text; // escape before replace (ip nets not escaped anyway)
+    if ($type === 'ip' && $return = generate_ip_link($text, $vars, $class, $escape)) {
+        return $return;
+    }
 
-            foreach ($addresses as $address) {
-                [ $ip, $net ] = explode('/', $address);
-
-                $ip_version = get_ip_version($ip);
-                if ($ip_version === 6) {
-                    // Compress IPv6
-                    $address_compressed = ip_compress($ip);
-                    if (!safe_empty($net)) {
-                        $address_compressed .= '/' . $net;
-                    }
-                } else {
-                    // IPv4 always compressed :)
-                    $address_compressed = $address;
-                }
-
-                $ip_type = get_ip_type($ip);
-                //print_warning("$address : $ip_type");
-                // Do not linkify some types of ip addresses
-                if (in_array($ip_type, [ 'loopback', 'unspecified', 'broadcast', 'private', 'cgnat', 'link-local', 'reserved' ])) {
-                    if (!safe_empty($class)) {
-                        $link   = '<span class="' . $class . '">' . $address_compressed . '</span>';
-                        $return = str_replace($address, $link, $return);
-                    } elseif ($ip_version === 6) {
-                        $return = str_replace($address, $address_compressed, $return);
-                    }
-                    continue;
-                }
-
-                $url    = !safe_empty($vars) ? generate_url($vars) : 'javascript:void(0)'; // If vars empty, set link not clickable
-                $link   = '<a href="' . $url . '" class="entity-popup' . ($class ? " $class" : '') . '" data-eid="' . $ip . '" data-etype="' . $type . '">' . $address_compressed . '</a>';
-                $return = str_replace($address, $link, $return);
-            }
-
-            return $return;
-        }
-    } elseif ($type === 'autodiscovery') {
+    if ($type === 'autodiscovery') {
         $data   = $text;
         $text   = get_icon('info');
         $escape = FALSE;
     }
 
-    $url  = safe_count($vars) ? generate_url($vars) : 'javascript:void(0)'; // If vars empty, set link not clickable
+    $url  = safe_count($vars) ? generate_url($vars) : 'javascript:void(0)'; // If vars empty, a set link not clickable
     $data = $data ?? $text;
     if ($escape) {
         $text = escape_html($text);
@@ -1400,9 +1377,9 @@ function generate_popup_link($type, $text = NULL, $vars = [], $class = NULL, $es
     return '<a href="' . $url . '" class="entity-popup' . ($class ? " $class" : '') . '" data-eid="' . $data . '" data-etype="' . $type . '">' . $text . '</a>';
 }
 
-function generate_tooltip_time($timestamp, $text = '')
-{
-    if (is_numeric($timestamp) && $timestamp > OBS_MIN_UNIXTIME) {
+function generate_tooltip_time($timestamp, $text = '') {
+
+    if (is_valid_unixtime($timestamp)) {
         // Unixtime
         $timediff = get_time() - $timestamp;
         $timetext = format_uptime($timediff, "short-3");
@@ -1721,6 +1698,31 @@ function print_graph_popup($graph_array)
     echo(generate_graph_popup($graph_array));
 }
 
+/**
+ * Delete orphaned entity permission entries for non-existent entities
+ *
+ * @param string $mode        'role' or 'user'
+ * @param string $entity_type Entity type (device, port, sensor, bill, group)
+ * @param int    $entity_id   Entity ID
+ * @param array  $params      Array containing role_id or user_id
+ *
+ * @return int Number of deleted entries
+ */
+function entity_permission_cleanup($mode, $entity_type, $entity_id, $params) {
+    $table = $mode === 'role' ? 'roles_entity_permissions' : 'entity_permissions';
+    $where = '`entity_type` = ? AND `entity_id` = ?';
+
+    if ($mode === 'role') {
+        $where .= ' AND `role_id` = ?';
+        $result = dbDelete($table, $where, [$entity_type, $entity_id, $params['role_id']]);
+    } else {
+        $where .= ' AND `user_id` = ?';
+        $result = dbDelete($table, $where, [$entity_type, $entity_id, $params['user_id']]);
+    }
+
+    return $result;
+}
+
 // TESTME needs unit testing
 // DOCME needs phpdoc block
 function permissions_cache($user_id) {
@@ -1728,46 +1730,61 @@ function permissions_cache($user_id) {
     $cache_key  = 'permissions_' . $GLOBALS['config']['auth_mechanism'] . $user_id;
     $cache_item = get_cache_item($cache_key);
     if (ishit_cache_item($cache_item)) {
-        return get_cache_data($cache_item);
+        // permissions stored in Fast Cache
+        $permissions = get_cache_data($cache_item);
+        mem_cache_set('user_permissions', $permissions);
+        return $permissions;
     }
 
-    $permissions = [];
+    if (!mem_cache_exists('user_permissions')) {
+        // Init cache entry and build array
+        $permissions =& mem_cache_key('user_permissions');
 
-    // Get permissions from user-specific and role tables.
-    $permission_where         = '`user_id` = ? AND `auth_mechanism` = ?';
-    $permission_params        = [ $user_id, $GLOBALS['config']['auth_mechanism'] ];
-    $entity_permissions       = dbFetchRows("SELECT * FROM `entity_permissions` WHERE " . $permission_where, $permission_params);
-    $roles_entity_permissions = dbFetchRows("SELECT * FROM `roles_entity_permissions` LEFT JOIN `roles_users` USING (`role_id`) WHERE " . $permission_where, $permission_params);
-    foreach (array_merge((array)$entity_permissions, (array)$roles_entity_permissions) as $entity) {
-        // Set access to ro if it's not in the defined list.
-        $access = (in_array($entity['access'], [ 'ro', 'rw' ]) ? $entity['access'] : 'ro');
+        // Get permissions from user-specific and role tables.
+        $permission_where         = '`user_id` = ? AND `auth_mechanism` = ?';
+        $permission_params        = [ $user_id, $GLOBALS['config']['auth_mechanism'] ];
+        $entity_permissions       = dbFetchRows("SELECT * FROM `entity_permissions` WHERE " . $permission_where, $permission_params);
+        $roles_entity_permissions = dbFetchRows("SELECT * FROM `roles_entity_permissions` LEFT JOIN `roles_users` USING (`role_id`) WHERE " . $permission_where, $permission_params);
+        foreach (array_merge((array)$entity_permissions, (array)$roles_entity_permissions) as $entity) {
+            // Set access to ro if it's not in the defined list.
+            $access = (in_array($entity['access'], [ 'ro', 'rw' ]) ? $entity['access'] : 'ro');
 
-        if ($entity['entity_type'] === 'group') {
-            // this is a group, so expand its members into an array
-            $group = get_group_by_id($entity['entity_id']);
-            foreach (get_group_entities($entity['entity_id']) as $group_entity_id) {
-                $permissions[$group['entity_type']][(int)$group_entity_id] = $access;
+            if ($entity['entity_type'] === 'group') {
+                // this is a group, so expand its members into an array
+                $group = get_group_by_id($entity['entity_id']);
+                foreach (get_group_entities($entity['entity_id']) as $group_entity_id) {
+                    $permissions[$group['entity_type']][(int)$group_entity_id] = $access;
+                }
+            } elseif ($entity['entity_type'] === 'poller') {
+                // this is a poller, so expand to all devices on this poller
+                $poller_devices = dbFetchColumn('SELECT `device_id` FROM `devices` WHERE `poller_id` = ?',
+                                                 [$entity['entity_id']]);
+                foreach ($poller_devices as $device_id) {
+                    $permissions['device'][(int)$device_id] = $access;
+                }
+            }
+            $permissions[$entity['entity_type']][(int)$entity['entity_id']] = $access;
+        }
+
+        // Cache platform permissions
+        foreach (dbFetchRows("SELECT * FROM `roles_permissions` LEFT JOIN `roles_users` USING (`role_id`) WHERE " . $permission_where, $permission_params) as $perm) {
+            $permissions['permission'][$perm['permission']] = TRUE;
+        }
+
+        // Alerts
+        // FIXME - this seems like it would be slow on very large installs
+        $alert = [];
+        foreach (dbFetchRows('SELECT `alert_table_id`, `device_id`, `entity_id`, `entity_type` FROM `alert_table`') as $alert_table_entry) {
+            //r($alert_table_entry);
+            if (is_entity_permitted($alert_table_entry['entity_id'], $alert_table_entry['entity_type'], $alert_table_entry['device_id'], $permissions)) {
+                $alert[$alert_table_entry['alert_table_id']] = TRUE;
             }
         }
-        $permissions[$entity['entity_type']][(int)$entity['entity_id']] = $access;
-    }
-
-    // Cache platform permissions
-    foreach (dbFetchRows("SELECT * FROM `roles_permissions` LEFT JOIN `roles_users` USING (`role_id`) WHERE " . $permission_where, $permission_params) as $perm) {
-        $permissions['permission'][$perm['permission']] = TRUE;
-    }
-
-    // Alerts
-    // FIXME - this seems like it would be slow on very large installs
-    $alert = [];
-    foreach (dbFetchRows('SELECT `alert_table_id`, `device_id`, `entity_id`, `entity_type` FROM `alert_table`') as $alert_table_entry) {
-        //r($alert_table_entry);
-        if (is_entity_permitted($alert_table_entry['entity_id'], $alert_table_entry['entity_type'], $alert_table_entry['device_id'], $permissions)) {
-            $alert[$alert_table_entry['alert_table_id']] = TRUE;
+        if (!safe_empty($alert)) {
+            $permissions['alert'] = $alert;
         }
-    }
-    if (!safe_empty($alert)) {
-        $permissions['alert'] = $alert;
+    } else {
+        $permissions = mem_cache_get('user_permissions');
     }
 
     set_cache_item($cache_item, $permissions);
@@ -1776,34 +1793,38 @@ function permissions_cache($user_id) {
     del_cache_expired();
 
     return $permissions;
-
 }
 
 /**
  * Return WEB client remote IP address.
- * In mostly cases (also by default) this is just $_SERVER['REMOTE_ADDR'],
+ * In most cases (also by default) this is just $_SERVER['REMOTE_ADDR'],
  * but if config options ($config['web_remote_addr_header']) set, this can use specified HTTP headers
  *
  * @param bool $use_http_header Use or not HTTP header specified in $config['web_remote_addr_header']
  *
  * @return string IP address of remote client
  */
-function get_remote_addr($use_http_header = FALSE)
-{
-    global $config;
+function get_remote_addr($use_http_header = FALSE) {
 
     if ($use_http_header) {
-        // Note, this headers is very dangerous for use as auth!
-        $addr_headers = ['HTTP_CF_CONNECTING_IP', // CF-Connecting-IP (CloudFlare network)
-                         'HTTP_X_REAL_IP',        // X-Real-IP
-                         'HTTP_X_FORWARDED_FOR',  // X-Forwarded-For
-                         'HTTP_CLIENT_IP'];      // Client-IP
+        // Note, these headers is very dangerous for use as auth!
+        $addr_headers = [
+            'HTTP_CF_CONNECTING_IP',   // CF-Connecting-IP (CloudFlare network)
+            'HTTP_CF_CONNECTING_IPV6', // CF-Connecting-IPv6 (CloudFlare network)
+            'HTTP_X_REAL_IP',          // X-Real-IP
+            'HTTP_X_FORWARDED_FOR',    // X-Forwarded-For
+            'HTTP_CLIENT_IP'           // Client-IP
+        ];
 
-        if (!in_array($config['web_remote_addr_header'], ['default', 'detect', 'auto'])) {
-            $remote_addr_header = 'HTTP_' . str_replace('-', '_', strtoupper($config['web_remote_addr_header']));
+        if (!in_array($GLOBALS['config']['web_remote_addr_header'], [ 'default', 'detect', 'auto' ])) {
+            $remote_addr_header = 'HTTP_' . str_replace('-', '_', strtoupper($GLOBALS['config']['web_remote_addr_header']));
             if (in_array($remote_addr_header, $addr_headers)) {
                 // Use only exact single header
-                $addr_headers = [$remote_addr_header];
+                $addr_headers = [ $remote_addr_header ];
+                if ($remote_addr_header === 'HTTP_CF_CONNECTING_IP') {
+                    // Append IPv6 header for CloudFlare
+                    $addr_headers[] = 'HTTP_CF_CONNECTING_IPV6';
+                }
             } else {
                 // Unknown config value passed, do not check any header
                 $addr_headers = [];
@@ -1811,76 +1832,23 @@ function get_remote_addr($use_http_header = FALSE)
         }
 
         foreach ($addr_headers as $header) {
-            if (!empty($_SERVER[$header]) && preg_match(OBS_PATTERN_IP_FULL, $_SERVER[$header], $matches)) {
+            if (empty($_SERVER[$header])) {
+                continue;
+            }
+            if ($GLOBALS['config']['devel']) {
+                //bdump($_SERVER);
+                bdump($_SERVER[$header], $header);
+            }
+            if (preg_match(OBS_PATTERN_IP_FULL, $_SERVER[$header], $matches)) {
                 // HTTP header found and it contains valid IP address
                 return $matches[1];
             }
         }
     }
 
-    // By default just use server remote address
+    // By default, just use server remote address
     return $_SERVER['REMOTE_ADDR'];
 }
-
-// TESTME needs unit testing
-// DOCME needs phpdoc block
-function bill_permitted($bill_id)
-{
-    global $permissions;
-
-    if ($_SESSION['userlevel'] >= "5") {
-        $allowed = TRUE;
-    } elseif ($permissions['bill'][$bill_id]) {
-        $allowed = TRUE;
-    } else {
-        $allowed = FALSE;
-    }
-
-    return $allowed;
-}
-
-function entity_permitted_array(&$entities, $entity_type)
-{
-
-    $entity_type_data = entity_type_translate_array($entity_type);
-
-    // Strip out the entities the user isn't allowed to see, if they don't have global view rights
-    if (!isset($_SESSION['user_limited']) || $_SESSION['user_limited']) {
-        foreach ($entities as $key => $entity) {
-            if (!is_entity_permitted($entity[$entity_type_data['id_field']], $entity_type, $entity['device_id'])) {
-                unset($entities[$key]);
-            }
-        }
-    }
-}
-
-
-// TESTME needs unit testing
-// DOCME needs phpdoc block
-function application_permitted($app_id, $device_id = NULL)
-{
-    global $permissions;
-
-    if (is_numeric($app_id)) {
-        if (!$device_id) {
-            $device_id = get_device_id_by_app_id($app_id);
-        }
-        if ($_SESSION['userlevel'] >= "5") {
-            $allowed = TRUE;
-        } elseif (device_permitted($device_id)) {
-            $allowed = TRUE;
-        } elseif ($permissions['application'][$app_id]) {
-            $allowed = TRUE;
-        } else {
-            $allowed = FALSE;
-        }
-    } else {
-        $allowed = FALSE;
-    }
-
-    return $allowed;
-}
-
 
 // TESTME needs unit testing
 // DOCME needs phpdoc block
@@ -2215,15 +2183,18 @@ function generate_query_permitted_ng($type_array = [ 'device' ], $options = []) 
     //  $GLOBALS['cache']['devices'] = $_SESSION['cache']['devices'];
     //}
 
-    if (!isset($GLOBALS['permissions'])) {
+    if (!mem_cache_exists('user_permissions')) {
         if (is_graph() || is_api()) {
             // Do not broke graph/api output
             print_debug("Function " . __FUNCTION__ . "() on page '$page' called before include cache-data.inc.php or something wrong with caching permissions.");
         } else {
-            // Note, this function must used after load permissions list!
+            // Note, this function must be used after load permissions list!
             print_error("Function " . __FUNCTION__ . "() on page '$page' called before include cache-data.inc.php or something wrong with caching permissions.");
         }
+        //permissions_cache($_SESSION['user_id']);
     }
+    $permissions = $user_limited ? (array) mem_cache_get('user_permissions') : [];
+
     // Use option hide_disabled if passed or use config
     $options['hide_disabled'] = $options['hide_disabled'] ?? !$GLOBALS['config']['web_show_disabled'];
 
@@ -2243,8 +2214,8 @@ function generate_query_permitted_ng($type_array = [ 'device' ], $options = []) 
 
                 // Show only permitted devices
                 if ($user_limited) {
-                    if (!safe_empty($GLOBALS['permissions']['device'])) {
-                        $query_permitted[] = generate_query_values(array_keys($GLOBALS['permissions']['device']), $column);
+                    if (!safe_empty($permissions['device'])) {
+                        $query_permitted[] = generate_query_values(array_keys($permissions['device']), $column);
                     } else {
                         // Exclude all entries, because there are no permitted devices
                         $query_permitted[] = ' 0';
@@ -2294,10 +2265,10 @@ function generate_query_permitted_ng($type_array = [ 'device' ], $options = []) 
 
                 // Show only permitted ports
                 if ($user_limited) {
-                    if (!safe_empty($GLOBALS['permissions']['port'])) {
-                        $query_permitted[] = generate_query_values(array_keys($GLOBALS['permissions']['port']), $column);
+                    if (!safe_empty($permissions['port'])) {
+                        $query_permitted[] = generate_query_values(array_keys($permissions['port']), $column);
                         // $query_permitted[] = " $column IN (" .
-                        //                      implode(',', array_keys($GLOBALS['permissions']['port'])) .
+                        //                      implode(',', array_keys($permissions['port'])) .
                         //                      ')';
                     } else {
                         // Exclude all entries, because there is no permitted ports
@@ -2399,8 +2370,8 @@ function generate_query_permitted_ng($type_array = [ 'device' ], $options = []) 
 
                 // Show only permitted entities
                 if ($user_limited) {
-                    if (!safe_empty($GLOBALS['permissions']['sensor'])) {
-                        $query_permitted[] = generate_query_values(array_keys((array)$GLOBALS['permissions']['sensor']), $column);
+                    if (!safe_empty($permissions['sensor'])) {
+                        $query_permitted[] = generate_query_values(array_keys($permissions['sensor']), $column);
                     } else {
                         // Exclude all entries, because there are no permitted entities
                         $query_permitted[] = '0';
@@ -2423,8 +2394,8 @@ function generate_query_permitted_ng($type_array = [ 'device' ], $options = []) 
 
                 // Show only permitted entities
                 if ($user_limited) {
-                    if (!safe_empty($GLOBALS['permissions']['alert'])) {
-                        $query_permitted = generate_query_values(array_keys((array)$GLOBALS['permissions']['alert']), $column);
+                    if (!safe_empty($permissions['alert'])) {
+                        $query_permitted = generate_query_values(array_keys($permissions['alert']), $column);
                     } else {
                         // Exclude all entries, because there are no permitted entities
                         $query_permitted = '0';
@@ -2627,21 +2598,27 @@ function process_sql_vars($vars)
                     continue;
                 }
 
-                // Split enum|foo|bar into enum  foo|bar
-                [$vartype, $varparams] = explode('|', $config_variable[$sqlname]['type'], 2);
-                $params = [];
+                $vartype = $config_variable[$sqlname]['type'];
+                $params  = [];
 
                 // If a callback function is defined, use this to fill params.
                 if ($config_variable[$sqlname]['params_call'] && function_exists($config_variable[$sqlname]['params_call'])) {
                     $params = call_user_func($config_variable[$sqlname]['params_call']);
                     // Else if the params are defined directly, use these.
                 } elseif (is_array($config_variable[$sqlname]['params'])) {
-                    $params = $config_variable[$sqlname]['params'];
-                } elseif (!empty($varparams)) {
-                    // Else use parameters specified in variable type (e.g. enum|1|2|5|10)
-                    foreach (explode('|', $varparams) as $param) {
-                        $params[$param] = [ 'name' => nicecase($param) ];
+                    // Else if the params are defined directly, use these.
+                    if (is_array_flat($config_variable[$sqlname]['params'])) {
+                        // simple list convert to common params arrays
+                        foreach ($config_variable[$sqlname]['params'] as $param) {
+                            $params[$param] = [ 'name' => $param ];
+                        }
+                    } else {
+                        $params = $config_variable[$sqlname]['params'];
                     }
+                } elseif (str_contains($vartype, '|')) {
+                    // CLEANME. Deperecated, use params definition
+                    // Split enum|foo|bar into enum  foo|bar
+                    $vartype = explode('|', $vartype, 2)[0];
                 }
 
                 switch ($vartype) {
@@ -2953,59 +2930,117 @@ function adjust_colour_brightness($hex, $steps)
 }
 
 /**
- * Highlight (or replace with specific strings) part of string.
- * Optionally can search full words of search strings.
+ * Highlight (or replace with entity links) part of the string.
  *
- * @param string $text    Text where need highlight search string
+ * @param string $text    Text where need to highlight a search string
  * @param array  $search  Search array. Can be string, simple array or array with 'search', 'replace' pairs
  * @param string $replace Default is just
- * @param bool   $words   If True search full words
+ * @param bool   $escape  Escape not entity part of text
  *
  * @return string
  */
-function html_highlight($text, $search = [], $replace = '', $words = FALSE)
-{
+function html_highlight_entities($text, $search = [], $replace = '', $escape = TRUE) {
+
+    if (empty($search)) {
+        return $escape ? escape_html($text) : $text;
+    }
+
     if (empty($replace)) {
         // Default is highlight as danger class
-        $replace = $words ? '<em class="text-danger">$1</em>' : '<em class="text-danger">$0</em>';
+        $replace = '<em class="text-danger">$2</em>';
     }
 
-    $entries = [];
-    foreach ((array)$search as $entry) {
-        if (isset($entry['search'])) {
-            if (!isset($entry['replace'])) {
-                $entry['replace'] = $replace;
+    $tags = [];
+    foreach ((array)$search as $index => $entry) {
+
+        if (!isset($entry['pattern'])) {
+            if (!isset($entry['search'])) {
+                continue;
             }
-            $text = html_highlight($text, $entry['search'], $entry['replace'], $words);
-            continue;
+            // generate a pattern from a search array
+            $entry['search'] = array_map(function ($p) {
+                // allow limited regex patterns in search strings (currently only for interfaces links)
+                return str_replace('\\\\d\+', '\d+', preg_quote($p, '%'));
+            }, $entry['search']);
+            $entry['pattern'] = '(' . implode('|', $entry['search']) . ')';
         }
+        $pattern = OBS_PATTERN_START_S . $entry['pattern'] . OBS_PATTERN_END_S;
+        $entry_replace = $entry['replace'] ?? $replace;
 
-        if (strlen($entry) == 0) {
-            continue;
+        if (preg_match($pattern, $text, $matches)) {
+            $entity = $escape ? escape_html($matches[2]) : $matches[2];
+            $tags['ENTITY_REPLACE_'.$index] = str_replace('$2', $entity, $entry_replace);
+
+            $match1 = $matches[1] ?? '';
+            $match3 = $matches[3] ?? '';
+
+            $text = str_replace($match1.$matches[2].$match3, $match1.'%ENTITY_REPLACE_'.$index.'%'.$match3, $text); // use tagged replace
         }
-        $entry = preg_quote($entry, '%');
-        // allow limited regex patterns in search strings (currently only for interfaces links)
-        //$patterns = [ '\\\\d\+' => '\d+', ];
-        $entries[] = str_replace('\\\\d\+', '\d+', $entry);
     }
-    if (!count($entries)) {
+
+    if ($escape) {
+        $text = escape_html($text);
+    }
+
+    if (empty($tags)) {
+        // replace strings not found, tags not required
         return $text;
     }
 
-    $search_pattern = '(' . implode('|', $entries) . ')';
-    if ($words) {
-        // Search full words
-        $search_pattern = str_replace('(?:', '(', OBS_PATTERN_START) .
-                          $search_pattern .
-                          str_replace('(?:', '(', OBS_PATTERN_END);
-        // append start and end in pattern search
-        $replace = '$1' . $replace . '$3';
-    } else {
-        // Search any search string
-        $search_pattern = '%' . $search_pattern . '%i';
+    return array_tag_replace($tags, $text);
+}
+
+/**
+ * Highlight part of string.
+ *
+ * @param string        $text    Text where need highlight search string
+ * @param string|array  $search  Search string or array with string.
+ * @param string        $replace Default is danger text class
+ * @param bool          $escape  Escape not search part of text
+ *
+ * @return string
+ */
+function html_highlight($text, $search = [], $replace = '', $escape = TRUE) {
+
+    if (empty($search)) {
+        return $text;
     }
 
-    return preg_replace($search_pattern, $replace, $text);
+    if (is_array($search)) {
+        $search_escaped = array_map(function ($entry) {
+            return preg_quote($entry, '%');
+        }, $search);
+        $pattern = implode('|', $search_escaped);
+    } else {
+        $pattern = preg_quote($search, '%');
+    }
+
+    if (empty($replace)) {
+        // Default is highlight as danger class
+        $replace = '<em class="text-danger">$0</em>';
+    }
+
+    $tags = [];
+    if (preg_match_all('%' . $pattern . '%i', $text, $matches)) {
+        //r($matches);
+        foreach (array_unique($matches[0]) as $index => $match) {
+            $string  = $escape ? escape_html($match) : $match;
+            $text    = str_replace($match, '%HIGHLIGHT_REPLACE_'.$index.'%', $text); // use tagged replace
+
+            $tags['HIGHLIGHT_REPLACE_'.$index] = str_replace('$0', $string, $replace);
+        }
+    }
+
+    if ($escape) {
+        $text = escape_html($text);
+    }
+
+    if (empty($tags)) {
+        // replace strings not found, tags not required
+        return $text;
+    }
+
+    return array_tag_replace($tags, $text);
 }
 
 /**
@@ -3114,6 +3149,209 @@ function unset_value_by_keys(&$array, $keys)
             unset_value_by_keys($array[$key], $keys);
         }
     }
+}
+
+/**
+ * Generate a responsive status panel with overview metrics
+ *
+ * Creates a horizontal grid of status boxes, each containing:
+ * - Title (bold header)
+ * - Value (main content - string, number, label array, or HTML)
+ * - Subtitle (small description)
+ *
+ * Responsive grid adjusts column count based on number of boxes:
+ * - 1-4 boxes: 3 columns each (col-md-3)
+ * - 5-6 boxes: 2 columns each (col-md-2)
+ * - 7+ boxes: 1 column each (col-md-1)
+ *
+ * Value formats:
+ * - String/number: HTML-escaped text
+ * - ['text' => 'Label', 'class' => 'label-success']: Bootstrap label
+ * - ['html' => '<strong>HTML</strong>']: Raw HTML (for device links)
+ *
+ * @param array $boxes Array of status boxes
+ * @param array $options Optional container settings (title, class, style)
+ * @return string HTML for complete status panel
+ *
+ * Example:
+ * generate_status_panel([
+ *   ['title' => 'Root Bridge', 'value' => 'sw-core-1', 'subtitle' => 'Network Root'],
+ *   ['title' => 'Protocol', 'value' => ['text' => 'RSTP', 'class' => 'label-info'], 'subtitle' => 'IEEE 802.1w'],
+ *   ['title' => 'Status', 'value' => ['html' => generate_device_link($device)], 'subtitle' => 'Device Link'],
+ *   ['title' => 'Health', 'value' => 'Good', 'subtitle' => 'Score: 95/100']
+ * ]);
+ */
+function generate_status_panel($boxes, $options = []) {
+    if (empty($boxes) || !is_array($boxes)) {
+        return '';
+    }
+
+    $box_count = count($boxes);
+
+    $panel_title = $options['title'] ?? '';
+    $panel_style = $options['style'] ?? '';
+    $panel_class = $options['class'] ?? 'well well-sm';
+
+    $html = '<div class="row"><div class="col-md-12">';
+    if ($panel_title) {
+        $html .= generate_box_open(['title' => $panel_title]);
+    } else {
+        $html .= '<div class="' . $panel_class . '"' . ($panel_style ? ' style="' . $panel_style . '"' : '') . '>';
+    }
+
+    // Special 8-box layout: 2 rows of 4 boxes each (7-8 boxes)
+    if ($box_count >= 7 && $box_count <= 8) {
+        $html .= '<div class="row">';
+        // First row of 4 boxes
+        $html .= '<div class="col-md-6"><div class="row text-center">';
+        for ($i = 0; $i < 4 && $i < $box_count; $i++) {
+            $box = $boxes[$i];
+            if (is_callable($box['value'])) {
+                $box['value'] = $box['value']();
+            }
+            $html .= '<div class="col-md-3">';
+            if (!empty($box['title'])) {
+                $html .= '<strong>' . htmlentities($box['title']) . '</strong><br>';
+            }
+            if (array_key_exists('value', $box)) {
+                $html .= generate_status_value($box['value']);
+            }
+            if (!empty($box['subtitle'])) {
+                $html .= '<br><small class="text-muted">' . htmlentities($box['subtitle']) . '</small>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div></div>';
+
+        // Second row of remaining boxes
+        $html .= '<div class="col-md-6"><div class="row text-center">';
+        for ($i = 4; $i < $box_count; $i++) {
+            $box = $boxes[$i];
+            if (is_callable($box['value'])) {
+                $box['value'] = $box['value']();
+            }
+            $html .= '<div class="col-md-3">';
+            if (!empty($box['title'])) {
+                $html .= '<strong>' . htmlentities($box['title']) . '</strong><br>';
+            }
+            if (array_key_exists('value', $box)) {
+                $html .= generate_status_value($box['value']);
+            }
+            if (!empty($box['subtitle'])) {
+                $html .= '<br><small class="text-muted">' . htmlentities($box['subtitle']) . '</small>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div></div>';
+        $html .= '</div>';
+    } else {
+        // Standard single-row layout for 1-6 boxes
+        if ($box_count <= 3) {
+            $col_class = 'col-md-4';
+        } elseif ($box_count <= 4) {
+            $col_class = 'col-md-3';
+        } elseif ($box_count <= 6) {
+            $col_class = 'col-md-2';
+        } else {
+            $col_class = 'col-md-' . max(1, floor(12 / $box_count));
+        }
+
+        $html .= '<div class="row text-center">';
+        foreach ($boxes as $box) {
+            // Support callable values for dynamic content
+            if (is_callable($box['value'])) {
+                $box['value'] = $box['value']();
+            }
+
+            $html .= '<div class="' . $col_class . '">';
+            if (!empty($box['title'])) {
+                $html .= '<strong>' . htmlentities($box['title']) . '</strong><br>';
+            }
+            if (array_key_exists('value', $box)) {
+                $html .= generate_status_value($box['value']);
+            }
+            if (!empty($box['subtitle'])) {
+                $html .= '<br><small class="text-muted">' . htmlentities($box['subtitle']) . '</small>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+    }
+
+    $html .= $panel_title ? generate_box_close() : '</div>';
+    $html .= '</div></div>';
+    return $html;
+}
+
+/**
+ * Format status value: string, single label, list of labels, or raw HTML
+ *
+ * Supported formats:
+ * - string/number: HTML-escaped text
+ * - ['text' => 'Label Text', 'class' => 'label-info']: Bootstrap label
+ * - ['html' => '<a href="...">Link</a>']: Raw HTML (use with caution)
+ * - [label1, label2, ...]: Array of labels
+ */
+function generate_status_value($value) {
+    if (is_string($value) || is_numeric($value)) {
+        return htmlentities((string)$value);
+    }
+    if (is_array($value)) {
+        if (isset($value['html'])) {
+            // Allow raw HTML content (use with caution - ensure content is safe)
+            return (string)$value['html'];
+        }
+        if (isset($value['text']) && isset($value['class'])) {
+            return '<span class="label ' . htmlentities($value['class']) . '">' . htmlentities($value['text']) . '</span>';
+        }
+        $labels = [];
+        foreach ($value as $label) {
+            if (is_array($label) && isset($label['text']) && isset($label['class'])) {
+                $labels[] = '<span class="label ' . htmlentities($label['class']) . '">' . htmlentities($label['text']) . '</span>';
+            } else {
+                $labels[] = htmlentities((string)$label);
+            }
+        }
+        return implode(' ', $labels);
+    }
+    return htmlentities((string)$value);
+}
+
+/**
+ * Generate form values for poller entity type
+ *
+ * @param mixed $form_filter Filter array or FALSE
+ * @param string $column Column name to use (default: poller_id)
+ * @param array $options Additional options (filter_mode, show_icon, etc)
+ *
+ * @return array Array of form values
+ */
+function generate_poller_form_values($form_filter = FALSE, $column = 'poller_id', $options = [])
+{
+    if (!is_array($form_filter)) {
+        $options['filter_mode'] = FALSE;
+    }
+
+    $form_items = [];
+    $query = 'SELECT `poller_id`, `poller_name` FROM `pollers` ORDER BY `poller_name`';
+
+    foreach (dbFetchRows($query) as $entry) {
+        // Filter items based on filter_mode
+        if ($options['filter_mode'] === 'include') {
+            if (!in_array($entry['poller_id'], $form_filter)) {
+                continue;
+            }
+        } elseif ($options['filter_mode'] === 'exclude') {
+            if (in_array($entry['poller_id'], $form_filter)) {
+                continue;
+            }
+        }
+
+        $name = $entry['poller_name'] . ' (ID: ' . $entry['poller_id'] . ')';
+        $form_items[$entry['poller_id']] = $name;
+    }
+
+    return $form_items;
 }
 
 // EOF

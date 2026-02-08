@@ -18,9 +18,11 @@ if (!file_exists($cacti_root . "/include/config.php")) {
     }
 }
 
-ini_set('include_path',
+ini_set(
+    'include_path',
     ini_get('include_path') . PATH_SEPARATOR . $cacti_root . PATH_SEPARATOR . $cacti_root . '/plugins/weathermap'
-    . PATH_SEPARATOR . $cacti_root . '/plugins/weathermap/random-bits');
+    . PATH_SEPARATOR . $cacti_root . '/plugins/weathermap/random-bits'
+);
 
 require_once 'lib/Weathermap.class.php';
 require_once 'lib/database.php';
@@ -38,7 +40,7 @@ include_once 'editor-config.php';
 
 // adjust width of link based on bandwidth.
 // NOTE: These are bands - the value has to be up to or including the value in the list to match
-$width_map = array (
+$width_map = array(
     '1000000' => '1',     // up to 1meg
     '9999999' => '1',     // 1-10meg
     '10000000' => '2',    // 10meg
@@ -87,7 +89,7 @@ $inputmapfile = "";
 // initialize object
 $cg = new Console_Getopt();
 $short_opts = '';
-$long_opts = array (
+$long_opts = array(
     "help",
     "input=",
     "output=",
@@ -108,9 +110,9 @@ if (PEAR::isError($ret)) {
 
 $gopts = $ret[0];
 
-$options_output = array ();
+$options_output = array();
 
-if (sizeof($gopts) > 0) {
+if (count($gopts) > 0) {
     foreach ($gopts as $o) {
         switch ($o[0]) {
             case '--debug':
@@ -169,7 +171,7 @@ if ($inputmapfile == '' || $outputmapfile == '') {
 // figure out which template has interface traffic. This might be wrong for you.
 $data_template = "Interface - Traffic";
 $stmt = $pdo->prepare("select id from data_template where name=?");
-$stmt->execute( array($data_template));
+$stmt->execute(array($data_template));
 $data_template_id = $stmt->fetchColumn();
 //$data_template_id =
 //    db_fetch_cell("select id from data_template where name='" . mysql_real_escape_string($data_template) . "'");
@@ -200,7 +202,7 @@ foreach ($map->nodes as $node) {
         $stmt = $pdo->prepare("select hostname,description from host where id=?");
         $stmt->execute(array(intval($host_id)));
         $res1 = $stmt->fetch(PDO::FETCH_ASSOC);
-//        $res1 = db_fetch_row("select hostname,description from host where id=" . intval($host_id));
+        //        $res1 = db_fetch_row("select hostname,description from host where id=" . intval($host_id));
 
         if ($res1) {
             if ($hostname == '') {
@@ -214,7 +216,7 @@ foreach ($map->nodes as $node) {
             }
         }
     }
-// by now, if there was a host_id, all 3 are populated. If not, then we should try one of the others to get a host_id
+    // by now, if there was a host_id, all 3 are populated. If not, then we should try one of the others to get a host_id
     else {
         if ($address != '') {
 
@@ -222,7 +224,7 @@ foreach ($map->nodes as $node) {
             $stmt->execute(array($address));
             $res2 = $stmt->fetch(PDO::FETCH_ASSOC);
 
-//            $res2 = db_fetch_row("select id,description from host where hostname='" . mysql_real_escape_string($address)
+            //            $res2 = db_fetch_row("select id,description from host where hostname='" . mysql_real_escape_string($address)
 //                . "'");
 
             if ($res2) {
@@ -238,7 +240,7 @@ foreach ($map->nodes as $node) {
             $stmt = $pdo->prepare("select id,description from host where description=?");
             $stmt->execute(array($hostname));
             $res3 = $stmt->fetch(PDO::FETCH_ASSOC);
-//            $res3 =
+            //            $res3 =
 //                db_fetch_row("select id,hostname from host where description='" . mysql_real_escape_string($hostname)
 //                    . "'");
 
@@ -257,13 +259,15 @@ foreach ($map->nodes as $node) {
     if ($host_id != '') {
         $info = $config['base_url'] . "host.php?id=" . $host_id;
         $tgt = "cactimonitor:$host_id";
-        $map->nodes[$node->name]->targets = array (array (
-            $tgt,
-            '',
-            '',
-            0,
-            $tgt
-        ));
+        $map->nodes[$node->name]->targets = array(
+            array(
+                $tgt,
+                '',
+                '',
+                0,
+                $tgt
+            )
+        );
 
         $map->nodes[$node->name]->infourl[IN] = $info;
     }
@@ -285,7 +289,7 @@ foreach ($map->links as $link) {
 
         print "LINK $name\n";
 
-        if (count($link->targets) == 0 || $overwrite_targets ) {
+        if (count($link->targets) == 0 || $overwrite_targets) {
             if ((($a_id + $b_id) > 0) && ($int_out . $int_in == '')) {
                 print "  (could do if there were interfaces)\n";
             }
@@ -314,18 +318,18 @@ foreach ($map->links as $link) {
             if ($tgt_host != "") {
                 $int_list = explode(":::", $tgt_interface);
                 $total_speed = 0;
-                $total_target = array ();
+                $total_target = array();
 
                 foreach ($int_list as $interface) {
                     print "  Interface: $interface\n";
 
-                    foreach (array ('ifName', 'ifDescr', 'ifAlias') as $field) {
+                    foreach (array('ifName', 'ifDescr', 'ifAlias') as $field) {
 
                         $stmt = $pdo->prepare("select data_local.id, data_source_path, host_snmp_cache.snmp_index from data_template_data, data_local,snmp_query, host_snmp_cache where data_template_data.local_data_id=data_local.id and host_snmp_cache.snmp_query_id = snmp_query.id and data_local.host_id=host_snmp_cache.host_id and data_local.snmp_query_id=host_snmp_cache.snmp_query_id  and data_local.snmp_index=host_snmp_cache.snmp_index and host_snmp_cache.host_id=? and host_snmp_cache.field_name=? and host_snmp_cache.field_value=? and data_local.data_template_id=? order by data_template_data.id desc limit 1;");
                         $stmt->execute(array($tgt_host, $field, $interface, $data_template_id));
                         $res4 = $stmt->fetch(PDO::FETCH_ASSOC);
 
-//                        $SQL =
+                        //                        $SQL =
 //                            sprintf(
 //                                "select data_local.id, data_source_path, host_snmp_cache.snmp_index from data_template_data, data_local,snmp_query, host_snmp_cache where data_template_data.local_data_id=data_local.id and host_snmp_cache.snmp_query_id = snmp_query.id and data_local.host_id=host_snmp_cache.host_id and data_local.snmp_query_id=host_snmp_cache.snmp_query_id  and data_local.snmp_index=host_snmp_cache.snmp_index and host_snmp_cache.host_id=%d and host_snmp_cache.field_name='%s' and host_snmp_cache.field_value='%s' and data_local.data_template_id=%d order by data_template_data.id desc limit 1;",
 //                                $tgt_host, $field, mysql_real_escape_string($interface), $data_template_id);
@@ -341,10 +345,10 @@ foreach ($map->links as $link) {
                         $local_data_id = $res4['id'];
                         $snmp_index = $res4['snmp_index'];
                         $tgt = str_replace("<path_rra>", $config["rra_path"], $target);
-                        $tgt = $tgt . $ds_names;
+                        $tgt .= $ds_names;
 
                         if ($use_dsstats) {
-                            $map->links[$link->name]->targets[] = array (
+                            $map->links[$link->name]->targets[] = array(
                                 $tgt,
                                 '',
                                 '',
@@ -353,7 +357,7 @@ foreach ($map->links as $link) {
                             );
                         } else {
                             $tgt = "8*dsstats:$local_data_id" . $ds_names;
-                            $map->links[$link->name]->targets[] = array (
+                            $map->links[$link->name]->targets[] = array(
                                 $tgt,
                                 '',
                                 '',
@@ -370,11 +374,11 @@ foreach ($map->links as $link) {
                         $stmt_hspeed->execute(array($tgt_host, $snmp_index));
                         $hspeed = $stmt_hspeed->fetchColumn();
 
-//                        $SQL_speed =
+                        //                        $SQL_speed =
 //                            "select field_value from host_snmp_cache where field_name='ifSpeed' and host_id=$tgt_host and snmp_index=$snmp_index";
 //                        $speed = db_fetch_cell($SQL_speed);
 
-//                        $SQL_hspeed =
+                        //                        $SQL_hspeed =
 //                            "select field_value from host_snmp_cache where field_name='ifHighSpeed' and host_id=$tgt_host and snmp_index=$snmp_index";
 //                        $hspeed = db_fetch_cell($SQL_hspeed);
 
@@ -387,7 +391,7 @@ foreach ($map->links as $link) {
                         $stmt_graph->execute(array($local_data_id));
                         $graph_id = $stmt_graph->fetchColumn();
 
-//                        $SQL_graphid =
+                        //                        $SQL_graphid =
 //                            "select graph_templates_item.local_graph_id FROM graph_templates_item,graph_templates_graph,data_template_rrd where graph_templates_graph.local_graph_id = graph_templates_item.local_graph_id  and task_item_id=data_template_rrd.id and local_data_id=$local_data_id LIMIT 1;";
 //                        $graph_id = db_fetch_cell($SQL_graphid);
 
@@ -418,8 +422,8 @@ foreach ($map->links as $link) {
                 if ($map_widths) {
                     foreach ($width_map as $map_speed => $map_width) {
                         if ($total_speed <= $map_speed) {
-                            $map->links[$name]->width = $width_map{$map_speed};
-                            print "    WIDTH " . $width_map{$map_speed}. "\n";
+                            $map->links[$name]->width = $width_map[$map_speed];
+                            print "    WIDTH " . $width_map[$map_speed] . "\n";
                             continue 2;
                         }
                     }

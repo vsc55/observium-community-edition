@@ -18,6 +18,8 @@
 -- Internal Source Code Version:1.268
 -- Date: 01 Jan 2006
 -- **********************************************************
+--   
+--   
 
 AIRESPACE-WIRELESS-MIB DEFINITIONS ::= BEGIN
 
@@ -4488,7 +4490,12 @@ bsnAPType OBJECT-TYPE
                         esw6300(100),
                         ap9130AXI(101),
                         ap9130AXE(102),
+                        ap9105AXI(106),
+                        ap9105AXW1(107),
                         pwifiac2(110),
+                        ap9124AXI(112),
+                        ap9124AXD(113),
+                        ap9124AXE(114),
                         ap9136I(115),
                         wpwifi6(116),
                         isr1101ax(129),
@@ -4503,7 +4510,13 @@ bsnAPType OBJECT-TYPE
                         cw9178I(138),
                         iw9165E(139),
                         cw9176I(140),
-                        cw9176D(141)
+                        cw9176D(141),
+                        cw9172I(142),
+                        cw9172H(143),
+                        cw9179F(144),
+                        cw9174I(145),
+                        cw9174E(146),
+                        cw9171I(147)
                     }
     MAX-ACCESS      read-only
     STATUS          current

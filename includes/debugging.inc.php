@@ -12,13 +12,13 @@
 
 // Debug nicer functions
 //$config['devel'] = TRUE; // DEVEL
-if (!defined('OBS_API') && PHP_SAPI !== 'cli' && PHP_VERSION_ID >= 70200 &&
+if (!defined('OBS_API') && PHP_SAPI !== 'cli' &&
     isset($config['devel']) && $config['devel']) {
     Tracy\Debugger::enable(Tracy\Debugger::Development);
 }
 
 if ((defined('OBS_DEBUG') && OBS_DEBUG) || !empty($_SERVER['REMOTE_ADDR']) ||
-    (PHP_SAPI === 'cli' && is_array($options['d']))) {
+    (PHP_SAPI === 'cli' && isset($options['d']) && is_array($options['d']))) {
     // this include called before definitions :(
     if (function_exists('token_get_all') && !class_exists('ref')) {
         // Class ref loaded by class_exist call
@@ -228,6 +228,20 @@ function whimsical_error_handler($errno, $errstr, $errfile, $errline) {
         return FALSE;
     }
 
+    // Signal future requests to reset opcache (for stale code cache errors)
+    if (function_exists('opcache_reset') && function_exists('set_obs_attrib')) {
+        try {
+            set_obs_attrib('opcache_reset', 1);
+            print_debug("Opcache reset flag set for future requests.");
+        } catch (Exception $e) {
+            // Database may not be available during fatal error
+            // Attempt direct CLI reset as fallback
+            if (PHP_SAPI === 'cli' && opcache_reset()) {
+                print_debug("PHP Opcache CLI was reset (direct).");
+            }
+        }
+    }
+
     // Call the display_error_page function
     display_error_page($errno, $errstr, $errfile, $errline, debug_backtrace());
     exit();
@@ -237,6 +251,20 @@ function whimsical_shutdown_handler() {
     $error = error_get_last();
 
     if ($error !== NULL && $error['type'] & (E_ERROR | E_USER_ERROR | E_COMPILE_ERROR | E_PARSE)) {
+        // Signal future requests to reset opcache (for stale code cache errors)
+        if (function_exists('opcache_reset') && function_exists('set_obs_attrib')) {
+            try {
+                set_obs_attrib('opcache_reset', 1);
+                print_debug("Opcache reset flag set for future requests.");
+            } catch (Exception $e) {
+                // Database may not be available during fatal error
+                // Attempt direct CLI reset as fallback
+                if (PHP_SAPI === 'cli' && opcache_reset()) {
+                    print_debug("PHP Opcache CLI was reset (direct).");
+                }
+            }
+        }
+
         display_error_page($error['type'], $error['message'], $error['file'], $error['line'], []);
         exit();
     }
@@ -252,22 +280,25 @@ function get_context_lines($file, $line_number, $context = 5) {
     $context_lines[$line_number - $start - 1] = '' . $context_lines[$line_number - $start - 1] . '';
 
     return [
-      'start' => $start + 1,
-      'lines' => $context_lines
+        'start' => $start + 1,
+        'lines' => $context_lines
     ];
 }
 
 function display_error_page($errno, $errstr, $errfile, $errline, $backtrace) {
     // Log the error
-    //error_log("Custom error: [$errno] $errstr in $errfile on line $errline");
+    if ($GLOBALS['config']['php_debug'] && !defined('__PHPUNIT_PHAR__')) {
+        // Hrm, default error logging now do not work
+        error_log("Custom error: [$errno] $errstr in $errfile on line $errline");
+    }
 
     if (!defined('OBS_MIN_PHP_VERSION')) {
-        define('OBS_MIN_PHP_VERSION', '7.2.24');
+        define('OBS_MIN_PHP_VERSION', '7.3.20');
     }
 
     // If the error is an uncaught exception, get the correct backtrace
     if (preg_match('/^Uncaught Error: (.+) in (.+):(\d+)$/m', $errstr, $matches)) {
-        $backtrace = (new ErrorException($matches[1], 0, $errno, $matches[2], $matches[3])) -> getTrace();
+        $backtrace = (new ErrorException($matches[1], 0, $errno, $matches[2], $matches[3]))->getTrace();
         $errstr    = $matches[1];
     }
 
@@ -595,11 +626,11 @@ function display_error_http($errno, $message = NULL)
 
 function display_exception($exception) {
     display_error_page(
-        $exception -> getCode(),
-        $exception -> getMessage(),
-        $exception -> getFile(),
-        $exception -> getLine(),
-        $exception -> getTrace()
+        $exception->getCode(),
+        $exception->getMessage(),
+        $exception->getFile(),
+        $exception->getLine(),
+        $exception->getTrace()
     );
 }
 
@@ -609,7 +640,9 @@ set_exception_handler('display_exception');
 register_shutdown_function("whimsical_shutdown_handler");
 
 // Set QUIET
-define('OBS_QUIET', isset($options['q']));
+if (!defined('OBS_QUIET')) {
+    define('OBS_QUIET', isset($options['q']));
+}
 
 // Set DEBUG
 if (isset($options['d'])) {
@@ -661,7 +694,8 @@ if (isset($options['d'])) {
         ini_set('error_reporting', E_ALL ^ E_DEPRECATED ^ E_NOTICE ^ E_WARNING);
     } // else not set anything before auth
 
-} else {
+} elseif (!defined('OBS_DEBUG')) {
+    //echo("NO DEBUG\n");
     define('OBS_DEBUG', 0);
     ini_set('display_errors', 0);
     ini_set('display_startup_errors', 0);

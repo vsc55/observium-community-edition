@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,21 +8,27 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Helper;
+namespace Phpfastcache\Helper;
 
-use phpFastCache\CacheManager;
-use phpFastCache\Core\Item\ExtendedCacheItemInterface;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheRootException;
-use phpFastCache\Exceptions\phpFastCacheSimpleCacheException;
+use DateInterval;
+use DateTime;
+use Phpfastcache\CacheManager;
+use Phpfastcache\Config\ConfigurationOptionInterface;
+use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
+use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
+use Phpfastcache\Exceptions\{PhpfastcacheDriverCheckException,
+    PhpfastcacheInvalidArgumentException,
+    PhpfastcacheLogicException,
+    PhpfastcacheRootException,
+    PhpfastcacheSimpleCacheException};
 use Psr\SimpleCache\CacheInterface;
+use Traversable;
 
 /**
  * Class Psr16Adapter
@@ -36,20 +43,34 @@ class Psr16Adapter implements CacheInterface
 
     /**
      * Psr16Adapter constructor.
-     * @param string $driver
-     * @param array $config
-     * @throws phpFastCacheDriverCheckException
+     * @param $driver
+     * @param null|ConfigurationOptionInterface $config
+     * @throws PhpfastcacheDriverCheckException
+     * @throws PhpfastcacheInvalidArgumentException
+     * @throws PhpfastcacheLogicException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheDriverException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheDriverNotFoundException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidConfigurationException
+     * @throws \ReflectionException
      */
-    public function __construct($driver, array $config = [])
+    public function __construct($driver, ConfigurationOptionInterface $config = null)
     {
-        $this->internalCacheInstance = CacheManager::getInstance($driver, $config);
+        if ($driver instanceof ExtendedCacheItemPoolInterface) {
+            if ($config !== null) {
+                throw new PhpfastcacheLogicException("You can't pass a config parameter along with an non-string '\$driver' parameter.");
+            }
+            $this->internalCacheInstance = $driver;
+        } else {
+            $this->internalCacheInstance = CacheManager::getInstance($driver, $config);
+        }
     }
 
     /**
      * @param string $key
-     * @param null $default
+     * @param mixed|null $default
      * @return mixed|null
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
+     * @throws \Psr\Cache\InvalidArgumentException
      */
     public function get($key, $default = null)
     {
@@ -57,143 +78,164 @@ class Psr16Adapter implements CacheInterface
             $cacheItem = $this->internalCacheInstance->getItem($key);
             if (!$cacheItem->isExpired() && $cacheItem->get() !== null) {
                 return $cacheItem->get();
-            } else {
-                return $default;
             }
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+
+            return $default;
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
      * @param string $key
      * @param mixed $value
-     * @param null $ttl
+     * @param null|int|DateInterval $ttl
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
+     * @throws \Psr\Cache\InvalidArgumentException
      */
-    public function set($key, $value, $ttl = null)
+    public function set($key, $value, $ttl = null): bool
     {
         try {
             $cacheItem = $this->internalCacheInstance
-              ->getItem($key)
-              ->set($value);
-            if (is_int($ttl) && $ttl <= 0) {
-                $cacheItem->expiresAt((new \DateTime('@0')));
-            } elseif (is_int($ttl) || $ttl instanceof \DateInterval) {
+                ->getItem($key)
+                ->set($value);
+            if (\is_int($ttl) && $ttl <= 0) {
+                $cacheItem->expiresAt((new DateTime('@0')));
+            } elseif ($ttl !== null) {
                 $cacheItem->expiresAfter($ttl);
             }
             return $this->internalCacheInstance->save($cacheItem);
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
      * @param string $key
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
      */
-    public function delete($key)
+    public function delete($key): bool
     {
         try {
             return $this->internalCacheInstance->deleteItem($key);
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
      */
-    public function clear()
+    public function clear(): bool
     {
         try {
             return $this->internalCacheInstance->clear();
-        } catch (phpFastCacheRootException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheRootException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
-     * @param string[] $keys
+     * @param iterable $keys
      * @param null $default
-     * @return \iterable
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @return ExtendedCacheItemInterface[]|iterable
+     * @throws PhpfastcacheSimpleCacheException
+     * @throws \Psr\Cache\InvalidArgumentException
      */
     public function getMultiple($keys, $default = null)
     {
-        if ($keys instanceof \Traversable) {
+        if ($keys instanceof Traversable) {
             $keys = \iterator_to_array($keys);
         }
         try {
-            return array_map(function (ExtendedCacheItemInterface $item) {
-                return $item->get();
-            }, $this->internalCacheInstance->getItems($keys));
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+            return \array_map(
+                static function (ExtendedCacheItemInterface $item) use ($default) {
+                    return $item->isHit() ? $item->get() : $default;
+                },
+                $this->internalCacheInstance->getItems($keys)
+            );
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
      * @param string[] $values
-     * @param null|int|\DateInterval $ttl
+     * @param null|int|DateInterval $ttl
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
+     * @throws \Psr\Cache\InvalidArgumentException
      */
-    public function setMultiple($values, $ttl = null)
+    public function setMultiple($values, $ttl = null): bool
     {
         try {
             foreach ($values as $key => $value) {
                 $cacheItem = $this->internalCacheInstance->getItem($key)->set($value);
 
-                if (is_int($ttl) && $ttl <= 0) {
-                    $cacheItem->expiresAt((new \DateTime('@0')));
-                } elseif (is_int($ttl) || $ttl instanceof \DateInterval) {
+                if (\is_int($ttl) && $ttl <= 0) {
+                    $cacheItem->expiresAt((new DateTime('@0')));
+                } elseif ($ttl !== null) {
                     $cacheItem->expiresAfter($ttl);
                 }
                 $this->internalCacheInstance->saveDeferred($cacheItem);
                 unset($cacheItem);
             }
             return $this->internalCacheInstance->commit();
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
-     * @param string[] $keys
+     * @param iterable|array $keys
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
+     * @throws \Psr\Cache\InvalidArgumentException
      */
-    public function deleteMultiple($keys)
+    public function deleteMultiple($keys): bool
     {
         try {
-            if ($keys instanceof \Traversable) {
+            if ($keys instanceof Traversable) {
                 return $this->internalCacheInstance->deleteItems(\iterator_to_array($keys));
-            } elseif (is_array($keys)) {
+            } elseif (\is_array($keys)) {
                 return $this->internalCacheInstance->deleteItems($keys);
             } else {
                 throw new phpFastCacheInvalidArgumentException('$keys must be an array/Traversable instance.');
             }
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
     }
 
     /**
      * @param string $key
      * @return bool
-     * @throws \phpFastCache\Exceptions\phpFastCacheSimpleCacheException
+     * @throws PhpfastcacheSimpleCacheException
      */
-    public function has($key)
+    public function has($key): bool
     {
         try {
             $cacheItem = $this->internalCacheInstance->getItem($key);
             return $cacheItem->isHit() && !$cacheItem->isExpired();
-        } catch (phpFastCacheInvalidArgumentException $e) {
-            throw new phpFastCacheSimpleCacheException($e->getMessage(), null, $e);
+        } catch (PhpfastcacheInvalidArgumentException $e) {
+            throw new PhpfastcacheSimpleCacheException($e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Extra methods that are not part of
+     * psr16 specifications
+     */
+
+    /**
+     * @return ExtendedCacheItemPoolInterface
+     * @internal
+     */
+    public function getInternalCacheInstance(): ExtendedCacheItemPoolInterface
+    {
+        return $this->internalCacheInstance;
     }
 }

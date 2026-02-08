@@ -1,19 +1,7 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmsbrg.mib,v 1.8 2012/09/07 09:52:05 siva Exp $
 ARICENT-MIStdBRIDGE-MIB DEFINITIONS ::= BEGIN
          
-         -- The following changes are done for making the mib 
-         -- compliant with SNMPv2: 
-         -- MAX-ACCESS instead of ACCESS, 
-         -- Counter32 instead of Counter, 
-         -- STATUS set to current instead of mandatory.
-
-         -- Also new group fsDot1dNotifications is added for the traps.
-         
-         -- The fsDot1dStaticTable Index is set to read-only
-         -- instead of read-write.
-
 IMPORTS
             MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
             Counter32, TimeTicks, mib-2, Integer32,

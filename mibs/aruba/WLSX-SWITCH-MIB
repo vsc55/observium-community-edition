@@ -1,4 +1,4 @@
--- ArubaOS 8.11.2.0_87947
+-- ArubaOS 8.12.0.4_91755
 -- vim:set ts=4 sw=4:
    WLSX-SWITCH-MIB DEFINITIONS ::= BEGIN
 
@@ -2600,7 +2600,7 @@ wlsxLowOnFlash1Space NOTIFICATION-TYPE
 
 wlsxSwitchIPv6Changed NOTIFICATION-TYPE
         OBJECTS {wlsxSwitchIpv6}
-    STATUS  current
+    STATUS  obsolete
     DESCRIPTION
                         "A trap which indicates that the switch IPv6 address has changed."
     ::= { wlsxSwitchTraps 1047 }

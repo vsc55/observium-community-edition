@@ -33,11 +33,11 @@ foreach ($results as $result) {
         'icon'   => $config['icon']['wifi'],
         'data'   => [
             $result['ap_name'],
-            escape_html($result['ap_location']) . ' | Access point'
+            $result['ap_location'] . ' | Access point'
         ]
     ];
 }
 
-$search_results['accesspoints'] = ['descr' => 'APs found', 'results' => $ap_search_results];
+$search_results['accesspoints'] = [ 'descr' => 'APs found', 'results' => $ap_search_results ];
 
 // EOF

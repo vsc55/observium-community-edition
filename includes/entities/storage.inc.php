@@ -10,17 +10,25 @@
  *
  */
 
-function discover_storage_definition($device, $mib, $entry, $object)
-{
+function discover_storage_definition($device, $mib, $entry, $object) {
     $entry['found'] = FALSE;
-
-    $entry['object'] = $object;
-    echo($object . ' [');
 
     // Just append mib name to definition entry, for simple pass to external functions
     if (empty($entry['mib'])) {
         $entry['mib'] = $mib;
     }
+
+    // Determine identifier for storage_object using 3-tier priority
+    $object = entity_object_definition($entry, $object, 'storage');
+
+    // Skip broken definitions - this fallback should never be used
+    if (safe_empty($object)) {
+        echo "]";
+        print_debug("No valid identifier found for storage entry $object in mib {$entry['mib']} - skipping");
+        return;
+    }
+
+    echo($entry['object'] . ' [');
 
     // Check that types listed in skip_if_valid_exist have already been found
     if (discovery_check_if_type_exist($entry, 'storage')) {
@@ -34,21 +42,54 @@ function discover_storage_definition($device, $mib, $entry, $object)
         return;
     }
 
+    // Validate primary OIDs exist for current mib (similar to sensor discovery)
+    $validate_oids = [
+        [ 'oid_total', 'oid_used', 'oid_free', 'oid_perc' ],    // common set
+        [ 'oid_total_hc', 'oid_used_hc', 'oid_free_hc' ],       // hc set
+        [ 'oid_total_high', 'oid_used_high', 'oid_free_high' ], // high/low
+    ];
+    $valid_oids = 0;
+    foreach ($validate_oids as $voids) {
+        foreach ($voids as $oid_key) {
+            if (isset($entry[$oid_key])) {
+                if (empty($entry[$oid_key . '_num'])) {
+                    // Use snmptranslate if oid_num not set
+                    $entry[$oid_key . '_num'] = snmp_translate($entry[$oid_key], $mib);
+                    if (empty($entry[$oid_key . '_num'])) {
+                        print_debug("OID [" . $entry[$oid_key] . "] not exist for mib [$mib].");
+                        continue;
+                    }
+                }
+                $valid_oids++;
+            }
+        }
+        // Skip next OIDs set checking
+        if ($valid_oids > 1) { break; }
+    }
+
+    // Need at least one valid primary OID to proceed
+    if ($valid_oids === 0) {
+        echo "]";
+        print_debug("No valid storage OIDs found for object [$object] in mib [$mib]. Storage skipped.");
+        return;
+    }
+
     // oid_*_hc and oid_*_high/oid_*_low used with storage_hc flag
-    $table_oids    = ['oid_total', 'oid_total_hc', 'oid_total_high', 'oid_total_low',
-                      'oid_used', 'oid_used_hc', 'oid_used_high', 'oid_used_low',
-                      'oid_free', 'oid_free_hc', 'oid_free_high', 'oid_free_low',
-                      'oid_perc', 'oid_descr', 'oid_scale', 'oid_unit',
-                      'oid_type', 'oid_online', 'oid_extra',
-                      //'oid_limit_low', 'oid_limit_low_warn', 'oid_limit_high_warn', 'oid_limit_high',
-                      //'oid_limit_nominal', 'oid_limit_delta_warn', 'oid_limit_delta', 'oid_limit_scale'
+    $table_oids = [
+        'oid_total', 'oid_total_hc', 'oid_total_high', 'oid_total_low',
+        'oid_used', 'oid_used_hc', 'oid_used_high', 'oid_used_low',
+        'oid_free', 'oid_free_hc', 'oid_free_high', 'oid_free_low',
+        'oid_perc', 'oid_descr', 'oid_scale', 'oid_unit',
+        'oid_type', 'oid_online', 'oid_extra',
+        //'oid_limit_low', 'oid_limit_low_warn', 'oid_limit_high_warn', 'oid_limit_high',
+        //'oid_limit_nominal', 'oid_limit_delta_warn', 'oid_limit_delta', 'oid_limit_scale'
     ];
     $storage_array = discover_fetch_oids($device, $mib, $entry, $table_oids);
 
     // FIXME - generify description generation code and just pass it template and OID array.
 
     $i             = 1; // Used in descr as %i%
-    $storage_count = count($storage_array);
+    $storage_count = safe_count($storage_array);
     foreach ($storage_array as $index => $storage_entry) {
         $options = [];
         //$oid_num = $entry['oid_num'] . '.' . $index;
@@ -217,7 +258,7 @@ function discover_storage_ng($device, $storage_mib, $storage_object, $storage_in
     }
 
     // Check storage ignore filters
-    if (entity_descr_check($storage_descr, 'storage')) {
+    if (entity_descr_check($storage_descr, 'storage', FALSE)) {  // Do not limit descr, text field
         return FALSE;
     }
     // Search duplicates for same mib/descr
@@ -233,7 +274,7 @@ function discover_storage_ng($device, $storage_mib, $storage_object, $storage_in
 
     $device_id = $device['device_id'];
 
-    $storage_db = dbFetchRow("SELECT * FROM `storage` WHERE `device_id` = ? AND `storage_index` = ? AND `storage_mib` = ?", [$device_id, $storage_index, $storage_mib]);
+    $storage_db = dbFetchRow("SELECT * FROM `storage` WHERE `device_id` = ? AND `storage_index` = ? AND `storage_mib` = ? AND `storage_object` = ?", [$device_id, $storage_index, $storage_mib, $storage_object]);
     if (!isset($storage_db['storage_id'])) {
 
         $update = ['device_id' => $device_id];
@@ -394,12 +435,11 @@ function poll_cache_storage($device, &$oid_cache)
 
     $oid_to_cache = [];
     foreach (dbFetchRows($walk_query, $walk_params) as $entry) {
-        if (!isset($config['mibs'][$entry['storage_mib']]['storage'][$entry[$object_field]])) {
+        $def = storage_find_definition_by_oid($entry['storage_mib'], $entry[$object_field]);
+        if (!$def) {
             // Cache only definition based
             continue;
         }
-
-        $def = $config['mibs'][$entry['storage_mib']]['storage'][$entry[$object_field]];
         $hc  = $entry['storage_hc'];
 
         // Explode indexes from GROUP_CONCAT()
@@ -497,5 +537,36 @@ function poll_cache_storage($device, &$oid_cache)
     print_debug_vars($oid_cache);
     return !empty($oid_to_cache);
 }
+
+function storage_find_definition_by_oid($mib, $oid_name)
+{
+    global $config;
+
+    if (!isset($config['mibs'][$mib]['storage'])) {
+        return null;
+    }
+
+    // First try traditional associative lookup
+    if (isset($config['mibs'][$mib]['storage'][$oid_name])) {
+        return $config['mibs'][$mib]['storage'][$oid_name];
+    }
+
+    // Then search through [] syntax entries for matching OID
+    $primary_oids = ['oid_total', 'oid_used', 'oid_free', 'oid_perc'];
+    foreach ($config['mibs'][$mib]['storage'] as $key => $def) {
+        if (is_numeric($key) && is_array($def)) {
+            // Check if any primary OID matches
+            foreach ($primary_oids as $oid_key) {
+                if (isset($def[$oid_key]) && $def[$oid_key] === $oid_name) {
+                    return $def;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+
 
 // EOF

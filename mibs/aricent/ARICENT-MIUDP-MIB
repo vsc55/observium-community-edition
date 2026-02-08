@@ -1,7 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmsudpipvx.mib,v 1.3 2012/09/07 09:52:05 siva Exp $
-
    ARICENT-MIUDP-MIB DEFINITIONS ::= BEGIN
 
    IMPORTS

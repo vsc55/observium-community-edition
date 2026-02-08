@@ -28,7 +28,7 @@ if (snmp_status()) {
         // See: https://jira.observium.org/browse/OBS-4373
 
         // Build dot1dBasePort
-        foreach (snmpwalk_cache_oid($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB') as $dot1dbaseport => $entry) {
+        foreach (snmp_cache_table($device, 'dot1dBasePortIfIndex', [], 'BRIDGE-MIB') as $dot1dbaseport => $entry) {
             $dot1dBasePort_table[$dot1dbaseport] = $port_ifIndex_table[$entry['dot1dBasePortIfIndex']];
         }
         print_debug_vars($dot1dBasePort_table);

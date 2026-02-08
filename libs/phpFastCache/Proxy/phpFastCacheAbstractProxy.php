@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,16 +8,19 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Proxy;
+namespace Phpfastcache\Proxy;
 
-use phpFastCache\CacheManager;
-use phpFastCache\Core\Item\ExtendedCacheItemInterface;
-use phpFastCache\Entities\DriverStatistic;
+use BadMethodCallException;
+use Phpfastcache\CacheManager;
+use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
+use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
+use Phpfastcache\Entities\DriverStatistic;
 use Psr\Cache\CacheItemInterface;
 
 /**
@@ -50,35 +54,42 @@ use Psr\Cache\CacheItemInterface;
  * @method void prependItemsByTag($tagName, $data) // Prepend items by a tag
  * @method void prependItemsByTags(array $tagNames, $data) // Prepend items by a tags
  */
-abstract class phpFastCacheAbstractProxy
+abstract class PhpfastcacheAbstractProxy
 {
     /**
-     * @var \phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface
+     * @var ExtendedCacheItemPoolInterface
      */
     protected $instance;
 
     /**
-     * phpFastCache constructor.
+     * PhpfastcacheAbstractProxy constructor.
      * @param string $driver
-     * @param array $config
+     * @param null $config
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheDriverCheckException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheDriverException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheDriverNotFoundException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheInvalidConfigurationException
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheLogicException
+     * @throws \ReflectionException
      */
-    public function __construct($driver = 'auto', array $config = [])
+    public function __construct(string $driver, $config = null)
     {
         $this->instance = CacheManager::getInstance($driver, $config);
     }
 
     /**
-     * @param $name
-     * @param $args
+     * @param string $name
+     * @param array $args
      * @return mixed
-     * @throws \BadMethodCallException
+     * @throws BadMethodCallException
      */
-    public function __call($name, $args)
+    public function __call(string $name, array $args)
     {
-        if (method_exists($this->instance, $name)) {
-            return call_user_func_array([$this->instance, $name], $args);
-        } else {
-            throw new \BadMethodCallException(sprintf('Method %s does not exists', $name));
+        if (\method_exists($this->instance, $name)) {
+            return $this->instance->$name(...$args);
         }
+
+        throw new BadMethodCallException(\sprintf('Method %s does not exists', $name));
     }
 }

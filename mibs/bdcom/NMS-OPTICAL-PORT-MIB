@@ -7,7 +7,7 @@
                NMS-OPTICAL-PORT-MIB DEFINITIONS ::= BEGIN
 
                IMPORTS
-                    NOTIFICATION-TYPE,INTEGER
+                    NOTIFICATION-TYPE
                         FROM SNMPv2-SMI
                     Counter, IpAddress, Counter
 			FROM RFC1155-SMI
@@ -74,8 +74,14 @@
                   opIfVolt
                       INTEGER,
                   opIfCurrent
-                      INTEGER
-                                    
+                      INTEGER,
+                  ofIfTemperatureLimit
+                      INTEGER,
+		  opIfRxPowerULimitWarning
+		      INTEGER,		     
+		  opIfTxPowerULimitWarning
+		      INTEGER		     
+                                                    
                      
               }
               
@@ -211,10 +217,40 @@
               ::= { opticalPortPowerEntry 15 }
 
 
+          ofIfTemperatureLimit OBJECT-TYPE
+              SYNTAX  INTEGER
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "A unique value for each optical interface, that means optical module temperature limit value. Unit is centigrade."
+              ::= { opticalPortPowerEntry 16 }
+
+
+
+          opIfRxPowerULimitWarning OBJECT-TYPE
+              SYNTAX  INTEGER
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "A unique value for each optical interface, that means optical module rx-power warning limit value. Unit is db."
+              ::= { opticalPortPowerEntry 17 }
+
+          opIfTxPowerULimitWarning OBJECT-TYPE
+              SYNTAX  INTEGER
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "A unique value for each optical interface, that means optical module rx-power warning limit value. Unit is db."
+              ::= { opticalPortPowerEntry 18 }
+
+
+
           opIfTransMode OBJECT-TYPE
               SYNTAX  INTEGER{
                               upload(1),
-                              download(2)
+                              download(2),
+                              insert-port(3),
+                              pull-out-port(4)
               }
               ACCESS  not-accessible
               STATUS  mandatory
@@ -259,7 +295,17 @@
                        opIfIndex,
                        opIfDescr,
                        opIfTransMode,
-                       opIfTransPowerAlarm
+                       opIfTransPowerAlarm,
+                       opIfRxPowerULimit,
+                       opIfRxPowerCurr,
+                       opIfRxPowerLLimit,
+                       opIfRxPowerULimitWarning,
+                       opIfTxPowerCurr,
+                       opIfTxPowerLLimit,
+                       opIfTxPowerULimit,
+                       opIfTxPowerULimitWarning
+                 
+                       
     		}
     		STATUS      current
     		DESCRIPTION
@@ -282,9 +328,41 @@
         	"The agent generates this notification when optical interface upload BER exceed the threshold ruled in opticalPortPowerTable."
     		::= { opIfUploadBERNotifications 1 }
 
+-- Temperature Notifications
+	nmsOpIfTemperatureNotifications OBJECT IDENTIFIER
+                                ::= { opticalPortPower 7 }
+
+
+	nmsOpIfTemperatureNotification NOTIFICATION-TYPE
+    		OBJECTS {
+                       opIfIndex,
+                       opIfDescr,
+                       opIfTemperature,
+                       ofIfTemperatureLimit
+    		}
+    		STATUS      current
+    		DESCRIPTION
+        	"The agent generates this notification when optical interface temperature exceeds the threshold."
+    		::= { nmsOpIfTemperatureNotifications 1 }
               
 	
+-- Temperature Notifications
+	nmsOpIfStatusNotifications OBJECT IDENTIFIER
+                                ::= { opticalPortPower 8 }
 
+
+	nmsOpIfStatusNotification NOTIFICATION-TYPE
+    		OBJECTS {
+                       opIfIndex,
+                       opIfDescr,
+                       opIfTransMode
+    		}
+    		STATUS      current
+    		DESCRIPTION
+        	"The agent generates this notification when optical interface status changes. opIfTransMode value will be pull-out or insert. "
+    		::= { nmsOpIfStatusNotifications 1 }
+              
+	
 
               
               		     

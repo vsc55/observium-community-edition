@@ -1,7 +1,5 @@
 -- Copyright (C) 2016 Aricent. All Rights Reserved
 
--- $Id: fsmpb.mib,v 1.17 2016/02/18 09:47:31 siva Exp $
-
 ARICENT-MIPROVIDERBRIDGE-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS
@@ -9,7 +7,7 @@ IMPORTS
     OBJECT-TYPE,MODULE-IDENTITY,
     Integer32, Unsigned32, Counter32, IpAddress, enterprises
        FROM SNMPv2-SMI
-    RowStatus, MacAddress, TEXTUAL-CONVENTION, TruthValue
+    RowStatus, MacAddress, TruthValue, TEXTUAL-CONVENTION
        FROM SNMPv2-TC
     VlanId, dot1qVlanIndex 
        FROM Q-BRIDGE-MIB

@@ -1,11 +1,6 @@
--- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
-
--- $Id: fsrmon.mib,v 1.9 2013/10/28 09:51:44 siva Exp $
+-- Copyright (C) 2018  Aricent Group . All Rights Reserved
 
 ARICENT-RMON-MIB DEFINITIONS ::= BEGIN
-                   --  Remote Network Monitoring MIB
-
--- Enterprises MIB for RMON product (for Trace).
 
 IMPORTS 
     etherStatsEntry                FROM RMON-MIB
@@ -27,7 +22,7 @@ futrmon MODULE-IDENTITY
         The etherStatsDatasource of etherStats table identifies the source of data 
         that is configured to analyze. Now this source can be set to either
         interface OID or VLAN OID. If configured for interface OID the statistics
-        collection is set to be on Interface and if the source is set to VLAN OID 
+        collection is set to be on Interface and if the source is set to VLAN OID,
         the statistics collection is set to be on any of the VLAN configured in the
         device."
 
@@ -40,7 +35,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled debug flag for rmon"
+		         "This object specifies the enabled debug flag for rmon."
 
          ::=  { futrmon  1 }
         
@@ -51,7 +46,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the rmonenable flag for rmon" 
+		         "This object specifies the rmonenable flag for rmon." 
 
          ::=  { futrmon  2 }
 -- FutreRmon  stats supported object
@@ -62,8 +57,8 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the flag for whether HW supports
-                   Etherstatistics or not   "
+		          "This object specifies the flag for whether HW supports
+                   Etherstatistics or not."
 
          ::=  { futrmon  3 }
 
@@ -75,7 +70,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWhistorysupp flag for rmon"
+		          "This object specifies the enabled HWhistorysupp flag for rmon."
 
          ::=  { futrmon  4 }
 
@@ -87,7 +82,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWAlarmsupp flag for rmon"
+		         "This object specifies the enabled HWAlarmsupp flag for rmon."
 
          ::=  { futrmon  5 }
 
@@ -99,7 +94,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWhostsupp flag for rmon"
+		         "This object specifies the enabled HWhostsupp flag for rmon."
 
          ::=  { futrmon  6 }
 
@@ -110,7 +105,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWHostTopN flag for rmon"
+		         "This object specifies the enabled HWHostTopN flag for rmon."
 
          ::=  { futrmon  7 }
 
@@ -121,7 +116,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWMatrix flag for rmon"
+		         "This object specifies the enabled HWMatrix flag for rmon."
 
          ::=  { futrmon  8 }
 
@@ -132,7 +127,7 @@ futrmon MODULE-IDENTITY
               MAX-ACCESS read-write
               STATUS current
               DESCRIPTION
-		  "This object defines the enabled HWEvent flag for rmon"
+		         "This object specifies the enabled HWEvent flag for rmon."
 
          ::=  { futrmon  9 }
 
@@ -143,7 +138,8 @@ futrmon MODULE-IDENTITY
     	SYNTAX     SEQUENCE OF RmonStatsEntry
        	MAX-ACCESS not-accessible
         STATUS     current
-        DESCRIPTION "The table is a enhancement of etherStatsTable in stdrmon.mib."
+        DESCRIPTION 
+		   "This object specifies the table which is a enhancement of etherStatsTable in stdrmon.mib."
 
     ::= {futrmon 10}
 
@@ -151,7 +147,8 @@ futrmon MODULE-IDENTITY
         SYNTAX      RmonStatsEntry
         MAX-ACCESS not-accessible
         STATUS     current
-        DESCRIPTION "An Entry containing Statistics information (e.g., OutFCSError)."
+        DESCRIPTION 
+		   "This object specifies an Entry containing Statistics information (e.g., OutFCSError)."
         AUGMENTS {etherStatsEntry}
     ::= {rmonStatsTable 1}
 
@@ -164,7 +161,7 @@ futrmon MODULE-IDENTITY
         MAX-ACCESS  read-only
         STATUS      current
         DESCRIPTION
-        "The number of frames transmitted with an invalid FCS.
+           "This object specifies the number of frames transmitted with an invalid FCS.
         Whenever a frame is modified during transmission
         (e.g., to add or remove a tag) the frame's original FCS
         is inspected before a new FCS is added to a modified
@@ -179,7 +176,7 @@ futrmon MODULE-IDENTITY
      MAX-ACCESS read-only
      STATUS     current
      DESCRIPTION
-         "The total number of packets (including bad
+         "This object specifies the total number of packets (including bad
          packets) received that were between
          1519 and 1522 octets in length inclusive
          (excluding framing bits but including FCS octets)."

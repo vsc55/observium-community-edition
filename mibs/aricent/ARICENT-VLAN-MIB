@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved.
 
--- $Id: fsvlan.mib,v 1.52.24.1 2018/03/26 11:33:14 siva Exp $
-
 ARICENT-VLAN-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS 
@@ -12,6 +10,8 @@ IMPORTS
     RowStatus, TEXTUAL-CONVENTION, MacAddress, TruthValue,
     DisplayString
          FROM SNMPv2-TC
+    SnmpAdminString
+         FROM SNMP-FRAMEWORK-MIB
     dot1qTpFdbPort
          FROM Q-BRIDGE-MIB
     dot1qStaticUnicastEntry
@@ -24,12 +24,21 @@ IMPORTS
          FROM Q-BRIDGE-MIB;                                    -- [RFC4363]
  
 futureVlanMIB MODULE-IDENTITY 
-    LAST-UPDATED "201209050000Z" 
+    LAST-UPDATED "202111150000Z" 
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
     CONTACT-INFO "support@aricent.com" 
     DESCRIPTION "||||||"
-    REVISION "201209050000Z"
+
+    REVISION    "202111150000Z" -- Novenber 15, 2021
+    DESCRIPTION "Ver 3: Added automated voice uplink."
+
+    REVISION    "202108120000Z" -- August 12, 2021
+    DESCRIPTION "Ver 2: Objects supporting automated voice
+                VLAN capabilities defined."
+
+    REVISION "202006010000Z"
     DESCRIPTION "||||||" 
+
 ::= { enterprises futuresoftware(2076) 65} 
  
 VlanId ::= TEXTUAL-CONVENTION 
@@ -248,7 +257,8 @@ Dot1qFutureVlanPortEntry ::=
       dot1qFutureVlanPortAllowableTPID2 Integer32,
       dot1qFutureVlanPortAllowableTPID3 Integer32,
       dot1qFutureVlanPortUnicastMacSecType INTEGER,
-      dot1qFuturePortPacketReflectionStatus TruthValue
+      dot1qFuturePortPacketReflectionStatus TruthValue,
+      dot1qFutureVlanPortProtectedStatic TruthValue
    } 
  
 dot1qFutureVlanPort OBJECT-TYPE 
@@ -275,7 +285,7 @@ dot1qFutureVlanPortType OBJECT-TYPE
        member of all the existing VLANs and also for any new VLAN
        created. 
        When configured as hybrid port, the port can send or accept both 
-       tagged and untagged frames."
+       tagged and untagged frames." 
 
    DEFVAL   { hybridPort } 
    ::= { dot1qFutureVlanPortEntry 2 } 
@@ -480,8 +490,7 @@ dot1qFutureVlanPortUnicastMacSecType OBJECT-TYPE
     SYNTAX      INTEGER {
                     sav(1),
                     shv(2),
-                    off(3),
-                    sdv(4)
+                    off(3)
                 }
     MAX-ACCESS  read-write
     STATUS      current
@@ -492,9 +501,6 @@ dot1qFutureVlanPortUnicastMacSecType OBJECT-TYPE
                  Only unknown MAC is treated as violation on all security configured ports.
          shv   - security is shv, strict is TRUE
                  Configured MAC alone is treated as non violation in all security configured ports.
-         sdv   - security is sdv, strict is TRUE
-                 Configured MAC alone is treated as non violation in all security configured ports.
-                 Ports will be disabled.
          off   - disable security."
 
     DEFVAL { 3 }
@@ -513,6 +519,16 @@ dot1qFuturePortPacketReflectionStatus OBJECT-TYPE
    DEFVAL  {false} 
    ::= { dot1qFutureVlanPortEntry 16 } 
 
+dot1qFutureVlanPortProtectedStatic  OBJECT-TYPE
+   SYNTAX      TruthValue
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+      "The static Split Horizon property of the port. If set to true, frames 
+       that are received on any other port that has the same property set to
+       true will not be forwarded on this port."
+
+   ::= { dot1qFutureVlanPortEntry 17 }
 
 -- ---------------------------------------------------------------------------- 
 -- Future Vlan Mac Map Table 
@@ -521,7 +537,7 @@ dot1qFuturePortPacketReflectionStatus OBJECT-TYPE
 dot1qFutureVlanPortMacMapTable OBJECT-TYPE 
    SYNTAX      SEQUENCE OF Dot1qFutureVlanPortMacMapEntry 
    MAX-ACCESS  not-accessible 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "A table that contains information on VLAN-MAC address 
       mapping." 
@@ -530,7 +546,7 @@ dot1qFutureVlanPortMacMapTable OBJECT-TYPE
 dot1qFutureVlanPortMacMapEntry OBJECT-TYPE
    SYNTAX      Dot1qFutureVlanPortMacMapEntry
    MAX-ACCESS  not-accessible 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "This object specifies the entry that contains VLAN-MAC address mapping." 
    INDEX { dot1qFutureVlanPort, dot1qFutureVlanPortMacMapAddr }
@@ -548,7 +564,7 @@ Dot1qFutureVlanPortMacMapEntry ::=
 dot1qFutureVlanPortMacMapAddr OBJECT-TYPE
    SYNTAX      MacAddress  
    MAX-ACCESS  not-accessible 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "This object specifies the MAC address for which the VLAN mapping is
        present in the entry." 
@@ -557,7 +573,7 @@ dot1qFutureVlanPortMacMapAddr OBJECT-TYPE
 dot1qFutureVlanPortMacMapVid OBJECT-TYPE
    SYNTAX      VlanId 
    MAX-ACCESS  read-write 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "This object specifies the VLAN to which the MAC address of this entry is
        mapped to." 
@@ -566,7 +582,7 @@ dot1qFutureVlanPortMacMapVid OBJECT-TYPE
 dot1qFutureVlanPortMacMapName OBJECT-TYPE
    SYNTAX      DisplayString 
    MAX-ACCESS  read-write 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "This object specifies the name given to the mac-VLAN entry." 
    ::= { dot1qFutureVlanPortMacMapEntry 3 }
@@ -574,7 +590,7 @@ dot1qFutureVlanPortMacMapName OBJECT-TYPE
 dot1qFutureVlanPortMacMapMcastBcastOption OBJECT-TYPE
    SYNTAX      INTEGER { allow(1), suppress(2) }
    MAX-ACCESS  read-write
-   STATUS      deprecated
+   STATUS      current
    DESCRIPTION 
        "Configurable option for discarding/allowing Multicast/Broadcast untagged
         frames. The value allow (1) indicates that Multicast/Broadcast frames
@@ -588,7 +604,7 @@ dot1qFutureVlanPortMacMapMcastBcastOption OBJECT-TYPE
 dot1qFutureVlanPortMacMapRowStatus OBJECT-TYPE
    SYNTAX      RowStatus 
    MAX-ACCESS  read-write 
-   STATUS      deprecated
+   STATUS      current 
    DESCRIPTION 
       "The row status of the entry."  
    ::= { dot1qFutureVlanPortMacMapEntry 5 }
@@ -1517,18 +1533,20 @@ dot1qFutureStVlanType OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-	"Indicates the VLAN type of the static VLAN.
-	This object is being retained for backward compatibility of OID's
-	of the remaining objects in this table. "
+    "Indicates the VLAN type of the static VLAN.
+    This object is being retained for backward compatibility of OID's
+    of the remaining objects in this table. "
     ::= { dot1qFutureStVlanExtEntry 1 }
 
 dot1qFutureStVlanVid OBJECT-TYPE
    SYNTAX      VlanIdOrNone
-   MAX-ACCESS  read-only 
+   MAX-ACCESS  read-only
    STATUS      current 
    DESCRIPTION 
-   	"This object is being retained for backward compatibility of OID's of the
-	remaining objects in this table. "
+   
+   "This object is being retained for backward compatibility of OID's of the
+   remaining objects in this table. "
+
    ::= { dot1qFutureStVlanExtEntry 2 }
 
 dot1qFutureStVlanEgressEthertype OBJECT-TYPE
@@ -1805,4 +1823,108 @@ dot1qFutureVlanLoopbackStatus OBJECT-TYPE
    DEFVAL   { disabled }
    ::= { dot1qFutureVlanLoopbackEntry 1 }
 
+-- ---------------------------------------------------------------------------- 
+-- Voice VLAN objects            
+-- ---------------------------------------------------------------------------- 
+
+dot1qFutureVlanVoiceVlan OBJECT-TYPE
+   SYNTAX      VlanIdOrNone 
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The default voice VLAN. A non-zero value indicates
+      that automated VoIP device discovery and/or voice 
+      VLAN-related configuration can be performed using
+      this value (if applicable). A zero value indicates
+      that a default voice VLAN has not been defined." 
+
+   ::= { dot1qFutureVlan 34 }
+ 
+dot1qFutureVlanVoicePriority OBJECT-TYPE
+   SYNTAX      Integer32 (0..7) 
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The default voice VLAN 802.1p user priority."
+
+   DEFVAL { 6 }
+   ::= { dot1qFutureVlan 35 }
+ 
+dot1qFutureVlanVoiceDscp OBJECT-TYPE
+   SYNTAX      Integer32 (0..63) 
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The default voice VLAN DSCP."
+
+   DEFVAL { 46 }
+   ::= { dot1qFutureVlan 36 }
+ 
+dot1qFutureVlanVoiceVlanTagging OBJECT-TYPE
+   SYNTAX      INTEGER {
+                   tagged(1),
+                   untagged(2)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The default voice VLAN tagging status. Voice
+      traffic is considered tagged by default. A value
+      of 'untagged(2)' indicates that voice traffic will 
+      be untagged (port PVID set to the voice VLAN)."
+
+   DEFVAL { tagged }
+   ::= { dot1qFutureVlan 37 }
+ 
+dot1qFutureVlanVoiceDataVlan OBJECT-TYPE
+   SYNTAX      VlanIdOrNone 
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The data VLAN that is associated with the default 
+      voice VLAN."
+
+   DEFVAL { 0 }
+   ::= { dot1qFutureVlan 38 }
+ 
+dot1qFutureVlanVoiceDataVlanTagging OBJECT-TYPE
+   SYNTAX      INTEGER {
+                   tagged(1),
+                   untagged(2)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "The tagging status for the data VLAN that is
+      associated with the default voice VLAN. Data
+      traffic is considered untagged by default. A value
+      of 'tagged(1)' indicates that data traffic will 
+      be tagged (port PVID is not set to the data VLAN).
+
+      If voice traffic is untagged, the data VLAN
+      tagging status is ignored."
+
+   DEFVAL { untagged }
+   ::= { dot1qFutureVlan 39 }
+ 
+dot1qFutureVlanVoiceUplink OBJECT-TYPE
+   SYNTAX      SnmpAdminString (SIZE (0..7))
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+       "Specifies an interface to be considered for
+       VLAN membership updates when VLAN membership
+       updates are initiated by the VLAN voice support.
+
+       An uplink interface is specified using interface
+       type and value notation in a string format
+       (e.g., 'gi0/9', 'po1234'). A maximum of 1 voice
+       uplink can be specified.
+
+       A zero-length string indicates that no uplink
+       data is specified."
+
+   ::= { dot1qFutureVlan 40 }
+
 END    
+

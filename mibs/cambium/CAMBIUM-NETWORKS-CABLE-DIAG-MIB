@@ -14,11 +14,15 @@ IMPORTS
             FROM SNMPv2-TC;
 
 cnCableDiagMib MODULE-IDENTITY
-    LAST-UPDATED "202011160000Z"     -- Nov 16, 2020
+    LAST-UPDATED "202406270000Z"     -- June 27, 2024
     ORGANIZATION "Cambium Networks, Inc."
     CONTACT-INFO "cambiumnetworks.com"
     DESCRIPTION
         "This MIB module contains objects related to the cable diagnostics support."
+
+    REVISION "202406270000Z"     -- June 27, 2024
+    DESCRIPTION
+        "Additional results of the cable diagnostics test. Added length for normal cables."
 
     REVISION "202011160000Z"     -- Nov 16, 2020
     DESCRIPTION
@@ -55,7 +59,11 @@ CnCableDiagPortEntry ::= SEQUENCE {
        cnCableDiagFaultLengthPair3 Integer32,
        cnCableDiagFaultLengthPair4 Integer32,
        cnCableDiagTimeStamp        Integer32,
-       cnCableDiagStartTest        INTEGER
+       cnCableDiagStartTest        INTEGER,
+       cnCableDiagLengthPair1 Integer32,
+       cnCableDiagLengthPair2 Integer32,
+       cnCableDiagLengthPair3 Integer32,
+       cnCableDiagLengthPair4 Integer32
 }
 
 cnCableDiagPortIndex OBJECT-TYPE
@@ -75,7 +83,16 @@ cnCableDiagTestResultPair1 OBJECT-TYPE
                           pair-busy(5),
                           test-in-progress(6),
                           test-failed(7),
-                          no-test(8)
+                          no-test(8),
+                          impedance-mismatch(9),
+                          short-tx-rx-pair0(10),
+                          short-tx-rx-pair1(11),
+                          short-tx-rx-pair2(12),
+                          short-tx-rx-pair3(13),
+                          time-out(14),
+                          pair-ok-extended(15),
+                          test-failed-port-down(16),
+                          test-failed-port-10M(17)
                       }
        MAX-ACCESS  read-only
        STATUS      current
@@ -92,7 +109,16 @@ cnCableDiagTestResultPair2 OBJECT-TYPE
                           pair-busy(5),
                           test-in-progress(6),
                           test-failed(7),
-                          no-test(8)
+                          no-test(8),
+                          impedance-mismatch(9),
+                          short-tx-rx-pair0(10),
+                          short-tx-rx-pair1(11),
+                          short-tx-rx-pair2(12),
+                          short-tx-rx-pair3(13),
+                          time-out(14),
+                          pair-ok-extended(15),
+                          test-failed-port-down(16),
+                          test-failed-port-10M(17)
                       }
        MAX-ACCESS  read-only
        STATUS      current
@@ -109,7 +135,16 @@ cnCableDiagTestResultPair3 OBJECT-TYPE
                           pair-busy(5),
                           test-in-progress(6),
                           test-failed(7),
-                          no-test(8)
+                          no-test(8),
+                          impedance-mismatch(9),
+                          short-tx-rx-pair0(10),
+                          short-tx-rx-pair1(11),
+                          short-tx-rx-pair2(12),
+                          short-tx-rx-pair3(13),
+                          time-out(14),
+                          pair-ok-extended(15),
+                          test-failed-port-down(16),
+                          test-failed-port-10M(17)
                       }
        MAX-ACCESS  read-only
        STATUS      current
@@ -126,7 +161,16 @@ cnCableDiagTestResultPair4 OBJECT-TYPE
                           pair-busy(5),
                           test-in-progress(6),
                           test-failed(7),
-                          no-test(8)
+                          no-test(8),
+                          impedance-mismatch(9),
+                          short-tx-rx-pair0(10),
+                          short-tx-rx-pair1(11),
+                          short-tx-rx-pair2(12),
+                          short-tx-rx-pair3(13),
+                          time-out(14),
+                          pair-ok-extended(15),
+                          test-failed-port-down(16),
+                          test-failed-port-10M(17)
                       }
        MAX-ACCESS  read-only
        STATUS      current
@@ -184,4 +228,37 @@ cnCableDiagStartTest OBJECT-TYPE
        DESCRIPTION
                "This object starts the cable diagnostics cable tester. For reading results use other objects."
        ::= { cnCableDiagPortEntry 11 }
+
+cnCableDiagLengthPair1 OBJECT-TYPE
+        SYNTAX        Integer32 (1..2147483647)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+               "This object representes the length of a normal cable"
+        ::= { cnCableDiagPortEntry 12 }
+
+cnCableDiagLengthPair2 OBJECT-TYPE
+        SYNTAX        Integer32 (1..2147483647)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+               "This object representes the length of a normal cable"
+        ::= { cnCableDiagPortEntry 13 }
+
+cnCableDiagLengthPair3 OBJECT-TYPE
+        SYNTAX        Integer32 (1..2147483647)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+               "This object representes the length of a normal cable"
+        ::= { cnCableDiagPortEntry 14 }
+
+cnCableDiagLengthPair4 OBJECT-TYPE
+        SYNTAX        Integer32 (1..2147483647)
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+               "This object representes the length of a normal cable"
+        ::= { cnCableDiagPortEntry 15 }
+
 END

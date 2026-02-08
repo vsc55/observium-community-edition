@@ -55,7 +55,7 @@ if (!$config['enable_vrfs']) {
     // Clean Removed ports
     print_debug_vars($valid['vrf-ports']);
     $vrf_ports = [];
-    foreach ($valid['vrf-ports'] as $vrf_name => $entry) {
+    foreach ($valid['vrf-ports'] as $entry) {
         $vrf_ports[] = array_keys($entry);
         //$vrf_ports = array_merge($vrf_ports, array_keys($entry));
     }

@@ -36,19 +36,53 @@ if (!isset($options['q'])) {
     print_cli_banner();
 }
 
-if ($options['h'] === "all") {
-    $where = " ";
-    $doing = "all";
-} elseif ($options['h']) {
-    $params = [];
-    if (is_numeric($options['h'])) {
-        $where    = "AND `device_id` = ?";
-        $doing    = $options['h'];
-        $params[] = $options['h'];
+if ($options['h'] === "pollers") {
+    // Distributed pollers only (just placeholder as in poller)
+    if (OBS_DISTRIBUTED) {
+        //poll_pollers_distributed();
+        print_debug("Distribution pollers not require alerter.");
+    } elseif (OBSERVIUM_EDITION === 'community') {
+        print_debug("Distribution pollers not available in CE.");
     } else {
-        $where    = "AND `hostname` LIKE ?";
-        $doing    = $options['h'];
-        $params[] = str_replace('*', '%', $options['h']);
+        print_debug("Distribution pollers not exist on install.");
+    }
+    exit(); // Silent exit
+}
+if (isset($options['h'])) {
+    $params = [];
+    switch ($options['h']) {
+        case 'odd':
+        case 'even':
+        case 'new':
+        case 'none':
+            // placeholder for hostname as in discovery
+            $doing = $options['h'];
+            break;
+
+        case 'all':
+            $where = ' ';
+            $doing = 'all';
+            break;
+
+
+
+        default:
+            if (is_numeric($options['h'])) {
+                $doing_single = TRUE; // Alert single device! (from wrapper)
+
+                $where    = "AND `device_id` = ?";
+                $params[] = $options['h'];
+                $doing    = $options['h'];
+            } elseif ($doing_single = (is_valid_hostname($options['h']) || get_ip_version($options['h']))) {
+                // Alert single device as hostname
+                $where = "AND `hostname` = ?";
+                $params[] = $options['h'];
+                $doing = $options['h'];
+            } else {
+                $where    = "AND `hostname` LIKE ?";
+                $doing    = $options['h'];
+                $params[] = str_replace('*', '%', $options['h']);
+            }
     }
 }
 

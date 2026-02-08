@@ -50,89 +50,23 @@ foreach (dbFetchRows("SELECT * FROM `ospf_instances` WHERE `device_id` = ? AND `
     }
     $nbr_count = dbFetchCell("SELECT COUNT(*) FROM `ospf_nbrs` WHERE `device_id` = ? AND `ospfVersionNumber` = ?", $ospf_params);
 
-    if ($instance['ospfAdminStat'] === "enabled") {
-        $enabled   = '<span class="label label-success">enabled</span>';
-        $row_class = 'up';
-    } else {
-        $enabled   = '<span class="label">disabled</span>';
-        $row_class = "disabled";
-    }
-    if ($instance['ospfAreaBdrRtrStatus'] === "true") {
-        $abr = '<span class="label label-success">ABR</span>';
+    $row_class = $instance['ospfAdminStat'] === "enabled" ? 'up' : 'disabled';
 
-    } else {
-        $abr = '<span class="label">no</span>';
-    }
-    if ($instance['ospfASBdrRtrStatus'] === "true") {
-        $asbr = '<span class="label label-success">ASBR</span>';
-    } else {
-        $asbr = '<span class="label">no</span>';
-    }
-
-    echo generate_box_open();
-
-    ?>
-    <table class="table table-hover table-striped vertical-align">
-        <tbody>
-        <tr class="up">
-            <td class="state-marker"></td>
-            <td style="padding: 10px 14px;"><span style="font-size: 20px;">Router ID <?php echo($instance_id); ?></span>
-</td>
-<td>
-</td>
-
-<td style="text-align: right;">
-
-
-
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>Status</strong></div>
-        <div class="btn btn-sm btn-<?php echo ($instance['ospfAdminStat'] == "enabled" ? 'success' : 'warning')  ?>"> <?php echo $instance['ospfAdminStat']; ?></div>
-    </div>
-
-    <?php
-
-if ($instance['ospfAreaBdrRtrStatus'] === "true") {
-    echo '
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>ABR</strong></div>
-        <div class="btn btn-sm btn-success">yes</div>
-    </div>';
-}
-
-if ($instance['ospfASBdrRtrStatus'] === "true") {
-    echo '
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>ASBR</strong></div>
-        <div class="btn btn-sm btn-success">yes</div>
-    </div>';
-}
-
-    ?>
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>Areas</strong></div>
-        <div class="btn btn-sm btn-info"> <?php echo $area_count; ?> </div>
-    </div>
-
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>Ports</strong></div>
-        <div class="btn btn-sm btn-info"> <?php echo $port_count; ?></div>
-        <div class="btn btn-sm btn-success"> <?php echo $port_count_enabled; ?></div>
-    </div>
-
-    <div class="btn-group" style="margin: 5px;">
-        <div class="btn btn-sm btn-default"><strong>Neighbours</strong></div>
-        <div class="btn btn-sm btn-info"> <?php echo $nbr_count; ?></div>
-    </div>
-</td>
-
-</tr>
-</tbody>
-</table>
-
-<?php
-
-    echo generate_box_close();
+    echo generate_state_header([
+        'title' => ['html' => 'Router ID ' . $instance_id],
+        'row_class' => $row_class,
+        'badges' => [
+            ['label' => 'Status', 'value' => $instance['ospfAdminStat'], 'class' => ($instance['ospfAdminStat'] == "enabled" ? 'success' : 'warning')],
+            ['label' => 'ABR', 'value' => 'yes', 'class' => 'success', 'show' => ($instance['ospfAreaBdrRtrStatus'] === "true")],
+            ['label' => 'ASBR', 'value' => 'yes', 'class' => 'success', 'show' => ($instance['ospfASBdrRtrStatus'] === "true")],
+            ['label' => 'Areas', 'value' => $area_count, 'class' => 'info'],
+            ['label' => 'Ports', 'values' => [
+                ['value' => $port_count, 'class' => 'info'],
+                ['value' => $port_count_enabled, 'class' => 'success']
+            ]],
+            ['label' => 'Neighbours', 'value' => $nbr_count, 'class' => 'info']
+        ]
+    ]);
 
     echo '<div class="row">';
     echo '<div class="col-md-6">';

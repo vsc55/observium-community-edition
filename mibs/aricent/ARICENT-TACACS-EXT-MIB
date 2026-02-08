@@ -1,9 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fstacsxt.mib,v 1.3 2013/09/20 14:48:24 siva Exp $
-
--- TACACS-CLIENT-EXT-MIB DEFINITIONS ::= BEGIN
-
 ARICENT-TACACS-EXT-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
@@ -14,11 +10,14 @@ IMPORTS
     InetAddressType, InetAddress     FROM INET-ADDRESS-MIB;
 
 futureTacacsClientExtMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202210190000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
 	 DESCRIPTION
          "The MIB for ISSAcessControl."
+	 REVISION "202210190000Z"
+         DESCRIPTION
+         "Added fsTacClntServerKeyType"
 	 REVISION "201209050000Z"
          DESCRIPTION
          "The MIB for ISSAcessControl."
@@ -61,8 +60,8 @@ fsTacClntExtTraceLevel   OBJECT-TYPE
     STATUS      current
     DESCRIPTION
       "The debug trace level for TACACS+ client implementation. This is a bit
-      mapped data. Each bit of this object reprsents a trace level.
-       0x00000001 - Infomation
+      mapped data. Each bit of this object represents a trace level.
+       0x00000001 - Information
        0x00000002 - Errors
        0x00000004 - Tx. packet dump
        0x00000008 - Rx. packet dump
@@ -323,7 +322,7 @@ fsTacClntExtConnectionFailures   OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-      "Number of connection failures occured."
+      "Number of connection failures occurred."
     ::= { fsTacClntExtStatisticsGroup 30 }
 
 -- Tabular MIB definitions 
@@ -365,7 +364,9 @@ FsTacClntExtServerEntry ::= SEQUENCE {
       fsTacClntExtServerTimeout
          Integer32,
       fsTacClntExtServerKey
-         DisplayString
+         DisplayString,
+      fsTacClntExtServerKeyType
+         INTEGER
       }
 
 fsTacClntExtServerAddressType OBJECT-TYPE
@@ -432,4 +433,16 @@ fsTacClntExtServerKey OBJECT-TYPE
       "Secret key shared between the client and server(IPv4 or IPv6) for encryption and
       decryption"
    ::= { fsTacClntExtServerEntry 7 }
+
+fsTacClntExtServerKeyType OBJECT-TYPE
+    SYNTAX      INTEGER {
+                            unencrypted-password (0),
+                            type-7 (7)
+                        }
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+      "This is used to indicate how the secret key must be interpreted."
+    DEFVAL { unencrypted-password }
+   ::= { fsTacClntExtServerEntry 8 }
 END

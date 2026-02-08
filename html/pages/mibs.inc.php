@@ -34,7 +34,7 @@ foreach ($config['os'] as $os => $data) {
 }
 
 // Fetch all MIBs we support for specific OS groups
-foreach ($config['os_group'] as $os => $data) {
+foreach ($config['os_group'] as $data) {
     foreach ($data['mibs'] as $mib) {
         if (!isset($mibs[$mib])) {
             $mibs[$mib] = 'group';

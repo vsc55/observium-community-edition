@@ -14,7 +14,8 @@
 
 $port_module = 'adsl';
 if ($ports_modules[$port_module] && $port_stats_count &&
-    dbExist('ports', '`device_id` = ? AND `ifType` IN (?, ?, ?)', [$device['device_id'], 'adsl', 'vdsl', 'vdsl2'])) {
+    dbExist('ports', '`device_id` = ? AND `ifType` IN (?, ?, ?, ?, ?)', [ $device['device_id'], 'adsl', 'adsl2', 'adsl2plus', 'vdsl', 'vdsl2' ])) {
+
     echo("ADSL ");
     $adsl_oids  = ['adslAtucPhysEntry', 'adslAturPhysEntry', 'adslAtucChanEntry',
                    'adslAturChanEntry', 'adslAtucPerfDataEntry', 'adslAturPerfDataEntry'];

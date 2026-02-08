@@ -258,7 +258,7 @@ function simple_template_replace($string, $tags)
                                 $replace = preg_replace('/^[\r\n]/', '', $matches[2][$key]);
                                 // If tag is array, use recurcive repeater
                                 $repeate = [];
-                                foreach ($tags[$var] as $item => $entry) {
+                                foreach ($tags[$var] as $entry) {
                                     $repeate[] = simple_template_replace($replace, $entry);
                                 }
                                 $replace = implode('', $repeate);

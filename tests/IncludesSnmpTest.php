@@ -10,24 +10,11 @@
 *
 */
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
 
-//define('OBS_DEBUG', 2);
+class IncludesSnmpTest extends \PHPUnit\Framework\TestCase {
 
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-//include(dirname(__FILE__) . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/functions.inc.php');
+    protected $backupGlobals = FALSE;
 
-class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
-{
   /**
   * @dataProvider providerMibDirs
   * @group mib
@@ -41,7 +28,7 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, mib_dirs($value));
   }
 
-  public function providerMibDirs()
+  public static function providerMibDirs()
   {
     $results = array(
       array('/opt/observium/mibs/rfc:/opt/observium/mibs/net-snmp', ''),
@@ -78,7 +65,7 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($dirs, snmp_mib2mibdirs($mib));
   }
 
-  public function providerSnmpMib2MibDir()
+  public static function providerSnmpMib2MibDir()
   {
     $results = array(
       // Basic
@@ -108,7 +95,7 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, snmp_mib_entity_vendortype($device, $mib));
   }
 
-  public function providerSnmpMibEntityVendortype()
+  public static function providerSnmpMibEntityVendortype()
   {
     $device_linux = array('device_id' => 999, 'os' => 'linux');
     $device_ios   = array('device_id' => 998, 'os' => 'ios');
@@ -134,7 +121,7 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, snmp_dewrap32bit($value));
   }
 
-  public function providerSnmpDewrap32bit()
+  public static function providerSnmpDewrap32bit()
   {
     return array(
       array(         0,           0),
@@ -159,7 +146,7 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, snmp_size64_high_low($high, $low));
   }
 
-  public function providerSnmpSize64HighLow()
+  public static function providerSnmpSize64HighLow()
   {
     return array(
       array(         0,           0, 0),
@@ -174,58 +161,67 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
     * @dataProvider providerSnmpFixNumeric
     * @group numbers
     */
-    public function testSnmpFixNumeric($value, $result, $unit) {
-        $this->assertSame($result, snmp_fix_numeric($value, $unit));
+    public function testSnmpFixNumeric($value, $result, $unit = NULL, $mib = NULL) {
+        $this->assertSame($result, snmp_fix_numeric($value, $unit, $mib));
     }
 
-    public function providerSnmpFixNumeric() {
+    public static function providerSnmpFixNumeric() {
 
         $array = [
-            array(         0,           0),
-            array(  '-65000',      -65000),
-            array(        '',          ''),
-            array(  'Some.0',    'Some.0'),
-            array(     FALSE,       FALSE),
-            array(4200000066,  4200000066),
+            [          0,           0 ],
+            [   '-65000',      -65000 ],
+            [         '',          '' ],
+            [   'Some.0',    'Some.0' ],
+            [      FALSE,       FALSE ],
+            [ 4200000066,  4200000066 ],
+
             // Here numeric fixes
-            array('"-7"',              -7),
-            array('+7',                 7),
-            array('  20,4',          20.4),
-            array('4,200000067', 4.200000067),
-            array('" -002.4336 dBm: Normal "', -2.4336),
-            array('"66.1 C (151.0 F)"', 66.1),
-            array('"36 C/96 F"', 36),
-            array('"8232W"', 8232),
-            array('"1628W (+/- 3.0%)"', 1628),
-            array('3.09(W-)', 3.09),
-            array('-26.02(A-)', -26.02),
-            array('-0.00(A-)', 0.0),
+            [ '"-7"',              -7 ],
+            [ '+7',                 7 ],
+            [ '  20,4',          20.4 ],
+            [ '4,200000067', 4.200000067 ],
+            [ '" -002.4336 dBm: Normal "', -2.4336 ],
+            [ '"66.1 C (151.0 F)"', 66.1 ],
+            [ '"36 C/96 F"', 36 ],
+            [ '"8232W"', 8232 ],
+            [ '"1628W (+/- 3.0%)"', 1628 ],
+            [ '3.09(W-)', 3.09 ],
+            [ '-26.02(A-)', -26.02 ],
+            [ '-0.00(A-)', 0.0 ],
+            [ '-21.70.', -21.7 ],
+            [ '42.42c.', 42.42 ],
+
             // SNMP hex string
             [ '31 37 2E 33 6B 56 41 00 ', 17.3 ], // 17.3kVA
             [ '31 37 2E 33 6B 56 41 00 ', 17300.0, 'units' ], // 17.3kVA
+            [ '2D 32 31 2E 37 30 00 ', -21.7 ], // -21.70.
+            [ '34 32 2E 34 32 63 00 ', 42.42 ], // 42.42c.
             [ '31', 31 ],
+
             // Convert some passed units
-            array('512 MB', 512),
-            array('512 MB', 536870912.0, 'bytes'),
-            array('119.1 GB', 119.1),
-            array('119.1 GB', 127882651238.4, 'bytes'),
-            array('0x01', 1, 'hex'),
-            array('0x00', 0, 'hex'),
+            [ '512 MB', 512 ],
+            [ '512 MB', 536870912.0, 'bytes' ],
+            [ '119.1 GB', 119.1 ],
+            [ '119.1 GB', 127882651238.4, 'bytes' ],
+            [ '0x01', 1, 'hex' ],
+            [ '0x00', 0, 'hex' ],
             [ '17.3kVA', 17.3 ],
             [ '17.3kVA', 17300.0, 'units' ],
+
             // More complex
-            array('CPU Temperature-Ctlr B: 58 C 136.40F',   58),
-            array('Capacitor Cell 1 Voltage-Ctlr B: 2.04V', 2.04),
-            array('Voltage 12V Rail Loc: left-PSU: 12.22V', 12.22),
-            array('Current 12V Rail Loc: right-PSU: 9.53A', 9.53),
-            array('Capacitor Charge-Ctlr B: 100%',          100),
-            array('Spinning at 5160 RPM',                   5160),
+            [ 'CPU Temperature-Ctlr B: 58 C 136.40F',   58 ],
+            [ 'Capacitor Cell 1 Voltage-Ctlr B: 2.04V', 2.04 ],
+            [ 'Voltage 12V Rail Loc: left-PSU: 12.22V', 12.22 ],
+            [ 'Current 12V Rail Loc: right-PSU: 9.53A', 9.53 ],
+            [ 'Capacitor Charge-Ctlr B: 100%',          100 ],
+            [ 'Spinning at 5160 RPM',                   5160 ],
 
             // Split
             [ '42.50 ,35.97 ,40.64 ,40.38', 42.5,  'split1' ],
             [ '42.50 ,35.97 ,40.64 ,40.38', 35.97, 'split2' ],
             [ '42.50 ,35.97 ,40.64 ,40.38', 40.64, 'split3' ],
             [ '42.50 ,35.97 ,40.64 ,40.38', 40.38, 'split4' ],
+            [ '-3.49 ,-0.19 ,-1.93 ,-0.74', -1.93, 'split3' ],
 
             [ 'CPU Load (100ms, 1s, 10s) : 0%, 2%, 3%', 0, 'split1' ],
             [ 'CPU Load (100ms, 1s, 10s) : 0%, 2%, 3%', 2, 'split2' ],
@@ -240,7 +236,27 @@ class IncludesSnmpTest extends \PHPUnit\Framework\TestCase
             [ "  6% (cpu1:  5%   cpu2:  7%)", 6 ],
             [ "  6% (cpu1:  5%   cpu2:  7%)", 5, 'split_cpu1' ],
             [ "  6% (cpu1:  5%   cpu2:  7%)", 7, 'split_cpu2' ],
+            [ "  6% (cpu1:  5%   cpu2:  7%)", 5, 'split_cpu1', 'NEWTEC-DEVICE-MIB' ],
+            [ "  6% (cpu1:  5%   cpu2:  7%)", 7, 'split_cpu2', 'NEWTEC-DEVICE-MIB' ],
+
         ];
+
+        // Split for os/mib specific
+        $split_firstmile1 = "Vendor:LIGHT OPTICS    ;SN:LOW180316137    ;PartNumber:LO-SF-1G-3S5-20L;SFPInfo:SMF 20Km 1310nm 1000BASE-LX;Temperature:34.00 degree; Voltage:3.27V;TX Bias:20.78mA; TX:-6.04db RX:-7.20db";
+        $array[] = [ $split_firstmile1,  34.0,  'split5' ];
+        $array[] = [ $split_firstmile1,  34.0,  'split_temp', 'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile1,  3.27,  'split_volt', 'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile1, 20.78,  'split_bias', 'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile1, -6.04,  'split_tx',   'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile1, -7.20,  'split_rx',   'OnAccess2200-MIB' ];
+
+        $split_firstmile2 = "Vendor:GBC PHOTONICS   ;SN:GPL201031981    ;PartNumber:QSPSMM85QV015CGP;SFPInfo:MMF 150m  850.00nm 40G-SR4;Temperature:30.71 degree; Voltage:3.30V;RX:1[-2.42dBm] 2[-1.28dBm] 3[-1.92dBm] 4[-6.14dBm];TX:1[0.08dBm] 2[-0.60dBm] 3[-0.15dBm] 4[-0.24dBm];TX Bias:1[5.0mA] 2[5.0mA] 3[5.0mA] 4[5.0mA];TxDisable: Support";
+        $array[] = [ $split_firstmile2,   3.3,  'split6' ];
+        $array[] = [ $split_firstmile2, 30.71,  'split_temp', 'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile2,   3.3,  'split_volt', 'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile2,  0.08,  'split_tx1',  'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile2, -2.42,  'split_rx1',  'OnAccess2200-MIB' ];
+        $array[] = [ $split_firstmile2,   5.0, 'split_bias3', 'OnAccess2200-MIB' ];
 
         // Split lanes
         $split_lanes = '
@@ -253,33 +269,40 @@ Lane  4:  2.71 dBm';
         $array[] = [ $split_lanes, 2.1,   'split_lane3' ];
         $array[] = [ $split_lanes, 2.71,  'split_lane4' ];
 
-        foreach ($array as $index => $entry) {
-            if (!isset($entry[2])) {
-                $array[$index][] = NULL;
-            }
-        }
+        $array[] = [ $split_lanes, 2.71,  'split_lane4', 'TROPIC-OPTICALPORT-MIB' ];
 
         return $array;
     }
 
-  /**
-  * @dataProvider providerSnmpFixString
-  * @group string
-  */
-  /* Needed real data for test
-  public function testSnmpFixString($value, $result)
-  {
-    $this->assertSame($result, snmp_fix_string($value));
-  }
+    /**
+    * @dataProvider providerSnmpFixString
+    * @group string
+    */
+    public function testSnmpFixString($value, $result, $unit = NULL) {
+        $this->assertSame($result, snmp_fix_string($value, $unit));
+    }
 
-  public function providerSnmpFixString()
-  {
-    return array(
-      array("This is a &#269;&#x5d0; test&#39; &#250;", "This is a čא test' ú"),
-      array("P<FA>lt stj<F3>rnst<F6><F0>",              "Púlt stjórnstöð"),
-    );
-  }
-  */
+    public static function providerSnmpFixString() {
+        return [
+            // null chars
+            [ 'V_AKN_POP001....................', 'V_AKN_POP001', 'descr' ],
+            [ '................................', '', 'descr' ],
+            [ 'LAN-1.............................................................................................................................................................................................', 'LAN-1', 'label' ],
+            // null less 3 chars or at left of ifAlias
+            [ 'V_AKN_POP001....................', 'V_AKN_POP001....................', 'ifAlias' ],
+            [ 'LAN..', 'LAN..' ],
+            [ '..', '..' ],
+            [ '...LAN', '...LAN' ],
+            //
+            //[ "This is a &#269;&#x5d0; test\x27 \xFA", "This is a čא test' ú" ],
+            [ "P\xFAlt stj\xF3rnst\xF6\xF0",              "Púlt stjórnstöð" ],
+
+            // win/mac newline to unix
+            [ "\r", "\n" ],
+            [ "\r\n", "\n" ],
+            [ "\n", "\n" ],
+        ];
+    }
 
   /**
   * @dataProvider providerSnmpHexString
@@ -290,7 +313,7 @@ Lane  4:  2.71 dBm';
     $this->assertSame($result, snmp_hexstring($value));
   }
 
-  public function providerSnmpHexString()
+  public static function providerSnmpHexString()
   {
     return array(
       array("42 6C 61 63 6B 20 43 61 72 74 72 69 64 67 65 20", "Black Cartridge "),
@@ -342,7 +365,7 @@ Lane  4:  2.71 dBm';
     $this->assertSame((string)$result, snmp_oid_to_string($value));
   }
 
-  public function providerSnmpStringToOid()
+  public static function providerSnmpStringToOid()
   {
     return array(
       array(                     '',                                    '0'),
@@ -364,7 +387,7 @@ Lane  4:  2.71 dBm';
     $this->assertSame($result, snmp_parse_line($value, $flags));
   }
 
-  public function providerSnmpParseLine()
+  public static function providerSnmpParseLine()
   {
     $flags = OBS_SNMP_ALL;
     return array(

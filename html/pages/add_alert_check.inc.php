@@ -24,7 +24,7 @@ register_html_resource('js', 'bootbox.min.js');
 //register_html_resource('js', 'bootstrap-select.min.js');
 register_html_resource('js', 'interact.min.js');
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 // print_vars($vars);
 
@@ -385,7 +385,7 @@ if (empty($vars['entity_type']) || !isset($config['entities'][$vars['entity_type
                                 alert_conditions: document.getElementById('alert_conditions').value,
                                 requesttoken: document.getElementById('requesttoken').value
                             });
-      
+
       var request = $.ajax({
       type: 'POST',
       url: 'ajax/actions.php',
@@ -393,9 +393,9 @@ if (empty($vars['entity_type']) || !isset($config['entities'][$vars['entity_type
       dataType: 'json',
       contentType : 'application/json',
     });
-      
+
     request.success(  function(json) {
-      
+
         if (json.status === 'ok') 
         {
             div.html('<div class=\"alert alert-success\">Creation Succeeded. Redirecting!</div>')
@@ -403,16 +403,16 @@ if (empty($vars['entity_type']) || !isset($config['entities'][$vars['entity_type
         } else {
             div.html('<div class=\"alert alert-warning\">Creation Failed: ' + json.message + '</div>')
         }
-        
+
     });
   }
   });
-  
-  
+
+
   $('#btn-reset').on('click', function() {
     $('#" . $form_id . "').queryBuilder('reset');
   });
-  
+
   </script>
   ";
 

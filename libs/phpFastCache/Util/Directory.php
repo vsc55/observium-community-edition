@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,12 +8,13 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Util;
+namespace Phpfastcache\Util;
 
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -30,17 +32,19 @@ class Directory
      * @param bool $includeDirAllocSize
      * @return integer
      */
-    public static function dirSize($directory, $includeDirAllocSize = false)
+    public static function dirSize(string $directory, bool $includeDirAllocSize = false): int
     {
         $size = 0;
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory)) as $file) {
             /**
-             * @var \SplFileInfo $file
+             * @var SplFileInfo $file
              */
             if ($file->isFile()) {
                 $size += filesize($file->getRealPath());
-            } else if ($includeDirAllocSize) {
-                $size += $file->getSize();
+            } else {
+                if ($includeDirAllocSize) {
+                    $size += $file->getSize();
+                }
             }
         }
 
@@ -51,13 +55,13 @@ class Directory
      * @param string $path
      * @return int
      */
-    public static function getFileCount($path)
+    public static function getFileCount(string $path): int
     {
         $count = 0;
-        $objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path), \RecursiveIteratorIterator::SELF_FIRST);
+        $objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path), RecursiveIteratorIterator::SELF_FIRST);
         foreach ($objects as $object) {
             /**
-             * @var \SplFileInfo $object
+             * @var SplFileInfo $object
              */
             if ($object->isFile()) {
                 $count++;
@@ -76,7 +80,7 @@ class Directory
      *
      * @return bool true on success; false on failure
      */
-    public static function rrmdir($source, $removeOnlyChildren = false)
+    public static function rrmdir(string $source, bool $removeOnlyChildren = false): bool
     {
         if (empty($source) || file_exists($source) === false) {
             return false;
@@ -89,19 +93,25 @@ class Directory
 
         $files = new RecursiveIteratorIterator
         (
-          new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
-          RecursiveIteratorIterator::CHILD_FIRST
+            new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
         );
 
         foreach ($files as $fileinfo) {
             /**
              * @var SplFileInfo $fileinfo
              */
-            if ($fileinfo->isDir()) {
-                if (self::rrmdir($fileinfo->getRealPath()) === false) {
+            $realpath = $fileinfo->getRealPath();
+            if($realpath){
+                if ($fileinfo->isDir()) {
+                    if (self::rrmdir($fileinfo->getRealPath()) === false) {
+                        return false;
+                    }
+                } elseif (unlink($realpath) === false) {
                     return false;
                 }
-            } else if (unlink($fileinfo->getRealPath()) === false) {
+            }
+            else{
                 return false;
             }
         }
@@ -117,10 +127,10 @@ class Directory
      * Alias of realpath() but work
      * on non-existing files
      *
-     * @param $path
+     * @param string $path
      * @return string
      */
-    public static function getAbsolutePath($path)
+    public static function getAbsolutePath(string $path): string
     {
         $parts = preg_split('~[/\\\\]+~', $path, 0, PREG_SPLIT_NO_EMPTY);
         $absolutes = [];
@@ -139,7 +149,7 @@ class Directory
          * Allows to dereference char
          */
         $__FILE__ = preg_replace('~^(([a-z0-9\-]+)://)~', '', __FILE__);// remove file protocols such as "phar://" etc.
-        $prefix = $__FILE__[ 0 ] === DIRECTORY_SEPARATOR ? DIRECTORY_SEPARATOR : '';
+        $prefix = $__FILE__[0] === DIRECTORY_SEPARATOR ? DIRECTORY_SEPARATOR : '';
         return $prefix . implode(DIRECTORY_SEPARATOR, $absolutes);
     }
 }

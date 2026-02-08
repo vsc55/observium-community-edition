@@ -13,7 +13,7 @@
 
 chdir(dirname($argv[0]));
 
-$options = getopt("A:VyaselurpdbitxT");
+$options = getopt("A:VyascelurpdbitxT");
 
 include("includes/observium.inc.php");
 
@@ -73,6 +73,12 @@ if (isset($options['a']) || isset($options['i'])) {
 if (isset($options['a']) || isset($options['r'])) {
     $modules[] = 'rrd';
 }
+if (isset($options['a']) || isset($options['c'])) {
+    $modules[] = 'cache';
+}
+if (isset($options['a'])) {
+    $modules[] = 'discovery_perf';
+}
 if (isset($options['x'])) {
     $modules[] = 'billing_data';
 }
@@ -115,6 +121,7 @@ OPTIONS:
  -i                                          Clean up inventory
  -r                                          Clean up unused RRD files
  -p                                          Clean up deleted ports
+ -c                                          Clean up simple cache entries
  -b                                          Clean up stale database entries
  -A <age>                                    Specifies maximum age for all modules (overrides configuration)
  -f                                          Force run Housekeeping on Poller ID other than 0 (main)

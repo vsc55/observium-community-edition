@@ -32,15 +32,16 @@ if (OBS_API) {
 @ini_set('session.use_trans_sid', '0');    // Disable SID (no session id in url)
 
 $currenttime   = time();
-$lifetime      = 60 * 60 * 24;                     // Session lifetime (default one day)
-$cookie_expire = $currenttime + 60 * 60 * 24 * 14; // Cookies expire time (14 days)
-$cookie_path   = '/';                              // Cookie path
-$cookie_domain = '';                               // RFC 6265, to have a "host-only" cookie is to NOT set the domain attribute.
+$lifetime      = 60 * 60 * 24;             // Session lifetime (default one day)
+$cookie_expire = get_time('14days', TRUE); // Cookies expire time (14 days)
+$cookie_path   = '/';                      // Cookie path
+$cookie_domain = '';                       // RFC 6265, to have a "host-only" cookie is to NOT set the domain attribute.
 /// FIXME. Some old browsers not supports secure/httponly cookies params.
 $cookie_https = is_ssl();
-// AJAX request not have access to cookies with httponly, and for example widgets lost auth
-$cookie_httponly = FALSE;
-//$cookie_httponly = TRUE;
+// Make HttpOnly configurable; default FALSE to preserve legacy widget behavior
+// Set $config['web_session_httponly'] = TRUE to enable
+$cookie_httponly = isset($GLOBALS['config']['web_session_httponly']) ?
+                   (bool)$GLOBALS['config']['web_session_httponly'] : FALSE;
 
 // Use custom session lifetime
 if (is_intnum($GLOBALS['config']['web_session_lifetime']) && $GLOBALS['config']['web_session_lifetime'] >= 0) {
@@ -59,22 +60,18 @@ $session_handler = new Observium_Session();
 //print_vars(ini_get('session.gc_maxlifetime'));
 */
 
-if (PHP_VERSION_ID >= 70300) {
-    // Allows servers to assert that a cookie ought not to be sent along with cross-site requests.
-    // Lax will sent the cookie for cross-domain GET requests, while Strict will not
-    //@ini_set('session.cookie_samesite', 'Strict');
-    $cookie_params = [
-      'lifetime' => $lifetime,
-      'path'     => $cookie_path,
-      'domain'   => $cookie_domain,
-      'secure'   => $cookie_https,
-      'httponly' => $cookie_httponly,
-      'samesite' => 'Lax' // 'Strict' /// FIXME. Set this configurable? See: https://jira.observium.org/browse/OBS-4214
-    ];
-    session_set_cookie_params($cookie_params);
-} else {
-    session_set_cookie_params($lifetime, $cookie_path, $cookie_domain, $cookie_https, $cookie_httponly);
-}
+// Allows servers to assert that a cookie ought not to be sent along with cross-site requests.
+// Lax will send the cookie for cross-domain GET requests, while Strict will not
+//@ini_set('session.cookie_samesite', 'Strict');
+$cookie_params = [
+    'lifetime' => $lifetime,
+    'path'     => $cookie_path,
+    'domain'   => $cookie_domain,
+    'secure'   => $cookie_https,
+    'httponly' => $cookie_httponly,
+    'samesite' => 'Lax' // 'Strict' /// FIXME. Set this configurable? See: https://jira.observium.org/browse/OBS-4214
+];
+session_set_cookie_params($cookie_params);
 //session_cache_limiter('private');
 
 // Check for allowed by CIDR range
@@ -108,6 +105,7 @@ if ($config['auth']['remote_user'] && is_valid_param($_SERVER['REMOTE_USER'], 'u
     session_set_var('username', $_SERVER['REMOTE_USER']);
 }
 
+
 $auth_file = $config['html_dir'] . '/includes/authentication/' . $config['auth_mechanism'] . '.inc.php';
 if (is_file($auth_file)) {
     if (isset($_SESSION['auth_mechanism']) && $_SESSION['auth_mechanism'] != $config['auth_mechanism']) {
@@ -134,7 +132,7 @@ if (is_file($auth_file)) {
 }
 
 // Check logout
-if ($_SESSION['authenticated'] && str_starts(ltrim($_SERVER['REQUEST_URI'], '/'), 'logout')) {
+if ($_SESSION['authenticated'] && str_starts_with(ltrim($_SERVER['REQUEST_URI'], '/'), 'logout')) {
     // Do not use $vars and get_vars here!
     //print_vars($_SERVER['REQUEST_URI']);
     if (auth_can_logout()) {
@@ -267,7 +265,8 @@ if (isset($_SESSION['username'])) {
         session_set_debug($debug_web_requested);
 
         //$a = utime();
-        $permissions = permissions_cache($_SESSION['user_id']);
+        // Pre-cache user (entity) permissions
+        permissions_cache($_SESSION['user_id']);
         //echo utime() - $a . 's for permissions cache';
     }
 

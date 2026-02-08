@@ -1,6 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fspimstd.mib,v 1.10 2013/03/20 13:25:19 siva Exp $
 ARICENT-PIMCMN2-MIB DEFINITIONS ::= BEGIN
 
 IMPORTS
@@ -16,11 +15,16 @@ IMPORTS
     NOTIFICATION-GROUP		     FROM SNMPv2-CONF;
 
 fsPimStdMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202411070000Z" -- November 7, 2024
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION	 "The MIB module for management of PIM Routers
                     Initial Version"
+
+    REVISION "202411070000Z" -- November 7, 2024
+    DESCRIPTION	"Added fsPimStdComponentContextId for 
+                 implementation conformance"
+
     REVISION "201209050000Z"
     DESCRIPTION	 "The MIB module for management of PIM Routers
                     Initial Version"
@@ -837,7 +841,8 @@ FsPimStdComponentEntry ::= SEQUENCE {
     fsPimStdComponentBSRExpiryTime      TimeTicks,
     fsPimStdComponentCRPHoldTime        Integer32,
     fsPimStdComponentStatus             RowStatus,
-    fsPimStdComponentScopeZoneName      DisplayString
+    fsPimStdComponentScopeZoneName      DisplayString,
+    fsPimStdComponentContextId          Integer32
 }
 
 fsPimStdComponentIndex OBJECT-TYPE
@@ -865,7 +870,7 @@ fsPimStdComponentBSRExpiryTime OBJECT-TYPE
     ::= { fsPimStdComponentEntry 2 }
 
 fsPimStdComponentCRPHoldTime OBJECT-TYPE
-    SYNTAX     Integer32 (0..255)
+    SYNTAX     Integer32 (0|150..255)
     UNITS      "seconds"
     MAX-ACCESS read-create
     STATUS     current
@@ -894,6 +899,15 @@ fsPimStdComponentScopeZoneName OBJECT-TYPE
       " This object indicates the scope-zone associated with 
         a particular component"
     ::= { fsPimStdComponentEntry 5 }
+
+fsPimStdComponentContextId OBJECT-TYPE
+    SYNTAX     Integer32
+    MAX-ACCESS read-write
+    STATUS     current
+    DESCRIPTION
+           "Identifies the context for which the configuration 
+           is applicable."
+    ::= { fsPimStdComponentEntry 6 }
 
 fsPimStdComponentBSRTable OBJECT-TYPE
     SYNTAX     SEQUENCE OF FsPimStdComponentBSREntry

@@ -17,7 +17,7 @@ $update_entities = [];
 foreach ($vars['sensors'] as $sensor_id => $sensor_update) {
 
     $update_array = [];
-    if (is_entity_write_permitted('sensor', $sensor_id)) {
+    if (is_entity_write_permitted($sensor_id, 'sensor')) {
 
         $sensor = get_sensor_by_id($sensor_id);
 

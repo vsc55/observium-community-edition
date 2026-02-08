@@ -1,6 +1,6 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmirtm.mib,v 1.14 2016/02/08 10:40:15 siva Exp $
+-- $Id: fsmirtm.mib,v 1.1.1.1 2018/02/08 06:06:34 siva Exp $
 
 ARICENT-RTMMI-MIB DEFINITIONS ::= BEGIN 
  
@@ -11,18 +11,19 @@ ARICENT-RTMMI-MIB DEFINITIONS ::= BEGIN
     TruthValue, RowStatus  FROM SNMPv2-TC; 
 
 fsMIRtm MODULE-IDENTITY
-     LAST-UPDATED "201209110000Z"
+     LAST-UPDATED "202311080000Z"
      ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
      CONTACT-INFO "support@aricent.com"
      DESCRIPTION " This mib module is for Route redistribution support
                    provided by Route Table Manager with Virtual Context support
                    (Virtual routing and forwarding support)"
 
+     REVISION "202311080000Z"
+        DESCRIPTION "Added fsMIRtmGlobalDebug "
      REVISION "201209110000Z"
-
-     DESCRIPTION " This mib module is for Route redistribution support
-                   provided by Route Table Manager with Virtual Context support
-                   (Virtual routing and forwarding support)"
+        DESCRIPTION "This mib module is for Route redistribution support
+                    provided by Route Table Manager with Virtual Context support
+                    (Virtual routing and forwarding support)"
      ::=  { enterprises aricent-communication-holding-ltd(29601) iss(2) 31}
 
 --  RTM General Variables
@@ -65,6 +66,21 @@ fsMIRtm MODULE-IDENTITY
          "This object is used to enable/disable VRF Route Leaking between Default VRF and Non-Default VRF."
       DEFVAL { disable }
       ::= { fsMIRtmGeneralGroup 3 }
+
+    fsMIRtmGlobalDebug OBJECT-TYPE
+      SYNTAX  Integer32 (0..3)
+      MAX-ACCESS read-write
+      STATUS  current
+      DESCRIPTION
+         "Enables the tracing in the selected submodule in RTM. A 32 bit integer
+           is used to store the Tracing level in the specified module.
+           Different Tracing Levels -
+           VAL = 0  - Traces off 
+           VAL = 1  - Error condition messages
+           VAL = 2  - Normal operation messages
+           VAL = 3  - Verbose operation messages"
+      DEFVAL { 0 }
+      ::= { fsMIRtmGeneralGroup 4 }
 
 
 --  SCALAR END

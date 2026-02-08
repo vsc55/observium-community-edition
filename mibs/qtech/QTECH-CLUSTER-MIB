@@ -934,8 +934,8 @@ qtechClusterCompliance MODULE-COMPLIANCE
                         qtechClusterCandidateGroup,
                         qtechClusterMemberAddGroup,
                         qtechClusterBlackListGroup,
-                        uijieClusterPasswordAuthPoolGroup,
-                        qtechDeviceAuthPasswordGroup,
+                        qtechClusterPasswordAuthPoolGroup,
+                        qtechClusterDeviceAuthPasswordGroup,
                         qtechClusterCandidateStatusGroup
                        }
     ::= { qtechClusterMIBCompliances 1 }
@@ -1074,7 +1074,7 @@ qtechClusterPasswordAuthPoolGroup    OBJECT-GROUP
              on the manager device only."
     ::= { qtechClusterMIBGroups 8 }
 
-qtechClsuterDeviceAuthPasswordGroup    OBJECT-GROUP
+qtechClusterDeviceAuthPasswordGroup    OBJECT-GROUP
     OBJECTS {
              qtechClusterDeviceMacAddress,
              qtechClusterDevicePassword

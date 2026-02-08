@@ -22,9 +22,9 @@ $amap_hosts = snmpwalk_cache_twopart_oid($device, 'aipAMAPIpAddr', [], $mib, NUL
 print_debug_vars($amap_array);
 print_debug_vars($amap_hosts);
 
-foreach ($amap_array as $aipAMAPLocalConnectionIndex => $entry1) {
+foreach ($amap_array as $entry1) {
     foreach ($entry1 as $remote_mac => $entry2) {
-        foreach ($entry2 as $aipAMAPRemConnectionIndex => $amap) {
+        foreach ($entry2 as $amap) {
             $port = get_port_by_index_cache($device, $amap['aipAMAPLocalIfindex']);
 
             // Remote Hostname

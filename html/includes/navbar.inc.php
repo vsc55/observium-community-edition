@@ -41,31 +41,74 @@ if (OBS_DEBUG) {
                         /// Build main "globe" menu
                         $navbar['observium'] = ['url' => generate_url(['page' => 'dashboard']), 'icon' => $config['icon']['globe']];
 
-                        // Dashboards
-
-                        $dashboards = dbFetchRows("SELECT * FROM `dashboards`");
-
+                        // Dashboards (grouped: My / Public), prefer slug URLs, show star + Default badge
                         $entries = [];
+                        $current_user = (int)$_SESSION['user_id'];
+                        $default_id = get_user_pref($current_user, 'dashboard_default');
+                        $default_id = is_numeric($default_id) ? (int)$default_id : -1;
 
-                        if (safe_count($dashboards)) {
-                            //$navbar['observium']['dash']['text'] = "Dashboards";
-                            foreach ($dashboards as $dash) {
-                                $entries[] = ['text' => $dash['dash_name'], 'url' => generate_url(['page' => "dashboard", 'dash' => $dash['dash_id']]), 'icon' => $config['icon']['overview']];
+                        // My Dashboards
+                        $my_entries = [];
+                        $my_ids = [];
+                        foreach (dbFetchRows("SELECT dash_id, dash_name, slug FROM `dashboards` WHERE `user_id` = ? ORDER BY `dash_order`, `dash_id`", [$current_user]) as $row) {
+                            $is_default = ((int)$row['dash_id'] === $default_id);
+                            $title = ($is_default ? "★ " : "") . escape_html($row['dash_name']);
+                            $param = strlen($row['slug']) ? $row['slug'] : $row['dash_id'];
+                            $entry = [
+                              'title'  => $title,
+                              'url'    => generate_url(['page' => 'dashboard', 'dash' => $param]),
+                              'icon'   => $config['icon']['overview'],
+                              'escape' => FALSE
+                            ];
+                            if ($is_default) { $entry['extra'] = ' ' . get_label_span('Default', 'info'); }
+                            $my_entries[] = $entry;
+                            $my_ids[] = (int)$row['dash_id'];
+                        }
+                        $my_count = safe_count($my_entries);
+
+                        // Public Dashboards
+                        $pub_entries = [];
+                        foreach (dbFetchRows("SELECT dash_id, dash_name, slug FROM `dashboards` WHERE `is_public` = 1 ORDER BY `dash_order`, `dash_id`", []) as $row) {
+                            // Skip duplicate if also listed in My Dashboards (owner made public)
+                            if (in_array((int)$row['dash_id'], $my_ids, TRUE)) { continue; }
+                            $is_default = ((int)$row['dash_id'] === $default_id);
+                            $title = ($is_default ? "★ " : "") . escape_html($row['dash_name']);
+                            $param = strlen($row['slug']) ? $row['slug'] : $row['dash_id'];
+                            $entry = [
+                              'title'  => $title,
+                              'url'    => generate_url(['page' => 'dashboard', 'dash' => $param]),
+                              'icon'   => $config['icon']['overview'],
+                              'escape' => FALSE
+                            ];
+                            if ($is_default) { $entry['extra'] = ' ' . get_label_span('Default', 'info'); }
+                            $pub_entries[] = $entry;
+                        }
+                        $pub_count = safe_count($pub_entries);
+
+                        // If total dashboards is small (<=10), flatten items directly into the Dashboard submenu; else group
+                        $total_dash = $my_count + $pub_count;
+                        if ($total_dash && $total_dash <= 10) {
+                            if ($my_count) { $entries = array_merge($entries, $my_entries); }
+                            if ($my_count && $pub_count) { $entries[] = ['divider' => TRUE]; }
+                            if ($pub_count) { $entries = array_merge($entries, $pub_entries); }
+                        } else {
+                            if ($my_count) {
+                                $entries[] = ['title' => 'My Dashboards', 'icon' => $config['icon']['user'], 'entries' => $my_entries];
+                            }
+                            if ($pub_count) {
+                                $entries[] = ['title' => 'Public Dashboards', 'icon' => $config['icon']['globe'], 'entries' => $pub_entries];
                             }
                         }
 
-                        $entries[] = ['divider' => TRUE];
-
                         if ($_SESSION['userlevel'] > 7) {
+                            $entries[] = ['divider' => TRUE];
                             $entries[] = ['title' => 'Create Dashboard', 'url' => generate_url(['page' => 'dashboard_add']), 'icon' => $config['icon']['plus']];
                         }
 
                         $navbar['observium']['entries'][] = ['title' => 'Dashboard', 'url' => generate_url(['page' => 'dashboard']), 'icon' => $config['icon']['overview'], 'entries' => $entries];
                         $navbar['observium']['entries'][] = ['divider' => TRUE];
-
-                        unset($entries);
-
-                        // End Dashboards
+                        unset($entries, $my_entries, $pub_entries, $my_ids);
+                        // End Dashboards (grouped)
 
                         // Show Groups
                         $entity_group_menu = [];
@@ -146,6 +189,11 @@ if (OBS_DEBUG) {
                                 $navbar['observium']['entries'][] = [ 'title' => 'Syslog Alerts', 'url' => generate_url(['page' => 'syslog_alerts']), 'icon' => $config['icon']['syslog-alerts'] ];
                                 $navbar['observium']['entries'][] = [ 'title' => 'Syslog Rules', 'url' => generate_url(['page' => 'syslog_rules']), 'icon' => $config['icon']['syslog-rules'], 'userlevel' => 7 ];
                             }
+                        }
+
+                        if (isset($config['enable_traps']) && $config['enable_traps']) {
+                            $navbar['observium']['entries'][] = ['title' => 'Trap Log', 'url' => generate_url(['page' => 'trap_log']), 'icon' => $config['icon']['logs']];
+                            $navbar['observium']['entries'][] = [ 'title' => 'Trap Rules', 'url' => generate_url(['page' => 'trap_rules']), 'icon' => $config['icon']['alert-rules'], 'userlevel' => 5 ];
                         }
 
                         $navbar['observium']['entries'][] = [ 'divider' => TRUE ];
@@ -374,14 +422,48 @@ if (OBS_DEBUG) {
                             $navbar['devices']['entries'][] = ['divider' => TRUE];
                         }
 
-                        // Build list per device type
+                        // Build list per device type with device sub-menus
+                        $device_submenu_limit = 25; // Sanity limit for sub-menu items
                         foreach ($config['device_types'] as $devtype) {
                             if (array_key_exists($devtype['type'], (array)$cache['devices']['types'])) {
-                                $navbar['devices']['entries'][] = ['title'       => $devtype['text'],
-                                                                   'icon'        => $devtype['icon'],
-                                                                   'count_array' => $cache['devices']['types'][$devtype['type']],
-                                                                   'count'       => $cache['devices']['types'][$devtype['type']]['count'],
-                                                                   'url'         => generate_url(['page' => 'devices', 'type' => $devtype['type']])];
+                                $device_type_entry = ['title'       => $devtype['text'],
+                                                     'icon'        => $devtype['icon'],
+                                                     'count_array' => $cache['devices']['types'][$devtype['type']],
+                                                     'count'       => $cache['devices']['types'][$devtype['type']]['count'],
+                                                     'url'         => generate_url(['page' => 'devices', 'type' => $devtype['type']])];
+
+                                // Get devices for this type (with sanity limit)
+                                $device_count = $cache['devices']['types'][$devtype['type']]['count'];
+                                if ($device_count > 0 && $device_count <= $device_submenu_limit) {
+                                    $sql = 'SELECT `device_id`, `hostname`, `sysName`, `status` FROM `devices` ' .
+                                           generate_where_clause($cache['where']['devices_permitted'], ['`type` = ?']) .
+                                           ' ORDER BY `hostname` ASC LIMIT ' . ($device_submenu_limit + 1);
+                                    $devices_for_type = dbFetchRows($sql, [$devtype['type']]);
+
+                                    if (safe_count($devices_for_type) > 0) {
+                                        $device_entries = [];
+                                        $device_entries[] = ['title' => 'All ' . $devtype['text'],
+                                                           'url' => generate_url(['page' => 'devices', 'type' => $devtype['type']]),
+                                                           'icon' => $devtype['icon'],
+                                                           'count' => $device_count];
+                                        $device_entries[] = ['divider' => TRUE];
+
+                                        foreach ($devices_for_type as $device) {
+                                            if (safe_count($device_entries) > $device_submenu_limit + 2) break; // Account for header + divider
+
+                                            $device_icon = $device['status'] ? $config['icon']['device'] : $config['icon']['exclamation'];
+
+                                            $device_entries[] = ['title' => device_name($device, 'short'),
+                                                               'url' => generate_url(['page' => 'device', 'device' => $device['device_id']]),
+                                                               'icon' => $device_icon];
+                                        }
+
+                                        $device_type_entry['entries'] = $device_entries;
+                                        $device_type_entry['scrollable'] = TRUE;
+                                    }
+                                }
+
+                                $navbar['devices']['entries'][] = $device_type_entry;
                             }
                         }
 
@@ -434,10 +516,6 @@ if (OBS_DEBUG) {
                             $navbar['ports']['entries'][] = [ 'divider' => TRUE ];
                         }
 
-                        $navbar['ports']['entries'][] = [ 'title' => 'VLANs', 'url' => generate_url(['page' => 'vlan']), 'icon' => $config['icon']['vlan'], 'userlevel' => 5 ];
-                        $navbar['ports']['entries'][] = [ 'divider' => TRUE, 'userlevel' => 5 ];
-
-
                         if ($cache['p2pradios']['count']) {
                             $navbar['ports']['entries'][] = ['title' => 'P2P Radios', 'count' => $cache['p2pradios']['count'], 'url' => generate_url(['page' => 'p2pradios']), 'icon' => $config['entities']['p2pradio']['icon']];
                             $navbar['ports']['entries'][] = ['divider' => TRUE];
@@ -448,16 +526,6 @@ if (OBS_DEBUG) {
                             $ifbreak                      = 1;
                         }
 
-                        if ($cache['neighbours']['count']) {
-                            $navbar['ports']['entries'][] = ['title' => 'Neighbours', 'url' => generate_url(['page' => 'neighbours']), 'icon' => $config['icon']['neighbours'], 'count' => $cache['neighbours']['count']];
-                            $ifbreak                      = 1;
-                        }
-
-                        if ($config['enable_pseudowires'] && $cache['pseudowires']['count']) {
-                            $navbar['ports']['entries'][] = ['title' => 'Pseudowires', 'count' => $cache['pseudowires']['count'], 'url' => generate_url(['page' => 'pseudowires']), 'icon' => $config['icon']['pseudowire']];
-                            $ifbreak                      = 1;
-                        }
-
                         if ($cache['mac_accounting']['count']) {
                             $navbar['ports']['entries'][] = ['title' => 'MAC Accounting', 'count' => $cache['mac_accounting']['count'], 'url' => generate_url(['page' => 'ports', 'mac_accounting' => 'yes']), 'icon' => $config['icon']['port']];
                             $ifbreak                      = 1;
@@ -465,11 +533,6 @@ if (OBS_DEBUG) {
 
                         if ($cache['cbqos']['count']) {
                             $navbar['ports']['entries'][] = ['title' => 'CBQoS', 'count' => $cache['cbqos']['count'], 'url' => generate_url(['page' => 'ports', 'cbqos' => 'yes']), 'icon' => $config['icon']['cbqos']];
-                            $ifbreak                      = 1;
-                        }
-
-                        if ($cache['sla']['count']) {
-                            $navbar['ports']['entries'][] = ['title' => 'IP SLA', 'count' => $cache['sla']['count'], 'url' => generate_url(['page' => 'slas']), 'icon' => $config['icon']['sla']];
                             $ifbreak                      = 1;
                         }
 
@@ -565,6 +628,122 @@ if (OBS_DEBUG) {
                             $navbar['ports']['entries']['statuses']['entries'][] = ['url' => generate_url(['page' => 'deleted-ports']), 'icon' => $config['icon']['stop'], 'title' => 'Deleted', 'count' => $cache['ports']['stat']['deleted']];
                         }
 
+                        //////////// Build network menu
+                        if ($_SESSION['userlevel'] >= '5' && (dbExist('stp_bridge') || dbExist('vlans') ||
+                                        $cache['neighbours']['count'] ||
+                                        $cache['pseudowires']['count'] ||
+                                        $cache['routing']['bgp']['count'] ||
+                                        $cache['routing']['ospf']['count'] ||
+                                        $cache['routing']['cef']['count'] ||
+                                        $cache['routing']['vrf']['count'] ||
+                                        $cache['routing']['bfd']['count'] ||
+                                        $cache['sla']['count'])) {
+                            $navbar['network'] = ['url' => '#', 'icon' => $config['icon']['routing'], 'title' => 'Network'];
+
+                            // BGP with submenu (most important routing protocol first)
+                            if ($cache['routing']['bgp']['count'] || safe_count($entity_group_menu['bgp_peer']) || safe_count($entity_group_menu['bgp_peer_af'])) {
+                                $bgp_submenu = [];
+
+                                if (safe_count($entity_group_menu['bgp_peer'])) {
+                                    $bgp_submenu[] = ['title' => 'Peer Groups', 'url' => generate_url(['page' => 'groups', 'entity_type' => 'bgp_peer']),
+                                                      'icon' => $config['icon']['group'], 'count' => safe_count($entity_group_menu['bgp_peer']),
+                                                      'entries' => array_merge($entity_group_menu['bgp_peer'])];
+                                }
+
+                                if (safe_count($entity_group_menu['bgp_peer_af'])) {
+                                    $bgp_submenu[] = ['title' => 'AFI/SAFI Groups', 'url' => generate_url(['page' => 'groups', 'entity_type' => 'bgp_peer_af']),
+                                                      'icon' => $config['icon']['group'], 'count' => safe_count($entity_group_menu['bgp_peer_af']),
+                                                      'entries' => array_merge($entity_group_menu['bgp_peer_af'])];
+                                }
+
+                                if ($cache['routing']['bgp']['count']) {
+                                    if (!safe_empty($bgp_submenu)) {
+                                        $bgp_submenu[] = ['divider' => TRUE];
+                                    }
+                                    $bgp_submenu[] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'all', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp'], 'title' => 'All Sessions', 'count' => $cache['routing']['bgp']['count']];
+                                    $bgp_submenu[] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'internal', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp-internal'], 'title' => 'Internal', 'count' => $cache['routing']['bgp']['internal']];
+                                    $bgp_submenu[] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'external', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp-external'], 'title' => 'External', 'count' => $cache['routing']['bgp']['external']];
+
+                                    if ($cache['routing']['bgp']['alerts']) {
+                                        $bgp_submenu[] = ['divider' => TRUE];
+                                        $bgp_submenu[] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'adminstatus' => 'start', 'state' => 'down']), 'icon' => $config['icon']['bgp-alert'], 'title' => 'Alerts', 'count' => $cache['routing']['bgp']['alerts']];
+                                    }
+                                }
+
+                                $navbar['network']['entries'][] = ['title' => 'BGP', 'url' => generate_url(['page' => 'routing', 'protocol' => 'bgp']), 'icon' => $config['icon']['bgp'], 'count' => $cache['routing']['bgp']['count'], 'entries' => $bgp_submenu];
+                            }
+
+                            // OSPF
+                            if ($cache['routing']['ospf']['count']) {
+                                $navbar['network']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'ospf']), 'icon' => $config['icon']['ospf'], 'title' => 'OSPF', 'count' => $cache['routing']['ospf']['count']];
+                            }
+
+                            // EIGRP
+                            if ($cache['routing']['eigrp']['count']) {
+                                $navbar['network']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'eigrp']), 'icon' => $config['icon']['ospf'], 'title' => 'EIGRP', 'count' => $cache['routing']['eigrp']['count']];
+                            }
+
+                            // Separator between primary routing protocols and infrastructure
+                            if ($cache['routing']['vrf']['count'] ||
+                                    $cache['routing']['bfd']['count'] ||
+                                    $cache['routing']['cef']['count'] ||
+                                    $cache['sla']['count']) {
+                                $navbar['network']['entries'][] = ['divider' => TRUE];
+                            }
+
+                            // VRFs
+                            if ($cache['routing']['vrf']['count']) {
+                                $navbar['network']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'vrf']), 'icon' => $config['icon']['vrf'], 'title' => 'VRFs', 'count' => $cache['routing']['vrf']['count']];
+                            }
+
+                            // BFD
+                            if ($cache['routing']['bfd']['count']) {
+                                $navbar['network']['entries'][] = ['url' => generate_url(['page' => 'bfd']), 'icon' => $config['icon']['bfd'], 'title' => 'BFD', 'count' => $cache['routing']['bfd']['count']];
+                            }
+
+                            // CEF
+                            if ($cache['routing']['cef']['count']) {
+                                $navbar['network']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'cef']), 'icon' => $config['icon']['cef'], 'title' => 'CEF', 'count' => $cache['routing']['cef']['count']];
+                            }
+
+                            // IP SLA
+                            if ($cache['sla']['count']) {
+                                $navbar['network']['entries'][] = ['title' => 'IP SLA', 'count' => $cache['sla']['count'], 'url' => generate_url(['page' => 'slas']), 'icon' => $config['icon']['sla']];
+                            }
+
+                            // Layer 2 protocols
+                            if (dbExist('stp_bridge') || dbExist('vlans') || $cache['neighbours']['count'] || ($config['enable_pseudowires'] && $cache['pseudowires']['count'])) {
+                                $navbar['network']['entries'][] = ['divider' => TRUE];
+
+                                // Spanning Tree
+                                if (dbExist('stp_bridge')) {
+                                    $navbar['network']['entries'][] = [ 'title' => 'Spanning Tree', 'url' => generate_url(['page' => 'stp']), 'icon' => $config['icon']['stp'] ];
+                                }
+
+                                // VLANs
+                                $navbar['network']['entries'][] = [ 'title' => 'VLANs', 'url' => generate_url(['page' => 'vlan']), 'icon' => $config['icon']['vlan'] ];
+
+                                // Neighbours (CDP/LLDP)
+                                if ($cache['neighbours']['count']) {
+                                    $navbar['network']['entries'][] = [ 'title' => 'Neighbours', 'url' => generate_url(['page' => 'neighbours']), 'icon' => $config['icon']['neighbours'], 'count' => $cache['neighbours']['count'] ];
+                                }
+
+                                // Pseudowires
+                                if ($config['enable_pseudowires'] && $cache['pseudowires']['count']) {
+                                    $navbar['network']['entries'][] = [ 'title' => 'Pseudowires', 'count' => $cache['pseudowires']['count'], 'url' => generate_url(['page' => 'pseudowires']), 'icon' => $config['icon']['pseudowire'] ];
+                                }
+                            }
+
+                            // Network Search (always at bottom)
+                            $navbar['network']['entries'][] = ['divider' => TRUE];
+                            $navbar['network']['entries'][] = ['title' => 'MAC Address', 'url' => generate_url(['page' => 'search', 'search' => 'mac']), 'icon' => $config['icon']['search']];
+                            $navbar['network']['entries'][] = ['title' => 'ARP/NDP Tables', 'url' => generate_url(['page' => 'search', 'search' => 'arp']), 'icon' => $config['icon']['search']];
+                            $navbar['network']['entries'][] = ['title' => 'FDB Tables', 'url' => generate_url(['page' => 'search', 'search' => 'fdb']), 'icon' => $config['icon']['search']];
+                            if ($cache['wifi_sessions']['count']) {
+                                $navbar['network']['entries'][] = ['title' => '.1x Sessions', 'url' => generate_url(['page' => 'search', 'search' => 'dot1x']), 'icon' => $config['icon']['search']];
+                            }
+                        }
+
                         //////////// Build health menu
                         $navbar['health'] = [ 'url' => '#', 'icon' => $config['icon']['health'], 'title' => 'Health' ];
 
@@ -658,84 +837,6 @@ if (OBS_DEBUG) {
                             unset($entry);
                         }
 
-                        //////////// Build routing menu
-                        if ($_SESSION['userlevel'] >= '5' && ($cache['routing']['bgp']['count'] + $cache['routing']['ospf']['count'] + $cache['routing']['cef']['count'] + $cache['routing']['vrf']['count']) > 0) {
-                            $navbar['routing'] = ['url' => '#', 'icon' => $config['icon']['routing'], 'title' => 'Routing'];
-
-                            $separator = 0;
-
-                            if (safe_count($entity_group_menu['bgp_peer']) || safe_count($entity_group_menu['bgp_peer_af'])) {
-                                if (safe_count($entity_group_menu['bgp_peer'])) {
-                                    $navbar['routing']['entries'][] = ['title'   => 'BGP Peer Groups', 'url' => generate_url(['page' => 'groups', 'entity_type' => 'bgp_peer']),
-                                                                       'icon'    => $config['icon']['group'], 'count' => safe_count($entity_group_menu['bgp_peer']),
-                                                                       'entries' => array_merge($entity_group_menu['bgp_peer'])];
-                                }
-                                if (safe_count($entity_group_menu['bgp_peer_af'])) {
-                                    $navbar['routing']['entries'][] = ['title'   => 'BGP Peer (AFI/SAFI) Groups', 'url' => generate_url(['page' => 'groups', 'entity_type' => 'bgp_peer_af']),
-                                                                       'icon'    => $config['icon']['group'], 'count' => safe_count($entity_group_menu['bgp_peer_af']),
-                                                                       'entries' => array_merge($entity_group_menu['bgp_peer_af'])];
-                                }
-                                $separator = 1;
-                            }
-
-                            if ($cache['routing']['vrf']['count']) {
-                                if ($separator) {
-                                    $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                    $separator                      = 0;
-                                }
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'vrf']), 'icon' => $config['icon']['vrf'], 'title' => 'VRFs', 'count' => $cache['routing']['vrf']['count']];
-
-                            }
-
-                            if ($cache['routing']['cef']['count']) {
-                                if ($separator) {
-                                    $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                    $separator                      = 0;
-                                }
-
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'cef']), 'icon' => $config['icon']['cef'], 'title' => 'CEF', 'count' => $cache['routing']['cef']['count']];
-                                $separator++;
-                            }
-
-                            if ($cache['routing']['eigrp']['count']) {
-                                if ($separator) {
-                                    $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                    $separator                      = 0;
-                                }
-
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'eigrp']), 'icon' => $config['icon']['ospf'], 'title' => 'EIGRP', 'count' => $cache['routing']['eigrp']['count']];
-                                $separator++;
-                            }
-
-                            if ($cache['routing']['ospf']['count']) {
-                                if ($separator) {
-                                    $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                    $separator                      = 0;
-                                }
-
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'ospf']), 'icon' => $config['icon']['ospf'], 'title' => 'OSPF', 'count' => $cache['routing']['ospf']['count']];
-                                $separator++;
-                            }
-
-                            // BGP Sessions
-                            if ($cache['routing']['bgp']['count']) {
-                                if ($separator) {
-                                    $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                    $separator                      = 0;
-                                }
-
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'all', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp'], 'title' => 'BGP All Sessions', 'count' => $cache['routing']['bgp']['count']];
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'external', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp-external'], 'title' => 'BGP External', 'count' => $cache['routing']['bgp']['external']];
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'type' => 'internal', 'graph' => 'NULL']), 'icon' => $config['icon']['bgp-internal'], 'title' => 'BGP Internal', 'count' => $cache['routing']['bgp']['internal']];
-                            }
-
-                            // Do Alerts at the bottom
-                            if ($cache['routing']['bgp']['alerts']) {
-                                $navbar['routing']['entries'][] = ['divider' => TRUE];
-                                $navbar['routing']['entries'][] = ['url' => generate_url(['page' => 'routing', 'protocol' => 'bgp', 'adminstatus' => 'start', 'state' => 'down']), 'icon' => $config['icon']['bgp-alert'], 'title' => 'BGP Alerts', 'count' => $cache['routing']['bgp']['alerts']];
-                            }
-                        }
-
                         // Custom navbar entries.
                         if (is_file("includes/navbar-custom.inc.php")) {
                             include_once("includes/navbar-custom.inc.php");
@@ -744,7 +845,7 @@ if (OBS_DEBUG) {
 
                         // Build navbar from $navbar array
                         foreach ($navbar as $dropdown) {
-//  echo('            <li class="divider-vertical" style="margin: 0;"></li>' . PHP_EOL);
+                            //  echo('            <li class="divider-vertical" style="margin: 0;"></li>' . PHP_EOL);
 
                             if (str_contains($dropdown['icon'], 'sprite')) {
                                 $element = 'span';
@@ -916,6 +1017,10 @@ $(function() {
                                     $entries_settings[] = [ 'title' => 'Edit', 'url' => generate_url(['page' => 'settings']), 'icon' => 'settings-change' ];
                                     $entries_settings[] = [ 'title' => 'Full Dump', 'url' => generate_url(['page' => 'settings', 'format' => 'config']), 'icon' => 'config' ];
                                     $entries_settings[] = [ 'title' => 'Changed Dump', 'url' => generate_url(['page' => 'settings', 'format' => 'changed_config']), 'icon' => 'config' ];
+                                    $entries_settings[] = [ 'divider' => TRUE ];
+                                    if (OBSERVIUM_EDITION !== 'community') {
+                                        $entries_settings[] = [ 'title' => 'API Tokens', 'url' => generate_url([ 'page' => 'api_tokens' ]), 'icon' => 'sprite-cog', 'userlevel' => 7 ];
+                                    }
                                     if (OBS_DISTRIBUTED) {
                                         $entries_settings[] = [ 'divider' => TRUE ];
                                         $entries_settings[] = [ 'title' => 'Pollers', 'url' => generate_url(['page' => 'pollers']), 'icon' => 'pollers' ];

@@ -1,7 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsdhcpRelay.mib,v 1.14 2013/07/09 12:34:08 siva Exp $
-
 ARICENT-DHCP-RLY-MIB DEFINITIONS ::= BEGIN
 
 	IMPORTS
@@ -64,7 +62,7 @@ dhcpRelaySecsThreshold OBJECT-TYPE
 	      STATUS  current
 	      DESCRIPTION
                       "IF the secs field in the DHCP message is greater than the 
-         dhcpRelaySecsThreshold, Packet get dropped at the Relay Agent"
+         dhcpRelaySecsThreshold, Packet get dropped at the Relay Agent."
 	      DEFVAL { 0 }
 	      ::= { dhcpRelay 3 }
 
@@ -74,9 +72,9 @@ dhcpRelayHopsThreshold OBJECT-TYPE
 	      MAX-ACCESS  read-write
 	      STATUS  current
 	      DESCRIPTION
-                      "A maximum hop count,a relay agent allow to pass through it.If
-              the HopCount in the Dhcp Message is greater than the dhcpRelayHopsThreshold,
-              Packet get dropped at the Relay Agent "
+              "A maximum hop count,a relay agent allow to pass through it.
+		  If the HopCount in the Dhcp Message is greater than the dhcpRelayHopsThreshold,
+          Packet get dropped at the Relay Agent."
 	      DEFVAL { 4 }
 	      ::= { dhcpRelay 4 }
 
@@ -208,8 +206,8 @@ dhcpConfigTraceLevel OBJECT-TYPE
        MAX-ACCESS  read-write
        STATUS      current
        DESCRIPTION
-               "The Trace level Object which has bit masks for 
-		various levels of tracing "
+               "This object specifies the trace level Object which has bit masks for 
+		various levels of tracing."
         DEFVAL { 1 }
        ::= { dhcpRelay 15 }
 
@@ -228,7 +226,7 @@ dhcpConfigDhcpCircuitOption OBJECT-TYPE
         one bit at a time.Currently first three bits are used and remaning bits
 		are reserved for future purpose.Default value for this option is
 		routerindex(00000001)." 
-        DEFVAL { 1 }
+        DEFVAL { { vlanid } }
     ::= { dhcpRelay 16 }
 
 dhcpRelayCounterReset OBJECT-TYPE 
@@ -247,6 +245,22 @@ dhcpRelayCounterReset OBJECT-TYPE
         DEFVAL { notset }
 
 		::= { dhcpRelay 17 } 
+
+dhcpRelayRAIVPNIDSubOptionControl OBJECT-TYPE
+	      SYNTAX  INTEGER {
+            enable (1),
+            disable (2) 
+       }
+	      MAX-ACCESS  read-write
+	      STATUS  current
+	      DESCRIPTION
+		      "This object When enabled & if the RAIOption is globally enabled along with VRF, 
+		         then the Relay Agent shall insert the VRF name in the VPN identifier sub-option,
+		         Link Selection sub-option and server identifier override sub-option, 
+		         while relaying packets from a client to server and also strips off this sub-option
+		         while relaying packets from a server to a client."
+	      DEFVAL { disable }
+	      ::= { dhcpRelay 18 }
 
 --SCALAR_TABLE_END
 
@@ -319,7 +333,7 @@ dhcpRelaySrvAddressRowStatus OBJECT-TYPE
             MAX-ACCESS not-accessible
             STATUS current
             DESCRIPTION
-                    "Contains configured dhcp relay information suboptions"  
+                    "This object specifies the configured dhcp relay information suboptions."  
             INDEX { ifIndex }
             ::= { dhcpRelayIfTable 1 }
 
@@ -365,7 +379,7 @@ dhcpRelayIfRowStatus OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS current
     DESCRIPTION
-        "Row status of this table"
+        "This object specifies the row status of this table."
     ::=  { dhcpRelayIfEntry 3 }
 
 END

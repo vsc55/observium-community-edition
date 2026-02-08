@@ -27,7 +27,7 @@ function print_tabbar($tabbar)
 {
     $output = '<ul class="nav nav-tabs">';
 
-    foreach ($tabbar['options'] as $option => $array) {
+    foreach ($tabbar['options'] as $array) {
         if ($array['right'] == TRUE) {
             $array['class'] .= ' pull-right';
         }
@@ -52,13 +52,12 @@ function print_tabbar($tabbar)
  *   print_navbar(array('brand' => "Apps", 'class' => "navbar-narrow", 'options' => array('mysql' => array('text' => "MySQL", 'url' => generate_url($vars,
  *   'app' => "mysql")))))
  *
- * @param array $vars
+ * @param array $navbar
  *
  * @return void
  *
  */
-function print_navbar($navbar)
-{
+function print_navbar($navbar) {
     global $config;
 
     if (OBSERVIUM_EDITION === 'community' && isset($navbar['community']) && $navbar['community'] === FALSE) {
@@ -76,7 +75,7 @@ function print_navbar($navbar)
         <div class="navbar-inner">
             <div class="container">
                 <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target="#nav-<?php echo $id; ?>">
-                    <span class="oicon-bar"></span>
+                    <span class="icon-bar"></span>
                 </button>
 
                 <?php
@@ -113,7 +112,7 @@ function print_navbar($navbar)
                     }
                 }
 
-                foreach (['options', 'options_right'] as $array_name) {
+                foreach ([ 'options', 'options_right' ] as $array_name) {
                     if ($array_name === 'options_right') {
                         if (!$newbar[$array_name]) {
                             break;
@@ -123,9 +122,18 @@ function print_navbar($navbar)
                         echo('<ul class="nav">');
                     }
 
-                    foreach ($newbar[$array_name] as $option => $array) {
+                    foreach ($newbar[$array_name] as $array) {
 
-                        // if($array['divider']) { echo '<li class="divider"></li>'; break;}
+                        if ($array['divider']) {
+                            if ($array['divider'] === 'line') {
+                                // Vertical line
+                                echo '<li class="divider-vertical"></li>';
+                            } else {
+                                // Vertical Ellipsis
+                                echo '<li><strong style="display: block; padding: 5px 5px 5px; cursor: default;">&vellip;</strong></li>';
+                            }
+                            continue;
+                        }
 
                         if (!is_array($array['suboptions'])) {
                             echo('<li class="' . $array['class'] . '">');
@@ -213,7 +221,7 @@ function print_navbar($navbar)
           </a>
         <ul class="dropdown-menu">');
 
-                            foreach ($array['suboptions'] as $suboption => $subentry) {
+                            foreach ($array['suboptions'] as $subentry) {
                                 if (safe_count($subentry['entries'])) {
                                     navbar_submenu($subentry, $level + 1);
                                 } else {
@@ -509,6 +517,104 @@ function navbar_entry($entry, $level = 1) {
     }
 }
 
+/**
+ * Generate SQL profile modal content
+ *
+ * @param array $sql_profile Array of SQL query profiling data
+ * @return string HTML content for the modal
+ */
+function generate_sql_profile_modal_content($sql_profile) {
+    global $config, $db_stats;
+
+    if (empty($sql_profile)) {
+        return '<div class="alert alert-info">No SQL queries profiled on this page.</div>';
+    }
+
+    // Sort by execution time (slowest first) and limit to top 15
+    $sql_profile = array_sort((array)$sql_profile, 'time', 'SORT_DESC');
+    $sql_profile = array_slice($sql_profile, 0, 15);
+
+    // Calculate total query stats
+    $total_queries = ($db_stats['fetchcell'] ?? 0) + ($db_stats['fetchrow'] ?? 0) + 
+                     ($db_stats['fetchrows'] ?? 0) + ($db_stats['fetchcol'] ?? 0) +
+                     ($db_stats['insert'] ?? 0) + ($db_stats['update'] ?? 0) + ($db_stats['delete'] ?? 0);
+
+    $total_time = ($db_stats['fetchcell_sec'] ?? 0) + ($db_stats['fetchrow_sec'] ?? 0) + 
+                  ($db_stats['fetchrows_sec'] ?? 0) + ($db_stats['fetchcol_sec'] ?? 0) +
+                  ($db_stats['insert_sec'] ?? 0) + ($db_stats['update_sec'] ?? 0) + ($db_stats['delete_sec'] ?? 0);
+
+    // MySQL Stats Summary - All data in one table row with label groups
+    $content = '<div class="well well-sm" style="margin-bottom: 20px; padding: 10px;">';
+    $content .= '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">';
+
+    $content .= '<strong style="margin-right: 10px;">MySQL:</strong>';
+
+    // Read operations with label groups
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-primary">Cell</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['fetchcell'] ?? 0) . '/' . round($db_stats['fetchcell_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-primary">Row</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['fetchrow'] ?? 0) . '/' . round($db_stats['fetchrow_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-primary">Rows</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['fetchrows'] ?? 0) . '/' . round($db_stats['fetchrows_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-primary">Col</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['fetchcol'] ?? 0) . '/' . round($db_stats['fetchcol_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    // Write operations with label groups
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-warning">Insert</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['insert'] ?? 0) . '/' . round($db_stats['insert_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-warning">Update</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['update'] ?? 0) . '/' . round($db_stats['update_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-warning">Delete</span>';
+    $content .= '<span class="label label-default">' . ($db_stats['delete'] ?? 0) . '/' . round($db_stats['delete_sec'] ?? 0, 3) . 's</span>';
+    $content .= '</div>';
+
+    // Total with label group
+    $content .= '<div class="label-group">';
+    $content .= '<span class="label label-success">Total</span>';
+    $content .= '<span class="label label-default">' . $total_queries . '/' . round($total_time, 3) . 's</span>';
+    $content .= '</div>';
+
+    $content .= '</div>';
+    $content .= '</div>';
+
+    $content .= '<div style="max-height: 65vh; overflow-y: auto;">';
+
+    foreach ($sql_profile as $sql_query) {
+        $sql_query['location'] = str_replace($config['install_dir'] . '/', '', $sql_query['location']);
+
+        $content .= '<div class="well well-sm" style="margin-bottom: 15px;">';
+        $content .= '<div style="margin-bottom: 10px;">';
+        $content .= '<span class="label label-primary">' . htmlspecialchars($sql_query['function']) . '()</span> ';
+        $content .= '<span class="label label-info">' . htmlspecialchars($sql_query['location']) . ':' . $sql_query['line'] . '</span> ';
+        $content .= '<span class="label label-default">' . number_format($sql_query['time'], 3) . 's</span>';
+        $content .= '</div>';
+        $content .= '<pre>' . (new Doctrine\SqlFormatter\SqlFormatter())->format($sql_query['sql']) . '</pre>';
+        $content .= '</div>';
+    }
+
+    $content .= '</div>';
+
+    return $content;
+}
+
 function print_navbar_stats_debug() {
     global $config, $sql_profile;
 
@@ -539,29 +645,31 @@ function print_navbar_stats_debug() {
 
 
     if ($config['profile_sql'] && !safe_empty($sql_profile)) {
+
+       // Generate modal content
+        $modal_content = generate_sql_profile_modal_content($sql_profile);
+
+        $modal_args = [
+            'id' => 'modal-sql-profile',
+            'title' => 'SQL Query Profiling',
+            'body' => $modal_content,
+            'footer' => '<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>',
+            'class' => 'modal-xl',
+            'hide' => FALSE
+        ];
+
+        // Collect modal for output at page end
+        if (!isset($GLOBALS['page_modals'])) {
+            $GLOBALS['page_modals'] = '';
+        }
+        $GLOBALS['page_modals'] .= generate_modal($modal_args);
+
+        // Modal trigger
         ?>
-        <li class="dropdown">
-            <a href="<?php echo(generate_url(['page' => 'overview'])); ?>"
-               class="dropdown-toggle" data-hover="dropdown" data-toggle="dropdown">
-                <?php echo get_icon('databases'); ?> <b class="caret"></b></a>
-                <div class="dropdown-menu pre-scrollable" style="padding: 10px 10px 0px 10px; width: 1150px; max-height: 90vh; z-index: 2000;">
-
-            <?php
-
-            $sql_profile = array_sort((array)$sql_profile, 'time', 'SORT_DESC');
-            $sql_profile = array_slice($sql_profile, 0, 15);
-            foreach ($sql_profile as $sql_query) {
-
-                $sql_query['location'] = str_replace($config['install_dir'] . '/', '', $sql_query['location']);
-
-
-                echo '<span class="label label-primary">' . $sql_query['function'] . '()</span> <span class="label label-info">' .
-                     $sql_query['location'] . ':' . $sql_query['line'] . '</span> <span class="label">' . round($sql_query['time'], 3) . 's</span>
-                                              ' . (new Doctrine\SqlFormatter\SqlFormatter())->format($sql_query['sql']);
-            }
-
-            ?>
-                </div>
+        <li>
+            <a href="#modal-sql-profile" data-toggle="modal" title="SQL Query Profiling" class="navbar-link">
+                <?php echo get_icon('databases'); ?>
+            </a>
         </li>
         <?php
     } // End profile_sql
@@ -713,6 +821,31 @@ function print_navbar_stats() {
                                         ?>
                                     </table>
                                     <?php
+                                }
+
+                                if (function_exists('db_cache_stats')) {
+                                    $cache_stats = db_cache_stats();
+
+                                ?>
+                                    <table class="table  table-condensed-more  table-striped">
+                                        <tr>
+                                            <th colspan=2>DB Cache</th>
+                                        </tr>
+                                        <tr>
+                                            <th>Active</th>
+                                            <td><?php echo $cache_stats['active']; ?></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Expired</th>
+                                            <td><?php echo $cache_stats['expired']; ?></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total</th>
+                                            <td><?php echo $cache_stats['total']; ?></td>
+                                        </tr>
+                                    </table>
+
+                                <?php
                                 }
 
                                 if ($_SESSION['userlevel'] >= 10 && function_exists('get_cache_stats')) {

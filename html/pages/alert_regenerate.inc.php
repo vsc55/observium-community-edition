@@ -4,8 +4,8 @@
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     web
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -18,7 +18,7 @@ if ($_SESSION['userlevel'] < 10) {
     return;
 }
 
-include($config['html_dir'] . "/includes/alerting-navbar.inc.php");
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
 
 // Regenerate alerts
 

@@ -35,7 +35,6 @@
                 'width'     => '100%',
                 'div_class' => 'col-lg-1 col-md-2 col-sm-2',
                 'value'     => $vars['device_id'],
-                'groups'    => [ '', 'UP', 'DOWN', 'DISABLED' ], // This is optgroup order for values (if required)
                 'values'    => $form_items['devices']];
 
             // Add device_id limit for other fields

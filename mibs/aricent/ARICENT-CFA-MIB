@@ -1,32 +1,12 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fscfa.mib,v 1.63 2016/10/03 10:34:43 siva Exp $
--- CFA Proprietary MIB Definition
-
-
--- This document explains the proprietary MIB implemented 
--- for CFA product.
-
--- This proprietary MIB definition, supplements the standard interfaces
--- group MIB of RFC 2233 and also provides management of certain             
--- proprietary features of CFA. The various groups that are present 
--- in the proprietary MIB are :
-
-
--- CFA MIB.
-
--- The MIB contains scalars and tables used to configure 
--- CFA Interface Management, Fast-Forwarding and Fault Management
--- functionalities.
-
--- The different groups in CFA MIB are as follows:
-
    ARICENT-CFA-MIB DEFINITIONS ::= BEGIN
       
    IMPORTS
       MODULE-IDENTITY, OBJECT-TYPE, Counter32,Counter64, 
-      enterprises, IpAddress, Unsigned32, TimeTicks,
-      Integer32, NOTIFICATION-TYPE               FROM SNMPv2-SMI
+      enterprises, IpAddress, Unsigned32,
+      Integer32, NOTIFICATION-TYPE, TimeTicks    FROM SNMPv2-SMI
+      SnmpAdminString                            FROM SNMP-FRAMEWORK-MIB
       ifIndex,InterfaceIndex,ifEntry,ifType      FROM IF-MIB
       VlanId,PortList                            FROM Q-BRIDGE-MIB
       TruthValue, MacAddress, RowStatus,
@@ -36,12 +16,34 @@
 --    futuresoftware OBJECT IDENTIFIER ::= { enterprises 2076 }
 
       fscfa MODULE-IDENTITY
-         LAST-UPDATED "201209050000Z" 
+         LAST-UPDATED "202106110000Z" 
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
          CONTACT-INFO "support@aricent.com"
 
          DESCRIPTION
             " The MIB module for CFA. "
+
+         REVISION "202106110000Z" 
+         DESCRIPTION
+            "Cambium update: added read-only ifMainPrevDesc 
+            object to export the previous description for an
+            interface."
+
+         REVISION "202005240000Z" 
+         DESCRIPTION
+            "Cambium update: added read-only ifMainName 
+            object to export interface name data that is
+            used to configure various tables by the
+            management applications."
+
+         REVISION "201908260000Z" 
+         DESCRIPTION
+            "Cambium update: added ifMainNeighborId to
+            support per-interface condensed neighbor
+            identification. Defined the ifVlanIpTable
+            to support short-cut interface creation and
+            IP address configuration."
+
          REVISION "201209050000Z" 
          DESCRIPTION
             "The revised version of the MIB for CFA
@@ -147,12 +149,15 @@
             ifMainUfdDownlinkDisabledCount Counter32,
             ifMainUfdDownlinkEnabledCount  Counter32,
             ifMainDesigUplinkStatus        TruthValue,
-            ifMainEncapDot1qVlanId   Integer32
+            ifMainEncapDot1qVlanId   Integer32,
+            ifMainNeighborId         SnmpAdminString,
+            ifMainName               SnmpAdminString,
+            ifMainPrevDesc           DisplayString
             }
 
       ifMainIndex          OBJECT-TYPE
          SYNTAX            InterfaceIndex
-         MAX-ACCESS        not-accessible 
+         MAX-ACCESS        read-only 
          STATUS            current
          DESCRIPTION
             "A unique value, greater than zero, for each
@@ -816,7 +821,41 @@ ifMainDesigUplinkStatus OBJECT-TYPE
          DEFVAL { 0 }
          ::= { ifMainEntry 21 }
 
+          ifMainNeighborId OBJECT-TYPE
+            SYNTAX      SnmpAdminString (SIZE(0..255))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "A string identifying the device connected to the interface.
+                The neighbor ID is derived from LLDP data that is currently 
+                associated with the interface."
 
+            DEFVAL { "" }
+            ::= { ifMainEntry 22}
+
+          ifMainName OBJECT-TYPE
+            SYNTAX      SnmpAdminString (SIZE(0..32))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "A string identifying the device interface that can
+                be used to unambiguously identify the interface when 
+                configuring interface settings in various tables
+                that identify ports by name."
+
+            DEFVAL { "" }
+            ::= { ifMainEntry 23}
+
+          ifMainPrevDesc OBJECT-TYPE
+            SYNTAX      DisplayString (SIZE (0..255))
+            MAX-ACCESS  read-only
+            STATUS      current
+            DESCRIPTION
+                "A textual string which contains the previous 
+                description for the interface."
+
+            DEFVAL { "" }
+            ::= { ifMainEntry 24}
 
 -- ifIpTable
 -- This table is used for the management of the interfaces in the
@@ -1752,8 +1791,8 @@ IfMainExtEntry ::=
       ifMainExtInPkts               Counter32,
       ifMainExtLinkUpEnabledStatus  INTEGER,
       ifMainExtLinkUpDelayTimer     Unsigned32,
-      ifMainExtLinkUpRemainingTime Unsigned32,
-      ifMainExtReasonCode           INTEGER
+      ifMainExtLinkUpRemainingTime Unsigned32
+
    }
 
       ifMainExtMacAddress     OBJECT-TYPE
@@ -1827,7 +1866,7 @@ IfMainExtEntry ::=
            "The interface port security state says whether the port is connected
            to trusted hosts or not. If a port is trusted, the packets coming
            on that ports will also be trusted. By default all the ports will be
-           untrusted"
+           untrusted. If the interface is part of a port channel it cannot be set."
 
          DEFVAL { trusted }
          ::={ ifMainExtEntry 11 }
@@ -1878,28 +1917,6 @@ IfMainExtEntry ::=
              for the link Operation Status to be made UP."
 
          ::= { ifMainExtEntry 15}
-
-       ifMainExtReasonCode    OBJECT-TYPE
-         SYNTAX               INTEGER {
-                              none (0),
-                              loopbackdetected (1)
-                              }
-         MAX-ACCESS           read-only
-         STATUS               current
-         DESCRIPTION
-            "This object indicates the reason because of which the interface
-             'Admin Status' is moved to disabled state by the software.
-             This object will not indicate the reason code when port is
-             administratively made down by the user.
-             loopbackdetected - This reason code indicates that interface is
-                                disabled by the software due to loop back condition
-                                detection by the Loopback Detection feature.
-             When interface admin status is made UP explicitly by the user after
-             the disabled state, the reason code will be cleared and
-             It will reflect a value 'none' . "
-
-        DEFVAL { none }
-        ::= { ifMainExtEntry 16}
 -- ----------------------------------------------------------------------------
 -- CFA Custom TLV Table
 -- ----------------------------------------------------------------------------
@@ -3525,5 +3542,158 @@ ifmDebug OBJECT-TYPE
             address configured for the interface."
          ::= { if 35 }
 
+--
+-- Interface VLAN IP Table support
+--
+
+ifVlanIpTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF IfVlanIpEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "This table contains L3 interface attributes 
+        that are used for manipulating entries in 
+        various tables. 
+
+        ifVlanIpTable entry creation, modification and 
+        deletion results in related actions being 
+        performed for the ifMainTable and the ifIpTable. 
+        Likewise, data returned through ifVlanIpTable 
+        table queries is derived from these tables."
+
+    ::= { if 36 }
+
+ifVlanIpEntry OBJECT-TYPE
+    SYNTAX      IfVlanIpEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "Information about the L3 interface settings 
+        for a specific VLAN on the device."
+
+    INDEX { ifVlanIpVlanId }
+    ::= { ifVlanIpTable 1 }
+
+IfVlanIpEntry ::= SEQUENCE {
+    ifVlanIpVlanId           VlanId,
+    ifVlanIpIfIndex          InterfaceIndex,
+    ifVlanIpAdminStatus      INTEGER,
+    ifVlanIpAddrAllocMethod  INTEGER,
+    ifVlanIpAddr             IpAddress,
+    ifVlanIpSubnetMask       IpAddress,
+    ifVlanIpRowStatus        RowStatus
+}
+
+ifVlanIpVlanId OBJECT-TYPE
+    SYNTAX         VlanId
+    MAX-ACCESS     not-accessible
+    STATUS         current
+    DESCRIPTION
+        "VLAN ID for the L3 interface specification."
+
+    ::= { ifVlanIpEntry 1 }
+
+ifVlanIpIfIndex OBJECT-TYPE
+    SYNTAX         InterfaceIndex
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "The ifIndex associated with the VLAN ID for
+        this L3 interface specification. An ifIndex
+        is automatically allocated when a new entry
+        is created. The ifIndex and related settings
+        are automatically deleted when an entry is
+        destroyed."
+
+    ::= { ifVlanIpEntry 2 }
+
+ifVlanIpAdminStatus OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       enabled(1),
+                       disabled(2)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "The desired state of the interface. This 
+        attribute has similar semantics to the 
+        ifAdminStatus object of the standard ifTable."
+
+    DEFVAL { enabled } 
+    ::= { ifVlanIpEntry 3 }
+
+ifVlanIpAddrAllocMethod OBJECT-TYPE
+    SYNTAX         INTEGER {
+                       manual(1),
+                       dynamic(2)
+                   }
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "The mechanism to be used for allocation of 
+        the IPv4 address for this L3 VLAN interface." 
+            
+    ::= { ifVlanIpEntry 4 }
+
+ifVlanIpAddr OBJECT-TYPE
+    SYNTAX         IpAddress
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the IPv4 address assigned to 
+        this L3 VLAN interface.
+
+        A valid IpAddress value is required when 
+        creating a new entry and the associated
+        address allocation method is 'manual'. A
+        zero IpAddress value is required when
+        creating a new entry and the associated
+        address allocation method is 'dynamic'."
+
+    ::= { ifVlanIpEntry 5 }
+
+ifVlanIpSubnetMask OBJECT-TYPE
+    SYNTAX         IpAddress
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "Specifies the IPv4 address subnet mask
+        assigned to this L3 VLAN interface.
+
+        A valid subnet mask value is required when 
+        creating a new entry and the associated
+        address allocation method is 'manual'. A
+        zero subnet mask value is required when
+        creating a new entry and the associated
+        address allocation method is 'dynamic'."
+
+    ::= { ifVlanIpEntry 6 }
+
+ifVlanIpRowStatus OBJECT-TYPE
+    SYNTAX         RowStatus
+    MAX-ACCESS     read-create
+    STATUS         current
+    DESCRIPTION
+        "This object allows entries to be created, modified
+        and deleted in the ifVlanIpTable. Values 'createAndWait', 
+        'active' and 'destroy' are supported for Sets.
+
+        The rowStatus value of the underlying ifMainEntry is
+        returned when entry data is queried.
+
+        Entry creation requires data for all read-create
+        attributes to be specified with a 'createAndWait' 
+        RowStatus value.
+
+        The ifVlanIpAdminStatus is the only value that can
+        be modified in an existing entry. This action is 
+        performed by specifying the requested admin status
+        with a 'active' RowStatus value.
+
+        Table entries are deleted with a 'destroy' RowStatus.
+        No other attributes need to be specified for this
+        action to be performed."
+
+    ::= { ifVlanIpEntry 10 }
 
 END

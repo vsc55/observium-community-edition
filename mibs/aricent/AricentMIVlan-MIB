@@ -1,7 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmpvlan.mib,v 1.43.24.1 2018/03/26 11:33:14 siva Exp $
-
 AricentMIVlan-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
@@ -21,14 +19,22 @@ IMPORTS
 
  
 futureMIVlanMIB MODULE-IDENTITY 
-    LAST-UPDATED "201209050000Z" 
+    LAST-UPDATED "201906240000Z" 
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
     CONTACT-INFO "support@aricent.com" 
     DESCRIPTION "This mib module is for Proprietary
        Multiple Instance VLAN mib" 
+
+    REVISION "201906240000Z"
+    DESCRIPTION
+        "Added fsMIDot1qFutureVlanPortTypeStatic object 
+        supporting the export of static (vs dynamic) 
+        settings for this attribute."
+
     REVISION "201209050000Z"
     DESCRIPTION "This mib module is for Proprietary
        Multiple Instance VLAN mib" 
+
 ::= { enterprises futuresoftware(2076) 120 } 
  
 VlanId ::= TEXTUAL-CONVENTION 
@@ -131,8 +137,10 @@ FsMIDot1qFutureVlanGlobalsEntry ::=
           TruthValue,
        fsMIDot1qFutureVlanUserDefinedTPID
           Integer32,
-	   fsMIDot1qFutureVlanRemoteFdbFlush
-		  TruthValue
+       fsMIDot1qFutureVlanRemoteFdbFlush
+	  TruthValue,
+       fsMIDot1qFutureRSPANRsvdVlanList
+          OCTET STRING
    }
 
 fsMIDot1qFutureVlanContextId OBJECT-TYPE
@@ -476,7 +484,38 @@ fsMIDot1qFutureVlanRemoteFdbFlush OBJECT-TYPE
     DEFVAL   { false }
        ::= { fsMIDot1qFutureVlanGlobalsEntry 22 }
 
+-- RSPAN VLAN list
+fsMIDot1qFutureRSPANRsvdVlanList OBJECT-TYPE
+    SYNTAX      OCTET STRING (SIZE (0..512))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+           "This object identifies the list of VLANs that are reserved for RSPAN
+           feature.
 
+           The first octet corresponds to VLANs with VlanId values
+           1 through 8; the second octet corresponds to VLANs 9 through
+           16 etc.  The most significant bit of each octet
+           corresponds to the lowest VLAN ID in that octet.
+           The least significant bit represents the highest VLAN ID.
+
+           When VLANs are reserved through this object then following properties
+           are applicable:
+                  - MAC learning is disabled for this VLAN.
+                  - Reserved VLAN which is used for RSPAN should not be used for any
+                    other functionality.
+                  - Ports participating in RSPAN VLAN should be tagged ports to
+                    connect to the remote device across network.
+
+           When VLANs are removed from this reservation list then RSPAN properties
+           on those VLANs will be removed and converted back to normal VLAN.
+           
+           Re-configuring VLAN list will always overwrite the exiting list of VLANs
+           and the newly configured list of VLANs will be functional. Also in case
+           of reconfiguration, if any VLAN in the existing reserved VLAN list is
+           been used in any mirroring session, then overwriting will be restricted."
+
+   ::= { fsMIDot1qFutureVlanGlobalsEntry 23 }
 
 -- ------------------------------------------------------------------------- 
 -- Future Vlan Port Table 
@@ -546,7 +585,8 @@ FsMIDot1qFutureVlanPortEntry ::=
       fsMIDot1qFutureVlanPortUnicastMacSecType INTEGER,
       fsMIDot1qFutureVlanPortStVlanList OCTET STRING,
       fsMIDot1qFutureVlanPortStUntaggedVlan Unsigned32,
-      fsMIDot1qFuturePortPacketReflectionStatus TruthValue  
+      fsMIDot1qFuturePortPacketReflectionStatus TruthValue,  
+      fsMIDot1qFutureVlanPortTypeStatic INTEGER 
    } 
  
 fsMIDot1qFutureVlanPort OBJECT-TYPE 
@@ -561,7 +601,9 @@ fsMIDot1qFutureVlanPortType OBJECT-TYPE
    SYNTAX      INTEGER { 
                   accessPort (1), 
                   trunkPort (2), 
-                  hybridPort (3)
+                  hybridPort (3),
+                  hostPort (4), 
+                  promiscuousPort (5)
                } 
    MAX-ACCESS  read-write 
    STATUS      current 
@@ -573,7 +615,40 @@ fsMIDot1qFutureVlanPortType OBJECT-TYPE
        member of all the existing Vlans and also for any new vlan
        created. 
        When configured as hybrid port, the port can send or accept both 
-       tagged and untagged frames."
+       tagged and untagged frames.  
+       
+       hostPort, promiscuousPort are types of port in PVLAN domain.
+       Behaviour of host port varies based on the secondary vlan to which
+       it is configured as member port.
+
+       If a host port is a member port of an isolated VLAN, traffic from the 
+       host port is sent only to the promiscuous port of the Private VLAN and 
+       the trunk port.
+
+       If a host port is a member port of the community VLAN, traffic from the 
+       port can be sent only to other ports of the community VLAN , trunk port 
+       and promiscuous port of the private VLAN.
+
+       A host port can be associated with only one secondary vlan and with
+       the associated primary vlan.
+
+       The PVID of host port will be set the ID of the secondary vlan
+       to which it belongs to.
+       If a host port is member port of primary vlan, but is not member port 
+       of any secondary vlan, then its PVID will be set to primary vlan id.
+
+       Promiscuous ports should be configured as member port of primary vlan 
+       and member port of all(some) secondary vlans associated with that 
+       primary vlan.
+
+       The PVID of promiscuous port will be set as the ID of the primary 
+       vlan to which it belongs to.
+
+       Host and  promiscuous ports should be configured as untagged members
+       of primary/secondary vlans.
+
+       When a access/hybrid port is configured as a member port of a
+       primary/secondary vlan, it becomes a hostPort automatically."
 
    DEFVAL   { hybridPort } 
    ::= { fsMIDot1qFutureVlanPortEntry 2 } 
@@ -881,11 +956,7 @@ fsMIDot1qFutureVlanPortFdbFlush  OBJECT-TYPE
    DESCRIPTION
       "If this object is set as 'true', then all the dynamically 
        learnt MAC addresses on the specified interface are removed.
-       After flush this object is set to 'false'.
-
-       If port is non secure, its all dynamic MAC addresses
-       are cleared. If port is secure, its all secure MAC addresses
-       which have learned or configured are cleared."
+       After flush this object is set to 'false'"
    DEFVAL   { false }
    ::= { fsMIDot1qFutureVlanPortEntry 35 }
  
@@ -1016,8 +1087,7 @@ fsMIDot1qFutureVlanPortUnicastMacSecType OBJECT-TYPE
     SYNTAX      INTEGER {
                     sav(1),
                     shv(2),
-                    off(3),
-                    sdv(4)
+                    off(3)
                 }
       MAX-ACCESS  read-write
       STATUS      current
@@ -1028,9 +1098,6 @@ fsMIDot1qFutureVlanPortUnicastMacSecType OBJECT-TYPE
                  Only unknown MAC is treated as violation on all security configured ports.
          shv   - security is shv, strict is TRUE
                  Configured MAC alone is treated as non violation in all security configured ports.
-         sdv   - security is sdv, strict is TRUE
-                 Configured MAC alone is treated as non violation in all security configured ports.
-                 Ports will be disabled.
          off   - disable security."
 
     DEFVAL { 3 }
@@ -1089,6 +1156,68 @@ fsMIDot1qFuturePortPacketReflectionStatus OBJECT-TYPE
    DEFVAL  {false}
    ::= { fsMIDot1qFutureVlanPortEntry 46 } 
 
+fsMIDot1qFutureVlanPortTypeStatic OBJECT-TYPE 
+   SYNTAX      INTEGER { 
+                   accessPort (1), 
+                   trunkPort (2), 
+                   hybridPort (3),
+                   hostPort (4), 
+                   promiscuousPort (5)
+               } 
+   MAX-ACCESS  read-only 
+   STATUS      current 
+   DESCRIPTION 
+      "The type of the port is by default hybrid port. 
+       When configured as access port, the port can accept and send 
+       only untagged frames.
+
+       When configured as a trunk port, port is added as 
+       member of all the existing Vlans and also for any new vlan
+       created. 
+
+       When configured as hybrid port, the port can send or accept both 
+       tagged and untagged frames.  
+       
+       hostPort, promiscuousPort are types of port in PVLAN domain.
+       Behaviour of host port varies based on the secondary vlan to which
+       it is configured as member port.
+
+       If a host port is a member port of an isolated VLAN, traffic from the 
+       host port is sent only to the promiscuous port of the Private VLAN and 
+       the trunk port.
+
+       If a host port is a member port of the community VLAN, traffic from the 
+       port can be sent only to other ports of the community VLAN , trunk port 
+       and promiscuous port of the private VLAN.
+
+       A host port can be associated with only one secondary vlan and with
+       the associated primary vlan.
+
+       The PVID of host port will be set the ID of the secondary vlan
+       to which it belongs to.
+       If a host port is member port of primary vlan, but is not member port 
+       of any secondary vlan, then its PVID will be set to primary vlan id.
+
+       Promiscuous ports should be configured as member port of primary vlan 
+       and member port of all(some) secondary vlans associated with that 
+       primary vlan.
+
+       The PVID of promiscuous port will be set as the ID of the primary 
+       vlan to which it belongs to.
+
+       Host and  promiscuous ports should be configured as untagged members
+       of primary/secondary vlans.
+
+       When a access/hybrid port is configured as a member port of a
+       primary/secondary vlan, it becomes a hostPort automatically.
+
+       This object represents the static VLAN Port Type value. 
+       When the value is different than the value of the 
+       fsMIDot1qFutureVlanPortType object, a dynamic setting 
+       is currently applied."
+
+   DEFVAL { hybridPort } 
+   ::= { fsMIDot1qFutureVlanPortEntry 47 } 
  
 -- ------------------------------------------------------------------------- 
 -- Future Vlan Mac Map Table 
@@ -2004,7 +2133,9 @@ fsMIDot1qFutureStVlanExtTable OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-        "An extension to fsDot1qVlanStaticTable VLAN table."
+        "An extension to fsDot1qVlanStaticTable VLAN table.
+         This table contains the Private Vlan (PVLAN) related
+         configurations."
    ::= { fsMIDot1qFutureVlan 15 } 
  
 fsMIDot1qFutureStVlanExtEntry OBJECT-TYPE
@@ -2012,39 +2143,59 @@ fsMIDot1qFutureStVlanExtEntry OBJECT-TYPE
    MAX-ACCESS  not-accessible 
    STATUS      current 
    DESCRIPTION 
-        "Each entry specifies the Vlan configuration done for
+        "Each entry specifies the Private Vlan configuration done for
          a given Vlan."
    AUGMENTS { fsDot1qVlanStaticEntry }
    ::= { fsMIDot1qFutureStVlanExtTable 1 }
     
 FsMIDot1qFutureStVlanExtEntry ::=
    SEQUENCE { 
-      fsMIDot1qFutureStVlanType INTEGER,
-      fsMIDot1qFutureStVlanVid VlanIdOrNone,
+      fsMIDot1qFutureStVlanPVlanType INTEGER,
+      fsMIDot1qFutureStVlanPrimaryVid VlanIdOrNone,
       fsMIDot1qFutureStVlanFdbFlush TruthValue,
       fsMIDot1qFutureStVlanEgressEthertype Integer32
    } 
  
-fsMIDot1qFutureStVlanType OBJECT-TYPE
+fsMIDot1qFutureStVlanPVlanType OBJECT-TYPE
     SYNTAX      INTEGER {
-                          normal (1)
+                          normal (1),
+                          primary (2),
+                          isolated (3),
+                          community (4) 
                         }
-   MAX-ACCESS  read-only 
+   MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-    	"Indicates the VLAN type of the static VLAN.
-	This object is being retained for backward compatibility of OID's
-	of the remaining objects in this table."
+        "This object identifies the Private vlan type for this vlan.
+         normal    - Vlan does not belong to any Private VLAN domain.
+         primary   - Primary vlan in a Private VLAN domain.
+         isolated  - Isolated vlan in a Private VLAN domain.
+                     Devices connected to host ports of this vlan, can not
+                     communicate with each other.
+                     For every isolated vlan, one primary vlan id should be
+                     configured.
+         community - Community Vlan in a Private VLAN domain. Layer 2 
+                     behaviour for a community and normal vlan is same.
+                     For every community vlan, one primary vlan id should be
+                     configured.
+         Configuration of this object is allowed only when VLAN is not
+         active."
     DEFVAL { normal }
     ::= { fsMIDot1qFutureStVlanExtEntry 1 }
 
-fsMIDot1qFutureStVlanVid OBJECT-TYPE
+fsMIDot1qFutureStVlanPrimaryVid OBJECT-TYPE
    SYNTAX      VlanIdOrNone
-   MAX-ACCESS  read-only 
+   MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
-      "This object is being retained for backward compatibility of OID's of the
-	remaining objects in this table. "
+      "This object identifies the primary vlan assoicated with this
+       vlan. 
+       For primary and normal vlans, this object will have the value zero 
+       and configuring this object to non-zero value will not be allowed for 
+       them.
+       For secondary vlans, this object identifies the associated
+       primary vlan."
+    DEFVAL { 0 }
    ::= { fsMIDot1qFutureStVlanExtEntry 2 }
 
 fsMIDot1qFutureStVlanFdbFlush OBJECT-TYPE

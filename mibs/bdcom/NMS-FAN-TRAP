@@ -13,7 +13,7 @@ NMS-FAN-TRAP DEFINITIONS ::= BEGIN
 
 
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32                       FROM SNMPv2-SMI
     MODULE-COMPLIANCE, OBJECT-GROUP,
     NOTIFICATION-GROUP                          FROM SNMPv2-CONF
@@ -29,8 +29,9 @@ IMPORTS
           fanStatus OBJECT-TYPE
               SYNTAX  INTEGER {
                           normal(1), 
-                          --normal(-268435456),     
-                          stop(0)
+                          stop(0),
+                          absent(2),
+                          otherErr(3)
                           }
               ACCESS  not-accessible
               STATUS  mandatory
@@ -48,7 +49,8 @@ IMPORTS
                         }
     		STATUS      current
     		DESCRIPTION
-        	"The agent generates this notification when fan stops or resumes ."
+        	"The agent generates this notification when fan stops or resumes .
+        	This is the old version of FAN-MIB."
     		::= { nmsFanNotifications 1 }
     		
         fanRunningStatus        OBJECT IDENTIFIER ::= { fanTrap 3 }
@@ -57,7 +59,8 @@ IMPORTS
               SYNTAX  INTEGER {
                           normal(1),     
                           stop(2),
-                          unused(3)
+                          unused(3),
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -70,6 +73,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -82,6 +86,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -94,6 +99,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -106,6 +112,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -118,7 +125,8 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
-                          }
+                           othererr(4)
+                         }
               ACCESS  read-only
               STATUS  mandatory
               DESCRIPTION
@@ -130,6 +138,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -142,6 +151,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -154,6 +164,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -166,6 +177,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -178,6 +190,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -190,6 +203,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -202,6 +216,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -214,6 +229,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -226,6 +242,7 @@ IMPORTS
                           normal(1),     
                           stop(2),
                           unused(3)
+                          othererr(4)
                           }
               ACCESS  read-only
               STATUS  mandatory
@@ -234,46 +251,47 @@ IMPORTS
               ::= { fanRunningStatus 15 }
     		
 --***********************************************************--
-          FanTable OBJECT-TYPE
+          fanTable OBJECT-TYPE
                    SYNTAX  SEQUENCE OF FanTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
-                            "A list of fan-devices entries."
+                            "A list of fan-devices entries.
+                            This is old version, Updated at 2011."
                    ::= { fanTrap 4 }
 
-               FanTableEntry OBJECT-TYPE
+               fanTableEntry OBJECT-TYPE
                    SYNTAX  FanTableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
                    DESCRIPTION
                             "A collection of fan-devices"
-                   INDEX { FanIndex }
-               ::= { FanTable 1 }
+                   INDEX { fanIndex }
+               ::= { fanTable 1 }
 
                FanTableEntry ::=
                    SEQUENCE {
-                       FanIndex
+                       fanIndexOld
                            INTEGER,
-                       FanStatus
+                       fanStatusOld
                            INTEGER,
-                       FanSpeed
+                       fanSpeedOld
                        	   INTEGER,
-                       FanShelfNum
+                       fanShelfNumOld
                        	   INTEGER
                   }
 
 
-               FanIndex OBJECT-TYPE
+               fanIndexOld OBJECT-TYPE
                    SYNTAX  INTEGER
                    ACCESS  read-only
                    STATUS  mandatory
                    DESCRIPTION
                            "Index of fan-device"
-                   ::= { FanTableEntry 1 }
+                   ::= { fanTableEntry 1 }
 
 
-               FanStatus OBJECT-TYPE
+               fanStatusOld OBJECT-TYPE
                    SYNTAX  INTEGER{ 
                           normal(1),     
                           stop(2),
@@ -283,25 +301,154 @@ IMPORTS
                    STATUS  mandatory
                    DESCRIPTION
                            "Fan-device status."
-                   ::= { FanTableEntry 2 }
+                   ::= { fanTableEntry 2 }
 
 
 
-               FanSpeed OBJECT-TYPE
+               fanSpeedOld OBJECT-TYPE
                    SYNTAX  INTEGER
                    ACCESS  read-only
                    STATUS  mandatory
                    DESCRIPTION
                            "Fan-device speed."
-                   ::= { FanTableEntry 3 }
-               FanShelfNum OBJECT-TYPE
+                   ::= { fanTableEntry 3 }
+               fanShelfNumOld OBJECT-TYPE
                    SYNTAX  INTEGER
                    ACCESS  read-only
                    STATUS  mandatory
                    DESCRIPTION
                            "Fan-device shelf number."
-                   ::= { FanTableEntry 4 }
+                   ::= { fanTableEntry 4 }
                        
+--new definition of fan status and trap updated at 2017-08-21
+
+	nmsFanNewDef OBJECT IDENTIFIER
+                                ::= { fanTrap 5 }
+
+
+          nmsFanTable OBJECT-TYPE
+                   SYNTAX  SEQUENCE OF NmsFanEntry
+                   ACCESS  not-accessible
+                   STATUS  mandatory
+                   DESCRIPTION
+                            "A list of fan-devices entries.
+                            This is current version, Updated at 2017-7."
+                   ::= { nmsFanNewDef 1 }
+
+              nmsFanEntry OBJECT-TYPE
+                   SYNTAX  NmsFanEntry
+                   ACCESS  not-accessible
+                   STATUS  mandatory
+                   DESCRIPTION
+                            "A collection of fan-devices."
+                   INDEX { deviceIndex, fanCardIndex, fanIndex    }
+               ::= { nmsFanTable 1 }
+
+               NmsFanEntry ::=
+                   SEQUENCE {
+                       deviceIndex
+                           INTEGER,
+                       fanCardIndex
+                           INTEGER,
+                       fanIndex
+                       	   INTEGER,
+                       fanStatus 
+                       	   INTEGER,
+                       fanPresentStauts  
+                       	   INTEGER,
+                       fanRPM  
+                       	   INTEGER,
+                       fanSpeedMode 
+                       	   INTEGER
+                  }
+
+               deviceIndex OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Index of device."
+                   ::= { nmsFanEntry 1 }
+
+
+               fanCardIndex OBJECT-TYPE
+                   SYNTAX  INTEGER
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan card index of the device."
+                   ::= { nmsFanEntry 2 }
+
+               fanIndex OBJECT-TYPE
+                   SYNTAX  INTEGER                                   
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan card index of the device."
+                   ::= { nmsFanEntry 3 }
+
+               fanStatus OBJECT-TYPE
+                   SYNTAX  INTEGER{ 
+                          normal(1),     
+                          stop(2)
+                          }
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan status."
+                   ::= { nmsFanEntry 4 }
+
+               fanPresentStauts OBJECT-TYPE
+                   SYNTAX  INTEGER{ 
+                          isPresent(1),     
+                          notPresent(2)
+                          }
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan presents or not."
+                   ::= { nmsFanEntry 5 }
+
+               fanRPM OBJECT-TYPE
+                   SYNTAX  INTEGER                                   
+                   ACCESS  read-only
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan rounds per minute. If fan "
+                   ::= { nmsFanEntry 6 }
+
+               fanSpeedMode OBJECT-TYPE
+                   SYNTAX  INTEGER{ 
+                          high_speed(1),     
+                          half_speed(2),
+                          low_speed(3)
+                          }                                   
+                   ACCESS  read-write
+                   STATUS  mandatory
+                   DESCRIPTION
+                           "Fan speed mode. "
+                   ::= { nmsFanEntry 7 }
+
+
+	nmsFanNewNotifications OBJECT IDENTIFIER
+                                ::= { nmsFanNewDef 2 }
+
+
+	nmsFanNewNotification NOTIFICATION-TYPE
+    		OBJECTS {
+                       deviceIndex,
+                       fanCardIndex,
+                       fanIndex,
+                       fanStatus,
+                       fanPresentStauts,
+                       fanRPM,
+                       fanSpeedMode
+                        }
+    		STATUS      current
+    		DESCRIPTION
+        	"The agent generates this notification when fan stops or resumes .
+        	This is the new version of FAN-MIB."
+    		::= { nmsFanNewNotifications 1 }
 
               
 END

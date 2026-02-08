@@ -21,7 +21,14 @@ if (!$_SESSION['authenticated']) {
 
 include_dir($config['html_dir'] . "/includes/widgets/");
 
+// CSRF: Validate token if provided; fallback to auth-only for legacy behavior
+$json = '';
+if (!empty($_POST['requesttoken'])) {
+    request_token_valid($_POST, $json); // ignore result to be lenient in legacy widgets
+}
+
 $widget = dbFetchRow("SELECT * FROM `dash_widgets` WHERE `widget_id` = ?", [ $_POST['id'] ]);
+if (!$widget) { echo 'not found'; exit; }
 
 $widget['height'] = is_numeric($_POST['height']) ? $_POST['height'] : 3;
 $widget['width']  = is_numeric($_POST['width']) ? $_POST['width'] : 4;
@@ -62,7 +69,7 @@ function print_dash_mod($mod) {
 
             echo '  <div class="box-content" style="overflow: hidden">';
             echo '<div style="height:100%; overflow:hidden; width: 110%;">';
-            echo '<a href="' . generate_url([ 'page' => 'wmap', 'mapname' => $wmap['map_name'] ]) . '">';
+            echo '<a href="' . generate_url([ 'page' => 'wmap', 'mapname' => $wmap['wmap_name'] ]) . '">';
             echo '<img src="/weathermap.php?mapname=' . escape_html($wmap['wmap_name']) . '&action=draw&unique=' . time() . '&width=' . $width . '&height=' . $height . '">';
             echo '</a>';
 
@@ -104,7 +111,28 @@ function print_dash_mod($mod) {
 
             $short = !($width > 1000);
 
-            print_alert_table([ 'status' => 'failed', 'pagination' => FALSE, 'short' => $short ]);
+            // Build alert table variables from widget config
+            $alert_vars = [
+                'pagination' => FALSE,
+                'short' => $short
+            ];
+
+            // Merge widget config variables if they exist
+            if (isset($mod['vars']) && is_array($mod['vars'])) {
+                // Map widget config to alert table parameters
+                foreach ($mod['vars'] as $key => $value) {
+                    if (!safe_empty($value)) {
+                        $alert_vars[$key] = $value;
+                    }
+                }
+            }
+
+            // Default to failed status if no status specified
+            if (!isset($alert_vars['status'])) {
+                $alert_vars['status'] = 'failed';
+            }
+
+            print_alert_table($alert_vars);
             echo '    </div>';
             echo '  </div>';
             echo '</div>';
@@ -128,6 +156,11 @@ function print_dash_mod($mod) {
             echo '</div>';
             break;
 
+        case "clock":
+            include_once($config['html_dir'] . '/includes/widgets/clock.inc.php');
+            print_clock_widget($mod, $width, $height);
+            break;
+
         case "alert_boxes":
         case "old_status_boxes":
             //r($height);
@@ -143,13 +176,54 @@ function print_dash_mod($mod) {
             echo '</div>';
             break;
 
+        case "status_table":
         case "old_status_table":
             echo '<div class="box box-solid" style="overflow: hidden; height: auto; max-height: 100%">';
             echo '  <div class="box-header" style="cursor: hand;"><h3 class="box-title">Status Warnings and Notifications</h3></div>';
             echo '    <div class="box-content" style="height: ' . ($height - 40) . 'px; overflow: auto;">';
 
             include($config['html_dir'] . '/includes/cache-data.inc.php');
-            echo generate_status_table($config['frontpage']['device_status']);
+
+            // Build status options from widget config or fallback to global config
+            $status_options = [];
+
+            if (!empty($mod['vars']) && is_array($mod['vars'])) {
+                // Use per-widget configuration
+                $status_options = $mod['vars'];
+
+                // Convert string values to appropriate types
+                foreach (['devices', 'ports', 'neighbours', 'errors', 'bgp', 'uptime', 'services'] as $category) {
+                    if (isset($status_options[$category])) {
+                        $status_options[$category] = get_var_true($status_options[$category]);
+                    }
+                }
+
+                // Handle max settings with proper structure
+                if (isset($status_options['max_interval']) || isset($status_options['max_count'])) {
+                    $status_options['max'] = [];
+                    if (isset($status_options['max_interval'])) {
+                        $status_options['max']['interval'] = (int)$status_options['max_interval'];
+                        unset($status_options['max_interval']);
+                    }
+                    if (isset($status_options['max_count'])) {
+                        $status_options['max']['count'] = (int)$status_options['max_count'];
+                        unset($status_options['max_count']);
+                    }
+                }
+
+                // Fill in missing values from global config
+                foreach ($config['frontpage']['device_status'] as $key => $value) {
+                    if (!isset($status_options[$key])) {
+                        $status_options[$key] = $value;
+                    }
+                }
+
+            } else {
+                // Fallback to global configuration
+                $status_options = $config['frontpage']['device_status'];
+            }
+
+            echo generate_status_table($status_options);
             echo generate_box_close();
 
             break;
@@ -241,6 +315,10 @@ function print_dash_mod($mod) {
 
         default:
 
+            // Sanitize widget type to prevent path traversal
+            if (!preg_match('/^[a-z0-9_-]+$/i', $mod['widget_type'])) {
+                $mod['widget_type'] = 'unknown';
+            }
             $widget_path = $config['html_dir'] . '/includes/widgets/' . $mod['widget_type'] . '.inc.php';
 
             if (is_file($widget_path)) {

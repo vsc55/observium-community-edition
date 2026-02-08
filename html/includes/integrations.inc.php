@@ -119,7 +119,7 @@ function get_smokeping_files($debug = FALSE)
                 }
                 $target = str_replace($config['smokeping']['split_char'], ".", $target);
                 if ($config['smokeping']['suffix']) {
-                    $target = $target . $config['smokeping']['suffix'];
+                    $target .= $config['smokeping']['suffix'];
                     if ($debug) {
                         echo('- Suffix is configured, target is now <b>' . $target . '</b><br />');
                     }
@@ -136,7 +136,7 @@ function get_smokeping_files($debug = FALSE)
                     echo('- After replacing configured split_char ' . $config['smokeping']['split_char'] . ' by . target is <b>' . $target . '</b><br />');
                 }
                 if ($config['smokeping']['suffix']) {
-                    $target = $target . $config['smokeping']['suffix'];
+                    $target .= $config['smokeping']['suffix'];
                     if ($debug) {
                         echo('- Suffix is configured, target is now <b>' . $target . '</b><br />');
                     }

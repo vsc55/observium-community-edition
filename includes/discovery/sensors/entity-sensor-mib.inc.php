@@ -137,7 +137,7 @@ foreach ($entity_array as $index => $entry) {
         } elseif (!$entry['entPhysicalDescr'] && $entry['entPhysicalName']) {
             $descr = rewrite_entity_name($entry['entPhysicalName']);
         } elseif (!$entry['entPhysicalDescr'] && !$entry['entPhysicalName']) {
-            // This is also trick for some retard devices like NetMan Plus
+            // This is also a trick for some silly devices like NetMan Plus
             $descr = nicecase($type) . " $index";
         }
 
@@ -204,8 +204,11 @@ foreach ($entity_array as $index => $entry) {
                     $descr = $port['port_label'] . ' ' . $descr;
                 } elseif (isset($port['sensor_multilane']) && $port['sensor_multilane']) {
                     // Multilane sensors, some rewrites
-                    $match = explode('/', $port['ifDescr'])[0]; // Ethernet56/1 -> Ethernet56
-                    if (preg_match("! $match(\/(?<lane>\d))?!", $descr, $matches)) {
+                    // Ethernet56/1 -> Ethernet56
+                    // Ethernet3/50/1 -> Ethernet3/50
+                    $match = preg_replace('!/\d+$!', '', $port['ifDescr']);
+                    if (preg_match("! $match(\/(?<lane>[1-4]))?!", $descr, $matches)) {
+                        // Arista only?
                         $descr = str_replace($matches[0], '', $descr);
                         $descr = $port['port_label'] . (isset($matches['lane']) ? ' Lane ' . $matches['lane'] : '') . ' ' . $descr;
                     } elseif (preg_match("! Eth\d+.+\)\/(?<lane>[1234])$!", $descr, $matches)) {
@@ -242,7 +245,7 @@ foreach ($entity_array as $index => $entry) {
             }
         } elseif ($type === 'power' && is_device_mib($device, 'ARUBAWIRED-POWERSUPPLY-MIB')) {
             // ARUBAWIRED-POWERSUPPLY-MIB
-            foreach ($t_entity_array as $t_index => $t_entry) {
+            foreach ($t_entity_array as $t_entry) {
                 // ENTITY-SENSOR-MIB::entPhysicalName.7401 = STRING: Power sensor for power supply 1/2
                 // ARUBAWIRED-POWERSUPPLY-MIB::arubaWiredPSUName.1.2 = STRING: 1/2
                 if ($t_entry['arubaWiredPSUMaximumPower'] > 0 &&
@@ -255,7 +258,7 @@ foreach ($entity_array as $index => $entry) {
             // CISCO-ENTITY-SENSOR-EXT-MIB
 
             // Check thresholds for this entry
-            foreach ($t_entity_array[$index] as $t_index => $t_entry) {
+            foreach ($t_entity_array[$index] as $t_entry) {
                 if ($t_entry['ceSensorExtThresholdValue'] == "-32768") {
                     continue;
                 }

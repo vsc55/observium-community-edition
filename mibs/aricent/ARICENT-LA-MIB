@@ -1,17 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved.
 
--- $Id: fsla.mib,v 1.46 2016/03/04 11:11:51 siva Exp $
---    LA Proprietary MIB Definition
-      
---    This document explains the proprietary MIB implemented
---    for LA product.
-      
---    This proprietary MIB definition, supplements the standard IEEE802.3ad 
---    MIB and also provides management of certain proprietary features of LA. 
-      
---    The proprietary MIB definitions follows:
-
-
       ARICENT-LA-MIB DEFINITIONS ::= BEGIN
     
       IMPORTS
@@ -19,24 +7,44 @@
          enterprises,Integer32,NOTIFICATION-TYPE,TimeTicks,Unsigned32,Counter32,
          Gauge32
          FROM SNMPv2-SMI
-         TEXTUAL-CONVENTION, MacAddress, TruthValue
+         TruthValue, TEXTUAL-CONVENTION, MacAddress, DisplayString, RowStatus
          FROM SNMPv2-TC
+         SnmpAdminString
+         FROM SNMP-FRAMEWORK-MIB
          InterfaceIndex,InterfaceIndexOrZero    
          FROM IF-MIB
-         PortList FROM Q-BRIDGE-MIB;
+         PortList FROM Q-BRIDGE-MIB
+	 dot3adAggActorAdminKey,LacpKey FROM IEEE8023-LAG-MIB;
     
 ---   futuresoftware OBJECT IDENTIFIER ::= { enterprises 2076 }
                                                  
-
       fsla MODULE-IDENTITY
-            LAST-UPDATED "201403010000Z"
+            LAST-UPDATED "202008190000Z"
             ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
             CONTACT-INFO "support@aricent.com"
             DESCRIPTION
                "The proprietary MIB module for LA."
+
+	    REVISION "202008190000Z"
+            DESCRIPTION
+               "Added user priority support to the Cambium 
+               pass-thru fsLaIfPortChannelTable."
+
+	    REVISION "202007300000Z"
+            DESCRIPTION
+               "Added support for defining a default
+               load-balance option through the object
+               fsLaPortChannelGblSelectionPolicy."
+
+	    REVISION "201912090000Z"
+            DESCRIPTION
+               "Introduction of the Cambium pass-thru
+               fsLaIfPortChannelTable."
+
 	    REVISION "201403010000Z"
             DESCRIPTION
                "The proprietary MIB module for LA."
+
          ::=  { enterprises futuresoftware (2076) 63 }
    
 -- -------------------------------------------------------------
@@ -61,13 +69,6 @@
                        disable(3)
                     }
 
-     LacpKey ::= TEXTUAL-CONVENTION
-     DISPLAY-HINT "d"
-         STATUS    current
-         DESCRIPTION
-                "The actor or partner Key value."
-         SYNTAX Integer32 (0..65535)
- 
     
    LacpState ::= TEXTUAL-CONVENTION
       STATUS current
@@ -572,6 +573,34 @@
               DEFVAL { false }
               ::= { fsLaSystem 27 }
 
+       fsLaClearStatistics OBJECT-TYPE
+              SYNTAX       TruthValue 
+              MAX-ACCESS   read-write
+              STATUS       current
+              DESCRIPTION
+              "This object is used to clear all the statistics.
+              When this object is set to TRUE, it will clear the statistics for
+              the Bridge, port channel and member ports of the port channel."
+              DEFVAL { false }
+              ::= { fsLaSystem 28 }
+    
+      fsLaMCLAGSystemControl OBJECT-TYPE
+           SYNTAX      INTEGER { start(1), shutdown(2)}
+           MAX-ACCESS  read-write
+           STATUS      current
+           DESCRIPTION
+                "This object start or shutdown Multi-Chassis Link Aggregation Module in the system
+                start(1)    - MC-LAG feature will be enabled in the system.MC-LAG global system status
+                              is allowed to be enabled in the system.
+                shutdown(2) - MC-LAG feature will be disabled in the system.
+                              Disables MC-LAG system status globally and in  port-channel status.
+                              MC-LAG cannot be enabled in the system.
+                              Resets the MC-LAG configurations.
+                              ICCL VLAN,port-channel and IVR will be deleted.
+                              ICCL parameters will be changed to default.
+                              This object is set to shutdown when LA System contol status is shutdown."
+        DEFVAL  { start }
+        ::= { fsLaSystem 29 }
     
 --
 -- Port Channel Table
@@ -641,7 +670,13 @@ FsLaPortChannelEntry ::=
               fsLaPortChannelMCLAGPeriodicSyncPduTxCount   Counter32,
               fsLaPortChannelMCLAGPeriodicSyncPduRxCount   Counter32,
               fsLaPortChannelMCLAGEventUpdatePduTxCount    Counter32,
-              fsLaPortChannelMCLAGEventUpdatePduRxCount    Counter32
+              fsLaPortChannelMCLAGEventUpdatePduRxCount    Counter32,
+              fsLaPortChannelClearStatistics               TruthValue,
+	      fsLaPortChannelUpCount			   Counter32,
+	      fsLaPortChannelDownCount			   Counter32,
+	      fsLaPortChannelHotStandByPortsCount	   Counter32,
+	      fsLaPortChannelOperChgTimeStamp              TimeTicks,
+	      fsLaPortChannelDownReason			   INTEGER
               }
 
 fsLaPortChannelIfIndex OBJECT-TYPE
@@ -738,7 +773,9 @@ fsLaPortChannelSelectionPolicy OBJECT-TYPE
                       macSrcDstVid(11),
                       mplsVcLabel(12),
                       mplsTunnelLabel(13),
-                      mplsVcTunnelLabel(14)
+                      mplsVcTunnelLabel(14),
+                      enhanced(15),
+                      randomized(16)
                   }
           MAX-ACCESS  read-write
           STATUS      current
@@ -799,7 +836,9 @@ fsLaPortChannelSelectionPolicyBitList  OBJECT-TYPE
                       ip6Dst(10),    -- Destination IPv6 address
                       l3Protocol(11),-- Layer 3 protocol specified in IP header
                       l4SrcPort(12), -- Layer 4 source port specified in L4 header ( tcp/udp port )
-                      l4DstPort (13) -- Layer 4 destination port specified in L4 header ( tcp/udp port )
+                      l4DstPort (13),-- Layer 4 destination port specified in L4 header ( tcp/udp port )
+                      enhanced(14),  -- enhanced hashing-based load balance specific to platform
+                      randomized(15) -- randomized load balance specific to platform
 
                 The remaining bits are unused. Selection of multiple bits 
                 implies selection of corresponding attributes in the 
@@ -1325,7 +1364,308 @@ fsLaPortChannelMCLAGEventUpdatePduRxCount OBJECT-TYPE
                ICCL port."
           ::={ fsLaPortChannelEntry 37 }
 
+fsLaPortChannelClearStatistics OBJECT-TYPE
+          SYNTAX        TruthValue 
+          MAX-ACCESS    read-write
+          STATUS        current
+          DESCRIPTION
+          "This object is used to clear the statistics of port channel and its member ports.
+          When this object is set to TRUE, it will clear the statistics for the
+          port channel and member ports of that port channel."
+          DEFVAL { false }
+          ::={ fsLaPortChannelEntry 38 }
+
+fsLaPortChannelUpCount OBJECT-TYPE
+          SYNTAX       Counter32
+          MAX-ACCESS   read-only
+          STATUS       current
+          DESCRIPTION
+               "This object specifies the number of times a portchannel
+	       moves to operational up state."
+          ::={ fsLaPortChannelEntry 39 }
+fsLaPortChannelDownCount OBJECT-TYPE
+          SYNTAX       Counter32
+          MAX-ACCESS   read-only
+          STATUS       current
+          DESCRIPTION
+               "This object specifies the number of times a portchannel
+              moves to operational down state."
+          ::={ fsLaPortChannelEntry 40 }
+
+
+fsLaPortChannelHotStandByPortsCount OBJECT-TYPE
+          SYNTAX       Counter32
+          MAX-ACCESS   read-only
+          STATUS       current
+          DESCRIPTION
+               "This object specifies the number of hot standby
+              ports in this port channel entry."
+          ::={ fsLaPortChannelEntry 41 }
+
+fsLaPortChannelOperChgTimeStamp OBJECT-TYPE
+          SYNTAX       TimeTicks
+          MAX-ACCESS   read-only
+          STATUS       current
+          DESCRIPTION
+               "This object specifies the last operational change timestamp
+               for this port channel."
+          ::={ fsLaPortChannelEntry 42 }
+
+fsLaPortChannelDownReason OBJECT-TYPE
+        SYNTAX INTEGER {
+                       operDown(1),
+                      adminDown(2)
+                         }
+
+          MAX-ACCESS   read-only
+          STATUS       current
+          DESCRIPTION
+               "This object specifies the reason when the portchannel
+              moves to down state.
+               operDown(1) - The port is operationally down.
+               adminDown(2) - The port is shutdown by the user."
+          ::={ fsLaPortChannelEntry 43 }
+
+
 -- END OF LaPortChannel Table
+
+--
+-- LA Interface Port Channel Table
+--
+
+fsLaIfPortChannelTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF FsLaIfPortChannelEntry 
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "This table contains port-channel attributes that
+        are used for manipulating entries in various tables.
+
+        fsLaIfPortChannelTable entry creation, modification 
+        and deletion results in related actions being 
+        performed on multiple tables, including ifMainTable, 
+        fsLaPortChannelTable, faLaPortTable and the 
+        dot3adAggPortTable. Likewise, data returned through 
+        fsLaIfPortChannelTable queries is derived from these 
+        tables."
+
+    ::= { fsLaPortChannel 2 }
+
+fsLaIfPortChannelEntry OBJECT-TYPE
+    SYNTAX      FsLaIfPortChannelEntry 
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "Information about a specific port-channel and
+        related components."
+
+    INDEX { fsLaIfPortChannelName }
+    ::= { fsLaIfPortChannelTable 1 }
+
+FsLaIfPortChannelEntry ::= SEQUENCE {
+    fsLaIfPortChannelName         SnmpAdminString,
+    fsLaIfPortChannelIfIndex      InterfaceIndex,
+    fsLaIfPortChannelGroupKey     Integer32,
+    fsLaIfPortChannelOperMode     INTEGER,
+    fsLaIfPortChannelPorts        SnmpAdminString,
+    fsLaIfPortChannelAdminStatus  INTEGER,
+    fsLaIfPortChannelMtu          Integer32,
+    fsLaIfPortChannelPvid         Integer32,
+    fsLaIfPortChannelPortMode     INTEGER,
+    fsLaIfPortChannelStpStatus    INTEGER,
+    fsLaIfPortChannelDesc         DisplayString,
+    fsLaIfPortChannelRowStatus    RowStatus,
+    fsLaIfPortChannelUserPriority INTEGER
+}
+
+fsLaIfPortChannelName OBJECT-TYPE
+    SYNTAX       SnmpAdminString (SIZE (3..7))
+    MAX-ACCESS   not-accessible
+    STATUS       current
+    DESCRIPTION
+        "The port-channel name of the form
+        'po<Key>', where <Key> is the port-
+        channel group key."
+
+    ::= { fsLaIfPortChannelEntry 1 }
+
+fsLaIfPortChannelIfIndex OBJECT-TYPE
+    SYNTAX       InterfaceIndex
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "The ifIndex of the port-channel."
+
+    ::= { fsLaIfPortChannelEntry 2 }
+
+fsLaIfPortChannelGroupKey OBJECT-TYPE
+    SYNTAX       Integer32 (1..65535)
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Port-channel group key identifier."
+
+    ::= { fsLaIfPortChannelEntry 3 }
+
+fsLaIfPortChannelOperMode OBJECT-TYPE
+    SYNTAX       INTEGER {
+                     manual(1),
+                     passive(2),
+                     active(3),
+                     disable(4)
+                 }
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The operational mode of the port-channel. If
+        the port-channel has no assigned ports, the mode
+        is 'disable(4)'."
+
+    ::= { fsLaIfPortChannelEntry 4 }
+
+fsLaIfPortChannelPorts OBJECT-TYPE
+    SYNTAX       SnmpAdminString (SIZE (5..55))
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "Text string identifying the port-channel member
+        ports using the system representation of the port 
+        name. A maximum of 8 comma-separated port names 
+        can be specified, e.g., 'gi0/4,gi0/5,gi0/10'." 
+
+    ::= { fsLaIfPortChannelEntry 5 }
+
+fsLaIfPortChannelAdminStatus OBJECT-TYPE
+    SYNTAX       INTEGER {
+                     up(1),
+                     down(2)
+                 }
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The administrative status for the port-channel."
+
+    DEFVAL { down }
+    ::= { fsLaIfPortChannelEntry 6 }
+
+fsLaIfPortChannelMtu OBJECT-TYPE
+    SYNTAX       Integer32
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The MTU for the port-channel.
+
+        When changing the MTU, the port-channel must first
+        be brought down. Changing MTU while the port-channel 
+        is administratively up is not permitted.
+
+        If not specified during interface creation, a default
+        value is assigned."
+
+    ::= { fsLaIfPortChannelEntry 7 }
+
+fsLaIfPortChannelPvid OBJECT-TYPE
+    SYNTAX       Integer32 (1..4094)
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The PVID for the port-channel."
+
+    ::= { fsLaIfPortChannelEntry 8 }
+
+fsLaIfPortChannelPortMode OBJECT-TYPE
+    SYNTAX       INTEGER {
+                     access(1),
+                     trunk(2),
+                     hybrid(3)
+                 }
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The port mode for the port-channel."
+
+    ::= { fsLaIfPortChannelEntry 9 }
+
+fsLaIfPortChannelStpStatus OBJECT-TYPE
+    SYNTAX       INTEGER {
+                     enabled(1),
+                     disabled(2)
+                 }
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The STP status for the port-channel."
+
+    ::= { fsLaIfPortChannelEntry 10 }
+
+fsLaIfPortChannelDesc OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "A textual string which contains a description
+        for the port-channel interface. Attribute has
+        the same semantics as the ifMainDesc object." 
+
+    ::= { fsLaIfPortChannelEntry 11 }
+
+fsLaIfPortChannelRowStatus OBJECT-TYPE
+    SYNTAX       RowStatus
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "This object allows entries to be created, modified
+        and deleted in the fsLaIfPortChannelTable. Values 
+        'createAndWait', 'active' and 'destroy' are supported 
+        for Sets.
+
+        The rowStatus value of the underlying ifMainEntry is
+        returned when entry data is queried.
+
+        Entry creation requires data for all read-create
+        attributes to be specified with a 'createAndWait'
+        RowStatus value.
+
+        fsLaIfPortChannelPorts is the only value that can
+        be modified in an existing entry. This action is
+        performed by specifying the requested admin status
+        with a 'active' RowStatus value.
+
+        Table entries are deleted with a 'destroy' RowStatus.
+        No other attributes need to be specified for this
+        action to be performed."
+
+    ::= { fsLaIfPortChannelEntry 12 }
+ 
+fsLaIfPortChannelUserPriority OBJECT-TYPE
+    SYNTAX       INTEGER (0..7)
+    MAX-ACCESS   read-create
+    STATUS       current
+    DESCRIPTION
+        "The default user priority for the port-channel."
+
+    ::= { fsLaIfPortChannelEntry 13 }
+
+-- END OF LaIfPortChannel Table
+
+fsLaPortChannelGblSelectionPolicy OBJECT-TYPE
+    SYNTAX       INTEGER {
+                     macSrc(1), 
+                     macDst(2),
+                     macSrcDst(3),
+                     ipSrc(4),
+                     ipDst(5),
+                     ipSrcDst(6)
+                 }
+    MAX-ACCESS   read-write
+    STATUS       current
+    DESCRIPTION
+        "Global link selection policy to be used by port-
+        channels. Supported options are implementation 
+        dependent."
+
+    DEFVAL { macSrcDst }
+    ::= { fsLaPortChannel 3 }
 
 -- -------------------------------------------------------------
 -- The Fs Aggregation Port Group 
@@ -1366,7 +1706,21 @@ fsLaPortChannelMCLAGEventUpdatePduRxCount OBJECT-TYPE
          fsLaPortErrStateRecCount    Counter32,
          fsLaPortDefaultedStateThreshold   Unsigned32,
          fsLaPortHardwareFailureRecThreshold   Unsigned32,
-         fsLaPortSameStateRecThreshold   Unsigned32
+         fsLaPortSameStateRecThreshold           Unsigned32,
+	 fsLaPortUpInBundleCount         	 Counter32,
+	 fsLaPortDownInBundleCount      	 Counter32,
+	 fsLaPortBundStChgTimeStamp     	 TimeTicks,
+	 fsLaPortDownInBundleReason              INTEGER,
+	 fsLaPortErrStateDetTimeStamp            TimeTicks,
+	 fsLaPortErrStateRecTimeStamp		 TimeTicks,
+	 fsLaPortRecTrigReason    		 INTEGER,
+  	 fsLaPortDefStateRecCount  	 	 Counter32,
+	 fsLaPortSameStateRecCount               Counter32,
+	 fsLaPortHwFailRecCount          	 Counter32,
+ 	 fsLaPortDefStateRecTimeStamp            TimeTicks,
+	 fsLaPortSameStateRecTimeStamp           TimeTicks,
+	 fsLaPortHwFailRecTimeStamp  	         TimeTicks,	
+	 fsLaPortRecState                        LacpState 
         }
 
    fsLaPortIndex OBJECT-TYPE
@@ -1440,7 +1794,7 @@ fsLaPortChannelMCLAGEventUpdatePduRxCount OBJECT-TYPE
       STATUS     current
       DESCRIPTION
             "Duration of the port to attach to the PortChannel."
-      DEFVAL { 2 }
+      DEFVAL { 200 }
       ::={fsLaPortEntry 5 }
 
     fsLaPortPartnerResetAdminState OBJECT-TYPE
@@ -1554,6 +1908,172 @@ fsLaPortChannelMCLAGEventUpdatePduRxCount OBJECT-TYPE
         DEFVAL { 5 }
         ::= { fsLaPortEntry 14 }
    
+     fsLaPortUpInBundleCount OBJECT-TYPE
+        SYNTAX       Counter32
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object is used to track the number of times a port goes to
+	    up-in-bundle state."
+        ::= { fsLaPortEntry 15 }
+
+     fsLaPortDownInBundleCount OBJECT-TYPE
+        SYNTAX       Counter32
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object is used to track the number of times a port goes to
+	   down-in-bundle state."
+        ::= { fsLaPortEntry 16 }
+
+     fsLaPortBundStChgTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the timestamp when a ports bundle
+	    state changes."
+        ::= { fsLaPortEntry 17 }
+
+     fsLaPortDownInBundleReason OBJECT-TYPE
+	 SYNTAX INTEGER {
+                       operDown(1),
+                       partnerKeyMismatch(2),
+        	       partnerIdMismatch(3),
+		       partnerKeyZero(4),
+                       speedMismatch(5),
+		       mtuMismatch(6),
+		       pausemodeMismatch(7),
+		       portAggregation(8),
+	               hardwareFailure(9),
+                       hotStandBy(10),
+                       noLACPReceived(11)
+                    }
+
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the reason when a port goes to operationally 
+	    down state.
+	    operDown(1) - The port is operationally down 
+	    partnerKeyMismatch(2)- partner admin key mismatch
+	    partnerIdMismatch(3) - Partner Id mismatch
+	    partnerKeyZero(4) - partner Key is zero
+	    speedMismatch(5) - Speed mismatch between physical port and
+				 port channel
+	    mtuMismatch(6) - MTU mismatch between physical port and
+				 port channel
+	    pausemodeMismatch(7) - Pausemode mismatch between physical port
+				 and port channel
+	    portAggregation(8) - Aggregation of ports that are in loopback
+ 				 connection with the same system.
+	    hardwareFailure(9) - hardware failure while aggregator creation, 
+                                 mapping/unmapping port to aggregator. 
+	    hotStand-by(10) - when the port is selected as hot standby port.
+	    noLACPReceived(11) - no LACP PDU is received."
+        ::= { fsLaPortEntry 18}
+
+      fsLaPortErrStateDetTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the timestamp when the port goes
+	    to error detected state."
+        ::= { fsLaPortEntry 19 }
+
+      fsLaPortErrStateRecTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the timestamp when the port goes 
+	    to error triggered state."
+        ::= { fsLaPortEntry 20 }
+
+     fsLaPortRecTrigReason OBJECT-TYPE
+	SYNTAX INTEGER {
+                       defaulted(1),
+                       hardwareFailure(2),
+                       sameState(3)
+                    }
+
+	MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the reason for error recovery:
+  	       defaulted(1)- Port goes to defaulted state.
+ 	       hardwareFailure(2)- Hardware programming fails.
+	       sameState(3)-Port is stuck in same state for longer time."
+
+        ::= { fsLaPortEntry 21 }
+
+     fsLaPortDefStateRecCount OBJECT-TYPE
+        SYNTAX       Counter32
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object indicates the number of times a port undergoes error
+	    recovery due to defaulted state."
+        ::= { fsLaPortEntry 22 }
+
+     fsLaPortSameStateRecCount OBJECT-TYPE
+        SYNTAX       Counter32
+	MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object indicates the number of times a port undergoes error
+	    recovery due to same state."
+        ::= { fsLaPortEntry 23 }
+
+      fsLaPortHwFailRecCount OBJECT-TYPE
+        SYNTAX       Counter32
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the number of times a port undergoes error
+	    recovery due to hardware failure."
+        ::= { fsLaPortEntry 24 }
+
+     fsLaPortDefStateRecTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the time when the last recovery is
+            triggered to overcome from the defaulted state."
+	::= { fsLaPortEntry 25 }
+
+
+     fsLaPortSameStateRecTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the time when the last recovery is
+            triggered to overcome same state failure."
+        ::= { fsLaPortEntry 26 }
+     
+     fsLaPortHwFailRecTimeStamp OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object specifies the time when the last recovery is  
+            triggered to overcome the hardware failure."
+
+        ::= { fsLaPortEntry 27 }
+
+      fsLaPortRecState OBJECT-TYPE
+        SYNTAX       LacpState   
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+           "This object indicates the same state in which the port stays 
+	    for a threshold before triggering a error recovery."
+        ::= { fsLaPortEntry 28 }
+
+ 
 -- END OF LAPort Table
 
 -- -------------------------------------------------------------
@@ -2240,4 +2760,75 @@ fsLaMCLAGRemotePortPriority OBJECT-TYPE
 -------------------------------------------------------
 -- END OF Remote MC-LAG Aggregation Port Table
 -------------------------------------------------------
+-- -------------------------------------------------------------
+-- The Trap Notifications 
+-- -------------------------------------------------------------
+
+fsLaHwFailRecTrap NOTIFICATION-TYPE
+        OBJECTS {
+	 fsLaHwFailTrapType,
+	 fsLaPortHwFailRecTimeStamp,
+  	 fsLaPortHardwareFailureRecThreshold,
+	 fsLaRecTmrDuration,
+	 fsLaRecThresholdExceedAction
+                }
+        STATUS             current
+        DESCRIPTION
+        "Generated when any of the fsLaHwFailRecTrapType event occurs."
+   ::= { fsLaTraps 3 }
+
+fsLaDefStateErrRecTrap NOTIFICATION-TYPE
+        OBJECTS {
+         dot3adAggActorAdminKey,
+         fsLaPortDefStateRecTimeStamp,
+	 fsLaPortDefaultedStateThreshold,
+	 fsLaRecTmrDuration,
+         fsLaRecThresholdExceedAction
+                }
+        STATUS             current
+        DESCRIPTION
+        "Generated when any of the fsLaDefStateErrRecTrapType event occurs."
+   ::= { fsLaTraps 4 }
+
+fsLaSameStateErrRecTrap NOTIFICATION-TYPE
+        OBJECTS {
+         dot3adAggActorAdminKey,
+	 fsLaPortRecState,
+         fsLaPortSameStateRecTimeStamp,
+	 fsLaPortSameStateRecThreshold,
+	 fsLaRecTmrDuration,
+         fsLaRecThresholdExceedAction
+                }
+        STATUS             current
+        DESCRIPTION
+        "Generated when the error recovery is triggered for a port when the port strucks in the same state."
+   ::= { fsLaTraps 5 }
+
+fsLaPortBundleStateUpdateTrap NOTIFICATION-TYPE
+        OBJECTS {
+	  dot3adAggActorAdminKey,
+	  fsLaPortBundleState,
+	  fsLaPortBundStChgTimeStamp,
+    	  fsLaPortDownInBundleReason 
+                }
+
+        STATUS             current
+        DESCRIPTION
+        "Generated when any of the active ports is added/removed from the port channel."
+   ::= { fsLaTraps 6 }
+
+fsLaDownIndicationTrap NOTIFICATION-TYPE
+        OBJECTS {
+	  fsLaPortChannelOperChgTimeStamp,
+	  fsLaPortChannelDownReason 
+                }
+
+        STATUS             current
+        DESCRIPTION
+        "Generated when any of the port in the port channel goes down."
+   ::= { fsLaTraps 7 }
+
+-- -------------------------------------------------------------
+-- END of Trap Notifications 
+-- -------------------------------------------------------------
 END

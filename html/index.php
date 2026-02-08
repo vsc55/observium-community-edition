@@ -238,39 +238,30 @@ if (is_alpha($vars['page'])) {
         $panel_name = $vars['page'];
     }
     //r($panel_name);
-    if ($config['pages'][$panel_name]['custom_panel']) {
-        include($page_file);
-    } else {
-        echo '<div class="row">';
 
-        if ($config['pages'][$panel_name]['no_panel']) {
-            echo '<div class="col-lg-12">';
-        } else {
-            echo '
+    echo '<div class="row">';
+
+    if ($config['pages'][$panel_name]['no_panel']) {
+        // Skip any panel loading
+        echo '      <div class="col-lg-12">';
+    } else {
+        // Left panel placeholder
+        // Attrib data-panel="default" for ajax panel loading
+        echo '
       <div class="col-xl-4 visible-xl">
-        <div id="myAffix" data-spy="affix" data-offset-top="60">
+        <div id="myAffix" data-spy="affix" data-offset-top="60" data-panel="default">
         ##PAGE_PANEL##
         </div>
       </div>
-    <div class="col-xl-8 col-lg-12">';
-        }
-
-        include($page_file);
-        echo '</div>';
+      <div class="col-xl-8 col-lg-12">';
     }
 
-    // Register default panel if custom not set
-    if (!isset($GLOBALS['cache_html']['page_panel'])) {
-        if (is_file($config['html_dir'] . "/includes/panels/" . $panel_name . ".inc.php")) {
-            $panel_file = $config['html_dir'] . "/includes/panels/" . $panel_name . ".inc.php";
-        } else {
-            $panel_file = $config['html_dir'] . "/includes/panels/default.inc.php"; // default
-        }
-        ob_start();
-        include($panel_file);
-        $panel_html = ob_get_clean();
+    include($page_file);
+    echo '      </div>';
 
-        register_html_panel($panel_html);
+    // Register default panel (when not registered on pages)
+    if (!$config['pages'][$panel_name]['no_panel'] && !mem_cache_exists('html_page_panel')) {
+        register_html_panel('default');
     }
 }
 
@@ -290,7 +281,7 @@ if ($cachesize < 0) {
 <?php
 
 if (!get_var_true($vars['bare'])) {
-    include($config['html_dir'] . "/includes/navbar_footer.inc.php");
+    include($config['html_dir'] . "/includes/navbars/footer.inc.php");
 } // end if bare
 
 clear_duplicate_cookies();

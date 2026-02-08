@@ -79,11 +79,11 @@
                 <div class="box-header with-border"><h3 class="box-title">Development Team</h3></div>
                 <div class="box-body no-padding">
                     <dl class="dl-horizontal" style="margin: 0px; padding:5px;">
-                        <dt style="text-align: left;"><i class="icon-user"></i> Adam Armstrong</dt>
+                        <dt style="text-align: left;"><i class="icon-group"></i> Adam Armstrong</dt>
                         <dd>Project Leader</dd>
-                        <dt style="text-align: left;"><i class="icon-user"></i> Tom Laermans</dt>
+                        <dt style="text-align: left;"><i class="icon-group"></i> Tom Laermans</dt>
                         <dd>Committer & Developer</dd>
-                        <dt style="text-align: left;"><i class="icon-user"></i> Mike Stupalov</dt>
+                        <dt style="text-align: left;"><i class="icon-group"></i> Mikhail Stupalov</dt>
                         <dd>Committer & Developer</dd>
                     </dl>
                 </div>
@@ -123,8 +123,14 @@
                     $stats                    = [];
                     $stats['devices']         = dbFetchCell('SELECT COUNT(*) FROM `devices`');
                     $stats['ports']           = dbFetchCell('SELECT COUNT(*) FROM `ports`');
-                    $stats['syslog']          = dbFetchCell('SELECT COUNT(*) FROM `syslog`');
-                    $stats['events']          = dbFetchCell('SELECT COUNT(*) FROM `eventlog`');
+                    $stats['syslog']          = dbApproxCount('syslog'); // dbFetchCell('SELECT COUNT(*) FROM `syslog`');
+                    if ($stats['syslog'] > 99999) {
+                        $stats['syslog'] = format_si($stats['syslog']);
+                    }
+                    $stats['events']          = dbApproxCount('eventlog'); // dbFetchCell('SELECT COUNT(*) FROM `eventlog`');
+                    if ($stats['events'] > 99999) {
+                        $stats['events'] = format_si($stats['events']);
+                    }
                     $stats['applications']    = dbFetchCell('SELECT COUNT(*) FROM `applications`');
                     $stats['storage']         = dbFetchCell('SELECT COUNT(*) FROM `storage`');
                     $stats['diskio']          = dbFetchCell('SELECT COUNT(*) FROM `ucd_diskio`');
@@ -151,7 +157,7 @@
                     $stats['vms']  = dbFetchCell('SELECT COUNT(*) FROM `vminfo`');
                     $stats['slas'] = dbFetchCell('SELECT COUNT(*) FROM `slas`');
 
-                    $stats['db']  = get_db_size();
+                    $stats['db']  = dbSize();
                     $stats['rrd'] = get_dir_size($config['rrd_dir']);
 
                     set_cache_item($cache_item, $stats, ['ttl' => 900]); // 15 min
@@ -169,75 +175,75 @@
                         <table class="table table-striped table-condensed">
                             <tbody>
                             <tr>
-                                <td style="width: 45%;"><i class="<?php echo $config['icon']['storage']; ?>"></i> <strong>DB size</strong></td>
+                                <td style="width: 45%;"><?php echo get_icon('storage'); ?><strong>DB size</strong></td>
                                 <td><span class="pull-right"><?php echo format_bytes($stats['db']); ?></span></td>
-                                <td style="width: 45%;"><i class="<?php echo $config['icon']['database']; ?>"></i> <strong>RRD size</strong></td>
+                                <td style="width: 45%;"><?php echo get_icon('database'); ?><strong>RRD size</strong></td>
                                 <td><span class="pull-right"><?php echo format_bytes($stats['rrd']); ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['devices']; ?>"></i> <strong>Devices</strong></td>
+                                <td><?php echo get_icon('devices'); ?><strong>Devices</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['devices']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['port']; ?>"></i> <strong>Ports</strong></td>
+                                <td><?php echo get_icon('port'); ?><strong>Ports</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['ports']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['ipv4']; ?>"></i> <strong>IPv4 Addresses</strong></td>
+                                <td><?php echo get_icon('ipv4'); ?><strong>IPv4 Addresses</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['ipv4_addresses']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['ipv4']; ?>"></i> <strong>IPv4 Networks</strong></td>
+                                <td><?php echo get_icon('ipv4'); ?><strong>IPv4 Networks</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['ipv4_networks']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['ipv6']; ?>"></i> <strong>IPv6 Addresses</strong></td>
+                                <td><?php echo get_icon('ipv6'); ?><strong>IPv6 Addresses</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['ipv6_addresses']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['ipv6']; ?>"></i> <strong>IPv6 Networks</strong></td>
+                                <td><?php echo get_icon('ipv6'); ?><strong>IPv6 Networks</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['ipv6_networks']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['service']; ?>"></i> <strong>Services</strong></td>
+                                <td><?php echo get_icon('service'); ?><strong>Services</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['services']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['apps']; ?>"></i> <strong>Applications</strong></td>
+                                <td><?php echo get_icon('apps'); ?><strong>Applications</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['applications']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['processor']; ?>"></i> <strong>Processors</strong></td>
+                                <td><?php echo get_icon('processor'); ?><strong>Processors</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['processors']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['mempool']; ?>"></i> <strong>Memory pools</strong></td>
+                                <td><?php echo get_icon('mempool'); ?><strong>Memory pools</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['memory']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['storage']; ?>"></i> <strong>Storage Entries</strong></td>
+                                <td><?php echo get_icon('storage'); ?><strong>Storage Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['storage']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['diskio']; ?>"></i> <strong>Disk I/O Entries</strong></td>
+                                <td><?php echo get_icon('diskio'); ?><strong>Disk I/O Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['diskio']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['inventory']; ?>"></i> <strong>HR-MIB Entries</strong></td>
+                                <td><?php echo get_icon('inventory'); ?><strong>HR-MIB Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['hrdevice']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['inventory']; ?>"></i> <strong>Entity-MIB Entries</strong></td>
+                                <td><?php echo get_icon('inventory'); ?><strong>Entity-MIB Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['entphysical']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['syslog']; ?>"></i> <strong>Syslog Entries</strong></td>
+                                <td><?php echo get_icon('syslog'); ?><strong>Syslog Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['syslog']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['eventlog']; ?>"></i> <strong>Eventlog Entries</strong></td>
+                                <td><?php echo get_icon('eventlog'); ?><strong>Eventlog Entries</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['events']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['sensor']; ?>"></i> <strong>Sensors</strong></td>
+                                <td><?php echo get_icon('sensor'); ?><strong>Sensors</strong></td>
                                 <td><span class='pull-right'><?php echo $stats['sensors']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['printersupply']; ?>"></i> <strong>Printer Supplies</strong></td>
+                                <td><?php echo get_icon('printersupply'); ?><strong>Printer Supplies</strong></td>
                                 <td><span class='pull-right'><?php echo $stats['printersupplies']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['vserver']; ?>"></i> <strong>Netscaler VServers</strong></td>
+                                <td><?php echo get_icon('vserver'); ?><strong>Netscaler VServers</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['netscaler_vservers']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['service']; ?>"></i> <strong>Netscaler Services</strong></td>
+                                <td><?php echo get_icon('service'); ?><strong>Netscaler Services</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['netscaler_services']; ?></span></td>
                             </tr>
                             <tr>
-                                <td><i class="<?php echo $config['icon']['virtual-machine']; ?>"></i> <strong>Virtual Machines</strong></td>
+                                <td><?php echo get_icon('virtual-machine'); ?><strong>Virtual Machines</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['vms']; ?></span></td>
-                                <td><i class="<?php echo $config['icon']['sla']; ?>"></i> <strong>IP SLAs</strong></td>
+                                <td><?php echo get_icon('sla'); ?><strong>IP SLAs</strong></td>
                                 <td><span class="pull-right"><?php echo $stats['slas']; ?></span></td>
                             </tr>
                             </tbody>

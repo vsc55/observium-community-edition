@@ -426,7 +426,8 @@ class Mail_smtpmx extends Mail {
         $mx = array();
 
         if ($this->withNetDns) {
-            $res = $this->_loadNetDns();
+            //$res = $this->_loadNetDns();
+            $res = $this->_loadNetDns2();
             if (is_a($res, 'PEAR_Error')) {
                 return $res;
             }
@@ -448,7 +449,7 @@ class Mail_smtpmx extends Mail {
             if (!getmxrr($host, $mxHost, $mxWeight)) {
                 return false;
             }
-            for ($i = 0; $i < count($mxHost); ++$i) {
+            for ($i = 0, $iMax = count($mxHost); $i < $iMax; ++$i) {
                 $mx[$mxHost[$i]] = $mxWeight[$i];
             }
         }
@@ -474,6 +475,31 @@ class Mail_smtpmx extends Mail {
         }
 
         $this->resolver = new Net_DNS_Resolver();
+        if ($this->debug) {
+            $this->resolver->debug = 1;
+        }
+
+        return true;
+    }
+
+    /**
+     * initialize PEAR:Net_DNS2_Resolver
+     *
+     * @access private
+     * @return boolean true on success
+     */
+    function _loadNetDns2()
+    {
+        if (is_object($this->resolver)) {
+            return true;
+        }
+
+        // Observium, uses own autoload
+        // if (!include_once 'Net/DNS2.php') {
+        //     return $this->_raiseError('no_resolver');
+        // }
+
+        $this->resolver = new Net_DNS2_Resolver();
         if ($this->debug) {
             $this->resolver->debug = 1;
         }

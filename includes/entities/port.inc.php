@@ -64,6 +64,9 @@ function process_port_label(&$this_port, $device) {
     if (isset($config['os'][$device['os']]['ifname'])) {
         if (safe_empty($this_port['ifName'])) {
             $this_port['port_label'] = $this_port['ifDescr'];
+        } elseif (!preg_match('/^[[:print:]\p{L}]*$/mu', $this_port['ifName'])) {
+            // unprintable (broken?) ifName
+            $this_port['port_label'] = $this_port['ifDescr'];
         } else {
             $this_port['port_label'] = $this_port['ifName'];
         }
@@ -118,47 +121,131 @@ function process_port_label(&$this_port, $device) {
     return TRUE;
 }
 
+function port_speed_parse($speed_text) {
+    if (safe_empty($speed_text)) {
+        return FALSE;
+    }
+
+    $speed_bps = (int)unit_string_to_numeric($speed_text, 1000);
+
+    // Sanity check: speed should be between 1Kbps and 100Tbps
+    if ($speed_bps >= 1000 && $speed_bps <= 100000000000000) {
+        return $speed_bps;
+    }
+
+    return FALSE;
+}
+
 function process_port_speed(&$this_port, $device, $port = []) {
+    global $config;
 
     if (isset($port['ifSpeed_custom']) && $port['ifSpeed_custom'] > 0) {
         // Custom ifSpeed from WebUI
         $this_port['ifSpeed'] = (int)$port['ifSpeed_custom'];
-        print_debug('Port ifSpeed manually set.');
-    } else {
-        // Detect port speed by ifHighSpeed
-        if (is_numeric($this_port['ifHighSpeed'])) {
-            // Use old ifHighSpeed if current speed '0', seems as some error on device
-            if ($this_port['ifHighSpeed'] == '0' && $port['ifHighSpeed'] > '0') {
-                $this_port['ifHighSpeed'] = $port['ifHighSpeed'];
-                print_debug('Port ifHighSpeed fixed from zero.');
-            }
+        print_debug('Port ifSpeed manually set to -> ' .format_bps($port['ifSpeed_custom']));
 
-            if ((int)$this_port['ifHighSpeed'] === (int)$this_port['ifSpeed'] && $this_port['ifHighSpeed'] >= 1000000) {
-                // https://jira.observium.org/browse/OBS-4715
-                // ifSpeed same as ifHighSpeed
-                $this_port['ifHighSpeed'] = (int)($this_port['ifSpeed'] / 1000000);
-                print_debug('Port ifHighSpeed fixed from same ifSpeed.');
-            } else {
+        return;
+    }
 
-                // Maximum possible ifSpeed value is 4294967295
-                // Overwrite ifSpeed with ifHighSpeed if it's over 4G or ifSpeed equals to zero
-                // ifSpeed is more accurate for low speeds (ie: ifSpeed.60 = 1536000, ifHighSpeed.60 = 2)
-                // other case when (incorrect ifSpeed): ifSpeed.6 = 1000, ifHighSpeed.6 = 1000)
-                $ifSpeed_max = max($this_port['ifHighSpeed'] * 1000000, $this_port['ifSpeed']);
-                if ($this_port['ifHighSpeed'] > 0 &&
-                    ($ifSpeed_max > 4000000000 || $this_port['ifSpeed'] == 0 ||
-                        $this_port['ifSpeed'] == $this_port['ifHighSpeed'])) {
-                    // echo("HighSpeed, ");
-                    $this_port['ifSpeed'] = $ifSpeed_max;
-                }
-            }
+    // Use parsed speed from port description if enabled and available
+    if ($config['ports']['descr_speed_override'] && !safe_empty($port['port_descr_speed'])) {
+
+        if ($parsed_speed = port_speed_parse($port['port_descr_speed'])) {
+            $this_port['ifSpeed'] = $parsed_speed;
+            print_debug('Port ifSpeed set from parsed description: ' . $port['port_descr_speed'] . ' -> ' . format_bps($parsed_speed));
+
+            return;
         }
-        if ($this_port['ifSpeed'] == '0' && $port['ifSpeed'] > '0') {
-            // Use old ifSpeed if current speed '0', seems as some error on device
-            $this_port['ifSpeed'] = $port['ifSpeed'];
-            print_debug('Port ifSpeed fixed from zero.');
+        print_debug('Port ifSpeed from parsed description failed: invalid format "' . $port['port_descr_speed'] . '"');
+    }
+
+    // Detect port speed by ifHighSpeed
+    if (is_numeric($this_port['ifHighSpeed'])) {
+        // Use old ifHighSpeed if current speed '0', seems as some error on device
+        if ($this_port['ifHighSpeed'] == '0' && $port['ifHighSpeed'] > '0' &&
+            $this_port['ifSpeed'] > 1000) { // https://jira.observium.org/browse/OBS-4951
+            $this_port['ifHighSpeed'] = $port['ifHighSpeed'];
+            print_debug('Port ifHighSpeed fixed from zero.');
+        }
+
+        if ((int)$this_port['ifHighSpeed'] === (int)$this_port['ifSpeed'] && $this_port['ifHighSpeed'] >= 1000000) {
+            // https://jira.observium.org/browse/OBS-4715
+            // ifSpeed same as ifHighSpeed
+            $this_port['ifHighSpeed'] = (int)($this_port['ifSpeed'] / 1000000);
+            print_debug('Port ifHighSpeed fixed from same ifSpeed.');
+        } else {
+
+            // Maximum possible ifSpeed value is 4294967295
+            // Overwrite ifSpeed with ifHighSpeed if it's over 4G or ifSpeed equals to zero
+            // ifSpeed is more accurate for low speeds (ie: ifSpeed.60 = 1536000, ifHighSpeed.60 = 2)
+            // other case when (incorrect ifSpeed): ifSpeed.6 = 1000, ifHighSpeed.6 = 1000)
+            $ifSpeed_max = max($this_port['ifHighSpeed'] * 1000000, $this_port['ifSpeed']);
+            if ($this_port['ifHighSpeed'] > 0 &&
+                ($ifSpeed_max > 4000000000 || $this_port['ifSpeed'] == 0 ||
+                    $this_port['ifSpeed'] == $this_port['ifHighSpeed'])) {
+                // echo("HighSpeed, ");
+                $this_port['ifSpeed'] = $ifSpeed_max;
+            }
         }
     }
+
+    if ($this_port['ifSpeed'] == '0' && $port['ifSpeed'] > '0') {
+        // Use old ifSpeed if current speed '0', seems as some error on device
+        $this_port['ifSpeed'] = $port['ifSpeed'];
+        print_debug('Port ifSpeed fixed from zero.');
+    }
+}
+
+function process_port_iflastchange($this_port, $device_uptime, &$port) {
+
+    if (isset($this_port['ifLastChange']) && !safe_empty($this_port['ifLastChange'])) {
+
+        // This ifLastChange copied from previous
+        if (is_valid_timestamp($this_port['ifLastChange'])) {
+            return $this_port['ifLastChange'];
+        }
+
+        // Convert ifLastChange from timetick to timestamp
+        /**
+         * The value of sysUpTime at the time the interface entered
+         * its current operational state. If the current state was
+         * entered prior to the last re-initialization of the local
+         * network management subsystem, then this object contains a
+         * zero value.
+         *
+         * NOTE, observium uses last change timestamp.
+         */
+
+        $if_lastchange_sec = timeticks_to_sec($this_port['ifLastChange']);
+        if (is_numeric($if_lastchange_sec) && ($device_uptime['sysUpTime'] - $if_lastchange_sec) > 90) {
+
+            $if_lastchange = $device_uptime['polled'] - $device_uptime['sysUpTime'] + $if_lastchange_sec;
+            print_debug('DEBUG: IFLASTCHANGE ' .
+                        $device_uptime['polled'] . 's - ' . $device_uptime['sysUpTime'] . 's + ' .
+                        $if_lastchange_sec . 's = ' . $if_lastchange . 's');
+
+            if (abs($if_lastchange - strtotime($port['ifLastChange'])) > 90) {
+                // Compare iflastchange with previous,
+                // update only if more than 90 sec (for exclude random dispersion)
+                $port['update']['ifLastChange'] = date('Y-m-d H:i:s', $if_lastchange); // Convert to timestamp
+                return $port['update']['ifLastChange'];
+            }
+        }
+    }
+
+    // Device sysUpTime more than if uptime or too small difference.. impossible, seems as bug on device
+    // or ifLastChange not exist
+    if (empty($port['ifLastChange']) || $port['ifLastChange'] === '0000-00-00 00:00:00' || // Newer set (first time)
+        isset($port['update']['ifOperStatus']) || isset($port['update']['ifAdminStatus']) ||
+        isset($port['update']['ifSpeed']) || isset($port['update']['ifDuplex'])) {
+
+        print_debug("DEBUG: IFLASTCHANGE unknown/false, used system times.");
+        $port['update']['ifLastChange'] = date('Y-m-d H:i:s', $this_port['polled']);
+        return $port['update']['ifLastChange'];
+    }
+
+    // return previous value
+    return $port['ifLastChange'];
 }
 
 function process_port_label_def(&$this_port, $device) {
@@ -436,14 +523,14 @@ function get_port_id_by_ip_cache($device, $ip)
 }
 
 /**
- * This array used by html_highlight()
+ * This array used by html_highlight_entities()
  * @param $device
  *
  * @return void
  */
 function ports_links_cache($device) {
     global $cache;
-    
+
     // Create entity links arrays
     if (!isset($cache['entity_links']['ports'])) {
         $cache['entity_links']['ports'] = [];
@@ -461,34 +548,88 @@ function ports_links_cache($device) {
 
     $ports_links[$device['device_id']] = [];
 
-    $sql = 'SELECT `port_id`, `port_label_short`, `port_label_base`, `port_label_num`, `ifDescr`, `ifName` FROM `ports` WHERE `device_id` = ? AND `deleted` = ?';
+    $sql = 'SELECT `port_id`, `port_label_short`, `port_label_base`, `port_label_num`, `ifDescr`, `ifName`, `ifAlias` FROM `ports` WHERE `device_id` = ? AND `deleted` = ?';
 
-    foreach (dbFetchRows($sql, [ $device['device_id'], 0 ]) as $port_descr) {
-        $search = [ $port_descr['ifDescr'], $port_descr['ifName'], $port_descr['port_label_short'] ];
+    foreach (dbFetchRows($sql, [ $device['device_id'], 0 ]) as $entry) {
+        $search = [ $entry['ifDescr'], $entry['ifName'], $entry['port_label_short'] ];
+        $preg_search = [
+            preg_quote($entry['ifDescr'], '%'),
+            preg_quote($entry['ifName'], '%'),
+            preg_quote($entry['port_label_short'], '%')
+        ];
 
         // FIXME. OS specific hacks.
-        if (preg_match('/\s(port\s*\d.*)/i', $port_descr['ifDescr'], $matches)) {
+        if (preg_match('/\s(port\s*\d.*)/i', $entry['ifDescr'], $matches)) {
             // Hack for Extreme (should make universal with lots of examples), see:
             // https://jira.observium.org/browse/OBS-3304
-            $search[] = $matches[1];
+            $search[]      = $matches[1];
+            $preg_search[] = preg_quote($matches[1], '%');
         } elseif (($device['os'] === 'nos' || $device['os'] === 'slx') &&
-                  !safe_empty($port_descr['port_label_base']) && str_contains($port_descr['port_label_num'], '/')) {
+                  !safe_empty($entry['port_label_base']) && str_contains($entry['port_label_num'], '/')) {
             // Brocade NOS derp interfaces with rbridge ids, ie:
             // TenGigabitEthernet 22/0/20 or Te 22/0/20 -> TenGigabitEthernet 0/20
-            $search[] = $port_descr['port_label_base'] . '\d+/' . $port_descr['port_label_num'];
+            $search[] = $entry['port_label_base'] . '\d+/' . $entry['port_label_num'];
+            $preg_search[] = preg_quote($entry['port_label_base'], '%') . '\d+/' . preg_quote($entry['port_label_num'], '%');
             // and short
-            $search[] = short_ifname($port_descr['port_label_base'] . '\d+/' . $port_descr['port_label_num']);
-        } elseif (str_starts_with($device['os'], 'dlink') && str_contains($port_descr['port_label_num'], '/')) {
+            $search[] = short_ifname($entry['port_label_base'] . '\d+/' . $entry['port_label_num']);
+            $preg_search[] = preg_quote(short_ifname($entry['port_label_base']), '%') . '\d+/' . preg_quote($entry['port_label_num'], '%');
+        } elseif (str_starts_with($device['os'], 'dlink') && str_contains($entry['port_label_num'], '/')) {
             // D-Link derp syslog ports associations, ie:
             // 1/21 - Port <1:21>
-            $search[] = 'Port <' . str_replace('/', ':', $port_descr['port_label_num']) . '>';
+            $search[] = 'Port <' . str_replace('/', ':', $entry['port_label_num']) . '>';
+            $preg_search[] = preg_quote('Port <' . str_replace('/', ':', $entry['port_label_num']) . '>', '%');
         }
 
-        $ports_links[$device['device_id']][$port_descr['port_id']] = [
-            'search'  => $search,
-            'replace' => generate_entity_link('port', $port_descr['port_id'], '$2')
+        $ports_links[$device['device_id']][$entry['port_id']] = [
+            'entity_type'  => 'port',
+            'entity_id'    => $entry['port_id'],
+            'entity_name'  => $entry['port_label'],
+            'entity_descr' => $entry['ifAlias'],
+
+            'pattern' => '(' . implode('|', array_unique($preg_search)) . ')',
+            'search'  => array_unique($search),
+            'replace' => generate_entity_link('port', $entry['port_id'], '$2')
         ];
     }
+}
+
+/**
+ * Find the ID of the network port on a device that has an IP address in the same subnet as a given IP address.
+ *
+ * This function queries the database to get a list of IP addresses and CIDR lengths for the specified device.
+ * It then checks each IP address against the specified search address using the `Net_IPv4` class to determine
+ * whether it is in the same subnet. If a matching interface is found, its port ID is returned. Otherwise, null is returned.
+ *
+ * @param int    $device_id     The ID of the device to search for a matching interface.
+ * @param string $ip_address    The IP address to match against.
+ *
+ * @return int|null The ID of the matching port, or null if no matching port was found.
+ * @global array $address_cache An array that caches the list of IP addresses and CIDR lengths for each device.
+ */
+function get_port_id_by_subnet_ipv4($device_id, $ip_address) {
+    global $address_cache; // global variable to cache the address list
+
+    // If the address list is not cached, query the database to get it
+    if (empty($address_cache[$device_id])) {
+        $address_query             = "SELECT * FROM `ipv4_addresses` WHERE `device_id` = ?";
+        $address_result            = dbFetchRows($address_query, [$device_id]);
+        $address_cache[$device_id] = $address_result;
+    } else {
+        // Otherwise, use the cached address list
+        $address_result = $address_cache[$device_id];
+    }
+
+    // Loop through the results and check each IP address against the search address
+    foreach ($address_result as $row) {
+        $network = $row['ipv4_address'] . '/' . $row['ipv4_prefixlen'];
+        if (ip_in_network($ip_address, $network, 4)) {
+            // The search address is in the same subnet as this IP address
+            return $row['port_id'];
+        }
+    }
+
+    // No matching port found
+    return NULL;
 }
 
 // DOCME needs phpdoc block
@@ -594,6 +735,8 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 if (is_array($port)) {
                     // Hola, port really found
                     print_debug("Port is found by sensor entAliasMappingIdentifier: ifIndex = $ifIndex, port_id = " . $port['port_id']);
+
+                    $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                     return $port;
                 }
             } elseif (!$allow_snmp && $sensor_port['ifIndex']) {
@@ -601,6 +744,8 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 $ifIndex = $sensor_port['ifIndex'];
                 $port    = get_port_by_index_cache($device['device_id'], $ifIndex);
                 print_debug("Port is found by sensor ifIndex: ifIndex = $ifIndex, port_id = " . $port['port_id']);
+
+                $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                 return $port;
             } else {
                 // This is another case for Cisco IOSXR, when have incorrect entAliasMappingIdentifier association,
@@ -621,6 +766,8 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                         //   [entPhysicalDescr]        => string(40) "DOM TX Bias Sensor for Eth52/3(Port52)/1"
                         $port['sensor_multilane'] = TRUE;
                     }
+
+                    $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                     return $port;
                 }
             }
@@ -635,16 +782,21 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 $port    = get_port_by_id($port_id);
                 $ifIndex = $port['ifIndex'];
                 print_debug("Port is found by Arista entPhysicalAlias: ifIndex = $ifIndex, port_id = " . $port_id);
+
+                $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                 return $port; // Exit do-while
             }
             if ($port_id = get_port_id_by_ifDescr($device['device_id'], $sensor_port['entPhysicalAlias'] . '/1')) {
                 // Multi-lane Tranceivers
-                $port                     = get_port_by_id($port_id);
-                $port['sensor_multilane'] = TRUE;
-                $ifIndex                  = $port['ifIndex'];
+                $port    = get_port_by_id($port_id);
+                $ifIndex = $port['ifIndex'];
                 print_debug("Port is found by Arista entPhysicalAlias ML: ifIndex = $ifIndex, port_id = " . $port_id);
+
+                $port['sensor_multilane'] = TRUE;
+                $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                 return $port; // Exit do-while
             }
+
             $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
         } elseif ($sensor_index == $sensor_port['entPhysicalContainedIn']) {
             break; // Break if current index same as next to avoid loop
@@ -653,7 +805,6 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                    isset($sensor_port[1]['entAliasMappingIdentifier']) ||
                    isset($sensor_port[2]['entAliasMappingIdentifier']))) {
             // Cisco IOSXR 6.5.x ASR 9900 platform && NCS 5500
-            $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
 
             // By first try if entAliasMappingIdentifier correct
             unset($entAliasMappingIdentifier);
@@ -670,6 +821,8 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 if (is_array($port)) {
                     // Hola, port really found
                     print_debug("Port is found by module entAliasMappingIdentifier: ifIndex = $ifIndex, port_id = " . $port['port_id']);
+
+                    $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                     return $port;
                 }
             }
@@ -716,14 +869,17 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 $ifIndex = $port['ifIndex'];
                 print_debug("Port is found by Cisco entPhysicalName: ifIndex = $ifIndex, port_id = " . $port_id);
 
+                $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                 return $port;
             }
+
+            $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
 
         } elseif ((($sensor_port['entPhysicalClass'] === 'sensor' && $sensor_port['entPhysicalContainedIn'] == 0) ||
                    ($sensor_port['entPhysicalClass'] === 'module' && ($sensor_port['entPhysicalIsFRU'] === 'true' || str_contains($sensor_port['entPhysicalVendorType'], 'SFP')))) &&
                   str_starts($sensor_port['entPhysicalName'], ['GigabitEthernet', 'TenGigE', 'TwentyFiveGigE', 'FortyGigE', 'HundredGigE', 'Ethernet'])) {
             // NOTE. This is deeeeeerp, you will never understand why this is so, but it is necessary because Cisco breaks its snmp every time
-            $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
+
             // entPhysicalName contain correct ifDescr, ie:
             // NCS platform: FortyGigE0/0/0/20
             // NXOS 6.x platform: "Ethernet1/1(volt)
@@ -734,8 +890,11 @@ function get_port_by_ent_index($device, $entPhysicalIndex, $allow_snmp = FALSE)
                 $ifIndex = $port['ifIndex'];
                 print_debug("Port is found by module entPhysicalName: ifIndex = $ifIndex, port_id = " . $port_id);
 
+                $port['entPhysicalIndex'] = $sensor_index; // append associated module entPhysicalIndex
                 return $port;
             }
+
+            $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
 
         } else {
             $sensor_index = $sensor_port['entPhysicalContainedIn']; // Next ifIndex
@@ -1225,21 +1384,27 @@ function is_port_valid($device, $port)
 // Delete port from database and associated rrd files
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function delete_port($int_id, $delete_rrd = TRUE)
-{
-    global $config;
+function delete_port($int_id, $delete_rrd = TRUE) {
+
+    if (!is_intnum($int_id) || $int_id < 0) {
+        print_error("Incorrect port id. Not deleted.");
+        return FALSE;
+    }
 
     $port = dbFetchRow("SELECT * FROM `ports`
                       LEFT JOIN `devices` USING (`device_id`)
-                      WHERE `port_id` = ?", [$int_id]);
-    $ret  = "> Deleted interface from " . $port['hostname'] . ": id=$int_id (" . $port['ifDescr'] . ")\n";
+                      WHERE `port_id` = ?", [ $int_id ]);
+    if ($port) {
+        $ret = "> Deleted interface from " . $port['hostname'] . ": id=$int_id (" . $port['ifDescr'] . ")\n";
+    } else {
+        $ret = "> Interface with id=$int_id not found, but try delete related entities\n";
+    }
 
     // Remove entities from common tables
     $deleted_entities = [];
-    foreach ($config['entity_tables'] as $table) {
+    foreach ($GLOBALS['config']['entity_tables'] as $table) {
         $where        = '`entity_type` = ?' . generate_query_values_and($int_id, 'entity_id');
-        $table_status = dbDelete($table, $where, ['port']);
-        if ($table_status) {
+        if (dbDelete($table, $where, [ 'port' ])) {
             $deleted_entities['port'] = 1;
         }
     }
@@ -1254,42 +1419,44 @@ function delete_port($int_id, $delete_rrd = TRUE)
                        'neighbours', 'ports'];
     $deleted_tables = [];
     foreach ($port_tables as $table) {
-        $table_status = dbDelete($table, "`port_id` = ?", [$int_id]);
-        if ($table_status) {
+        if (dbDelete($table, "`port_id` = ?", [ $int_id ])) {
             $deleted_tables[] = $table;
         }
     }
 
-    $table_status = dbDelete('ports_stack', "`port_id_high` = ? OR `port_id_low` = ?", [$int_id, $int_id]);
-    if ($table_status) {
+    if (dbDelete('ports_stack', "`port_id_high` = ? OR `port_id_low` = ?", [ $int_id, $int_id ])) {
         $deleted_tables[] = 'ports_stack';
     }
-    $table_status = dbDelete('entity_permissions', "`entity_type` = 'port' AND `entity_id` = ?", [$int_id]);
-    if ($table_status) {
+
+    if (dbDelete('entity_permissions', "`entity_type` = 'port' AND `entity_id` = ?", [ $int_id ])) {
         $deleted_tables[] = 'entity_permissions';
     }
-    $table_status = dbDelete('alert_table', "`entity_type` = 'port' AND `entity_id` = ?", [$int_id]);
-    if ($table_status) {
+
+    if (dbDelete('alert_table', "`entity_type` = 'port' AND `entity_id` = ?", [ $int_id ])) {
         $deleted_tables[] = 'alert_table';
     }
-    $table_status = dbDelete('group_table', "`entity_type` = 'port' AND `entity_id` = ?", [$int_id]);
-    if ($table_status) {
+
+    if (dbDelete('group_table', "`entity_type` = 'port' AND `entity_id` = ?", [ $int_id ])) {
         $deleted_tables[] = 'group_table';
     }
 
     $ret .= ' * Deleted interface entries from tables: ' . implode(', ', $deleted_tables) . PHP_EOL;
 
     if ($delete_rrd) {
-        $rrd_types    = ['adsl', 'dot3', 'fdbcount', 'poe', NULL];
-        $deleted_rrds = [];
-        foreach ($rrd_types as $type) {
-            $rrdfile = get_port_rrdfilename($port, $type, TRUE);
-            if (is_file($rrdfile)) {
-                unlink($rrdfile);
-                $deleted_rrds[] = $rrdfile;
+        if (OBS_RRD_REMOTE) {
+            $ret .= ' * Deleting interface RRD files skipped for remote RRDcached.' . PHP_EOL;
+        } else {
+            $rrd_types    = [ 'adsl', 'dot3', 'fdbcount', 'poe', NULL ];
+            $deleted_rrds = [];
+            foreach ($rrd_types as $type) {
+                $rrdfile = get_port_rrdfilename($port, $type, TRUE);
+                if (is_file($rrdfile)) {
+                    unlink($rrdfile);
+                    $deleted_rrds[] = $rrdfile;
+                }
             }
+            $ret .= ' * Deleted interface RRD files: ' . implode(', ', $deleted_rrds) . PHP_EOL;
         }
-        $ret .= ' * Deleted interface RRD files: ' . implode(', ', $deleted_rrds) . PHP_EOL;
     }
 
     return $ret;
@@ -1406,7 +1573,7 @@ function calculate_port_oid_stats(&$this_port, &$port, $oid, $polled_period) {
     $oid_diff  = $oid . '_diff';
     $oid_delta = $oid . '_delta';
     $oids_array = [ $oid_rate, $oid_diff, $oid_delta ];
-    
+
     if (isset($this_port[$oid_rate]) && is_numeric($this_port[$oid_rate])) {
         // This case for ports report only rates, see SPECTRA-LOGIC-STRATA-MIB definitions
         $rate = $this_port[$oid_rate];

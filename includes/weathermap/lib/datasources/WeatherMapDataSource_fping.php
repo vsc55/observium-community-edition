@@ -17,7 +17,7 @@ class WeatherMapDataSource_fping extends WeatherMapDataSource {
 		# You may need to change the line below to have something like "/usr/local/bin/fping" or "/usr/bin/fping" instead.
 		#
 		$this->fping_cmd = "/usr/local/sbin/fping";
-	
+
 		return(TRUE);
 	}
 
@@ -48,24 +48,24 @@ class WeatherMapDataSource_fping extends WeatherMapDataSource {
 		#debug("-------------------------\n");
 		#print_r($this->addresscache);
 		#debug("-------------------------\n");
-		
+
 		$ping_count = intval($map->get_hint("fping_ping_count"));
 		if($ping_count==0) $ping_count = 5;		
-		
+
 		if(preg_match("/^fping:(\S+)$/",$targetstring,$matches))
 		{
 			$target = $matches[1];
-			
+
 			$pattern = "/^$target\s:";
 			for($i=0;$i<$ping_count;$i++) $pattern .= "\s(\S+)";
 			$pattern .= "/";
-			
+
 			if(is_executable($this->fping_cmd))
 			{
 				$command = $this->fping_cmd." -t100 -r1 -p20 -u -C $ping_count -i10 -q $target 2>&1";
 				wm_debug("Running $command\n");
 				$pipe=popen($command, "r");
-				                
+
 				$count = 0; $hitcount=0;
 				if (isset($pipe))
 				{
@@ -74,7 +74,7 @@ class WeatherMapDataSource_fping extends WeatherMapDataSource {
 						$line=fgets($pipe, 4096);
 						$count++;
 						wm_debug("Output: $line");
-						
+
 						if(preg_match($pattern, $line, $matches))
 						{
 							wm_debug("Found output line for $target\n");
@@ -98,7 +98,7 @@ class WeatherMapDataSource_fping extends WeatherMapDataSource {
 								}
 							}
 							if($cnt >0) $ave = $total/$cnt;
-							
+
 							wm_debug("Result: $cnt $min -> $max $ave $loss\n");
 						}
 					}
@@ -130,7 +130,7 @@ class WeatherMapDataSource_fping extends WeatherMapDataSource {
 		}
 
 		wm_debug ("FPing ReadData: Returning (".($data[IN]===NULL?'NULL':$data[IN]).",".($data[OUT]===NULL?'NULL':$data[OUT]).",$data_time)\n");
-		
+
 		return( array($data[IN], $data[OUT], $data_time) );
 	}
 }

@@ -8,7 +8,7 @@ STONESOFT-NETNODE-MIB DEFINITIONS ::= BEGIN
 IMPORTS
 	Unsigned32, Integer32, MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE
 		FROM SNMPv2-SMI
-	DisplayString, TimeStamp
+	DisplayString, TimeStamp, DateAndTime
 		FROM SNMPv2-TC
 	OBJECT-GROUP, NOTIFICATION-GROUP, MODULE-COMPLIANCE
 		FROM SNMPv2-CONF
@@ -16,21 +16,30 @@ IMPORTS
 		FROM STONESOFT-SMI-MIB;
 
 stonesoftNetworkNodeMibModule MODULE-IDENTITY
-	LAST-UPDATED	"201403100000Z"
-	ORGANIZATION	"Stonesoft Corp"
-	CONTACT-INFO	"email: support@stonesoft.com"
-	DESCRIPTION	"MIB for generic network nodes"
-	
-	    REVISION		"201403100000Z"
-	    DESCRIPTION		"Added appliance identification objects"
+        LAST-UPDATED    "201605060000Z"
+        ORGANIZATION    "Forcepoint LLC"
+        CONTACT-INFO    "email: mib.stonesoft@forcepoint.com"
+        DESCRIPTION     "MIB for generic network nodes"
+
+        REVISION        "201605060000Z"
+        DESCRIPTION     "Company information update"
+
+        REVISION        "201510290000Z"
+        DESCRIPTION     "Policy upload date added to nodePolicyApplyTime"
+
+        REVISION        "201510150000Z"
+        DESCRIPTION     "Added last login date to nodeLoginTime"
+
+        REVISION        "201403100000Z"
+        DESCRIPTION     "Added appliance identification objects"
 
         REVISION        "200802040000Z"
         DESCRIPTION     "Added hardware monitoring objects"
 
 
-	REVISION	"200406160000Z"
-	DESCRIPTION	"First public revision"
-	::= { stonesoftModules 4 }
+        REVISION        "200406160000Z"
+        DESCRIPTION     "First public revision"
+        ::= { stonesoftModules 4 }
 
 netNodeObjects  OBJECT IDENTIFIER ::= { stonesoftNetworkNode 1 }
 netNodeEvents   OBJECT IDENTIFIER ::= { stonesoftNetworkNode 2 }
@@ -133,6 +142,22 @@ nodePosCode			OBJECT-TYPE
 		DESCRIPTION
 			"Appliance POS code"
 		::= { netNodeObjects 11 }
+
+nodeLoginTime	OBJECT-TYPE
+		SYNTAX		DateAndTime
+		MAX-ACCESS	read-only
+		STATUS		current
+		DESCRIPTION
+			"The most recent login event on the node"
+		::= { netNodeObjects 12 }
+		
+nodePolicyApplyTime	OBJECT-TYPE
+		SYNTAX		DateAndTime
+		MAX-ACCESS	read-only
+		STATUS		current
+		DESCRIPTION
+			"The time when the security policy was installed to the node"
+		::= { netNodeObjects 13 }
 
 --
 -- Tester objects
@@ -314,7 +339,7 @@ nodeIdentificationGroup	OBJECT-GROUP
 	::= { netNodeGroups 1 }
 
 nodeStatusGroup		OBJECT-GROUP
-	OBJECTS	{ nodeOperState, nodeCPULoad }
+	OBJECTS	{ nodeOperState, nodeCPULoad, nodePolicyApplyTime }
 	STATUS	current
 	DESCRIPTION
 		"A collection of objects giving information about 
@@ -322,7 +347,7 @@ nodeStatusGroup		OBJECT-GROUP
 	::= { netNodeGroups 2 }
 
 nodeLoginGroup		OBJECT-GROUP
-	OBJECTS	{ nodeLastLogin, nodeLastLoginTime }
+	OBJECTS	{ nodeLastLogin, nodeLastLoginTime, nodeLoginTime }
 	STATUS	current
 	DESCRIPTION
 		"A collection of objects giving information about logins

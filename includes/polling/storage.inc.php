@@ -31,9 +31,9 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $storage) {
         include($file);
     } else {
         // Definition based storage poller
-        // Table is always set when definitions add storage.
-        if (safe_empty($storage[$object_field]) || !is_array($config['mibs'][$storage['storage_mib']]['storage'][$storage[$object_field]])) {
-            // Unknown, so force rediscovery as there's a broken storage
+        $def = storage_find_definition_by_oid($storage['storage_mib'], $storage[$object_field]);
+        if (!$def) {
+            // Unknown definition, so force rediscovery
             force_discovery($device, 'storage');
 
             // CLEANME. Compat, clean after 2022/09
@@ -42,7 +42,9 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $storage) {
             }
         }
 
-        poll_storage_definition($device, $config['mibs'][$storage['storage_mib']]['storage'][$storage[$object_field]], $storage, $cache_storage);
+        if ($def) {
+            poll_storage_definition($device, $def, $storage, $cache_storage);
+        }
     }
 
     print_debug_vars($storage);
@@ -95,7 +97,7 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $storage) {
     $graphs['storage'] = TRUE;
 
     // Check alerts
-    check_entity('storage', $storage, ['storage_perc' => $percent, 'storage_free' => $storage['free'], 'storage_used' => $storage['used']]);
+    check_entity('storage', $storage, [ 'storage_perc' => $percent, 'storage_free' => $storage['free'], 'storage_used' => $storage['used'], 'storage_size' => $storage['size'] ]);
 
     $table_row    = [];
     $table_row[]  = $storage['storage_descr'];

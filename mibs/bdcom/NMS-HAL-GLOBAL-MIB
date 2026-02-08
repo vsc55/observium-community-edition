@@ -185,9 +185,42 @@
               DESCRIPTION
                       "The cut-through of switching function. The range is disable/enable. 0 means disable£¬1 means enable. 
                       Default is 0."
-              ::= { switchHALGlobal 18 }
-                        
-               
+              ::= { switchHALGlobal 18 } 
+              
+           clearMib OBJECT-TYPE
+			  SYNTAX  INTEGER(0..7)
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+                      "The clear mib of switching function. The range is 0 - max port diid. 0 means clear mib global."
+              ::= { switchHALGlobal 19 } 
+
+           QtgModeNum OBJECT-TYPE
+          	  SYNTAX  INTEGER(1 .. 4)
+          	  ACCESS  read-write
+          	  STATUS  mandatory
+          	  DESCRIPTION
+          	  		  "select one of the four qtgport num to be set or get.The range of QtgPortNum is 1 - 4."
+          	  	::= { switchHALGlobal 20 }
+              
+           QtgModeMode OBJECT-TYPE
+          	  SYNTAX  INTEGER{
+          	  			qtg40GeMode(0),
+          	  			qtg10GeMode(1)
+          	  				}
+          	  ACCESS  read-write
+          	  STATUS  mandatory
+          	  DESCRIPTION
+          	  		  "set or get 40ge port mode.the range of mode is 0-1,0 means 40ge mode,1 means 4*10ge mode."
+          	  	::= { switchHALGlobal 21 }
+          	  
+           QtgModeWrite OBJECT-TYPE
+           	  SYNTAX  INTEGER(1)	  
+              ACCESS  read-write
+              STATUS  mandatory
+              DESCRIPTION
+              		  "write QtgModeSet config.1 means write"   
+              	::={ switchHALGlobal 22 }                          
 END               
 
 

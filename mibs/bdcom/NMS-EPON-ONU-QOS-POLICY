@@ -15,7 +15,7 @@ NMS-EPON-ONU-QOS-POLICY DEFINITIONS ::= BEGIN
 				FROM RFC1213-MIB
 		    nmsEPONGroup
 				FROM NMS-SMI
-		    TruthValue,RowStatus,PhysAddress,DisplayString,QosPolicy
+		    TruthValue,RowStatus,PhysAddress,DisplayString
 		    	FROM SNMPv2-TC;
           
                   nmsEponOnuQosPolicy        OBJECT IDENTIFIER ::= { nmsEPONGroup 103}

@@ -534,8 +534,8 @@ nmsERPS OBJECT IDENTIFIER ::={ nmslocal 231 }
 					INTEGER,
 				nmsERPSRingPort
 					INTEGER,
-				nmsERPSRingPortNum
-					INTEGER,
+--				nmsERPSRingPortNum
+--					INTEGER,
 				nmsERPSRingPortAdminType
 					INTEGER,
 				nmsERPSRingPortOperType

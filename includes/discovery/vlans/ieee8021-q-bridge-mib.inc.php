@@ -80,12 +80,8 @@ foreach ($dot1q_ports as $domain_index => $vlans) {
                 $binary_debug[$vlan_num][$i] = $ifIndex; // DEBUG
 
                 $discovery_ports_vlans[$ifIndex][$vlan_num] = [
-                  'vlan' => $vlan_num,
-                  // FIXME. move STP to separate table
-                  //'baseport' => $vlan_port_id,
-                  //'priority' => $vlan_port['dot1dStpPortPriority'],
-                  //'state'    => $vlan_port['dot1dStpPortState'],
-                  //'cost'     => $vlan_port['dot1dStpPortPathCost']
+                  'vlan' => $vlan_num
+                  // STP data moved to separate stp_* tables  
                 ];
             }
         }

@@ -21,7 +21,7 @@ if (empty($isdp_array)) {
 foreach ($isdp_array as $ifIndex => $port_neighbours) {
     $port = get_port_by_index_cache($device, $ifIndex);
 
-    foreach ($port_neighbours as $entry_id => $isdp) {
+    foreach ($port_neighbours as $isdp) {
         if (safe_empty($isdp['agentIsdpCacheDevicePort']) && safe_empty($isdp['agentIsdpCachePlatform']) &&
             safe_empty($isdp['agentIsdpCacheAddress']) && safe_empty($isdp['agentIsdpCacheVersion'])) {
             // All neighbour fields are empty, ignore

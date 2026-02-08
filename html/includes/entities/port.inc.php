@@ -90,15 +90,18 @@ function build_ports_where_array($vars)
                 case 'device_id':
                     $where[] = generate_query_values_and($value, 'ports.device_id');
                     break;
-                case 'group':
-                case 'group_id':
-                    $values  = get_group_entities($value);
-                    $where[] = generate_query_values_and($values, 'ports.port_id');
-                    break;
                 case 'device_group_id':
                 case 'device_group':
                     $values  = get_group_entities($value, 'device');
                     $where[] = generate_query_values_and($values, 'ports.device_id');
+                    break;
+                case 'port_id':
+                    $where[] = generate_query_values_and($value, 'ports.port_id');
+                    break;
+                case 'group':
+                case 'group_id':
+                    $values  = get_group_entities($value);
+                    $where[] = generate_query_values_and($values, 'ports.port_id');
                     break;
                 case 'disable':
                     $var = 'disabled';
@@ -107,8 +110,8 @@ function build_ports_where_array($vars)
                 case 'ignore':
                 case 'ifSpeed':
                 case 'ifType':
+                case 'ifDuplex':
                 case 'ifVlan':
-                case 'port_id':
                     $where[] = generate_query_values_and($value, 'ports.' . $var);
                     break;
                 case 'hostname':
@@ -165,12 +168,12 @@ function build_ports_where_array($vars)
                     }
                     break;
                 case 'cbqos':
-                    if ($value && $value !== 'no') {
+                    if ($value && !get_var_false($value)) {
                         $where[] = generate_query_values_and($GLOBALS['cache']['ports']['cbqos'], 'ports.port_id');
                     }
                     break;
                 case 'mac_accounting':
-                    if ($value && $value !== 'no') {
+                    if ($value && !get_var_false($value)) {
                         $where[] = generate_query_values_and($GLOBALS['cache']['ports']['mac_accounting'], 'ports.port_id');
                     }
                     break;
@@ -925,7 +928,7 @@ function generate_port_row($port, $vars = [])
         $graph_file = get_port_rrdfilename($port, NULL, TRUE);
     }
 
-    if ($vars['graph'] && is_file($graph_file)) {
+    if ($vars['graph'] && rrd_is_file($graph_file)) {
 
         $string .= '<tr><td colspan="' . $table_cols . '">';
 
@@ -984,6 +987,12 @@ function print_port_permission_box($mode, $perms, $params = []) {
 
         foreach (array_keys($perms['port']) as $entity_id) {
             $port   = get_port_by_id($entity_id);
+
+            if (!$port) {
+                entity_permission_cleanup($mode, 'port', $entity_id, $params);
+                continue;
+            }
+
             $device = device_by_id_cache($port['device_id']);
 
             echo('<tr><td style="width: 1px;"></td>
@@ -1069,7 +1078,6 @@ function print_port_permission_box($mode, $perms, $params = []) {
         'onchange' => "getEntityList(this.value, 'port_entity_id', 'port')",
         'attribs'  => ['data-load' => 'devices'],
         //'value'    => $vars['device_id'],
-        'groups'   => ['', 'UP', 'DOWN', 'DISABLED'], // This is optgroup order for values (if required)
         //'values'   => $form_items['devices']
     ];
     $form['row'][0]['port_entity_id'] = [
@@ -1277,7 +1285,7 @@ function get_ports_links_sorted($device, $get_ports = FALSE) {
                                                                            'label_num2', SORT_ASC, SORT_NUMERIC,
                                                                            'label_num3', SORT_ASC, SORT_NUMERIC);
 
-        foreach ($ports_links[$port_type] as $ifIndex => $port) {
+        foreach ($ports_links[$port_type] as $port) {
             $ports[] = $get_ports ? $port : generate_port_link_short($port);
         }
     }
@@ -1363,10 +1371,8 @@ function port_permitted($port_id, $device_id = NULL)
     return is_entity_permitted($port_id, 'port', $device_id);
 }
 
-// TESTME needs unit testing
-// DOCME needs phpdoc block
-function port_permitted_array(&$ports)
-{
+// DEPRECATED. Very expensive memory usage, prefer query permissions limits
+function port_permitted_array(&$ports) {
     // Strip out the ports the user isn't allowed to see, if they don't have global rights
     if ($_SESSION['userlevel'] < '7') {
         foreach ($ports as $key => $port) {

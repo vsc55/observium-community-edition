@@ -44,7 +44,7 @@ $sensor_type = $config['sensor_types'][$sensor['sensor_type']];
 $line_text = $sensor['sensor_descr'];
 
 $colour_line   = "cc0000";
-$colour_area   = "FFBBBB";
+$colour_area   = "FFBBBB55";
 $colour_minmax = "c5c5c5";
 
 //$graph_max = 1;

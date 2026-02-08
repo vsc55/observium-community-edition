@@ -174,8 +174,18 @@ if (is_device_mib($device, 'BAY-STACK-PETH-EXT-MIB')) {
     // BAY-STACK-PETH-EXT-MIB::bspePethPsePortExtPowerUpMode.1.1 = dot3at
     // BAY-STACK-PETH-EXT-MIB::bspePethPsePortExtPowerPairs.1.1 = signal
 
-
     $oids = snmpwalk_cache_oid($device, 'bspePethPsePortExtEntry', $oids, 'BAY-STACK-PETH-EXT-MIB');
+}
+
+if (is_device_mib($device, 'ARICENT-POE-MIB')) {
+    // ARICENT-POE-MIB::fsPethPsPortPowerMeasurementsAmperage.1.12 = INTEGER: 84
+    // ARICENT-POE-MIB::fsPethPsPortPowerMeasurementsVoltage.1.12 = INTEGER: 539
+    // ARICENT-POE-MIB::fsPethPsPortPowerMeasurementsWattage.1.12 = INTEGER: 4400
+    // ARICENT-POE-MIB::fsPethPsPortPowerPriorityStatic.1.12 = INTEGER: low(3)
+    // ARICENT-POE-MIB::fsPethPsPortPowerMode.1.12 = INTEGER: std802d3(1)
+    // ARICENT-POE-MIB::fsPethPsPortPowerModeDynamic.1.12 = INTEGER: nonDynamic(0)
+
+    $oids = snmpwalk_cache_oid($device, 'fsPethPsePortEntry', $oids, 'ARICENT-POE-MIB');
 }
 
 if (is_device_mib($device, 'ARUBAWIRED-POE-MIB')) {
@@ -380,7 +390,7 @@ if (is_device_mib($device, 'NG700-POWER-ETHERNET-MIB')) {
     }
 }
 
-$not_power_statuses = ['searching', 'disabled', 'otherFault', 'fault'];
+$not_power_statuses = [ 'searching', 'disabled', 'otherFault', 'fault' ];
 print_debug_vars($oids);
 
 foreach ($oids as $index => $entry) {
@@ -390,23 +400,39 @@ foreach ($oids as $index => $entry) {
     }
 
     // Detect PoE Group and port
-    [$pethPsePortGroupIndex, $pethPsePortIndex] = explode('.', $index);
+    [ $pethPsePortGroupIndex, $pethPsePortIndex ] = explode('.', $index);
 
     $group = $pethPsePortGroupIndex > 1 ? " Group $pethPsePortGroupIndex" : ''; // Add group name if group number greater than 1
 
-    $options = ['entPhysicalIndex' => $pethPsePortIndex];
-    $port    = get_port_by_ifIndex($device['device_id'], $pethPsePortIndex);
-    // print_vars($port);
+    $options         = [];
+    $entry['index']  = $index;
+    $entry['index0'] = $pethPsePortGroupIndex;
+    $entry['index1'] = $pethPsePortIndex;
 
-    if (is_array($port)) {
-        $entry['ifDescr']                     = $port['port_label'];
-        $entry['port_label']                  = $port['port_label'];
-        $options['measured_class']            = 'port';
-        $options['measured_entity']           = $port['port_id'];
-        $options['measured_entity_label']     = $port['port_label'];
-        $options['entPhysicalIndex_measured'] = $port['ifIndex'];
-    } else {
-        $entry['ifDescr'] = "Port $pethPsePortIndex";
+    // Associate measured port
+    $port_found = FALSE;
+    if (isset($entry['bspePethPsePortExtMeasuredPower'])) {
+        // Extreme ERS have different (incorrect) port association
+        // See: https://jira.observium.org/browse/OBS-5089
+        $def = [ 'measured_match' => [ 'entity_type' => 'port', 'field' => 'ifName', 'match' => '%index0%/%index1%' ] ]; // working for stacks and single units
+        if ($measured = entity_measured_match_definition($device, $def, $entry)) {
+            $group   = '';
+            $options = $measured;
+
+            $port_found = TRUE;
+        }
+    }
+
+    if (!$port_found) {
+        // Common port entity association for all devices
+        $def = [ 'measured_match' => [ 'entity_type' => 'port', 'field' => 'ifIndex', 'match' => '%index1%' ] ];
+        if ($measured = entity_measured_match_definition($device, $def, $entry)) {
+            $options                     = $measured;
+            $options['entPhysicalIndex'] = $pethPsePortIndex;
+        } else {
+            $options['port_label']       = "Port $pethPsePortIndex";
+            $options['entPhysicalIndex'] = $pethPsePortIndex;
+        }
     }
 
     $scale = 0.001; // Init scale
@@ -417,7 +443,7 @@ foreach ($oids as $index => $entry) {
     // HH3C-POWER-ETH-EXT-MIB
 
     if (isset($entry['hh3cPsePortCurrentPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'hh3cPsePortCurrentPower';
         $oid_num  = ".1.3.6.1.4.1.25506.2.14.1.1.5.$index";
         $value    = $entry[$oid_name];
@@ -441,7 +467,7 @@ foreach ($oids as $index => $entry) {
     // ZYXEL-POWER-ETHERNET-MIB
     if (isset($entry['zyPoePsePortInfoPowerConsumption'])) {
         // note. different index
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'zyPoePsePortInfoPowerConsumption';
         $oid_num  = ".1.3.6.1.4.1.890.1.15.3.59.2.1.1.1.$pethPsePortIndex";
         $value    = $entry[$oid_name];
@@ -464,7 +490,7 @@ foreach ($oids as $index => $entry) {
     // ENTERASYS-POWER-ETHERNET-EXT-MIB
 
     if (isset($entry['etsysPsePortPowerUsage'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'etsysPsePortPowerUsage';
         $oid_num  = ".1.3.6.1.4.1.5624.1.2.50.1.5.1.1.2.$index";
         $value    = $entry[$oid_name];
@@ -487,7 +513,7 @@ foreach ($oids as $index => $entry) {
     // HP-ICF-POE-MIB
 
     if (isset($entry['hpicfPoePethPsePortPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'hpicfPoePethPsePortPower';
         $oid_num  = ".1.3.6.1.4.1.11.2.14.11.1.9.1.1.1.3.$index";
         $value    = $entry[$oid_name];
@@ -508,7 +534,7 @@ foreach ($oids as $index => $entry) {
             discover_sensor_ng($device, 'power', 'HP-ICF-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
         }
 
-        $descr    = $entry['ifDescr'] . ' PoE Current' . $group;
+        $descr    = $options['port_label'] . ' PoE Current' . $group;
         $oid_name = 'hpicfPoePethPsePortCurrent';
         $oid_num  = ".1.3.6.1.4.1.11.2.14.11.1.9.1.1.1.1.$index";
         $value    = $entry[$oid_name];
@@ -519,7 +545,7 @@ foreach ($oids as $index => $entry) {
             discover_sensor_ng($device, 'current', 'HP-ICF-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
         }
 
-        $descr    = $entry['ifDescr'] . ' PoE Voltage' . $group;
+        $descr    = $options['port_label'] . ' PoE Voltage' . $group;
         $oid_name = 'hpicfPoePethPsePortVoltage';
         $oid_num  = ".1.3.6.1.4.1.11.2.14.11.1.9.1.1.1.2.$index";
         $value    = $entry[$oid_name];
@@ -534,23 +560,27 @@ foreach ($oids as $index => $entry) {
     // EXTREME-POE-MIB
 
     if (isset($entry['extremePethPortMeasuredPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
-        $oid_name = 'extremePethPortMeasuredPower';
-        $oid_num  = ".1.3.6.1.4.1.1916.1.27.2.1.1.6.$index";
-        $value    = $entry[$oid_name];
-
-        // Limits
-        $options['limit_high'] = $entry['extremePethPortOperatorLimit'] * $scale;
-        if ($options['limit_high'] > 0) {
-            $options['limit_high_warn'] = $options['limit_high'] * $warning_threshold; // Warning at 90% of power limit - FIXME should move to centralized smart calculation function
-        } else {
-            unset($options['limit_high']);
-        }
 
         // Skip not powered
         $deny = in_array($entry['pethPsePortDetectionStatus'], $not_power_statuses, TRUE) && $entry['extremePethPortMeasuredPower'] == '0';
         if (!$deny) {
-            discover_sensor_ng($device, 'power', 'EXTREME-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
+            $descr    = $options['port_label'] . ' PoE Power' . $group;
+            $oid_name = 'extremePethPortMeasuredPower';
+            $oid_num  = ".1.3.6.1.4.1.1916.1.27.2.1.1.6.$index";
+            $value    = $entry[$oid_name];
+
+            // Limits
+            if ($entry['extremePethPortOperatorLimit'] > 0) {
+                $limits = [
+                    'limit_high'      => $entry['extremePethPortOperatorLimit'] * $scale,
+                    // Warning at 90% of power limit - FIXME should move to centralized smart calculation function
+                    'limit_high_warn' => $entry['extremePethPortOperatorLimit'] * $scale * $warning_threshold,
+                ];
+            } else {
+                $limits = [];
+            }
+
+            discover_sensor_ng($device, 'power', 'EXTREME-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, array_merge($options, $limits));
         }
     }
 
@@ -564,49 +594,87 @@ foreach ($oids as $index => $entry) {
     // BAY-STACK-PETH-EXT-MIB::bspePethPsePortExtPowerPairs.1.1 = signal
 
     if (isset($entry['bspePethPsePortExtMeasuredPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
-        $oid_name = 'bspePethPsePortExtMeasuredPower';
-        $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.7.$index";
-        $value = $entry[$oid_name];
-
-        // Limits
-        // bspePethPsePortExtPowerLimit.1.1 = 32
-        $options['limit_high'] = $entry['bspePethPsePortExtPowerLimit'];
-        if ($options['limit_high'] > 0) {
-            $options['limit_high_warn'] = $options['limit_high'] * $warning_threshold; // Warning at 90% of power limit - FIXME should move to centralized smart calculation function
-        } else {
-            unset($options['limit_high']);
-        }
 
         // Skip not powered
         $deny = in_array($entry['pethPsePortDetectionStatus'], $not_power_statuses, TRUE) &&
                 $entry['bspePethPsePortExtMeasuredPower'] == '0' && $entry['bspePethPsePortExtMeasuredVoltage'] == '0' && $entry['bspePethPsePortExtMeasuredCurrent'] == '0';
 
         if (!$deny) {
-            discover_sensor_ng($device, 'power', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
-        }
+            $descr    = $options['port_label'] . ' PoE Power' . $group;
+            $oid_name = 'bspePethPsePortExtMeasuredPower';
+            $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.7.$index";
+            $value = $entry[$oid_name];
 
-        unset($options['limit_high'], $options['limit_high_warn']);
+            // Limits
+            // bspePethPsePortExtPowerLimit.1.1 = 32
+            if ($entry['bspePethPsePortExtPowerLimit'] > 0) {
+                $limits = [
+                    'limit_high'      => $entry['bspePethPsePortExtPowerLimit'],
+                    'limit_high_warn' => $entry['bspePethPsePortExtPowerLimit'] * $warning_threshold, // Warning at 90% of power limit - FIXME should move to centralized smart calculation function
+                ];
+            } else {
+                $limits = [];
+            }
 
-        $descr    = $entry['ifDescr'] . ' PoE Current' . $group;
-        $oid_name = 'bspePethPsePortExtMeasuredCurrent';
-        $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.6.$index";
-        $value = $entry[$oid_name];
+            discover_sensor_ng($device, 'power', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, array_merge($options, $limits));
 
-        if (!$deny) {
-            discover_sensor_ng($device, 'current', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
-        }
+            $descr    = $options['port_label'] . ' PoE Current' . $group;
+            $oid_name = 'bspePethPsePortExtMeasuredCurrent';
+            $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.6.$index";
+            $value = $entry[$oid_name];
 
-        $descr    = $entry['ifDescr'] . ' PoE Voltage' . $group;
-        $oid_name = 'bspePethPsePortExtMeasuredVoltage';
-        $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.5.$index";
-        $value = $entry[$oid_name];
+            // Limits
+            $limits = [
+                'limit_high'          => '1.920',
+            ];
+            discover_sensor_ng($device, 'current', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, array_merge($options, $limits));
 
-        if (!$deny) {
-            discover_sensor_ng($device, 'voltage', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.1, $value, $options);
+            $descr    = $options['port_label'] . ' PoE Voltage' . $group;
+            $oid_name = 'bspePethPsePortExtMeasuredVoltage';
+            $oid_num  = ".1.3.6.1.4.1.45.5.8.1.1.1.5.$index";
+            $value = $entry[$oid_name];
+
+            // Limits
+            $limits = [
+                'limit_low'           => '48',
+                'limit_high'          => '58',
+            ];
+
+            discover_sensor_ng($device, 'voltage', 'BAY-STACK-PETH-EXT-MIB', $oid_name, $oid_num, $index, $descr, 0.1, $value, array_merge($options, $limits));
         }
     }
 
+    // ARICENT-POE-MIB
+
+    if (isset($entry['fsPethPsPortPowerMeasurementsWattage'])) {
+
+        // Skip not powered
+        $deny = in_array($entry['pethPsePortDetectionStatus'], $not_power_statuses, TRUE) &&
+                $entry['fsPethPsPortPowerMeasurementsAmperage'] == '0' && $entry['fsPethPsPortPowerMeasurementsVoltage'] == '0' && $entry['fsPethPsPortPowerMeasurementsWattage'] == '0';
+
+        if (!$deny) {
+            $descr    = $options['port_label'] . ' PoE Current' . $group;
+            $oid_name = 'fsPethPsPortPowerMeasurementsAmperage';
+            $oid_num  = ".1.3.6.1.4.1.2076.103.1.3.1.3.$index";
+            $value = $entry[$oid_name];
+
+            discover_sensor_ng($device, 'current', 'ARICENT-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
+
+            $descr    = $options['port_label'] . ' PoE Voltage' . $group;
+            $oid_name = 'fsPethPsPortPowerMeasurementsVoltage';
+            $oid_num  = ".1.3.6.1.4.1.2076.103.1.3.1.4.$index";
+            $value = $entry[$oid_name];
+
+            discover_sensor_ng($device, 'voltage', 'ARICENT-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.1, $value, $options);
+
+            $descr    = $options['port_label'] . ' PoE Power' . $group;
+            $oid_name = 'fsPethPsPortPowerMeasurementsWattage';
+            $oid_num  = ".1.3.6.1.4.1.2076.103.1.3.1.5.$index";
+            $value = $entry[$oid_name];
+
+            discover_sensor_ng($device, 'power', 'ARICENT-POE-MIB', $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
+        }
+    }
     // ARUBAWIRED-POE-MIB
 
     if (isset($entry['arubaWiredPoePethPsePortOperStatus'])) {
@@ -655,7 +723,7 @@ foreach ($oids as $index => $entry) {
     // CISCOSB-POE-MIB / MARVELL-POE-MIB / Radlan
 
     if (isset($entry['rlPethPsePortOutputPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'rlPethPsePortOutputPower';
         $oid_num  = "$radlan_base.1.1.5.$index";
         $value    = $entry[$oid_name];
@@ -680,7 +748,7 @@ foreach ($oids as $index => $entry) {
             discover_sensor_ng($device, 'power', $radlan_mib, $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
         }
 
-        $descr    = $entry['ifDescr'] . ' PoE Current' . $group;
+        $descr    = $options['port_label'] . ' PoE Current' . $group;
         $oid_name = 'rlPethPsePortOutputCurrent';
         $oid_num  = "$radlan_base.1.1.4.$index";
         $value    = $entry[$oid_name];
@@ -691,7 +759,7 @@ foreach ($oids as $index => $entry) {
             discover_sensor_ng($device, 'current', $radlan_mib, $oid_name, $oid_num, $index, $descr, 0.001, $value, $options);
         }
 
-        $descr    = $entry['ifDescr'] . ' PoE Voltage' . $group;
+        $descr    = $options['port_label'] . ' PoE Voltage' . $group;
         $oid_name = 'rlPethPsePortOutputVoltage';
         $oid_num  = "$radlan_base.1.1.3.$index";
         $value    = $entry[$oid_name];
@@ -712,7 +780,7 @@ foreach ($oids as $index => $entry) {
                      $entry['agentPethOutputPower'] === '0' && $entry['agentPethOutputCurrent'] === '0' && $entry['agentPethOutputVolts'] === '0';
 
     if (isset($entry['agentPethOutputPower'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Power' . $group;
+        $descr    = $options['port_label'] . ' PoE Power' . $group;
         $oid_name = 'agentPethOutputPower';
         $oid_num  = "$fastpath_base.1.1.1.2.$index";
         $value    = $entry[$oid_name];
@@ -744,7 +812,7 @@ foreach ($oids as $index => $entry) {
     }
 
     if (isset($entry['agentPethOutputCurrent'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Current' . $group;
+        $descr    = $options['port_label'] . ' PoE Current' . $group;
         $oid_name = 'agentPethOutputCurrent';
         $oid_num  = "$fastpath_base.1.1.1.3.$index";
         $value    = $entry[$oid_name];
@@ -757,7 +825,7 @@ foreach ($oids as $index => $entry) {
     }
 
     if (isset($entry['agentPethOutputVolts'])) {
-        $descr    = $entry['ifDescr'] . ' PoE Voltage' . $group;
+        $descr    = $options['port_label'] . ' PoE Voltage' . $group;
         $oid_name = 'agentPethOutputVolts';
         $oid_num  = "$fastpath_base.1.1.1.4.$index";
         $value    = $entry[$oid_name];
@@ -771,7 +839,7 @@ foreach ($oids as $index => $entry) {
     }
 
     if (isset($entry['agentPethTemperature']) && $entry['agentPethTemperature'] > 0) {
-        $descr    = $entry['ifDescr'] . ' Temperature' . $group;
+        $descr    = $options['port_label'] . ' Temperature' . $group;
         $oid_name = 'agentPethTemperature';
         $oid_num  = "$fastpath_base.1.1.1.5.$index";
         $value    = $entry[$oid_name];
@@ -783,7 +851,7 @@ foreach ($oids as $index => $entry) {
     }
 
     // pethPsePortDetectionStatus.1.4 = INTEGER: deliveringPower(3)
-    $descr    = $entry['ifDescr'] . ' PoE Status' . $group;
+    $descr    = $options['port_label'] . ' PoE Status' . $group;
     $oid_name = 'pethPsePortDetectionStatus';
     $oid_num  = '.1.3.6.1.2.1.105.1.1.1.6.' . $index;
     $type     = 'pethPsePortDetectionStatus';
@@ -794,7 +862,7 @@ foreach ($oids as $index => $entry) {
 
     if (isset($entry['pethPsePortDetectionStatus']) && !in_array($entry['pethPsePortDetectionStatus'], $not_power_statuses, TRUE)) {
         /* This is should be in graphs
-    $descr    = $entry['ifDescr'] . ' PoE Invalid Signature' . $group;
+    $descr    = $options['port_label'] . ' PoE Invalid Signature' . $group;
     $oid_name = 'pethPsePortInvalidSignatureCounter';
     $oid_num  = "1.3.6.1.2.1.105.1.1.1.11.$index";
     $type     = 'POWER-ETHERNET-MIB-' . $oid_name;
@@ -805,7 +873,7 @@ foreach ($oids as $index => $entry) {
          discover_counter($device, 'counter', 'POWER-ETHERNET-MIB', $oid_name, $oid_num, $index, $descr, 1, $value);
     }
 
-       $descr    = $entry['ifDescr'] . ' PoE Power denied' . $group;
+       $descr    = $options['port_label'] . ' PoE Power denied' . $group;
     $oid_name = 'pethPsePortPowerDeniedCounter';
     $oid_num  = "1.3.6.1.2.1.105.1.1.1.12.$index";
     $type     = 'POWER-ETHERNET-MIB-' . $oid_name;
@@ -818,7 +886,7 @@ foreach ($oids as $index => $entry) {
          discover_counter($device, 'counter', 'POWER-ETHERNET-MIB', $oid_name, $oid_num, $index, $descr, 1, $value);
     }
 
-       $descr    = $entry['ifDescr'] . ' PoE Overload' . $group;
+       $descr    = $options['port_label'] . ' PoE Overload' . $group;
     $oid_name = 'pethPsePortOverLoadCounter';
     $oid_num  = "1.3.6.1.2.1.105.1.1.1.13.$index";
     $type     = 'POWER-ETHERNET-MIB-' . $oid_name;
@@ -831,7 +899,7 @@ foreach ($oids as $index => $entry) {
          discover_counter($device, 'counter', 'POWER-ETHERNET-MIB', $oid_name, $oid_num, $index, $descr, 1, $value);
     }
 
-       $descr    = $entry['ifDescr'] . ' PoE Short' . $group;
+       $descr    = $options['port_label'] . ' PoE Short' . $group;
     $oid_name = 'pethPsePortShortCounter';
     $oid_num  = "1.3.6.1.2.1.105.1.1.1.14.$index";
     $type     = 'POWER-ETHERNET-MIB-' . $oid_name;

@@ -56,20 +56,27 @@ foreach (array_keys($config) as $ports_module) {
     //$ports_modules[$ports_module] = isset($attribs['enable_ports_' . $ports_module]) ? (bool)$attribs['enable_ports_' . $ports_module] : $config['enable_ports_' . $ports_module];
     $ports_modules[$ports_module] = is_module_enabled($device, 'ports_' . $ports_module);
 }
+
 // Additionally, force enable separate walk feature for some device oses, but only if ports total count >10
 $ports_module = 'separate_walk';
 // Model definition can override os definition
 $model_separate_walk = isset($model['ports_' . $ports_module]) && $model['ports_' . $ports_module];
+
 if (!$ports_modules[$ports_module] && $model_separate_walk) {
-    if (isset($attribs['enable_ports_' . $ports_module]) && !$attribs['enable_ports_' . $ports_module]) {
-    } // forcing disabled in device config
-    else {
-        $ports_total_count            = $ports_ignored_count_db + dbFetchCell('SELECT COUNT(*) FROM `ports` WHERE `device_id` = ? AND `deleted` = 0', [$device['device_id']]);
-        $ports_modules[$ports_module] = $ports_total_count > 10;
-        if (OBS_DEBUG && $ports_modules[$ports_module]) {
-            print_debug('Forced ports separate walk feature!');
-        }
+  if (isset($attribs['enable_ports_' . $ports_module]) && !$attribs['enable_ports_' . $ports_module]) {
+    // forcing disabled in device config
+  } else {
+    $ports_total_count = $ports_ignored_count_db + dbFetchCell(
+      'SELECT COUNT(*) FROM `ports` WHERE `device_id` = ? AND `deleted` = 0',
+      [$device['device_id']]
+    );
+    // NEW: configurable threshold; full table faster on small devices
+    $min_ports = $config['ports']['separate_walk_min_ports'] ?? 96;
+    $ports_modules[$ports_module] = $ports_total_count > $min_ports;
+    if (OBS_DEBUG && $ports_modules[$ports_module]) {
+      print_debug('Forced ports separate walk feature!');
     }
+  }
 }
 print_debug_vars($ports_modules);
 
@@ -218,7 +225,7 @@ if (is_device_mib($device, "IF-MIB")) {
             }
 
             // Use snmpget for each (not ignored) port
-            // NOTE. This method reduce polling time when too many ports (>100)
+            // NOTE. This method reduces polling time when too many ports (>100)
             echo(implode(' ', $port_oids) . ", ifIndex: ");
             foreach ($port_stats as $ifIndex => $port) {
                 $port_disabled = isset($ports[$ifIndex]['disabled']) && $ports[$ifIndex]['disabled']; // Port polling disabled from WUI
@@ -268,10 +275,78 @@ if (is_device_mib($device, "IF-MIB")) {
 //}
 echo PHP_EOL;                                                         // End IF-MIB section
 
+// ===== BEGIN: IF-MIB partial-walk repair (column-first, bounded) =====
+$rp = $config['snmp_repair'] ?? [];
+if (!empty($rp['enabled']) && !empty($port_stats)) {
+
+  // Anchor: all seen ifIndex rows from whatever IF-MIB we got
+  $anchor_idx = array_keys($port_stats);
+  $anchor_cnt = safe_count($anchor_idx);
+
+  // Required columns for correct event logic & labels (shortlist)
+  $need_cols  = ['ifOperStatus','ifAdminStatus','ifHighSpeed','ifAlias'];
+
+  // If 'ifIndex' itself is dubious, skip repair
+  if ($anchor_cnt > 0) {
+    $total_oids   = 0;
+    $repaired_any = false;
+
+    // Priority order so flaps/speeds are always sane
+    foreach ($need_cols as $col) {
+
+      $missing = [];
+      $seen_any = false; $filled = 0;
+
+      foreach ($anchor_idx as $i) {
+        $v = $port_stats[$i][$col] ?? null;
+        if ($v !== null && $v !== '' && $v !== 'noSuchInstance') { $seen_any = true; $filled++; }
+        else { $missing[] = $i; }
+      }
+
+      if (!$missing) { continue; }
+
+      // Skip if too broken for this column
+      $max_missing = min((int)$rp['max_missing_abs'], (int)ceil($anchor_cnt * (float)$rp['max_missing_pct']));
+      if (safe_count($missing) > $max_missing) { continue; }
+
+      // Target set: if column entirely absent → fetch all; if partial → fetch only holes
+      $to_get = $seen_any ? $missing : $anchor_idx;
+
+      // Budget check
+      $room = (int)$rp['max_oids_total'] - $total_oids;
+      if ($room <= 0) { break; }
+
+      // Perform batched GETs and merge into $port_stats
+      $take = array_slice($to_get, 0, min($room, safe_count($to_get)));
+      if (!empty($take)) {
+        $port_stats = snmp_get_multi_indexed($device, "IF-MIB::{$col}", $take, $port_stats, 'IF-MIB', (int)$rp['get_chunk']);
+        $total_oids += safe_count($take);
+        $repaired_any = true;
+      }
+    }
+
+    // Re-evaluate coverage; if "good enough", mark recovered for this poll
+    if ($repaired_any) {
+      $ok = true;
+      foreach ($need_cols as $col) {
+        $filled = 0;
+        foreach ($anchor_idx as $i) {
+          $v = $port_stats[$i][$col] ?? null;
+          if ($v !== null && $v !== '' && $v !== 'noSuchInstance') { $filled++; }
+        }
+        if ($filled < $anchor_cnt * (float)$rp['coverage_threshold']) { $ok = false; break; }
+      }
+      $GLOBALS['poll_ctx']['ports_recovered'] = $ok;
+    }
+  }
+}
+// ===== END: IF-MIB partial-walk repair =====
+
+
 //////////
 $private_stats = [];
 foreach (get_device_mibs_permitted($device) as $mib) {
-    $private_stats[] = merge_private_mib($device, 'ports', $mib, $port_stats, NULL);
+    $private_stats[] = merge_private_mib($device, 'ports', $mib, $port_stats);
 }
 $include_stats = array_merge($include_stats, ...$private_stats);
 unset($private_stats);
@@ -304,7 +379,7 @@ $data_oids_db = array_merge($data_oids_db, ['port_label', 'port_label_short', 'p
 $process_port_functions = [];                                         // collect processing functions
 $process_port_db        = [];                                         // collect processing db fields
 
-// Additionally include per MIB functions and snmpwalks (uses include_once)
+// Additionally, include per MIB functions and snmpwalks (uses include_once)
 $port_stats_count = safe_count($port_stats);
 $include_lib      = TRUE;
 $include_dir      = "includes/polling/ports/";
@@ -357,10 +432,12 @@ foreach ($port_stats as $ifIndex => $port) {
 
     if (is_port_valid($device, $port)) {
         if (!is_array($ports[$port['ifIndex']])) {
-            $port_insert             = ['device_id' => $device['device_id'],
-                                        'ifIndex'   => $ifIndex,
-                                        'ignore'    => isset($port['ignore']) ? $port['ignore'] : '0',
-                                        'disabled'  => isset($port['disabled']) ? $port['disabled'] : '0'];
+            $port_insert = [
+                'device_id' => $device['device_id'],
+                'ifIndex'   => $ifIndex,
+                'ignore'    => $port['ignore'] ?? '0',
+                'disabled'  => $port['disabled'] ?? '0'
+            ];
             $port_id                 = dbInsert(['device_id' => $device['device_id'], 'ifIndex' => $ifIndex], 'ports');
             $ports[$port['ifIndex']] = dbFetchRow("SELECT * FROM `ports` WHERE `port_id` = ?", [$port_id]);
             print_message("Adding: " . $port['ifDescr'] . "(" . $ifIndex . ")(" . $ports[$port['ifIndex']]['port_id'] . ")");
@@ -435,8 +512,7 @@ foreach ($ports as $port) {
         $port['state']  = []; // State field for update
 
         // Poll time and period
-        if (isset($this_port['polled']) && is_intnum($this_port['polled']) &&
-            ($this_port['polled'] > OBS_MIN_UNIXTIME)) {
+        if (isset($this_port['polled']) && is_valid_unixtime($this_port['polled'])) {
             // See SPECTRA-LOGIC-STRATA-MIB definition
         } else {
             $this_port['polled'] = $polled;
@@ -479,7 +555,8 @@ foreach ($ports as $port) {
                 continue;
             }
 
-            $this_port[$oid_fix] = snmp_fix_string($this_port[$oid_fix]);
+            $unit_fix = $oid_fix !== 'ifAlias' ? 'label' : NULL;
+            $this_port[$oid_fix] = snmp_fix_string($this_port[$oid_fix], $unit_fix);
         }
         process_port_label($this_port, $device);
         /* End process_port_label() */
@@ -669,51 +746,22 @@ foreach ($ports as $port) {
         }
 
         // ifLastChange
-        if (isset($this_port['ifLastChange']) && $this_port['ifLastChange'] != '') {
-            // Convert ifLastChange from timetick to timestamp
-            /**
-             * The value of sysUpTime at the time the interface entered
-             * its current operational state. If the current state was
-             * entered prior to the last re-initialization of the local
-             * network management subsystem, then this object contains a
-             * zero value.
-             *
-             * NOTE, observium uses last change timestamp.
-             */
-            $if_lastchange_uptime = timeticks_to_sec($this_port['ifLastChange']);
-            if (preg_match(OBS_PATTERN_TIMESTAMP, $this_port['ifLastChange'])) {
-                // This ifLastChange copied from previous
-                $if_lastchange_uptime = TRUE;
-            } elseif (($device_uptime['sysUpTime'] - $if_lastchange_uptime) > 90) {
-                $if_lastchange = $device_uptime['polled'] - $device_uptime['sysUpTime'] + $if_lastchange_uptime;
-                print_debug('IFLASTCHANGE = ' . $device_uptime['polled'] . 's - ' . $device_uptime['sysUpTime'] . 's + ' . $if_lastchange_uptime . 's');
-                if (abs($if_lastchange - strtotime($port['ifLastChange'])) > 90) {
-                    // Compare lastchange with previous, update only if more than 60 sec (for exclude random dispersion)
-                    $port['update']['ifLastChange'] = date('Y-m-d H:i:s', $if_lastchange); // Convert to timestamp
-                }
-            } else {
-                // Device sysUpTime more than if uptime or too small difference.. impossible, seems as bug on device
-                $if_lastchange_uptime = FALSE;
-            }
-        } else {
-            // ifLastChange not exist
-            $if_lastchange_uptime = FALSE;
+        if ($if_lastchange_timestamp = process_port_iflastchange($this_port, $device_uptime, $port)) {
+            // Add to alert array as unixtime
+            $port['alert_array']['ifLastChange']          = $if_lastchange_timestamp;
+            $port['alert_array']['ifLastChange_unixtime'] = strtotime($if_lastchange_timestamp);
+            $port['alert_array']['ifLastChange_uptime']   = $this_port['polled'] - $port['alert_array']['ifLastChange_unixtime'];
         }
 
-        if ($if_lastchange_uptime === FALSE) {
-            if (empty($port['ifLastChange']) || $port['ifLastChange'] === '0000-00-00 00:00:00' || // Newer set (first time)
-                isset($port['update']['ifOperStatus']) || isset($port['update']['ifAdminStatus']) ||
-                isset($port['update']['ifSpeed']) || isset($port['update']['ifDuplex'])) {
-                $port['update']['ifLastChange'] = date('Y-m-d H:i:s', $this_port['polled']);
-            }
-            print_debug("IFLASTCHANGE unknown/false, used system times.");
-        }
         if (isset($port['update']['ifLastChange'])) {
             print_debug("IFLASTCHANGE (" . $port['ifIndex'] . "): " . $port['update']['ifLastChange']);
             if ($port['ifLastChange'] && $port['ifLastChange'] !== '0000-00-00 00:00:00' && safe_count($log_event)) {
                 $log_event[] = "[ifLastChange] '" . $port['ifLastChange'] . "' -> '" . $port['update']['ifLastChange'] . "'";
             }
+
         }
+
+        // pull eventlogs
         if ((bool)$log_event) {
             log_event('Interface changed: ' . implode('; ', $log_event), $device, 'port', $port);
         }
@@ -810,22 +858,22 @@ foreach ($ports as $port) {
 
         // Update RRDs
         rrdtool_update_ng($device, 'port', [
-          'INOCTETS'         => $this_port['ifInOctets'],
-          'OUTOCTETS'        => $this_port['ifOutOctets'],
-          'INERRORS'         => $this_port['ifInErrors'],
-          'OUTERRORS'        => $this_port['ifOutErrors'],
-          'INUCASTPKTS'      => $this_port['ifInUcastPkts'],
-          'OUTUCASTPKTS'     => $this_port['ifOutUcastPkts'],
-          'INNUCASTPKTS'     => $this_port['ifInNUcastPkts'],
-          'OUTNUCASTPKTS'    => $this_port['ifOutNUcastPkts'],
-          'INDISCARDS'       => $this_port['ifInDiscards'],
-          'OUTDISCARDS'      => $this_port['ifOutDiscards'],
-          'INUNKNOWNPROTOS'  => $this_port['ifInUnknownProtos'],
-          'INBROADCASTPKTS'  => $this_port['ifInBroadcastPkts'],
-          'OUTBROADCASTPKTS' => $this_port['ifOutBroadcastPkts'],
-          'INMULTICASTPKTS'  => $this_port['ifInMulticastPkts'],
-          'OUTMULTICASTPKTS' => $this_port['ifOutMulticastPkts'],
-        ],                get_port_rrdindex($port), TRUE, $rrd_options);
+            'INOCTETS'         => $this_port['ifInOctets'],
+            'OUTOCTETS'        => $this_port['ifOutOctets'],
+            'INERRORS'         => $this_port['ifInErrors'],
+            'OUTERRORS'        => $this_port['ifOutErrors'],
+            'INUCASTPKTS'      => $this_port['ifInUcastPkts'],
+            'OUTUCASTPKTS'     => $this_port['ifOutUcastPkts'],
+            'INNUCASTPKTS'     => $this_port['ifInNUcastPkts'],
+            'OUTNUCASTPKTS'    => $this_port['ifOutNUcastPkts'],
+            'INDISCARDS'       => $this_port['ifInDiscards'],
+            'OUTDISCARDS'      => $this_port['ifOutDiscards'],
+            'INUNKNOWNPROTOS'  => $this_port['ifInUnknownProtos'],
+            'INBROADCASTPKTS'  => $this_port['ifInBroadcastPkts'],
+            'OUTBROADCASTPKTS' => $this_port['ifOutBroadcastPkts'],
+            'INMULTICASTPKTS'  => $this_port['ifInMulticastPkts'],
+            'OUTMULTICASTPKTS' => $this_port['ifOutMulticastPkts'],
+        ], get_port_rrdindex($port), TRUE, $rrd_options);
 
         // End Update IF-MIB
 
@@ -881,9 +929,11 @@ foreach ($ports as $port) {
         if ($config['amqp']['enable'] == TRUE && $config['amqp']['modules']['ports']) {
             $json_data = array_merge($this_port, $port['state']);
             unset($json_data['rrd_update']); // FIXME unset no longer needed when switched to rrdtool_update_ng() !
-            messagebus_send(['attribs' => ['t'         => $this_port['polled'], 'device' => $device['hostname'],
-                                           'device_id' => $device['device_id'], 'e_type' => 'port',
-                                           'e_index'   => $port['ifIndex']], 'data' => $json_data]);
+
+            messagebus_send([ 'attribs' => [ 't'         => $this_port['polled'], 'device' => $device['hostname'],
+                                             'device_id' => $device['device_id'], 'e_type' => 'port',
+                                             'e_index'   => $port['ifIndex']],
+                              'data'    => $json_data ]);
             unset($json_data);
         }
 

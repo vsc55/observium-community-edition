@@ -88,7 +88,7 @@ if (isset($vars['action'])) {
     $action = escape_html($vars['action']);
 }
 if (isset($vars['mapname'])) {
-    $mapname = escape_html($vars['mapname']);  /*$mapname = wm_editor_sanitize_conffile($mapname);*/
+    $mapname = escape_html($vars['mapname']);
 }
 if (isset($vars['selected'])) {
     $selected = wm_editor_sanitize_selected($vars['selected']);
@@ -112,31 +112,11 @@ if (empty($mapname)) {
     $map            = new WeatherMap;
     $map -> context = 'editor';
 
-
     if ($action != "draw") {
         //r($vars);
     }
 
     switch ($action) {
-        /*
-        case 'newmap':
-            $map->WriteConfig($mapfile);
-            break;
-
-        case 'newmapcopy':
-            if(isset($vars['sourcemap'])) { $sourcemapname = $vars['sourcemap']; }
-
-            $sourcemapname = wm_editor_sanitize_conffile($sourcemapname);
-
-            if($sourcemapname != "") {
-                $sourcemap = $mapdir.'/'.$sourcemapname;
-                if( file_exists($sourcemap) && is_readable($sourcemap) ) {
-                $map->ReadConfig($sourcemap);
-                $map->WriteConfig($mapfile);
-                }
-            }
-            break;
-        */
 
         case 'font_samples':
             $map -> ReadConfig($mapfile);
@@ -627,8 +607,8 @@ if (empty($mapname)) {
                             $dy = $link -> a -> y - $y;
 
                             for ($i = 0; $i < count($link -> vialist); $i++) {
-                                $link -> vialist[$i][0] = $link -> vialist[$i][0] - $dx;
-                                $link -> vialist[$i][1] = $link -> vialist[$i][1] - $dy;
+                                $link -> vialist[$i][0] -= $dx;
+                                $link -> vialist[$i][1] -= $dy;
                             }
                         } else {
                             $pivx = $pivot -> x;
@@ -828,7 +808,7 @@ if (empty($mapname)) {
 
                 $newnodename = $target;
                 do {
-                    $newnodename = $newnodename . "_copy";
+                    $newnodename .= "_copy";
                 } while (isset($map -> nodes[$newnodename]));
 
                 $node = new WeatherMapNode;
@@ -1075,7 +1055,7 @@ if (empty($mapname)) {
                         </tr>
                         <tr>
                             <th>Data Source</th>
-                            <td><input id="link_target" name="link_target" type="text"/> <span class="white"><a id="link_pick">[Select
+                            <td><input id="link_target" name="link_target" type="text"/> <span class="entity"><a id="link_pick">[Select
 			  from Observium]</a></span></td>
                         </tr>
                         <tr>

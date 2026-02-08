@@ -1,7 +1,5 @@
 -- Copyright (C) 2016 Aricent. All Rights Reserved.
 
--- $Id: fsvlnext.mib,v 1.14 2016/02/28 10:54:47 siva Exp $
-
 ARICENT-VLAN-EXT-MIB DEFINITIONS ::= BEGIN
  
 IMPORTS
@@ -46,8 +44,7 @@ L2CPProtocols ::= TEXTUAL-CONVENTION
         "This object specifies the types of Layer 2 protocols. Identifiers from
         1 to 13 specify the standard protocols - dot1x(1), lacp(2), stp(3), gvrp(4),
         gmrp(5), igmp(6), mvrp(7), mmrp(8), elmi(9), lldp(10), ecfm(11), eoam(12),
-        ptp(13), isisl1(14), isisl2(15), fctl(16).
-        The identifier 17 to 23 (denoted as other) specify other protocols."
+        ptp(13). The identifier 14 to 23 (denoted as other) specify other protocols."
 
     SYNTAX      INTEGER (1..23)
 
@@ -366,66 +363,6 @@ fsVlanTunnelIgmpAddress OBJECT-TYPE
         is set to Tunnel on the outgoing port, else the packets are dropped."
 
    ::= { fsVlanTunnelObjects 17 }
-   
-fsVlanTunnelIsisL1Address OBJECT-TYPE
-   SYNTAX      MacAddress
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-        "This object specifies the MAC address to be used for ISIS L1 packets
-        tunneling . When ISIS L1 tunneling is enabled on the port, this MAC address
-        will be used as destination MAC address of the ISIS L1 packets
-        received over the port.
-
-        ISIS L1 packets received with this MAC address will be treated as
-        data packets and are not processed.
-
-        When the tunneled ISIS L1 packets are sent out of the given network,
-        this MAC address will be replaced with the reserved address defined
-        for the ISIS L1 packets. This is done only when ISIS L1 protocol tunnel status
-        is set to Tunnel on the outgoing port, else the packets are dropped."
-
-   ::= { fsVlanTunnelObjects 18 }
-   
-fsVlanTunnelIsisL2Address OBJECT-TYPE
-   SYNTAX      MacAddress
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-        "This object specifies the MAC address to be used for ISIS L2 packets
-        tunneling . When ISIS L2 tunneling is enabled on the port, this MAC address
-        will be used as destination MAC address of the ISIS L2 packets
-        received over the port.
-
-        ISIS L2 packets received with this MAC address will be treated as
-        data packets and are not processed.
-
-        When the tunneled ISIS L2 packets are sent out of the given network,
-        this MAC address will be replaced with the reserved address defined
-        for the ISIS L2 packets. This is done only when ISIS L2 protocol tunnel status
-        is set to Tunnel on the outgoing port, else the packets are dropped."
-
-   ::= { fsVlanTunnelObjects 19 }
-
-fsVlanTunnelFctlAddress OBJECT-TYPE
-   SYNTAX      MacAddress
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-        "This object specifies the MAC address to be used for flow control packets
-        tunneling . When flow control tunneling is enabled on the port, this MAC address
-        will be used as destination MAC address of the flow control packets
-        received over the port.
-
-        Flow control packets received with this MAC address will be treated as
-        data packets and are not processed.
-
-        When the tunneled flow control packets are sent out of the given network,
-        this MAC address will be replaced with the reserved address defined
-        for the flow control packets. This is done only when flow control protocol
-        tunnel status is set to Tunnel on the outgoing port, else the packets are dropped."
-
-   ::= { fsVlanTunnelObjects 20 }
 
 -- SCALAR END
 
@@ -528,10 +465,7 @@ fsVlanTunnelProtocolEntry OBJECT-TYPE
     fsVlanTunnelProtocolLldp       TunnelStatus,
     fsVlanTunnelProtocolEcfm       TunnelStatus,
     fsVlanTunnelOverrideOption     EnabledStatus,
-    fsVlanTunnelProtocolEoam       TunnelStatus,
-    fsVlanTunnelProtocolIsisL1     TunnelStatus,
-    fsVlanTunnelProtocolIsisL2     TunnelStatus,
-    fsVlanTunnelProtocolFctl       TunnelStatus
+    fsVlanTunnelProtocolEoam       TunnelStatus
  }
 
 fsVlanTunnelProtocolDot1x OBJECT-TYPE
@@ -657,33 +591,6 @@ fsVlanTunnelProtocolEoam OBJECT-TYPE
        received on the port."
    ::= { fsVlanTunnelProtocolEntry 13 }
 
-fsVlanTunnelProtocolIsisL1 OBJECT-TYPE
-   SYNTAX      TunnelStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "The object specifies whether to peer or tunnel or discard the ISIS-L1 packets
-       received on the port."
-   ::= { fsVlanTunnelProtocolEntry 14 }
-
-fsVlanTunnelProtocolIsisL2 OBJECT-TYPE
-   SYNTAX      TunnelStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "The object specifies whether to peer or tunnel or discard the ISIS-L2 packets
-       received on the port."
-   ::= { fsVlanTunnelProtocolEntry 15 }
-
-fsVlanTunnelProtocolFctl OBJECT-TYPE
-   SYNTAX      TunnelStatus
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-      "The object specifies whether to peer or tunnel or discard the flow control packets
-       received on the port."
-   ::= { fsVlanTunnelProtocolEntry 16 }
-
 -- ----------------------------------------------------------------
 -- Tunnel protocol statistics table
 -- ----------------------------------------------------------------
@@ -710,36 +617,30 @@ fsVlanTunnelProtocolStatsEntry OBJECT-TYPE
     
 FsVlanTunnelProtocolStatsEntry ::=
  SEQUENCE {
-      fsVlanTunnelProtocolDot1xPktsRecvd   Counter32,
-      fsVlanTunnelProtocolDot1xPktsSent    Counter32,
-      fsVlanTunnelProtocolLacpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolLacpPktsSent     Counter32,
-      fsVlanTunnelProtocolStpPDUsRecvd     Counter32,
-      fsVlanTunnelProtocolStpPDUsSent      Counter32,
-      fsVlanTunnelProtocolGvrpPDUsRecvd    Counter32,
-      fsVlanTunnelProtocolGvrpPDUsSent     Counter32,
-      fsVlanTunnelProtocolGmrpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolGmrpPktsSent     Counter32,
-      fsVlanTunnelProtocolIgmpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolIgmpPktsSent     Counter32,
-      fsVlanTunnelProtocolMvrpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolMvrpPktsSent     Counter32,
-      fsVlanTunnelProtocolMmrpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolMmrpPktsSent     Counter32,
-      fsVlanTunnelProtocolElmiPktsRecvd    Counter32,
-      fsVlanTunnelProtocolElmiPktsSent     Counter32,
-      fsVlanTunnelProtocolLldpPktsRecvd    Counter32,
-      fsVlanTunnelProtocolLldpPktsSent     Counter32,
-      fsVlanTunnelProtocolEcfmPktsRecvd    Counter32,
-      fsVlanTunnelProtocolEcfmPktsSent     Counter32,
-      fsVlanTunnelProtocolEoamPktsRecvd    Counter32,
-      fsVlanTunnelProtocolEoamPktsSent     Counter32,
-      fsVlanTunnelProtocolIsisL1PktsRecvd  Counter32,
-      fsVlanTunnelProtocolIsisL1PktsSent   Counter32,
-      fsVlanTunnelProtocolIsisL2PktsRecvd  Counter32,
-      fsVlanTunnelProtocolIsisL2PktsSent   Counter32,
-      fsVlanTunnelProtocolFctlPktsRecvd    Counter32,
-      fsVlanTunnelProtocolFctlPktsSent     Counter32
+      fsVlanTunnelProtocolDot1xPktsRecvd Counter32,
+      fsVlanTunnelProtocolDot1xPktsSent  Counter32,
+      fsVlanTunnelProtocolLacpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolLacpPktsSent   Counter32,
+      fsVlanTunnelProtocolStpPDUsRecvd   Counter32,
+      fsVlanTunnelProtocolStpPDUsSent    Counter32,
+      fsVlanTunnelProtocolGvrpPDUsRecvd  Counter32,
+      fsVlanTunnelProtocolGvrpPDUsSent   Counter32,
+      fsVlanTunnelProtocolGmrpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolGmrpPktsSent   Counter32,
+      fsVlanTunnelProtocolIgmpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolIgmpPktsSent   Counter32,
+      fsVlanTunnelProtocolMvrpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolMvrpPktsSent   Counter32,
+      fsVlanTunnelProtocolMmrpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolMmrpPktsSent   Counter32,
+      fsVlanTunnelProtocolElmiPktsRecvd  Counter32,
+      fsVlanTunnelProtocolElmiPktsSent   Counter32,
+      fsVlanTunnelProtocolLldpPktsRecvd  Counter32,
+      fsVlanTunnelProtocolLldpPktsSent   Counter32,
+      fsVlanTunnelProtocolEcfmPktsRecvd  Counter32,
+      fsVlanTunnelProtocolEcfmPktsSent   Counter32,
+      fsVlanTunnelProtocolEoamPktsRecvd  Counter32,
+      fsVlanTunnelProtocolEoamPktsSent   Counter32
 
    }
 
@@ -947,60 +848,6 @@ fsVlanTunnelProtocolEoamPktsSent OBJECT-TYPE
       for which the EOAM tunneling status is enabled."
    ::= { fsVlanTunnelProtocolStatsEntry 24 }
 
-fsVlanTunnelProtocolIsisL1PktsRecvd OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L1 packets received on a port 
-      on which the ISIS L1 tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 25 }
-
-fsVlanTunnelProtocolIsisL1PktsSent OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L1 packets transmitted on a port 
-      for which the ISIS L1 tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 26 }
-
-fsVlanTunnelProtocolIsisL2PktsRecvd OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L2 packets received on a port 
-      on which the ISIS L2 tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 27 }
-
-fsVlanTunnelProtocolIsisL2PktsSent OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L2 packets transmitted on a port 
-      for which the ISIS L2 tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 28 }
-
-fsVlanTunnelProtocolFctlPktsRecvd OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of flow control packets received on a port 
-      on which the flow control tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 29 }
-
-fsVlanTunnelProtocolFctlPktsSent OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of flow control packets transmitted on a port 
-      for which the flow control tunneling status is enabled."
-   ::= { fsVlanTunnelProtocolStatsEntry 30 }
-
 
 -- ----------------------------------------------------------------
 -- VLAN Discard statistics table
@@ -1029,36 +876,30 @@ fsVlanDiscardStatsEntry OBJECT-TYPE
     
 FsVlanDiscardStatsEntry ::=
  SEQUENCE {
-      fsVlanDiscardDot1xPktsRx     Counter32,
-      fsVlanDiscardDot1xPktsTx     Counter32,
-      fsVlanDiscardLacpPktsRx      Counter32,
-      fsVlanDiscardLacpPktsTx      Counter32,
-      fsVlanDiscardStpPDUsRx       Counter32,
-      fsVlanDiscardStpPDUsTx       Counter32,
-      fsVlanDiscardGvrpPktsRx      Counter32,
-      fsVlanDiscardGvrpPktsTx      Counter32,
-      fsVlanDiscardGmrpPktsRx      Counter32,
-      fsVlanDiscardGmrpPktsTx      Counter32,
-      fsVlanDiscardIgmpPktsRx      Counter32,
-      fsVlanDiscardIgmpPktsTx      Counter32,
-      fsVlanDiscardMvrpPktsRx      Counter32,
-      fsVlanDiscardMvrpPktsTx      Counter32,
-      fsVlanDiscardMmrpPktsRx      Counter32,
-      fsVlanDiscardMmrpPktsTx      Counter32,
-      fsVlanDiscardElmiPktsRx      Counter32,
-      fsVlanDiscardElmiPktsTx      Counter32,
-      fsVlanDiscardLldpPktsRx      Counter32,
-      fsVlanDiscardLldpPktsTx      Counter32,
-      fsVlanDiscardEcfmPktsRx      Counter32,
-      fsVlanDiscardEcfmPktsTx      Counter32,
-      fsVlanDiscardEoamPktsRx      Counter32,
-      fsVlanDiscardEoamPktsTx      Counter32,
-      fsVlanDiscardIsisL1PktsRx    Counter32,
-      fsVlanDiscardIsisL1PktsTx    Counter32,
-      fsVlanDiscardIsisL2PktsRx    Counter32,
-      fsVlanDiscardIsisL2PktsTx    Counter32,
-      fsVlanDiscardFctlPktsRx      Counter32,
-      fsVlanDiscardFctlPktsTx      Counter32
+      fsVlanDiscardDot1xPktsRx   Counter32,
+      fsVlanDiscardDot1xPktsTx   Counter32,
+      fsVlanDiscardLacpPktsRx    Counter32,
+      fsVlanDiscardLacpPktsTx    Counter32,
+      fsVlanDiscardStpPDUsRx     Counter32,
+      fsVlanDiscardStpPDUsTx     Counter32,
+      fsVlanDiscardGvrpPktsRx    Counter32,
+      fsVlanDiscardGvrpPktsTx    Counter32,
+      fsVlanDiscardGmrpPktsRx    Counter32,
+      fsVlanDiscardGmrpPktsTx    Counter32,
+      fsVlanDiscardIgmpPktsRx    Counter32,
+      fsVlanDiscardIgmpPktsTx    Counter32,
+      fsVlanDiscardMvrpPktsRx    Counter32,
+      fsVlanDiscardMvrpPktsTx    Counter32,
+      fsVlanDiscardMmrpPktsRx    Counter32,
+      fsVlanDiscardMmrpPktsTx    Counter32,
+      fsVlanDiscardElmiPktsRx    Counter32,
+      fsVlanDiscardElmiPktsTx    Counter32,
+      fsVlanDiscardLldpPktsRx    Counter32,
+      fsVlanDiscardLldpPktsTx    Counter32,
+      fsVlanDiscardEcfmPktsRx    Counter32,
+      fsVlanDiscardEcfmPktsTx    Counter32,
+      fsVlanDiscardEoamPktsRx    Counter32,
+      fsVlanDiscardEoamPktsTx    Counter32
    }
 
 fsVlanDiscardDot1xPktsRx OBJECT-TYPE
@@ -1278,67 +1119,6 @@ fsVlanDiscardEoamPktsTx OBJECT-TYPE
        the transmission side when the tunnel protocol status is 
        set as Discard."
    ::= { fsVlanDiscardStatsEntry 24 }
-
-fsVlanDiscardIsisL1PktsRx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L1 packets discarded on 
-       the reception side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 25 }
-
-fsVlanDiscardIsisL1PktsTx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L1 packets discarded on 
-       the transmission side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 26 }
-
-fsVlanDiscardIsisL2PktsRx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L2 packets discarded on 
-       the reception side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 27 }
-
-fsVlanDiscardIsisL2PktsTx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of ISIS L2 packets discarded on 
-       the transmission side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 28 }
-
-fsVlanDiscardFctlPktsRx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of flow control packets discarded on 
-       the reception side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 29 }
-
-fsVlanDiscardFctlPktsTx OBJECT-TYPE
-   SYNTAX      Counter32
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-      "This object displays the number of flow control packets discarded on 
-       the transmission side when the tunnel protocol status is 
-       set as Discard."
-   ::= { fsVlanDiscardStatsEntry 30 }
-   
 
 -- ----------------------------------------------------------------
 -- Service Based Tunnel Protocol Configuration table

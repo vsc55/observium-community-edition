@@ -1,12 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
---******************************************************************************
---$Id: fsiss.mib,v 1.114 2016/09/17 12:43:08 siva Exp $
---
---Description : This file contains MIB definitions for ISS module. 
---
---******************************************************************************/
-
 -- ISS MIB Definition 
  
 -- MIB for 'Intelligent Switch Solution'
@@ -26,19 +19,43 @@ IMPORTS
    InetAddress, InetAddressType     FROM INET-ADDRESS-MIB;
 
    iss MODULE-IDENTITY 
-      LAST-UPDATED "202203140000Z" 
+      LAST-UPDATED "202409160000Z" -- September 16, 2024
       ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
       CONTACT-INFO "support@aricent.com" 
       DESCRIPTION 
          "The MIB for ISS." 
 
-      REVISION "202203140000Z"
+      REVISION "202409160000Z" -- September 16, 2024
       DESCRIPTION
-         "Extended maximum issSwitchName object size from 15 to 128."
+         "Defined issTrapPowerSupplyStatus object
+         to control power-related trap generation.
+         Defined issTrapFanStatusStatus object to
+         control fan status-related trap generation."
+
+      REVISION "202307100000Z"
+      DESCRIPTION
+         "The object issLogOutFilter was added"
+
+      REVISION "202306120000Z"
+      DESCRIPTION
+         "The object issLogInFilter was added"
+
+      REVISION "202203310000Z"
+      DESCRIPTION
+         "The object issPortCtrlForceSpeed was added"
+
+      REVISION "202201210000Z"
+      DESCRIPTION
+         "Was added object issHttpMaxSessions for setting HTTP max sessions"
+
+      REVISION "202201120000Z"
+      DESCRIPTION 
+         "The default value of MIB 'issLoginLockTime' was changed from 30 to 600."
 
       REVISION "201209050000Z"
       DESCRIPTION 
-         "The MIB for ISS." 
+         "The MIB for ISS."
+
    ::= { enterprises futuresoftware (2076) 81 }
 
 
@@ -80,8 +97,6 @@ PortList ::= TEXTUAL-CONVENTION
       issAclTrafficControl     OBJECT IDENTIFIER ::= { iss 15 }
       issLogTrap               OBJECT IDENTIFIER ::= { iss 16 }
       issHealthCheckGroup      OBJECT IDENTIFIER ::= { iss 17 }
-      issZtp                   OBJECT IDENTIFIER ::= { iss 18 }
-      issRunConfig             OBJECT IDENTIFIER ::= { iss 19 }
 
 -- ---------------------------------------------------------------- --
 
@@ -90,7 +105,7 @@ PortList ::= TEXTUAL-CONVENTION
 -- System Information
 
 issSwitchName OBJECT-TYPE 
-   SYNTAX      DisplayString (SIZE(1..128))
+   SYNTAX      DisplayString (SIZE(1..15))
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
@@ -418,6 +433,8 @@ issInitiateDlImage OBJECT-TYPE
       "Initiates the Image Download operation."
    ::= { issSystem 22 }
 
+
+
 -- Event logging related configuration / information
 
 issLoggingOption OBJECT-TYPE
@@ -496,9 +513,12 @@ issDownloadStatus    OBJECT-TYPE
                inprogress(1),
                successful(2),
                failed(3),
-               notInitiated(4)
+               configDefaultNeeded(4),
+               configDefaultInProgress(5),
+               configDeafultAborted(6),
+               notInitiated(7)
               }
-   MAX-ACCESS  read-only
+   MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
      "The status of the Image download operation to the switch."
@@ -534,11 +554,12 @@ issLoginAuthentication OBJECT-TYPE
                remoteRadius(2),
                remoteTacacs(3),
 	       radiusFallbackToLocal(4),
-	       tacacsFallbackToLocal(5)
+	       tacacsFallbackToLocal(5),
+               ldap(6)
 
               }
    MAX-ACCESS  read-write
-   STATUS      deprecated
+   STATUS      current
    DESCRIPTION
    	"Configures the mechanism by which the user login has to be authenticated 
    	for accessing the GUI to manage the switch. Authentication is done 
@@ -632,8 +653,7 @@ issHttpPort  OBJECT-TYPE
    MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-
-       "The port to be used by the hosts/PC to configure ISS using the Web Interface
+       "The port to be used by the hosts/PC to configure ISS using the Web Interface.
         The HTTP server must be disabled before this configuration is done"
    DEFVAL  { 80 }
 
@@ -991,7 +1011,8 @@ issConfigSaveTransferMode OBJECT-TYPE
    MAX-ACCESS read-write
    STATUS     current
    DESCRIPTION
-      "To select the Transfer mode for uploading/downloading configurations       to/from a remote system. Contents of this mib is relevant only when 
+      "To select the Transfer mode for saving the configurations on to a
+       remote system. Contents of this mib is relevant only when 
        issConfigSaveOption is remote save."
    DEFVAL  { tftp }       
    ::= { issSystem 61 }
@@ -1001,8 +1022,8 @@ issConfigSaveUserName OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-       "This mib-object is used for setting User name required for 
-        uploading/downloading the configurations to/from a remote site. Contents of this mib is relevant only 
+       "This mib-object is used for setting User name required for saving
+        configurations onto a remote site. Contents of this mib is relevant only 
         when issConfigSaveOption is remote save and issConfigSaveTransferMode is 
         SFTP."
     ::= { issSystem  62 }
@@ -1012,14 +1033,14 @@ issConfigSavePassword OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-       "This mib-object is used for setting Password required for 
-        uploading/downloading the configurations to/from a remote site. Contents of this mib is relevant 
+       "This mib-object is used for setting Password required for saving
+        configurations onto a remote site. Contents of this mib is relevant 
         only when the value of issConfigSaveOption is remote save and 
         issConfigSaveTransferMode is SFTP."
     ::= { issSystem 63 }
 
 issSwitchMinThresholdTemperature    OBJECT-TYPE 
-    SYNTAX          Integer32 (-35..30)
+    SYNTAX          Integer32 (-15..30)
     MAX-ACCESS      read-write
     STATUS          current
     DESCRIPTION
@@ -1027,11 +1048,11 @@ issSwitchMinThresholdTemperature    OBJECT-TYPE
      When the current temperature drops below the threshold,
      an SNMP trap with maximum severity will be sent to the manager."
 
-    DEFVAL { -5 }
+    DEFVAL { 10 }
     ::= {  issSystem 64 }
 
 issSwitchMaxThresholdTemperature    OBJECT-TYPE
-    SYNTAX          Integer32 (35..90)
+    SYNTAX          Integer32 (35..40)
     MAX-ACCESS      read-write
     STATUS          current
     DESCRIPTION
@@ -1039,7 +1060,7 @@ issSwitchMaxThresholdTemperature    OBJECT-TYPE
      When the current temperature rises above the threshold,
      an SNMP trap with maximum severity will be sent to the manager."
 
-     DEFVAL { 80 }
+     DEFVAL { 40 }
      ::= {  issSystem 65 }
 
 issSwitchCurrentTemperature    OBJECT-TYPE
@@ -1395,12 +1416,12 @@ issLoginAttempts OBJECT-TYPE
     ::= {issSystem 94}    
 
 issLoginLockTime OBJECT-TYPE
-    SYNTAX	Integer32(30..600)
+    SYNTAX	Integer32(30..900)
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
 	"Time in seconds a user is blocked following unsuccessful logins."
-    DEFVAL {30}
+    DEFVAL {600}
     ::= {issSystem 95}
 
 issAuditLogSizeThreshold OBJECT-TYPE
@@ -1753,54 +1774,324 @@ issRestoreType  OBJECT-TYPE
 
 issSwitchModeType  OBJECT-TYPE
    SYNTAX	  INTEGER {
-		   cutThrough   (1),
-		   storeForward	(2)
+              cutThroughSameSpeed (1),
+              storeForward (2),
+              cutThroughSlowToFast (3),
+              cutThroughFastToSlow (4)
                    }
    MAX-ACCESS      read-write
    STATUS          current
    DESCRIPTION
-      "Configures the switching mode and determines when the 
-       switch begins forwarding the frame. The configuration is 
-       applicable to all packets being switched or routed through
-       the switch.
+       "This MIB object configures switching mode configuration at
+        switch level. The switching mode configuration done at switch
+        level will be applied on all the ports in the system including
+        stacking ports.
 
-      When configured as store-forward, the switch stores each 
-      frame until the entire frame has been received and 
-      checked for cyclic redundancy check (CRC) errors before 
-      forwarding them to the network.
-      
-      When configured as cut-through, the switch starts forwarding
-      the frame even before receiving the entire frame as soon as
-      the destination details are read from the  packet header
-      
-      The switching speed will be slower in store-forward when 
-      compared to cut-through mode"
+        When configured as StoreForward(2), the switch operates  in a
+        store-and-forward mode and the  switch checks each  frame for
+        cyclic redundancy check (CRC)  errors before forwarding  them
+        to the network. Each frame  is stored until  the entire frame
+        has been received  and checked. Because the switch  waits for
+        forwarding the frame until the entire frame has been received
+        and checked, the  switching speed  in Store-Forward switching
+        mode  is  slower than the switching  speed  in  Cut-Through
+        switching modes.
 
+        When  configured any  of the cut-through  modes, the  switch
+        operates in Cut-Through switching mode and  start forwarding
+        the frame as soon  as the  switch  has read the  destination
+        details in the  packet  header. A switch in Cut-Through mode
+        forwards the data before it has completedreceiving the entire
+        frame. The switching speed in Cut-Through mode is faster than
+        the switching speed in Store-Forward switching mode.
 
+        Switching mode configuration:
+        CutThroughSameSpeed(1) : Cut-through forwarding between same speed
+                                 ports
+        StoreForward(2)        : Store and forward switching mode
+        CutThroughSlowToFast(3): Cut-through forwarding between slower to
+                                 faster speed ports.
+        CutThroughFastToSlow(4): Cut-through forwarding between faster to
+                                 slower speed ports.
+        NOTE:
+        Few platforms supports extended Cut-Through mode for ports with
+        mismatched speeds.(eg. slow-to-fast, fast-to-slow).
+        Platforms which doesn't support extended Cut-Through mode,
+        Cut-Through same speed shall be considered as Cut-Through
+        switching mode"
    DEFVAL   { storeForward }
    ::={ issSystem 119 }
 
-issHardwareSerialNumber OBJECT-TYPE
-   SYNTAX      DisplayString (SIZE(1..15))
-   MAX-ACCESS  read-only
+issConfigRestoreRetries OBJECT-TYPE
+    SYNTAX      Integer32 (1..10)
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "This object is used for configuring the number of retry attempts
+       for establishing connection with server during remote restore
+       operation"
+    DEFVAL  { 1 }
+    ::= { issSystem 120 }
+
+issPauseFloodSamplingInterval OBJECT-TYPE
+SYNTAX       Unsigned32 (10..300)
+UNITS        "seconds"
+MAX-ACCESS  read-write
+STATUS      current
+DESCRIPTION
+  "This object is used to set the sampling interval rate in seconds for pause
+   flood detection and protection feature."
+DEFVAL  { 30 }
+::= { issSystem 121 }
+
+issPauseFloodProtect OBJECT-TYPE
+SYNTAX      INTEGER {
+            enabled       (1),
+            disabled      (2)
+             }
+MAX-ACCESS  read-write
+STATUS      current
+DESCRIPTION
+  "This Object is used to Enable or disable the pause flood detection and
+   protection feature on all the ports in the system. Enabling this feature
+   avoids the resource exhaustion condition caused by pause frames/priority-based
+   pause frames.
+   The pause flood detection and protection feature is disabled by default."
+DEFVAL  { disabled }
+::= { issSystem 122 }
+
+issPauseFloodMode OBJECT-TYPE
+SYNTAX      INTEGER {
+            disabled       (1),
+            detectionOnly  (2),
+            enabled        (3)
+            }
+MAX-ACCESS  read-write
+STATUS      current
+DESCRIPTION
+  "This Object specifies the pause flood mode as disabled/detected-only/enabled
+   for all the ports in the system.
+
+   'disabled'       - In this mode, system is not monitored for pause flood
+                      condition.
+
+   'detectionOnly'  - In this mode, all system ports are monitored for pause
+                      flood condition.  All the system ports pause flood status
+                      and statistics counters are updated. No protection action
+                      is taken and no SNMP trap are generated. All the ports
+                      in the system are allowed to operate normally and the
+                      pause flood status is continually monitored and updated.
+
+   'enabled'        - In this mode, all system ports are monitored for pause
+                      flood condition. When pause flood condition is detected,
+                      protective action is taken by disabling the administrator
+                      status of those ports. The pause flood of those ports status
+                      will be updated to indicate the existence of such condition.
+                      Ports for which protective action is taken are remains in
+                      disabled state until an  administrative action is taken."
+DEFVAL  { disabled }
+::= { issSystem 123 }
+
+issPauseFloodReset OBJECT-TYPE
+SYNTAX      TruthValue
+MAX-ACCESS  read-write
+STATUS      current
+DESCRIPTION
+  "This object is used to recover or re-eanble the pause-flood
+   detection-only/enabled condition.
+
+   Recovery action in Detection-only mode has to log every sampling and clear
+   the status and stats.
+
+   Recovery action in enabled mode has to re-enable the ports
+   that were disabled due to the pause flood protective action."
+DEFVAL  { false }
+::= { issSystem 124 }
+
+issPauseFloodTraceSeverityLevel OBJECT-TYPE
+SYNTAX      INTEGER {
+            emergency       (0),
+            alert           (1),
+            critical        (2),
+            error           (3),
+            warning         (4),
+            notice          (5),
+            informational   (6),
+            debug           (7)
+            }
+
+MAX-ACCESS  read-write
+STATUS      current
+DESCRIPTION
+   "This object specifies the value of severity level been configured for pause flood
+    module's debug tracing.  It uses the value 0 (emergency) to 7 (debug).  The value 0 is
+    given to higher priority trace messages and 7 given to lower priority traces messages.
+    The trace messages defined at or numerically lower than the value configured in
+    this MIB object are logged."
+DEFVAL  { 4 }
+::= { issSystem 125 }
+
+issPauseFloodTraceOption OBJECT-TYPE
+SYNTAX         Integer32
+MAX-ACCESS     read-write
+STATUS         current
+DESCRIPTION
+   "This object is used to store the debug trace types that are enable by the user
+    for all the interfaces in the system. The bit positions of the traces is shown below.
+      Bit 0  - no trace
+      Bit 1  - init-shut
+      Bit 2  - mgmt
+      Bit 3  - sampling
+      Bit 4  - os resource
+      Bit 5  - entry
+      Bit 6  - exit "
+DEFVAL  { 0 }
+::= { issSystem 126 }
+
+issPortsSwitchingModeStatus OBJECT-TYPE
+SYNTAX         PortList
+MAX-ACCESS     read-only
+STATUS         current
+DESCRIPTION
+   "This object is used to reflect the switching mode
+    configuration of each physical port in the hardware.
+
+    The switching mode is updated as bit-wise representation.
+
+    Each bit position represents the interface index.
+    That is bit position 0 is for IfIndex 1,
+    bit position 1 is for IfIndex 2 and so on.
+
+    The bit value represents the switching mode.
+    That is bit value 1 represent Cut-Through and
+    bit value 0 represent Store-Forward."
+::= { issSystem 127 }
+
+issDebugTimeStampOption OBJECT-TYPE
+    SYNTAX      INTEGER {
+               enabled (1),
+               disabled (2)
+
+                        }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+       "This object is used to set the time stamp value in debug trace.
+        When time stamp is ENABLED, debug traces will be printed with timestamp and
+        when it is DISABLED, time stamp will not be displayed with the traces"
+
+    DEFVAL  { disabled }
+
+    ::= { issSystem 128 }
+
+issLdapLoginPrivilege    OBJECT-TYPE
+  SYNTAX      INTEGER
+  MAX-ACCESS  read-write
+  STATUS      current
+  DESCRIPTION "This object specifies the default privilege for users authenticated using LDAP."
+
+DEFVAL  { 0 }
+::= { issSystem 129 }
+
+issLdapAttributeName    OBJECT-TYPE
+  SYNTAX      OCTET STRING
+  MAX-ACCESS  read-write
+  STATUS      current
+  DESCRIPTION "This object specifies the attribute name of the field to be authenticated using LDAP."
+
+DEFVAL  { "" }
+::= { issSystem 130 }
+
+issConfigRestoreFileSkuManifest    OBJECT-TYPE
+  SYNTAX      OCTET STRING
+  MAX-ACCESS  read-only
+  STATUS      current
+  DESCRIPTION "This object specifies the switch models againts which the config file can be used for restoring configuration
+               String contains supported model numbers separated by ; (e.g. 1;2;3;4)"
+
+DEFVAL  { "" }
+::= { issSystem 131 }  
+
+issDlImageType    OBJECT-TYPE
+  SYNTAX      INTEGER {
+                agent(1),
+                diagnostic(2),
+                firmware-cpld(3)
+              }
+  MAX-ACCESS  read-write
+  STATUS      current
+  DESCRIPTION "This object specifies the image type which will be downloaded"
+
+DEFVAL  { 1 }
+::= { issSystem 132 }
+
+issFirmwareCpldVersion    OBJECT-TYPE
+  SYNTAX      OCTET STRING
+  MAX-ACCESS  read-only
+  STATUS      current
+  DESCRIPTION "This object specifies the cpld firmware version on the switch"
+
+DEFVAL  { "" }
+::= { issSystem 133 }
+
+issHttpMaxSessions  OBJECT-TYPE
+   SYNTAX      Integer32 (1..10)
+   MAX-ACCESS  read-write
    STATUS      current
    DESCRIPTION
-      "Serial number of the Hardware." 
-      DEFVAL { "" }
-   ::= { issSystem 120 }
+      "This object is used to set HTTP max sessions.
+       If the max sessions is being reduced, http(s) system is disabled, 
+       are closed all the sessions and enabled again."
+   DEFVAL  { 10 }
+   ::= { issSystem 134 }
 
-issDlImageType OBJECT-TYPE
-   SYNTAX     INTEGER {
-                firmware (1),
-                bootloader (2)
-              }
-   MAX-ACCESS read-write
-   STATUS     current
+issLogInFilter OBJECT-TYPE
+   SYNTAX      DisplayString (SIZE(1..128))
+   MAX-ACCESS  read-write
+   STATUS      current
    DESCRIPTION
-      "To select the type of image to be downloaded."
-   DEFVAL  { firmware }
-   ::= { issSystem 121 }
+      "The filter that will be used to keep lines, adding it to console or log file."
+      DEFVAL { "" }
+   ::= { issSystem 135 }
 
+issLogOutFilter OBJECT-TYPE
+   SYNTAX      DisplayString (SIZE(1..128))
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "The filter that will be used to filter out debug message lines from console or log file."
+      DEFVAL { "" }
+   ::= { issSystem 136 }
+
+issTrapPowerSupplyStatus  OBJECT-TYPE
+   SYNTAX      INTEGER {
+                   enable(1),
+                   disable(2)
+               }
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "Controls generation of the issTrapPowerSupply notification.
+      When trap conditions are met, the notification is only generated 
+      when this attribute is set to 'enable(1)'."
+
+   DEFVAL  { enable }
+   ::= { issSystem 137 }
+
+issTrapFanStatusStatus  OBJECT-TYPE
+   SYNTAX      INTEGER {
+                   enable(1),
+                   disable(2)
+               }
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "Controls generation of the issTrapFanStatus notification.
+      When trap conditions are met, the notification is only generated 
+      when this attribute is set to 'enable(1)'."
+
+   DEFVAL  { enable }
+   ::= { issSystem 138 }
 
 ------ Config Control Group ------------------------------------
 
@@ -1979,7 +2270,31 @@ IssPortCtrlEntry ::=
       issPortCtrlFlowControlMaxRate
          Integer32, 
       issPortCtrlFlowControlMinRate
-         Integer32      
+         Integer32,
+      issPortCtrlPauseFloodProtect
+         INTEGER,
+      issPortCtrlPauseFloodMode
+         INTEGER,
+      issPortCtrlPauseFloodStatus
+         INTEGER,
+      issPortCtrlPauseFloodReset
+         TruthValue,
+      issPortCtrlPauseFloodStats
+         Unsigned32,
+      issPortCtrlPauseFloodStatsClear
+         TruthValue,
+      issPortCtrlPauseFloodTraceOption
+         Integer32,
+      issPortCtrlSwitchModeType
+         INTEGER,
+      issPortCtrlSwitchModeStatus
+         INTEGER,
+      issPortCtrlInbandAutoNeg
+         INTEGER,
+      issPortCtrlBypassInbandAutoNeg
+         INTEGER,
+      issPortCtrlForceSpeed
+         INTEGER
 }
 
 issPortCtrlIndex OBJECT-TYPE 
@@ -2216,6 +2531,236 @@ issPortCtrlFlowControlMinRate OBJECT-TYPE
       alone be used."
    ::= { issPortCtrlEntry 14 }
 
+issPortCtrlPauseFloodProtect OBJECT-TYPE
+   SYNTAX      INTEGER {
+               enabled       (1),
+               disabled      (2)
+               }
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+       "This object is used to enable or disable the pause flood detection-only
+        or detection and protection feature on a port. The default behavior is
+        to have this feature disabled on a port. Enabling the feature avoid
+        resource exhaustion condition caused by pause frames/priority-based
+        pause frames"
+   DEFVAL  { disabled }
+   ::= { issPortCtrlEntry 15 }
+
+issPortCtrlPauseFloodMode OBJECT-TYPE
+   SYNTAX      INTEGER {
+               disabled       (1),
+               detectionOnly (2),
+               enabled        (3)
+               }
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+       "This object specifies the pause flood mode as disabled/detected-only/enabled
+
+       'disabled'       - In this mode, port is not monitored for pause flood condition.
+
+       'detectionOnly'  - In this mode, port is monitored for pause flood condition.
+       The port's pause flood status and statistics counters are updated. No protection
+       action is taken and no SNMP traps are generated. The port is allowed to
+       operate normally and the pause flood status is continually monitored and updated.
+
+       'enabled'        - In this mode, port is monitored for pause flood condition.
+       When pause flood condition is detected, protective action is taken by disabling
+       the administrator status of the port. The pause flood port status  will be
+       updated to indicate the existence of such a condition. The port remains in
+       disabled state until an  administrative action is taken."
+   DEFVAL  { disabled }
+   ::= { issPortCtrlEntry 16 }
+
+issPortCtrlPauseFloodStatus OBJECT-TYPE
+    SYNTAX      INTEGER {
+                normal (1),
+                detected (2),
+                blocked (3)
+                }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+    "This object specifies the pause flood status.
+
+    'normal'     - This status specifies that the pause flood condition has not
+                   been detected or the feature is disabled.
+
+    'detected'   - This status specifies that the pause flood condition being
+                   detected. This is applicable only when the pause flood mode
+                   is 'detection-only'.
+
+    'blocked'    - This status specifies the pause flood condition being detected
+                   and protective action taken. This is applicable only when
+                   the pause flood mode is 'enabled'"
+    ::= { issPortCtrlEntry 17 }
+
+issPortCtrlPauseFloodReset OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+    "This object is used to recover or re-eanble the pause-flood
+    detection-only/enabled condition.
+    Recovery action in Detection-only mode has to log every sampling and clear
+    the status and stats.
+
+    Recovery action in enabled mode has to recovers/re-enables a port
+    that was disabled due to the pause flood protective action."
+    DEFVAL  { false }
+    ::= { issPortCtrlEntry 18 }
+
+issPortCtrlPauseFloodStats OBJECT-TYPE
+    SYNTAX      Unsigned32
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+    "This object is used to hold the number of times the port entered pause flood condition."
+    ::= { issPortCtrlEntry 19 }
+
+issPortCtrlPauseFloodStatsClear OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+     "This object is used to clear the number of times the port entered pause flood condition."
+    DEFVAL  { false }
+    ::= { issPortCtrlEntry 20 }
+
+issPortCtrlPauseFloodTraceOption OBJECT-TYPE
+    SYNTAX         Integer32
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+     "This object is used to store the debug trace types that are enable by the user
+      for particular Interface. The bit positions of the traces is shown below.
+      Bit 0  - no trace
+      Bit 1  - init-shut
+      Bit 2  - mgmt
+      Bit 3  - sampling
+      Bit 4  - os resource
+      Bit 5  - entry
+      Bit 6  - exit"
+    DEFVAL  { 0 }
+    ::= { issPortCtrlEntry 21 }
+
+issPortCtrlSwitchModeType OBJECT-TYPE
+    SYNTAX    INTEGER {
+              cutThroughSameSpeed (1),
+              storeForward (2),
+              cutThroughSlowToFast (3),
+              cutThroughFastToSlow (4)
+    }
+    MAX-ACCESS     read-write
+    STATUS         current
+    DESCRIPTION
+       "This object is used to configure switching mode configuration
+        per port-level.
+
+        Switching mode can be configured only for physical ports.
+
+        When configured as StoreForward(2), the port operates in a
+        store-and-forward mode  and the switch checks each frame for
+        cyclic redundancy check (CRC) errors  before forwarding them
+        to the network. Each frame is  stored until the entire frame
+        has been received and  checked. Because the switch waits for
+        forwarding the frame until the entire frame has been received
+        and checked, the switching  speed in Store-Forward switching
+        mode is slower than  the switching speed  in Cut-Through
+        switching modes.
+
+        When configured any of the cut-through  modes, the switch
+        operates in Cut-Through switching mode and start forwarding
+        the  frame as soon as the  switch has read the  destination
+        details in the packet header. A switch in  Cut-Through mode
+        forwards  the data  before it has  completed receiving  the
+        entire frame. The switching  speed in Cut-Through  mode  is
+        faster than the switching speed in Store-Forward switching
+        mode.
+
+        Switching mode configuration:
+        CutThroughSameSpeed(1) : Cut-through forwarding between same speed
+                                 ports
+        StoreForward(2)        : Store and forward switching mode
+        CutThroughSlowToFast(3): Cut-through forwarding between slower to
+                                 faster speed ports.
+        CutThroughFastToSlow(4): Cut-through forwarding between faster to
+                                 slower speed ports.
+        NOTE:
+        Few platforms supports extended Cut-Through mode for ports with
+        mismatched speeds.(eg. slow-to-fast, fast-to-slow).
+        Platforms which doesn't support extended Cut-Through mode,
+        Cut-Through same speed shall be considered as Cut-Through
+        switching mode"
+    DEFVAL   { storeForward }
+    ::={ issPortCtrlEntry 22 }
+
+issPortCtrlSwitchModeStatus OBJECT-TYPE
+    SYNTAX    INTEGER {
+              cutThroughSameSpeed (1),
+              storeForward (2),
+              cutThroughSlowToFast (3),
+              cutThroughFastToSlow (4)
+    }
+    MAX-ACCESS    read-only
+    STATUS        current
+    DESCRIPTION
+       "This object is a read-only scalar MIB object to reflect the switching
+        mode configuration of the port in the hardware.
+
+        Switching mode configuration:
+        CutThroughSameSpeed(1) : Cut-through forwarding between same speed
+                                 ports
+        StoreForward(2)        : Store and forward switching mode
+        CutThroughSlowToFast(3): Cut-through forwarding between slower to
+                                 faster speed ports.
+        CutThroughFastToSlow(4): Cut-through forwarding between faster to
+                                 slower speed ports.
+        NOTE:
+        Few platforms supports extended Cut-Through mode for ports with
+        mismatched speeds.(eg. slow-to-fast, fast-to-slow).
+        Platforms which doesn't support extended Cut-Through mode,
+        Cut-Through same speed shall be considered as Cut-Through
+        switching mode"
+
+    ::={ issPortCtrlEntry 23 }
+
+issPortCtrlInbandAutoNeg OBJECT-TYPE
+    SYNTAX    INTEGER {
+              on(1),
+              off(2)
+    }
+    MAX-ACCESS    read-write
+    STATUS        current
+    DESCRIPTION
+       "This object is used to enable or disable the CPSS inband auto-negotiation.
+        This is required by certain 1G transceivers."
+    ::={ issPortCtrlEntry 24 }
+
+issPortCtrlBypassInbandAutoNeg OBJECT-TYPE
+    SYNTAX    INTEGER {
+              on(1),
+              off(2)
+    }
+    MAX-ACCESS    read-write
+    STATUS        current
+    DESCRIPTION
+       "This object is used to enable or disable the CPSS bypass inband auto-negotiation.
+        When this is enabled auto-negotiation may be bypassed when negotiating link if one side does not respond.
+        This is required by certain 1G transceivers."
+    ::={ issPortCtrlEntry 25 }
+
+issPortCtrlForceSpeed OBJECT-TYPE
+    SYNTAX    INTEGER {
+              on(1),
+              off(2)
+    }
+    MAX-ACCESS    read-write
+    STATUS        current
+    DESCRIPTION
+        "This object is used to detect manual speed settings on sfp ports."
+    ::={ issPortCtrlEntry 26 }
 -- ------------------------------------------------------------------ 
 -- Port Isolation Table 
 -- ------------------------------------------------------------------ 
@@ -2686,10 +3231,10 @@ issMirrorCtrlExtnSessionIndex OBJECT-TYPE
 issMirrorCtrlExtnMirrType OBJECT-TYPE
      SYNTAX       INTEGER{
                     portBased(1),
-                    mac-flowBased(2),
+                    macflowBased(2),
                     vlanBased(3),
                     invalid(4),
-                    ip-flowBased(5)
+                    ipflowBased(5)
      }
      MAX-ACCESS   read-write
      STATUS       current
@@ -4108,19 +4653,17 @@ IssSwitchFanEntry ::=
 
 issSwitchFanIndex       OBJECT-TYPE
     SYNTAX            Integer32 (1..5)
-    MAX-ACCESS        not-accessible
+    MAX-ACCESS        read-only
     STATUS            current
     DESCRIPTION
     "Indicates the fan number in the switch"
     ::= { issSwitchFanEntry 1 }
 
 issSwitchFanStatus     OBJECT-TYPE
-    SYNTAX    INTEGER {
-                  normal(1),
-                  faulty(2),
-                  critical(3),
-                  not-present(4)
-              }
+    SYNTAX      INTEGER {
+                up(1),
+                down(2)
+               }
     MAX-ACCESS      read-only
     STATUS          current
     DESCRIPTION
@@ -4338,6 +4881,17 @@ issLogTrapMessage NOTIFICATION-TYPE
          "This trap notifies  the erros on
           System Log file."
      ::= { issNotifications 10 }
+
+-- PAUSE FLOOD SNMP TRAP MESSAGE
+issPauseFloodSnmpTrapMessage NOTIFICATION-TYPE
+     OBJECTS      {
+                    issPortCtrlPauseFloodStatus
+                  }
+     STATUS       current
+     DESCRIPTION
+         "This object is used to notify the pause flood condition when the pause
+         flood mode is 'enabled'"
+     ::= { issNotifications 11 }
 
 issAclProvisionMode OBJECT-TYPE
    SYNTAX      INTEGER {
@@ -4562,179 +5116,7 @@ issHealthChkClearCtr    OBJECT-TYPE
 
     ::= { issHealthCheckGroup 5}
 
--- Zero touch provisioning related objects 
-issZtpConfigStatus OBJECT-TYPE
-    SYNTAX    INTEGER{
-              enabled(1),
-              disabled(2)
-              }
-     MAX-ACCESS  read-write
-     STATUS      current
-     DESCRIPTION
-                "Object to enable/disable ZTP in the system.
-                 The configuration will be updated in iss nvram file.
-                 It will take effect only in the next reload"
-     DEFVAL { disabled }
-     ::= { issZtp 1 }
-
-issZtpCurrentStatus OBJECT-TYPE
-    SYNTAX    INTEGER{
-              shutdown(1),
-              waiting(2),
-              download(3),
-              install(4),
-              reload(5),
-              complete(6),
-              error(7)}
-     MAX-ACCESS  read-only
-     STATUS      current
-     DESCRIPTION
-                "This object indicates the current status of ZTP operation in the switch."
-     DEFVAL { shutdown }
-     ::= { issZtp 2 }
-
--- Running config Related objects
-
-issRunConfigFileTransferMode  OBJECT-TYPE
-   SYNTAX     INTEGER {
-                tftp (1),
-                sftp  (2)
-              }
-   MAX-ACCESS read-write
-   STATUS     current
-   DESCRIPTION
-      "This object indicates the Transfer mode ,for downloading the  
-       configuration file in CLI command format"
-   DEFVAL  { 1 }       
-   ::= { issRunConfig 1 }
-
- issRunConfigIpAddrType    OBJECT-TYPE
-   SYNTAX      InetAddressType
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-   "This mib object specifies the address type of the remote system from which
-   the running configuration in CLI format has to be downloaded.The address type can be
-   IPv4 or IPv6 unicast address" 
-
-   ::= { issRunConfig 2 }
-
-issRunConfigIpAddr    OBJECT-TYPE
-   SYNTAX      InetAddress
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION 
-      "This mib object indicates the IP Address of the remote system from 
-      which the running configuration in CLI format has to be downloaded"
-
-   ::= { issRunConfig 3 }
-
-issRunConfigUserName OBJECT-TYPE
-    SYNTAX      DisplayString (SIZE(0..20))
-    MAX-ACCESS  read-write
-    STATUS      current
-    DESCRIPTION
-	"This mib object indicates the User name required for downloading 
-	running-config file in CLI command format. The user name is 
-	applicable when transfer mode is sftp. This object is 
-	not valid when Transfer Mode is selected as tftp"
 
 
-    ::= { issRunConfig 4 }
-
-issRunConfigPassword OBJECT-TYPE
-    SYNTAX      DisplayString (SIZE(0..20))
-    MAX-ACCESS  read-write
-    STATUS      current
-    DESCRIPTION
-	"This mib object indicates the Password required for downloading 
-	running-config file in CLI command format. This password is 
-	applicable when transfer mode is sftp. This object is 
-	not valid when Transfer Mode is selected as tftp"
-    ::= { issRunConfig 5 }
-
-issRunConfigFileName OBJECT-TYPE
-   SYNTAX      DisplayString (SIZE(1..128))
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION 
-      "This mib object indicates the Name of the running-config 
-       file to be downloaded from remote server."
-   ::= { issRunConfig 6 }
-
-issApplyConfigToRunningConfig  OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-       "When set as 'true' the configuration file in CLI command format is downloaded 
-       from remote tftp/sftp server. The configurations are applied on the switch and the value 
-       of this object reverts back to 'false'. 
-       This object is applicable only when the configuration restore type 
-       (issRestoreType) is CSR. This command is recommended to be used only when 
-       switch has just come up and no configurations are performed to the switch. 
-       When the switch is already running with some configurations, issuing 
-       this command may result in errors for the conflicting command.
-       Note: For uploading switch running configuration to remote tftp/sftp 
-       server the mib object 'issInitiateRunningConfig' should be used"
-       
-       DEFVAL  { false }
-   ::= { issRunConfig 7 }
-
-issConfigToRunningConfigStatus  OBJECT-TYPE
-   SYNTAX     INTEGER {
-              inprogress(1),
-              successful(2),
-              failed(3),
-              notInitiated(4)
-             }
-   MAX-ACCESS  read-only
-   STATUS      current
-   DESCRIPTION
-       "Status of applying CLI command configuration to the running configuration of the switch"
-
-   ::= { issRunConfig 8 }
-
-   issInitiateRunningConfig  OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-       "When set as 'true', the running configurations in the switch 
-        will be uploaded to the TFTP/SFTP server.
-        As soon as the running configurations upload operation is completed
-        in the chosen remote system, the value  of this object reverts back to 'false'."
-   DEFVAL  { false }
-   ::= { issRunConfig 9 }
-
-issCopyStartupConfig  OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-       "When set as 'true', the 'startup configuration file' in the switch
-        will be uploaded to the TFTP/SFTP server.
-        As soon as the upload operation is completed in the chosen remote system,
-        the value  of this object reverts back to 'false'. 
-        The objects such as issRunConfigIpAddr , issRunConfigFileName are 
-        used to configure the attributes required for the Copy Startup Config operation."
-   DEFVAL  { false }
-   ::= { issRunConfig 10 }
-
-issStartupToRunningConfig  OBJECT-TYPE
-   SYNTAX      TruthValue
-   MAX-ACCESS  read-write
-   STATUS      current
-   DESCRIPTION
-       "When set as 'true' the configuration file in CLI command format will be copied
-       from startup-config file to running-config.The configurations are applied 
-       on the switch and the value of this object reverts back to 'false'. 
-       This object is applicable only when the configuration restore type 
-       (issRestoreType) is CSR. This command is recommended to be used only when 
-       switch has just come up and no configurations are performed to the switch. 
-       When the switch is already running with some configurations, issuing 
-       this command may result in errors for the conflicting command. "
-   DEFVAL  { false }
-   ::= { issRunConfig 11 }
 
 END

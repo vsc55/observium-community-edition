@@ -96,76 +96,61 @@ if ($check_ports_vlans && safe_count($discovery_vlans)) { // Per port vlans walk
     shuffle($vlans); // Shuffle vlans, prevent vlan1 be first
     foreach ($vlans as $vlan_id) {
         /* Per port vlans */
-
         // /usr/bin/snmpbulkwalk -v2c -c kglk5g3l454@988  -OQUs  -m BRIDGE-MIB -M /opt/observium/mibs/ udp:sw2.ahf:161 dot1dStpPortEntry
         // /usr/bin/snmpbulkwalk -v2c -c kglk5g3l454@988  -OQUs  -m BRIDGE-MIB -M /opt/observium/mibs/ udp:sw2.ahf:161 dot1dBasePortEntry
 
-        // FIXME - do this only when vlan type == ethernet?
-        // Cisco IOS Vlans:
-        // 0, 4095   For system use only. You cannot see or use these VLANs.
-        // 1002-1005 Cisco defaults for FDDI and Token Ring. You cannot delete VLANs 1002-1005
-        if (is_numeric($vlan_id) &&
-            $vlan_id != 4095 && ($vlan_id < 1002 || $vlan_id > 1005)) { // Ignore reserved VLAN IDs
-            $vlan_data = [];
-
-            // Vlan specific context
-            if ($device['snmp_version'] === 'v3') {
-                $context = 'vlan-' . $vlan_id;
-            } else {
-                $context = $vlan_id;
-            }
-
-            $context_valid = snmp_virtual_exist($device, $context);
-            if ($context_valid) {
-                $device_context = $device;
-                // Add vlan context for snmp auth
-                $device_context['snmp_context'] = $context;
-                // Set retries to 1 for speedup walking
-                //$device_context['snmp_retries'] = 1;
-
-                $vlan_data = snmpwalk_cache_oid($device_context, "dot1dBasePortIfIndex", $vlan_data, "BRIDGE-MIB");
-                if (snmp_status()) {
-                    // FIXME. disable STP by default?
-                    $vlan_data = snmpwalk_cache_oid($device_context, "dot1dStpPortEntry", $vlan_data, "BRIDGE-MIB:Q-BRIDGE-MIB");
-                    //$vlan_data = snmpwalk_cache_oid($device_context, "dot1dStpPortPriority", $vlan_data, "BRIDGE-MIB:Q-BRIDGE-MIB");
-                    //$vlan_data = snmpwalk_cache_oid($device_context, "dot1dStpPortState", $vlan_data, "BRIDGE-MIB:Q-BRIDGE-MIB");
-                    //$vlan_data = snmpwalk_cache_oid($device_context, "dot1dStpPortPathCost", $vlan_data, "BRIDGE-MIB:Q-BRIDGE-MIB");
-                }
-                unset($device_context);
-
-                // At this point vlan context is validated and exist
-                $discovery_vlans[$vtp_domain_index][$vlan_id]['vlan_context'] = 1;
-            } elseif ($context_valid === FALSE &&
-                !snmp_virtual_exist($device, $context, 'dot1dBaseNumPorts')) {
-                // dot1dBaseBridgeAddress.0 = 0:0:0:0:0:0
-                // dot1dBaseNumPorts.0 = 0
-                // dot1dBaseType.0 = transparent-only
-
-                print_debug("VLANs context failed, loop stopped.");
-
-                // Stop loop for other vlans
-                break;
-            }
-
-            if ($vlan_data) {
-                print_debug(str_pad("dot1d id", 10) . str_pad("ifIndex", 10) . str_pad("Port Name", 25) .
-                            str_pad("Priority", 10) . str_pad("State", 15) . str_pad("Cost", 10));
-            }
-
-            foreach ($vlan_data as $vlan_port_id => $vlan_port) {
-                $ifIndex = $vlan_port['dot1dBasePortIfIndex'];
-                $discovery_ports_vlans[$ifIndex][$vlan_id] = [
-                    'vlan'     => $vlan_id,
-                    // FIXME. move STP to separate table
-                    'baseport' => $vlan_port_id,
-                    'priority' => $vlan_port['dot1dStpPortPriority'],
-                    'state'    => $vlan_port['dot1dStpPortState'],
-                    'cost'     => $vlan_port['dot1dStpPortPathCost']
-                ];
-            }
-        } else {
+        // Set per-VLAN context
+        $device_context = get_device_vlan_context($device, $vlan_id);
+        if (!$device_context) {
+            // Cisco IOS Vlans:
+            // 0, 4095   For system use only. You cannot see or use these VLANs.
+            // 1002-1005 Cisco defaults for FDDI and Token Ring. You cannot delete VLANs 1002-1005
             unset($module_stats[$vlan_id]);
+            continue;
         }
+        // Set retries to 1 for speedup walking
+        //$device_context['snmp_retries'] = 1;
+
+        $vlan_data = [];
+
+        // Vlan specific context
+        $context = $device_context['snmp_context'];
+
+        $context_valid = snmp_virtual_exist($device, $context);
+        if ($context_valid) {
+
+            // Only need basePort->ifIndex mapping for VLAN membership
+            $vlan_data = snmpwalk_cache_oid($device_context, "dot1dBasePortIfIndex", $vlan_data, "BRIDGE-MIB");
+            // STP data collection removed - now handled by dedicated STP module
+            unset($device_context);
+
+            // At this point vlan context is validated and exist
+            $discovery_vlans[$vtp_domain_index][$vlan_id]['vlan_context'] = 1;
+        } elseif ($context_valid === FALSE &&
+            !snmp_virtual_exist($device, $context, 'dot1dBaseNumPorts')) {
+            // dot1dBaseBridgeAddress.0 = 0:0:0:0:0:0
+            // dot1dBaseNumPorts.0 = 0
+            // dot1dBaseType.0 = transparent-only
+
+            print_debug("VLANs context failed, loop stopped.");
+
+            // Stop loop for other vlans
+            break;
+        }
+
+        if ($vlan_data) {
+            print_debug(str_pad("dot1d id", 10) . str_pad("ifIndex", 10) . str_pad("Port Name", 25) .
+                        str_pad("Priority", 10) . str_pad("State", 15) . str_pad("Cost", 10));
+        }
+
+        foreach ($vlan_data as $vlan_port) {
+            $ifIndex = $vlan_port['dot1dBasePortIfIndex'];
+            $discovery_ports_vlans[$ifIndex][$vlan_id] = [
+                'vlan' => $vlan_id
+                // STP data moved to separate stp_* tables
+            ];
+        }
+
         /* End per port vlans */
     }
 }

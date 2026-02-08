@@ -27,6 +27,7 @@ $cbgp_defs = [ 'PeerAcceptedPrefixes', 'PeerDeniedPrefixes', 'PeerPrefixAdminLim
 $local_as_array = get_bgp_localas_array($device);
 
 $vendor_mib    = FALSE; // CLEANME. Clear after full rewrite to definitions.
+$vendor_counters_vrf = [];
 $bgpVrfLocalAs = [];
 foreach ($local_as_array as $entry) {
 
@@ -109,15 +110,19 @@ $polled = time();
 
 if (OBS_DEBUG > 1) {
     print_vars($bgp_peers);
-    print_vars($cisco_peers);
-    print_vars($vendor_peers);
+    if (!safe_empty($cisco_peers)) {
+        print_vars($cisco_peers);
+        print_vars($cbgp2_peers);
+    }
+    if (!safe_empty($vendor_peers)) {
+        print_vars($vendor_peers);
+        print_vars($vendor_peers);
+    }
     print_vars($p_list);
     print_vars($af_list);
 }
 
-$sql = 'SELECT * FROM `bgpPeers` WHERE `device_id` = ?';
-
-foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
+foreach (dbFetchRows('SELECT * FROM `bgpPeers` WHERE `device_id` = ?', [ $device['device_id'] ]) as $peer) {
     $peer_as   = $peer['bgpPeerRemoteAs'];
     $peer_ip   = $peer['bgpPeerRemoteAddr'];
     $remote_ip = ip_compress($peer_ip); // Compact IPv6. Used only for log.
@@ -185,19 +190,19 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
     print_debug("[ polled $polled -> period $polled_period ]");
 
     rrdtool_update_ng($device, 'bgp', [
-      'bgpPeerOutUpdates'  => $bgpPeerOutUpdates,
-      'bgpPeerInUpdates'   => $bgpPeerInUpdates,
-      'bgpPeerOutTotal'    => $bgpPeerOutTotalMessages,
-      'bgpPeerInTotal'     => $bgpPeerInTotalMessages,
-      'bgpPeerEstablished' => $bgpPeerFsmEstablishedTime,
-    ],                $peer_ip);
+        'bgpPeerOutUpdates'  => $bgpPeerOutUpdates,
+        'bgpPeerInUpdates'   => $bgpPeerInUpdates,
+        'bgpPeerOutTotal'    => $bgpPeerOutTotalMessages,
+        'bgpPeerInTotal'     => $bgpPeerInTotalMessages,
+        'bgpPeerEstablished' => $bgpPeerFsmEstablishedTime,
+    ], $peer_ip);
 
     //$graphs['bgp_updates'] = TRUE; // not a device graph
 
     // Update states
     $peer['update'] = [];
     //foreach (array('bgpPeerState', 'bgpPeerAdminStatus', 'bgpPeerLocalAddr', 'bgpPeerIdentifier') as $oid)
-    foreach (['bgpPeerState', 'bgpPeerAdminStatus'] as $bgp_oid) {
+    foreach ([ 'bgpPeerState', 'bgpPeerAdminStatus' ] as $bgp_oid) {
         if ($$bgp_oid != $peer[$bgp_oid]) {
             $peer['update'][$bgp_oid] = $$bgp_oid;
         }
@@ -209,14 +214,14 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
     //}
 
     $check_metrics = [
-      'bgpPeerState'              => $bgpPeerState,
-      'bgpPeerChange'             => $bgpPeerChange,
-      'bgpPeerAdminStatus'        => $bgpPeerAdminStatus,
-      'bgpPeerFsmEstablishedTime' => $bgpPeerFsmEstablishedTime
+        'bgpPeerState'              => $bgpPeerState,
+        'bgpPeerChange'             => $bgpPeerChange,
+        'bgpPeerAdminStatus'        => $bgpPeerAdminStatus,
+        'bgpPeerFsmEstablishedTime' => $bgpPeerFsmEstablishedTime
     ];
 
     // Update metrics
-    $metrics = ['bgpPeerInUpdates', 'bgpPeerOutUpdates', 'bgpPeerInTotalMessages', 'bgpPeerOutTotalMessages'];
+    $metrics = [ 'bgpPeerInUpdates', 'bgpPeerOutUpdates', 'bgpPeerInTotalMessages', 'bgpPeerOutTotalMessages' ];
     foreach ($metrics as $oid) {
         $peer['update'][$oid] = $$oid;
         if (isset($peer[$oid]) && $peer[$oid] != "0") {
@@ -265,9 +270,17 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
 
     if ($cisco_version || $vendor_mib) {
 
+        // Set the correct vendor counters array per vrf
+        if ($vendor_mib) {
+            //$vrf_name = $peer['virtual_name'] ?: '';
+            $vendor_counters = $vendor_counters_vrf[$peer['virtual_name']];
+        } else {
+            $vendor_counters = [];
+        }
+
         // Check each AFI/SAFI for this peer
         $query_afis = 'SELECT * FROM `bgpPeers_cbgp` WHERE `device_id` = ? AND `bgpPeer_id` = ?';
-        foreach (dbFetchRows($query_afis, [$device['device_id'], $peer['bgpPeer_id']]) as $peer_afi) {
+        foreach (dbFetchRows($query_afis, [ $device['device_id'], $peer['bgpPeer_id'] ]) as $peer_afi) {
             $afi  = $peer_afi['afi'];
             $safi = $peer_afi['safi'];
             print_debug("$afi $safi");
@@ -284,7 +297,7 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
 
                 // Missing: cbgpPeerAdminLimit cbgpPeerPrefixThreshold cbgpPeerPrefixClearThreshold cbgpPeerSuppressedPrefixes cbgpPeerWithdrawnPrefixes
 
-                // See posible AFI/SAFI here: https://www.juniper.net/techpubs/en_US/junos12.3/topics/topic-map/bgp-multiprotocol.html
+                // See possible AFI/SAFI here: https://www.juniper.net/techpubs/en_US/junos12.3/topics/topic-map/bgp-multiprotocol.html
                 $afi_num  = is_numeric($afi) ? $afi : $config['routing_afis_name'][$afi];
                 $safi_num = is_numeric($safi) ? $safi : $config['routing_safis_name'][$safi];
 
@@ -349,21 +362,21 @@ foreach (dbFetchRows($sql, [$device['device_id']]) as $peer) {
 
             // Update RRD
             rrdtool_update_ng($device, 'cbgp', [
-              'AcceptedPrefixes'   => $cbgpPeerAcceptedPrefixes,
-              'DeniedPrefixes'     => $cbgpPeerDeniedPrefixes,
-              'AdvertisedPrefixes' => $cbgpPeerAdvertisedPrefixes,
-              'SuppressedPrefixes' => $cbgpPeerSuppressedPrefixes,
-              'WithdrawnPrefixes'  => $cbgpPeerWithdrawnPrefixes,
-            ],                $peer_ip . ".$afi.$safi");
+                'AcceptedPrefixes'   => $cbgpPeerAcceptedPrefixes,
+                'DeniedPrefixes'     => $cbgpPeerDeniedPrefixes,
+                'AdvertisedPrefixes' => $cbgpPeerAdvertisedPrefixes,
+                'SuppressedPrefixes' => $cbgpPeerSuppressedPrefixes,
+                'WithdrawnPrefixes'  => $cbgpPeerWithdrawnPrefixes,
+            ], $peer_ip . ".$afi.$safi");
 
             //$graphs['bgp_prefixes_'.$afi.$safi] = TRUE; // Not a device graph
 
             $check_metrics = [
-              'AcceptedPrefixes'   => $cbgpPeerAcceptedPrefixes,
-              'DeniedPrefixes'     => $cbgpPeerDeniedPrefixes,
-              'AdvertisedPrefixes' => $cbgpPeerAdvertisedPrefixes,
-              'SuppressedPrefixes' => $cbgpPeerSuppressedPrefixes,
-              'WithdrawnPrefixes'  => $cbgpPeerWithdrawnPrefixes
+                'AcceptedPrefixes'   => $cbgpPeerAcceptedPrefixes,
+                'DeniedPrefixes'     => $cbgpPeerDeniedPrefixes,
+                'AdvertisedPrefixes' => $cbgpPeerAdvertisedPrefixes,
+                'SuppressedPrefixes' => $cbgpPeerSuppressedPrefixes,
+                'WithdrawnPrefixes'  => $cbgpPeerWithdrawnPrefixes
             ];
 
             check_entity('bgp_peer_af', $peer_afi, $check_metrics);
@@ -393,9 +406,14 @@ if (!safe_empty($table_rows)) {
 
 }
 
-foreach ($p_list as $peer_ip => $entry) {
-    // Check if new peers found
-    $force_discovery = $force_discovery || !empty($entry);
+if (!$force_discovery) {
+    foreach ($p_list as $peer_ip => $entry) {
+        // Check if new peers found
+        if (!empty($entry) && get_ip_type($peer_ip) !== 'unspecified') {
+            $force_discovery = TRUE;
+            break;
+        }
+    }
 }
 
 if ($snmp_incomplete) {
@@ -409,6 +427,6 @@ if ($snmp_incomplete) {
 }
 
 // Clean
-unset($bgp_peers, $vendor_peers, $vendor_mib, $cisco_version, $cisco_peers, $af_list, $def, $c_table_rows);
+unset($bgp_peers, $vendor_peers, $vendor_mib, $vendor_counters_vrf, $cisco_version, $cisco_peers, $af_list, $def, $c_table_rows);
 
 // EOF

@@ -1,7 +1,5 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved.
 
--- $Id: fslldp.mib,v 1.20 2016/07/02 10:01:02 siva Exp $
-
 -- LLDP Proprietary MIB Definition  
 -- This MIB contains tables used to configure a switch running 
 -- LLDP in addition to the standard MIB.
@@ -9,11 +7,12 @@
     ARICENT-LLDP-MIB DEFINITIONS ::= BEGIN 
  
     IMPORTS 
-      MODULE-IDENTITY, OBJECT-TYPE, enterprises, Integer32, NOTIFICATION-TYPE,
-      Counter32
+      MODULE-IDENTITY, OBJECT-TYPE, enterprises, Integer32, NOTIFICATION-TYPE, Counter32
           FROM SNMPv2-SMI
       ZeroBasedCounter32
           FROM RMON2-MIB
+      InterfaceIndex
+          FROM IF-MIB
       DisplayString, MacAddress, RowStatus, TruthValue
           FROM SNMPv2-TC
       lldpLocPortNum, lldpRemChassisId, lldpRemPortId,
@@ -34,19 +33,40 @@
       lldpV2StatsTxPortEntry
         FROM LLDP-V2-MIB
       InetAddressIPv4 , InetAddressIPv6 
-        FROM INET-ADDRESS-MIB
-      InterfaceIndex
-        FROM IF-MIB;
+        FROM INET-ADDRESS-MIB;
  
       fslldp MODULE-IDENTITY 
-         LAST-UPDATED "201209050000Z" 
+         LAST-UPDATED "202303270000Z" 
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
          CONTACT-INFO "support@aricent.com" 
          DESCRIPTION 
             "The proprietary MIB module for LLDP." 
+
+	 REVISION "202303270000Z"
+         DESCRIPTION  
+            "Support for per-port Mgmt-Addr basic TLV Tx
+            control independent of specific management
+            addresses. Updates default Mgmt-Addr TLV Tx
+            status to 'enabled'."
+
+	 REVISION "202108100000Z"
+         DESCRIPTION  
+            "Support for LLDP-MED automatic VoIP device
+            configuration defined."
+
+	 REVISION "202012290000Z"
+         DESCRIPTION  
+            "Support for LLDP neighbor expiration PoE
+            reset defined."
+
+	 REVISION "201909180000Z"
+         DESCRIPTION  
+            "Added Cambium LLDP interface label support."
+
 	 REVISION "201209050000Z"
          DESCRIPTION  
             "The proprietary MIB module for LLDP."
+
          ::=  { enterprises futuresoftware (2076) 158 } 
   
 -- ------------------------------------------------------------  
@@ -127,19 +147,17 @@
              For example, to enable
                  - Init and Shutdown traces
                  - Management traces
-                 - Neighbor delete traces
                  - LLDP Port-descr TLV traces and
                  - LLDP Power-via-mdi TLV traces
              The input string is,
-             enable init-shut mgmt neigh-del port-descr pwr-mdi
+             enable init-shut mgmt port-descr pwr-mdi
              For example to disable 
                  - Init and Shutdown traces
                  - Management traces
-                 - Neighbor delete traces
                  - LLDP Port-descr TLV traces and
                  - LLDP Power-via-mdi TLV traces
              The input string is,
-             disable init-shut mgmt neigh-del port-descr pwr-mdi
+             disable init-shut mgmt port-descr pwr-mdi
              first value should be either enable or disable.
 
              The entered input string is parsed to get the trace options. 
@@ -159,17 +177,9 @@
              buf             - Buffer allocation/
                                release traces          
 
-             neigh-add       - Neighbor add traces
-             neigh-del       - Neighbor delete traces
-             neigh-updt      - Neighbor update traces
-             neigh-drop      - Neighbor drop traces
-             neigh-ageout    - Neighbor ageout traces
              critical        - LLDP Critical traces
              redundancy      - LLDP Redundancy traces
-             chassis-id      - LLDP Chassis-id TLV traces
-                 
-             port-id         - LLDP Port-id TLV trace
-             ttl             - LLDP Ttl TLV trace
+             mandatory-tlv   - LLDP Mandatory TLV traces
              port-descr      - LLDP Port-descr TLV traces
              sys-name        - LLDP Sys-name TLV traces
              sys-descr       - LLDP Sys-descr TLV traces
@@ -183,6 +193,11 @@
              mac-phy         - LLDP Mac-phy TLV traces
              pwr-mdi         - LLDP Power-via-mdi TLV traces
              lagg            - LLDP Link-agg TLV traces 
+             med-capability  - LLDP MED Capability TLV traces
+             network-policy  - LLDP MED Network Policy TLV traces
+             inventory-management - LLDP MED Inventory TLV traces
+             location-id     - LLDP MED Location ID TLV traces
+             ex-power-mdi    - LLDP MED Entended Power Via MDI TLV traces
              max-frame       - LLDP Max-frame-size TLV traces
              -               - Reserved
 
@@ -208,17 +223,17 @@
              Bit 6  - all-fail
              Bit 7  - buf
 
-             Bit 8  - neigh-add
-             Bit 9  - neigh-del
-             Bit 10 - neigh-updt
-             Bit 11 - neigh-drop
-             Bit 12 - neigh-ageout
+             Bit 8  - inventory-management
+             Bit 9  - vid-digest
+             Bit 10 - mgmt-vid
+             Bit 11 - med-capability
+             Bit 12 - network-policy
              Bit 13 - critical
              Bit 14 - redundancy
-             Bit 15 - chassis-id
+             Bit 15 - mandatory-tlv
 
-             Bit 16 - port-id
-             Bit 17 - ttl
+             Bit 16 - location-id
+             Bit 17 - ex-power-mdi
              Bit 18 - port-descr
              Bit 19 - sys-name
              Bit 20 - sys-descr
@@ -328,6 +343,27 @@
               " 
           ::= { fsLldpSystem 8 }
 
+  fsLldpInterfaceLabel OBJECT-TYPE
+          SYNTAX      INTEGER { 
+                          disabled(1),
+                          lldpSystemName(2),
+                          lldpSystemDescription(3),
+                          lldpChassisId(4) 
+                      }
+          MAX-ACCESS  read-write
+          STATUS      current
+          DESCRIPTION
+              "When this attribute is not disabled, ingress LLDPDU
+               processing will attempt to update the interface
+               description for the ingress interface. The description
+               is set based on the current value of this attribute.
+
+               The interface label is not updated if a static label
+               or a dynamic PBA label has already been assigned."
+
+          DEFVAL  { lldpSystemName }
+          ::= { fsLldpSystem 9 }
+
 -- ------------------------------------------------------------------ 
 -- The LLDP TLV Group 
 -- ------------------------------------------------------------------ 
@@ -372,41 +408,55 @@
       REFERENCE
          "IEEE 802.1AB-2005 9.5.2.3"
          ::= { fsLldpTLV 2}
-fsLldpLocPortTable OBJECT-TYPE
-	SYNTAX SEQUENCE OF FsLldpLocPortEntry
-	MAX-ACCESS         not-accessible
-	STATUS             current
+
+     fsLldpLocPortTable OBJECT-TYPE
+        SYNTAX         SEQUENCE OF FsLldpLocPortEntry
+	MAX-ACCESS     not-accessible
+	STATUS         current
 	DESCRIPTION
   	  "This table contains one or more rows per port information
  	  associated with the local system known to this agent."
+
 	::= { fsLldpTLV 3 }
 
      fsLldpLocPortEntry OBJECT-TYPE
-	SYNTAX             FsLldpLocPortEntry
-	MAX-ACCESS         not-accessible
-	STATUS             current
+        SYNTAX         FsLldpLocPortEntry
+        MAX-ACCESS     not-accessible
+        STATUS         current
 	DESCRIPTION
   	  "Information about a particular port component.
 	  Entries may be created and deleted in this table by the
    	  agent."
+
 	INDEX {lldpLocPortNum }
 	::= { fsLldpLocPortTable 1 }
 
      FsLldpLocPortEntry ::= SEQUENCE {
-	fsLldpLocPortIdSubtype INTEGER,
-	fsLldpLocPortId        OCTET STRING,
-        fsLldpPortConfigNotificationType       INTEGER,
-        fsLldpLocPortDstMac    MacAddress,
-        fsLldpMedAdminStatus  INTEGER
-	}
+	fsLldpLocPortIdSubtype            INTEGER,
+	fsLldpLocPortId                   OCTET STRING,
+        fsLldpPortConfigNotificationType  INTEGER,
+        fsLldpLocPortDstMac               MacAddress,
+        fsLldpMedAdminStatus              INTEGER,
+        fsLldpLocPortExpReset             INTEGER,
+        fsLldpLocPortExpResetCount        Counter32,
+        fsLldpLocPortAutoMedVoiceDisc     INTEGER,
+        fsLldpLocPortMgmtAddrTlvTx        INTEGER
+     }
 	
      fsLldpLocPortIdSubtype OBJECT-TYPE
-	SYNTAX         INTEGER {ifalias(1), portcomp(2), macaddr(3), nwaddr(4), 
-                                ifname(5), agentcircuitid(6), local(7) }
-	MAX-ACCESS     read-write
+        SYNTAX         INTEGER {
+                           ifalias(1), 
+                           portcomp(2), 
+                           macaddr(3), 
+                           nwaddr(4), 
+                           ifname(5), 
+                           agentcircuitid(6), 
+                           local(7) 
+                       }
+        MAX-ACCESS     read-write
 	STATUS         current
 	DESCRIPTION
-     	  "The type of port identifier encoding used to identify the port 
+          "The type of port identifier encoding used to identify the port 
           component associated with the local port.
 
           When port id subtype is configured as portcomp/local it is mandatory
@@ -418,37 +468,40 @@ fsLldpLocPortTable OBJECT-TYPE
           ifname/agentcircuitid it is not required to configure fsLldpLocPortId
           object. System specific values are used for setting fsLldpLocPortId
           object."
+
         REFERENCE
  	  "IEEE Std 802.1AB-2005 9.5.3.2"
         DEFVAL  { ifalias }
 	::= { fsLldpLocPortEntry 1 }
 
      fsLldpLocPortId OBJECT-TYPE
-	SYNTAX         OCTET STRING (SIZE (1..255))
+        SYNTAX         OCTET STRING (SIZE (1..255))
 	MAX-ACCESS     read-write
 	STATUS         current
 	DESCRIPTION
           "The string value used to identify the port component associated 
-    with the local port.
+          with the local port.
 
-    Write operation to this object is allowed only when the port id 
-    subtype is configured as portcomp/local.
+          Write operation to this object is allowed only when the port id 
+          subtype is configured as portcomp/local.
 
-    When port id subtype is configured as ifalias/macaddr/nwaddr/ifname/
-    agentcircuitid, system specific values are used and hence write operation to this 
-    object is not allowed."
+          When port id subtype is configured as ifalias/macaddr/nwaddr/ifname/ 
+          agentcircuitid, system specific values are used and hence write 
+          operation to this object is not allowed."
+
 	REFERENCE
    	  "IEEE Std 802.1AB-2005 9.5.3.3"
 	::= { fsLldpLocPortEntry 2 }
-      fsLldpPortConfigNotificationType       OBJECT-TYPE
-      SYNTAX      INTEGER  {
-                             remTabChg (1), 
-                             misCfg(2),
-                             remTabChgAndMisCfg(3)
-      } 
-      MAX-ACCESS  read-write
-      STATUS      current
-      DESCRIPTION
+
+     fsLldpPortConfigNotificationType OBJECT-TYPE
+        SYNTAX         INTEGER {
+                           remTabChg (1), 
+                           misCfg(2),
+                           remTabChgAndMisCfg(3)
+                       } 
+        MAX-ACCESS     read-write
+        STATUS         current
+        DESCRIPTION
              "This object is used to set the notification type. 
     
               If the associated fsLldpNotificationType object has a value of  
@@ -469,35 +522,113 @@ fsLldpLocPortTable OBJECT-TYPE
               fsLldpNotificationType Object is valid when 
               lldpPortConfigNotificationEnable object is true."
 
-       DEFVAL  { misCfg }
+        DEFVAL  { misCfg }
 	::= { fsLldpLocPortEntry 3 }
    
      fsLldpLocPortDstMac OBJECT-TYPE
-	SYNTAX         MacAddress
+        SYNTAX         MacAddress
 	MAX-ACCESS     read-write
 	STATUS         current
 	DESCRIPTION
           "The MAC address to be used as destination MAC for the LLDP agent.
            The default value would be the LLDP multicast MAC address."
 
-       DEFVAL  { '0180C200000E'h  }
+        DEFVAL  { '0180C200000E'h  }
 	::= { fsLldpLocPortEntry 4 }
 
-      fsLldpMedAdminStatus OBJECT-TYPE 
-          SYNTAX      INTEGER  { enabled(1), disabled(2) } 
-          MAX-ACCESS  read-write
-          STATUS      current 
-          DESCRIPTION 
-              "This object is used to enable or disable the LLDP-MED functionality in 
-              particular port. A value of 'enabled' (1) indicates that 
-              LLDP-MED functionality is enabled on the port. A value of 'disabled' (2) 
-              indicates that LLDP-MED functionality is disabled in the port."
+     fsLldpMedAdminStatus OBJECT-TYPE 
+        SYNTAX         INTEGER { 
+                           enabled(1), 
+                           disabled(2) 
+                       } 
+        MAX-ACCESS     read-write
+        STATUS         current 
+        DESCRIPTION 
+          "This object is used to enable or disable the LLDP-MED functionality in 
+          particular port. A value of 'enabled' (1) indicates that 
+          LLDP-MED functionality is enabled on the port. A value of 'disabled' (2) 
+          indicates that LLDP-MED functionality is disabled in the port."
               
-       DEFVAL  { disabled }
-       ::= { fsLldpLocPortEntry 5 }
+        DEFVAL  { disabled }
+        ::= { fsLldpLocPortEntry 5 }
 
+     fsLldpLocPortExpReset OBJECT-TYPE 
+        SYNTAX         INTEGER { 
+                           enabled(1), 
+                           disabled(2) 
+                       } 
+        MAX-ACCESS     read-write
+        STATUS         current 
+        DESCRIPTION 
+          "This object supports enabling/disabling automatic port PoE
+          reset upon LLDP neighbor data expiration. When enabled, neighbor
+          expiration causes the PoE administrative state to be toggled 
+          (disabled/enabled) for the port. This action only occurs if 
+          the port is a PoE port and the administrative state is enabled."
+
+        DEFVAL  { disabled }
+        ::= { fsLldpLocPortEntry 6 }
+
+     fsLldpLocPortExpResetCount OBJECT-TYPE 
+        SYNTAX         Counter32
+        MAX-ACCESS     read-only
+        STATUS         current 
+        DESCRIPTION 
+          "Increments each time the PoE administrative state is toggled 
+          (disabled/enabled) for the port based on LLDP neighbor data
+          expiration."
+              
+        ::= { fsLldpLocPortEntry 7 }
+
+     fsLldpLocPortAutoMedVoiceDisc OBJECT-TYPE 
+        SYNTAX         INTEGER { 
+                           enabled(1), 
+                           disabled(2) 
+                       } 
+        MAX-ACCESS     read-write
+        STATUS         current 
+        DESCRIPTION 
+          "This object supports enabling/disabling automatic
+          LLDP-MED VoIP device discovery processing. When
+          enabled, received LLDP-MED data is examined to
+          determine if automated voice VLAN-related settings
+          should be dynamically updated based on configured
+          voice VLAN attribute values.
+
+          The 'enabled(1)' setting indicates that automatic
+          LLDP-MED VoIP device discovery is currently enabled.
+
+          The 'disabled(2)' setting indicates that automatic
+          LLDP-MED VoIP device discovery is currently disabled."
+
+        DEFVAL  { enabled }
+        ::= { fsLldpLocPortEntry 8 }
+
+     fsLldpLocPortMgmtAddrTlvTx OBJECT-TYPE 
+        SYNTAX         INTEGER { 
+                           enabled(1), 
+                           disabled(2) 
+                       } 
+        MAX-ACCESS     read-write
+        STATUS         current 
+        DESCRIPTION 
+          "This object supports enabling/disabling Mgmt-Addr basic 
+          TLV transmission on a per-port basis independent of 
+          specific management addresses. When enabled, configured
+          management addresses are marked for inclusion in the
+          port's generated LLDPDU. When disabled, configured
+          management addresses are not included in the port's
+          generated LLDPDU. The lldpConfigManAddrPortsTxEnable
+          object is updated to indicate the current status
+          for each current management address."
+
+        DEFVAL  { enabled }
+        ::= { fsLldpLocPortEntry 9 }
+
+--
 -- fsLldpManAddrConfigTable : Management address related objects
 -- 
+
 fsLldpManAddrConfigTable OBJECT-TYPE
     SYNTAX      SEQUENCE OF FslldpManAddrConfigEntry
     MAX-ACCESS  not-accessible
@@ -915,9 +1046,9 @@ fsLldpManAddrConfigOperStatus OBJECT-TYPE
        is active."
      ::= { fslldpv2ConfigPortMapEntry 4  }
 
---
+----
 -- lldpV2DestAddressTable: Destination MAC addresses used by LLDP
---
+----
 
     fslldpV2DestAddressTable   OBJECT-TYPE
     SYNTAX      SEQUENCE OF FsLldpV2DestAddressTableEntry

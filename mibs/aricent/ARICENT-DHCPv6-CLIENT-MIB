@@ -1,7 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsdh6c.mib,v 1.9 2013/12/18 12:10:57 siva Exp $
-
 ARICENT-DHCPv6-CLIENT-MIB DEFINITIONS ::= BEGIN
 -- ******************************************************************
 -- RFC-3736 Stateless DHCPv6 Client MIB
@@ -216,7 +214,7 @@ fsDhcp6ClntTrapAdminControl OBJECT-TYPE
         the SNMP trap notification will come only when bit 2 fsDhcp6ClntTrapAdminControl 
         is set.
         "
-    DEFVAL { "\0" }
+    DEFVAL { { none } }
     ::= { fsDhcp6ClntSystem 1 }
 
 fsDhcp6ClntDebugTrace OBJECT-TYPE

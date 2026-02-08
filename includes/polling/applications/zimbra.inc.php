@@ -1,12 +1,11 @@
 <?php
-
 /**
  * Observium
  *
  *   This file is part of Observium.
  *
- * @package        observium
- * @subpackage     poller
+ * @package    observium
+ * @subpackage poller
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -70,8 +69,9 @@ if (!empty($agent_data['app']['zimbra'])) {
         04/24/2013 00:23:23,1,6506,1,1,6506,81,0.32098765432098764,1,0.0,1,36.0,84,0.0,100.0,50.0,34.59119496855346,0,0.0,138,10.405797101449275,0,0.0,0.0,0,0,0.0,0.0,0.0,0,0.0,0,0.0,1,0.0,0,1000,0,1,0,1,0,0,1,1,24,3,2,18,2,132,2000,1000,96.99490867673337,99.73302998524733,133,99.78571547607365,1,99.02449324324324,7,99.24445818173449,1,99.99996904482866,0,0.0,28,57.52625437572929,31,67.36491311592478,0,0.0,29250,487518,1382,103802,29250,487518,1382,103802,26258688,480000,83049792,24429248,13369344,0,216226736,186426448,125015776,9201952,312645872,210855696
         */
 
+        $mailboxd_count = safe_count($zimbra['mailboxd']);
         foreach (array_keys($zimbra['mailboxd'][0]) as $key) {
-            for ($line = 0; $line < count($zimbra['mailboxd']); $line++) {
+            for ($line = 0; $line < $mailboxd_count; $line++) {
                 // zmstat writes these CSV files every 30 seconds. The agent passes us the 10 last values, so we have the full 5 minute range.
                 // some of the variables should be added up to reach the total, but for most (gauges) we just want the latest value.
                 switch ($key) {
@@ -276,13 +276,14 @@ if (!empty($agent_data['app']['zimbra'])) {
             */
 
             $rrd_filename = "app-zimbra-proto-$protocol.rrd";
-            unset($rrd_values, $commands, $ds_list);
+            unset($commands, $ds_list);
 
             foreach ($zimbra[$protocol] as $line) {
                 $commands[$line['command']]['exec_count']   = $line['exec_count'];
                 $commands[$line['command']]['exec_msg_avg'] = $line['exec_ms_avg'];
             }
 
+            $rrd_values = [];
             foreach ($commandlist[$protocol] as $command) {
                 foreach (['exec_count', 'exec_ms_avg'] as $key) {
                     $rrd_values[] = (is_numeric($commands[$command][$key]) ? $commands[$command][$key] : "0");
@@ -292,9 +293,7 @@ if (!empty($agent_data['app']['zimbra'])) {
                 $ds_list .= "DS:c$ds_cmd:GAUGE:600:0:U DS:a$ds_cmd:GAUGE:600:0:U ";
             }
 
-            rrdtool_create($device, $rrd_filename, " "
-                                                   . $ds_list);
-
+            rrdtool_create($device, $rrd_filename, " " . $ds_list);
             rrdtool_update($device, $rrd_filename, "N:" . implode(':', $rrd_values));
         }
     }

@@ -10,19 +10,28 @@
  *
  */
 
+if (!$config['version_check']) {
+    print_debug("DEBUG: Observium versions checking disabled in configuration.");
+    return;
+}
+
 // Generate some statistics to send along with the version request.
 //
 // These stats are used to allow us to prioritise development resources
 // to target features and devices that are used the most.
 /// FIXME. Not used anymore..
-function get_instance_stats()
-{
+function get_instance_stats($extend = FALSE) {
     $stats = [];
 
     // Overall Ports/Devices statistics
     $stats['edition'] = OBSERVIUM_EDITION;
     $stats['version'] = OBSERVIUM_VERSION;
     $stats['uuid']    = get_unique_id();
+
+    if (!$extend) {
+        // Return only basic stats, without entities counts
+        return $stats;
+    }
 
     $stats['devices'] = dbFetchCell("SELECT COUNT(*) FROM devices");
     $stats['ports']   = dbFetchCell("SELECT COUNT(*) FROM ports");
@@ -93,14 +102,16 @@ if ($config['poller_id'] === 0) {
 
     $last_checked = get_obs_attrib('last_versioncheck');
 
-    if (isset($options['u']) || !is_numeric($last_checked) || $last_checked < (time() - 3600)) {
-        //$stats = get_instance_stats();
-        $stats = [ 'version' => OBSERVIUM_VERSION ];
+    if (!is_numeric($last_checked) || $last_checked < get_time('fourhour')) {
+        $tags = [];
+        if ($stats = get_instance_stats()) {
+            // Serialize and base64 encode stats array for transportation
+            $stat_base64 = base64_encode(serialize($stats));
 
-        // Serialize and base64 encode stats array for transportation
-        $stat_base64 = base64_encode(serialize($stats));
+            $tags['stats'] = $stat_base64;
 
-        $tags = [ 'stats' => $stat_base64 ];
+            unset($stats, $stat_base64);
+        }
 
         if ($versions = get_http_def('observium_versions', $tags)) {
 
@@ -115,9 +126,13 @@ if ($config['poller_id'] === 0) {
 
             $latest = $versions[$train];
 
-            set_obs_attrib('latest_ver', preg_replace('/^0\./', '', $latest['version']));
+            set_obs_attrib('latest_ver', $latest['version']);
             set_obs_attrib('latest_rev', $latest['revision']);
             set_obs_attrib('latest_rev_date', $latest['date']);
+
+            //logfile('update.log', "Observium versions checked (".OBSERVIUM_TRAIN."): ".$latest['version']);
+        } else {
+            logfile('update-errors.log', "Checking Observium versions error: " . implode(" - ", $GLOBALS['response_headers']));
         }
 
         set_obs_attrib('last_versioncheck', time());
@@ -130,12 +145,12 @@ if ($latest['revision'] > OBSERVIUM_REV) {
     $latest['version'] = get_obs_attrib('latest_ver');
     $latest['date']    = get_obs_attrib('latest_rev_date');
 
-    print_message("%GThere is a newer revision of Observium available!%n", 'color');
+    print_message("%GThere is a newer version of Observium available!%n", 'color');
     print_message("%GVersion %r" . $latest['version'] . "%G (" . format_unixtime(datetime_to_unixtime($latest['date']), 'jS F Y') . ") is %r" . ($latest['revision'] - OBSERVIUM_REV) . "%G revisions ahead.%n\n", 'color');
 } elseif (isset($options['u']) && $latest['revision'] == OBSERVIUM_REV) {
     print_message("-- Observium is up to date.");
 }
 
-unset($latest, $versions, $train, $last_checked, $stats);
+unset($latest, $versions, $train, $last_checked, $tags);
 
 // EOF

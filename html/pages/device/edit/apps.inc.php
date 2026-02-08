@@ -81,7 +81,7 @@ if (safe_count($apps_enabled)) {
 
             # Load our list of available applications
             $applications = [];
-            foreach (get_recursive_directory_iterator($config['install_dir'] . "/includes/polling/applications/") as $file => $info) {
+            foreach (get_recursive_directory_iterator($config['install_dir'] . "/includes/polling/applications/") as $info) {
                 if (!str_ends_with($info->getFilename(), '.inc.php')) { continue; }
                 $applications[] = str_replace(".inc.php", "", $info->getFilename());
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -10,73 +11,71 @@
  * @author Lucas Brucksch <support@hammermaps.de>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Zendshm;
+namespace Phpfastcache\Drivers\Zendshm;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver (zend memory cache)
  * Requires Zend Data Cache Functions from ZendServer
  * @package phpFastCache\Drivers
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
     use DriverBaseTrait;
 
     /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
+     * @return bool
      */
-    public function __construct(array $config = [])
+    public function driverCheck(): bool
     {
-        $this->setup($config);
+        return extension_loaded('Zend Data Cache') && function_exists('zend_shm_cache_store');
+    }
 
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        }
+    /**
+     * @return string
+     */
+    public function getHelp(): string
+    {
+        return <<<HELP
+<p>
+This driver rely on Zend Server 8.5+, see: https://www.zend.com/en/products/zend_server
+</p>
+HELP;
+    }
+
+    /**
+     * @return DriverStatistic
+     */
+    public function getStats(): DriverStatistic
+    {
+        $stats = (array)zend_shm_cache_info();
+        return (new DriverStatistic())
+            ->setData(implode(', ', array_keys($this->itemInstances)))
+            ->setInfo(sprintf("The Zend memory have %d item(s) in cache.\n For more information see RawData.", $stats['items_total']))
+            ->setRawData($stats)
+            ->setSize($stats['memory_total']);
     }
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    protected function driverConnect(): bool
     {
-        if (extension_loaded('Zend Data Cache') && function_exists('zend_shm_cache_store')) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    protected function driverWrite(CacheItemInterface $item)
-    {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            $ttl = $item->getExpirationDate()->getTimestamp() - time();
-
-            return zend_shm_cache_store($item->getKey(), $this->driverPreWrap($item), ($ttl > 0 ? $ttl : 0));
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return null|array
      */
     protected function driverRead(CacheItemInterface $item)
@@ -90,36 +89,22 @@ class Driver implements ExtendedCacheItemPoolInterface
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @param CacheItemInterface $item
+     * @return mixed
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
-            return zend_shm_cache_delete($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+            $ttl = $item->getExpirationDate()->getTimestamp() - time();
+
+            return zend_shm_cache_store($item->getKey(), $this->driverPreWrap($item), ($ttl > 0 ? $ttl : 0));
         }
-    }
 
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        return @zend_shm_cache_clear();
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        return true;
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /********************
@@ -129,27 +114,27 @@ class Driver implements ExtendedCacheItemPoolInterface
      *******************/
 
     /**
-     * @return string
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function getHelp()
+    protected function driverDelete(CacheItemInterface $item): bool
     {
-        return <<<HELP
-<p>
-This driver rely on Zend Server 8.5+, see: http://www.zend.com/en/products/zend_server
-</p>
-HELP;
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            return (bool)zend_shm_cache_delete($item->getKey());
+        }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
-     * @return DriverStatistic
+     * @return bool
      */
-    public function getStats()
+    protected function driverClear(): bool
     {
-        $stats = (array)zend_shm_cache_info();
-        return (new DriverStatistic())
-          ->setData(implode(', ', array_keys($this->itemInstances)))
-          ->setInfo(sprintf("The Zend memory have %d item(s) in cache.\n For more information see RawData.", $stats[ 'items_total' ]))
-          ->setRawData($stats)
-          ->setSize($stats[ 'memory_total' ]);
+        return @zend_shm_cache_clear();
     }
 }

@@ -1,46 +1,4 @@
--- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
-
--- /********************************************************************
---  * $Id: fshttp.mib,v 1.5 2013/02/12 12:10:45 siva Exp $
---  *
---  * Description: MIB for http module. 
---  *******************************************************************/
-
--- Introduction
-
--- This document explains the propreitary MIB implemented for the HTTP
--- product.
-
--- The proprietary MIB definitions, which contains MIB table for
--- redirection feature for HTTP and MIBs for HTTP authentication scheme.
--- For futher reading on HTTP Redirection or HTTP Authentication, refer 
--- RFC .
-
--- The scalars in this MIB
-
--- fsHttpRedirectionStatus		This scalar holds the status of HTTP 
---                                      redirection feature.
-
--- fsOperHttpAuthScheme         This scalar holds the HTTP authentication 
---                              scheme used to authenticate the HTTP 
---                              sessions. This value is set only once at 
---                              startup and cannot be modified on-the-fly.
-
--- fsConfigHttpAuthScheme       This scalar holds the HTTP authentication 
---                              scheme that can be modified at run time. The 
---                              new value of the authentication scheme gets 
---                              reflected only when the ISS configuration is
---                              saved and restored after an ISS restart.
-
--- The Tables in the MIB
-
--- fsHttpRedirectionTable    This index of table is URL which needs to be 
---                           redirected, elements are IP Address and Domain 
---                           Name of the HTTP server where this URL has to be 
---                           redirected, ONE can specify any one of IP address
---                           or Domain Name.
-
--- Management Information Base for HTTP Product
+-- Copyright (C) 2018 Aricent Group . All Rights Reserved
 
 ARICENT-HTTP-MIB DEFINITIONS ::= BEGIN
 
@@ -55,10 +13,10 @@ fsHttpMIB MODULE-IDENTITY
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
     CONTACT-INFO "support@aricent.com" 
          DESCRIPTION	 "The MIB module for management of HTTP Routers
-                    Initial Version"
+                    Initial Version."
 	 REVISION "201209050000Z"
          DESCRIPTION	 "The MIB module for management of HTTP Routers
-                    Initial Version"
+                    Initial Version."
 	 ::= { enterprises aricent-communication-holding-ltd(29601) iss(2) 44 }
 
 fsHttpMIBObjects   OBJECT IDENTIFIER ::= { fsHttpMIB 1 }
@@ -78,7 +36,7 @@ fsHttpRedirectionStatus OBJECT-TYPE
     MAX-ACCESS	    read-write 
     STATUS	    current
     DESCRIPTION
-	    "The status of the HTTP redirection"
+	    "This object specifies the status of the HTTP redirection."
     DEFVAL     { 1 }
     ::= { futureHttpScalars 1 }
 
@@ -94,7 +52,7 @@ fsOperHttpAuthScheme OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION
-        "This MIB holds the operational HTTP Authentication scheme value.
+        "This object specifies the operational HTTP Authentication scheme value.
          This value is initialized on ISS start up and cannot be modified
          at run-time. This value is used to authenticate all the HTTP sessions.
          During ISS startup,this operational value is read and initialised
@@ -111,7 +69,7 @@ fsConfigHttpAuthScheme OBJECT-TYPE
     MAX-ACCESS  read-write
     STATUS      current
     DESCRIPTION
-        "This MIB holds the configured HTTP Authentication scheme value.
+        "This object specifies the configured HTTP Authentication scheme value.
          This value can be modified at run time. The modified value is stored
          in a conf file and applied during the next start up of ISS.
          The value digest refers to the Digest authentication scheme of RFC 2617.
@@ -126,7 +84,7 @@ fsHttpRequestCount OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS current
     DESCRIPTION
-         "The number of HTTP request packets received. The purpose of having this statistics
+         "This object specifies the number of HTTP request packets received. The purpose of having this statistics
           counter object as read-write access(instead of read only) is to clear the counter 
 		  when needed. "
     DEFVAL     { 0 }
@@ -137,7 +95,7 @@ fsHttpRequestDiscards OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS current
     DESCRIPTION
-         "The number of HTTP packets discarded.  The purpose of having this statistics
+         "This object specifies the number of HTTP packets discarded.  The purpose of having this statistics
           counter object as read-write access(instead of read only) is to clear the counter
           when needed."
     DEFVAL     { 0 }
@@ -157,7 +115,7 @@ fsHttpRedirectionTable OBJECT-TYPE
     MAX-ACCESS not-accessible
     STATUS     current
     DESCRIPTION
-              "The (conceptual) table listing the Redirection related objects"
+        "This object specifies the (conceptual) table listing the Redirection related objects."
     ::= { futureHttpTables 1 }
 
 fsHttpRedirectionEntry OBJECT-TYPE
@@ -165,7 +123,7 @@ fsHttpRedirectionEntry OBJECT-TYPE
     MAX-ACCESS not-accessible
     STATUS     current
     DESCRIPTION
-	    "An entry (conceptual row) in the fsHttpRedirectionTable."
+	    "This object specifies an entry (conceptual row) in the fsHttpRedirectionTable."
     INDEX      { fsHttpRedirectionURL }
     ::= { fsHttpRedirectionTable 1 }
 
@@ -182,7 +140,7 @@ fsHttpRedirectionURL OBJECT-TYPE
     MAX-ACCESS not-accessible
     STATUS     current
     DESCRIPTION
-	    "The URL which has to be redirected"
+	    "This object specifies the URL which has to be redirected."
     ::= { fsHttpRedirectionEntry 1 }
 
 fsHttpRedirectedSrvAddrType OBJECT-TYPE
@@ -190,8 +148,8 @@ fsHttpRedirectedSrvAddrType OBJECT-TYPE
     MAX-ACCESS        read-write
     STATUS            current
     DESCRIPTION
-            "The Address type of HTTP server to which URL has to be 
-              redirected"
+       "This object specifies the Address type of HTTP server to which URL has to be 
+       redirected."
      ::= { fsHttpRedirectionEntry 2 }
 
 fsHttpRedirectedSrvIP OBJECT-TYPE
@@ -199,8 +157,8 @@ fsHttpRedirectedSrvIP OBJECT-TYPE
     MAX-ACCESS read-write
     STATUS     current
     DESCRIPTION
-          " The IP address of the HTTP Server to which redirect has to be done
-          interface belongs to"   
+       "This object specifies the IP address of the HTTP Server to which redirect has to be done
+       interface belongs to."   
     ::= { fsHttpRedirectionEntry 3 }      
 
 
@@ -209,8 +167,8 @@ fsHttpRedirectedSrvDomainName OBJECT-TYPE
     MAX-ACCESS       read-write
     STATUS           current
     DESCRIPTION
-            "The domain name of the HTTP server to which the URL has to be 
-              has to redirected"
+       "This object specifies the domain name of the HTTP server to which the URL has to be 
+       redirected."
     ::= { fsHttpRedirectionEntry 4 }
 
 fsHttpRedirectionEntryStatus OBJECT-TYPE
@@ -218,7 +176,7 @@ fsHttpRedirectionEntryStatus OBJECT-TYPE
     MAX-ACCESS       read-create
     STATUS           current
     DESCRIPTION
-            "The status of HTTP redirection table entry"
+       "This object specifies the status of HTTP redirection table entry."
     ::= { fsHttpRedirectionEntry 5 }
 
 END

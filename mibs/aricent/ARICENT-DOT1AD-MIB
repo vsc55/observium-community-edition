@@ -1,7 +1,5 @@
 -- Copyright (C) 2016 Aricent . All Rights Reserved.
 
--- $Id: fsdot1ad.mib,v 1.11 2016/02/28 10:54:48 siva Exp $
-
 ARICENT-DOT1AD-MIB DEFINITIONS ::= BEGIN 
  
 IMPORTS
@@ -14,10 +12,14 @@ IMPORTS
     EnabledStatus  FROM P-BRIDGE-MIB;
             
 dot1adMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202203080000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION "||||||"
+
+    REVISION "202203080000Z"
+    DESCRIPTION "Modify dot1adCVidRegistrationCVid and dot1adPepPvid to reflect supported values"
+
     REVISION "201209050000Z"
     DESCRIPTION "||||||"
 
@@ -286,7 +288,7 @@ dot1adCVidRegistrationEntry  OBJECT-TYPE
 
 Dot1adCVidRegistrationEntry ::=
     SEQUENCE {
-        dot1adCVidRegistrationCVid               VlanId,
+        dot1adCVidRegistrationCVid               Integer32,
         dot1adCVidRegistrationSVid               VlanId,
         dot1adCVidRegistrationUntaggedPep        TruthValue,
         dot1adCVidRegistrationUntaggedCep        TruthValue,
@@ -296,7 +298,7 @@ Dot1adCVidRegistrationEntry ::=
     }
     
 dot1adCVidRegistrationCVid OBJECT-TYPE
-    SYNTAX      VlanId
+    SYNTAX      Integer32 (1..4095)
     MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
@@ -430,14 +432,14 @@ dot1adPepEntry OBJECT-TYPE
             
 Dot1adPepEntry ::=
     SEQUENCE {
-        dot1adPepPvid                VlanId,
+        dot1adPepPvid                Integer32,
         dot1adPepDefaultUserPriority INTEGER,
         dot1adPepAccptableFrameTypes INTEGER,
         dot1adPepIngressFiltering    TruthValue
     }
 
 dot1adPepPvid OBJECT-TYPE
-   SYNTAX      VlanId
+   SYNTAX      Integer32 (0..4094)
    MAX-ACCESS  read-write 
    STATUS      current
    DESCRIPTION

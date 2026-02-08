@@ -319,11 +319,11 @@ function generate_status_row($status, $vars)
 
     $row .= '<td class="entity">' . generate_entity_link('status', $status) . '</td>';
 
-    // FIXME -- Generify this. It's not just for sensors.
     if ($vars['page'] === "device" && $vars['tab'] !== "overview") {
-        $row .= '      <td><span class="label-group">' . (!safe_empty($status['status_mib']) ? '<span class="label label-primary"><a href="' . OBSERVIUM_MIBS_URL . '/' . $status['status_mib'] . '/" target="_blank">' . nicecase($status['status_mib']) . '</a></span>' : '') .
-            (!safe_empty($status['status_mib']) ? '<span class="label label-success"><a href="' . OBSERVIUM_MIBS_URL . '/' . $status['status_mib'] . '/#' . $status['status_object'] . '" target="_blank">' . $status['status_object'] . '</a></span>' : '') .
-            '<span class="label label-delayed">' . $status['status_index'] . '</span></span></td>' . PHP_EOL;
+        // $row .= '      <td><span class="label-group">' . (!safe_empty($status['status_mib']) ? '<span class="label label-primary"><a href="' . OBSERVIUM_MIBS_URL . '/' . $status['status_mib'] . '/" target="_blank">' . nicecase($status['status_mib']) . '</a></span>' : '') .
+        //     (!safe_empty($status['status_mib']) ? '<span class="label label-success"><a href="' . OBSERVIUM_MIBS_URL . '/' . $status['status_mib'] . '/#' . $status['status_object'] . '" target="_blank">' . $status['status_object'] . '</a></span>' : '') .
+        //     '<span class="label label-delayed">' . $status['status_index'] . '</span></span></td>' . PHP_EOL;
+        $row .= generate_entity_mib_cell($status, [ 'entity_type' => 'status' ]);
         $table_cols++;
     }
 
@@ -334,11 +334,11 @@ function generate_status_row($status, $vars)
     $row .= '<td style="width: 90px; text-align: right;">' . generate_entity_link('status', $status, $mini_graph, NULL, FALSE) . '</td>';
     if ($vars['tab'] !== "overview") {
         $row .= '<td style="white-space: nowrap">' . generate_tooltip_time($status['status_last_change'], 'ago') . '</td>
-        <td style="text-align: right;"><strong>' . generate_tooltip_link('', $status['status_event'], $status['event_descr'], $status['event_class']) . '</strong></td>';
+        <td style="text-align: right;"><strong>' . generate_tooltip_link('', $status['status_event'], generate_status_state_tooltip($status), $status['event_class']) . '</strong></td>';
         $table_cols++;
         $table_cols++;
     }
-    $row .= '<td style="width: 80px; text-align: right;"><strong>' . generate_tooltip_link('', $status['status_name'], $status['event_descr'], $status['event_class']) . '</strong></td>
+    $row .= '<td style="width: 80px; text-align: right;"><strong>' . generate_tooltip_link('', $status['status_name'], generate_status_state_tooltip($status), $status['event_class']) . '</strong></td>
         </tr>' . PHP_EOL;
 
     if ($vars['view'] === "graphs") {
@@ -524,6 +524,63 @@ function print_status_form($vars, $single_device = FALSE)
 
     // Register custom panel
     register_html_panel(generate_form($panel_form));
+}
+
+/**
+ * Generate comprehensive state translations tooltip for status displays
+ *
+ * @param array $status Status entity array
+ * @return string Formatted tooltip content showing all possible state translations
+ */
+function generate_status_state_tooltip($status)
+{
+    // Get all possible states for this status type
+    $states_array = get_states_definition($status['status_type'], $status['status_mib']);
+
+    if (safe_empty($states_array)) {
+        // No states defined, return basic tooltip
+        return isset($status['event_descr']) ? $status['event_descr'] : 'Status information';
+    }
+
+    // Build comprehensive tooltip showing all possible states
+    $tooltip_lines = [];
+    $tooltip_lines[] = '<strong>Status: ' . $status['status_descr'] . '</strong>';
+    $tooltip_lines[] = '<strong>Current:</strong> ' . $status['status_name'] . ' (' . $status['status_value'] . ')';
+    $tooltip_lines[] = '';
+    $tooltip_lines[] = '<strong>All possible states:</strong>';
+
+    // Sort states by value for consistent display
+    ksort($states_array);
+
+    foreach ($states_array as $value => $state_data) {
+        $state_name = $state_data['name'];
+        $event_type = $state_data['event'];
+
+        // Add visual indicator for current state
+        $current_indicator = ($value == $status['status_value']) ? ' ← current' : '';
+
+        // Color coding based on event type
+        $color_class = '';
+        switch ($event_type) {
+            case 'ok':
+                $color_class = 'text-success';
+                break;
+            case 'warning':
+            case 'warn':
+                $color_class = 'text-warning';
+                break;
+            case 'alert':
+                $color_class = 'text-danger';
+                break;
+            case 'ignore':
+                $color_class = 'text-muted';
+                break;
+        }
+
+        $tooltip_lines[] = '<span class="' . $color_class . '">' . $value . ': ' . $state_name . ' (' . $event_type . ')' . $current_indicator . '</span>';
+    }
+
+    return implode('<br>', $tooltip_lines);
 }
 
 // EOF

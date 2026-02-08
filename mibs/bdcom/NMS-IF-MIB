@@ -274,7 +274,7 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
 
  --ifSfpParameterTable
              ifSfpParameterTable OBJECT-TYPE
-                 SYNTAX  SEQUENCE OF ifSfpParameterEntry
+                 SYNTAX  SEQUENCE OF IfSfpParameterEntry
                  ACCESS  not-accessible
                  STATUS  mandatory
                  DESCRIPTION
@@ -282,18 +282,18 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ::= { nmsIfObjects 7 }
 
              ifSfpParameterEntry OBJECT-TYPE
-                 SYNTAX ifSfpParameterEntry
+                 SYNTAX IfSfpParameterEntry
                  ACCESS  not-accessible
                  STATUS  mandatory
                  DESCRIPTION
                           "A collection of additional objects in the
                           sfp property table."
-                 INDEX { IfIndex }
+                 INDEX { ifSfpIndex }
              ::= { ifSfpParameterTable 1 }
 
-             ifSfpParameterEntry ::=
+             IfSfpParameterEntry ::=
                  SEQUENCE {
-                     IfIndex
+                     ifSfpIndex
                          INTEGER,
                      txPower1
                          INTEGER,
@@ -324,11 +324,25 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                      rxPower4
                          INTEGER,   
                      curr4
-                         INTEGER
-                         
-                 }
+                         INTEGER,
+		     type                         
+                          INTEGER,
+		     transDist                         
+                          INTEGER,
+		     waveLen                         
+                          INTEGER,
+		     sfpPresentStatus                         
+                          INTEGER,
+		     sfpLostStatus                         
+                          INTEGER,
+		     sfpMismatchStatus                         
+                          INTEGER,
+             sfpSeqNum
+                          OCTET STRING
 
-             IfIndex OBJECT-TYPE
+                }
+
+             ifSfpIndex OBJECT-TYPE
                  SYNTAX  INTEGER
                  ACCESS  read-only
                  STATUS  mandatory
@@ -341,7 +355,7 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The tx power 1 of optical module. The unit is 1DBm."
+                         "The tx power 1 of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 2 } 
     
              rxPower1 OBJECT-TYPE
@@ -349,7 +363,7 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The rx power 1 of optical module. The unit is 1DBm."
+                         "The rx power 1 of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 3 } 
      
              temperature OBJECT-TYPE
@@ -388,14 +402,14 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The tx 2 power of optical module. The unit is 1DBm."
+                         "The tx 2 power of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 8 } 
             rxPower2 OBJECT-TYPE
                  SYNTAX  INTEGER
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The rx 2 power of optical module. The unit is 1DBm."
+                         "The rx 2 power of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 9 } 
             curr2 OBJECT-TYPE
                  SYNTAX  INTEGER
@@ -409,14 +423,14 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The tx 3 power of optical module. The unit is 1DBm."
+                         "The tx 3 power of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 11 } 
             rxPower3 OBJECT-TYPE
                  SYNTAX  INTEGER
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The rx 3 power of optical module. The unit is 1DBm."
+                         "The rx 3 power of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 12 } 
             curr3 OBJECT-TYPE
                  SYNTAX  INTEGER
@@ -430,14 +444,14 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The tx 4 power  of optical module. The unit is 1DBm."
+                         "The tx 4 power  of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 14 } 
             rxPower4 OBJECT-TYPE
                  SYNTAX  INTEGER
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
-                         "The rx 4 power of optical module. The unit is 1DBm."
+                         "The rx 4 power of optical module. The unit is 0.01DBm."
                  ::= { ifSfpParameterEntry 15 } 
             curr4 OBJECT-TYPE
                  SYNTAX  INTEGER
@@ -446,6 +460,81 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  DESCRIPTION
                          "Sfp module bias current 4. The unit is 2uA."
                  ::= { ifSfpParameterEntry 16 }    
+                               
+            type OBJECT-TYPE
+                 SYNTAX  INTEGER{
+                                   sfp(1),
+                                   copper-sfp(2),
+                                   other(3)
+                                 }
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "Sfp module interface type. "
+                 ::= { ifSfpParameterEntry 17 }    
+                               
+            transDist OBJECT-TYPE
+                 SYNTAX  INTEGER
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "Sfp module interface transmission distance. Unit is meter. "
+                 ::= { ifSfpParameterEntry 18 }    
+                               
+            waveLen OBJECT-TYPE
+                 SYNTAX  INTEGER
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "Sfp module interface wave length. Unit is nm. "
+                 ::= { ifSfpParameterEntry 19 }    
+                               
+            sfpPresentStatus OBJECT-TYPE
+                 SYNTAX  INTEGER{
+                 		 online(1),
+                                 offline(2)                             
+                                 }
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "SFP status. "
+                 ::= { ifSfpParameterEntry 20 }    
+                               
+            sfpLostStatus OBJECT-TYPE
+                 SYNTAX  INTEGER{
+                 		 normal(1),
+                                 lost(2)
+                                 }
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "SFP status. "
+                 ::= { ifSfpParameterEntry 21 }    
+                               
+            sfpMismatchStatus OBJECT-TYPE
+                 SYNTAX  INTEGER{
+                 		 match(1),
+                                 mismatch(2)
+                                 }
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "SFP status. "
+                 ::= { ifSfpParameterEntry 22 }    
+                               
+           sfpSeqNum OBJECT-TYPE
+                 SYNTAX  OCTET STRING
+                 ACCESS  read-only
+                 STATUS  mandatory
+                 DESCRIPTION
+                         "SFP sequence number. "
+                 ::= { ifSfpParameterEntry 23 }    
+                               
+             
+                          
+                                
+                               
+                               
                                
  --cableDiagnoseTable
              cableDiagnoseTable OBJECT-TYPE
@@ -463,22 +552,24 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                  DESCRIPTION
                           "A collection of cable diagnose objects in the
                           interface table."
-                 INDEX { ifIndex }
+                 INDEX { cableDiagIfIndex }
              ::= { cableDiagnoseTable 1 }
 
              CableDiagnoseEntry ::=
                  SEQUENCE {
-                     ifIndex
+                     cableDiagIfIndex
                          INTEGER,
-                     enable
-                         INTEGER,
-                     period
-                         INTEGER,   
-                     description 
+--                     enable
+--                         INTEGER,
+--                     period
+--                         INTEGER,   
+--                     description 
+--                         OCTET STRING                      
+                     cableDiagnoseResult 
                          OCTET STRING                      
                  }
 
-             ifIndex OBJECT-TYPE
+             cableDiagIfIndex OBJECT-TYPE
                  SYNTAX  INTEGER
                  ACCESS  read-only
                  STATUS  mandatory
@@ -486,32 +577,40 @@ nmsIfObjects   OBJECT IDENTIFIER ::= { nmsIfMIB 1 }
                          "The only diid of port in System."
                  ::= { cableDiagnoseEntry 1 } 
         
-             enable OBJECT-TYPE
-                 SYNTAX  INTEGER{
-                                enable(1),
-                                disable(2)
-                                }
-                 ACCESS  read-write
-                 STATUS  mandatory
-                 DESCRIPTION
-                         "enable=1,disable=2."
-                 ::= { cableDiagnoseEntry 2 } 
-    
-             period OBJECT-TYPE
-                 SYNTAX  INTEGER(0..32767)
-                 ACCESS  read-write
-                 STATUS  mandatory
-                 DESCRIPTION
-                         "period=0 means manual scanning, the range of auto scanning period is 1-32767."
-                 ::= { cableDiagnoseEntry 3 } 
+--             enable OBJECT-TYPE
+--                 SYNTAX  INTEGER{
+--                                enable(1),
+--                                disable(2)
+--                                }
+--                 ACCESS  read-write
+--                 STATUS  mandatory
+--                 DESCRIPTION
+--                         "enable=1,disable=2."
+--                 ::= { cableDiagnoseEntry 2 } 
+--    
+--             period OBJECT-TYPE
+--                 SYNTAX  INTEGER(0..32767)
+--                 ACCESS  read-write
+--                 STATUS  mandatory
+--                 DESCRIPTION
+--                         "period=0 means manual scanning, the range of auto scanning period is 1-32767."
+--                 ::= { cableDiagnoseEntry 3 } 
+--        
+--             description OBJECT-TYPE
+--                 SYNTAX  OCTET STRING 
+--                 ACCESS  read-only
+--                 STATUS  mandatory
+--                 DESCRIPTION
+--                         "cable diagnoisis descpription."
+--                 ::= { cableDiagnoseEntry 4 } 
         
-             description OBJECT-TYPE
+             cableDiagnoseResult OBJECT-TYPE
                  SYNTAX  OCTET STRING 
                  ACCESS  read-only
                  STATUS  mandatory
                  DESCRIPTION
                          "cable diagnoisis descpription."
-                 ::= { cableDiagnoseEntry 4 } 
+                 ::= { cableDiagnoseEntry 2 } 
         
               
               

@@ -1,9 +1,5 @@
 <?php
 
-//define('OBS_DEBUG', 1);
-
-include(__DIR__ . '/../includes/observium.inc.php');
-include(__DIR__ . '../html/includes/functions.inc.php');
 
 class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
 
@@ -15,8 +11,8 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
         // Create fake device array from syslog line
         $os = explode('||', $line, 2)[0];
         $device = array('hostname' => $os, 'device_id' => crc32($os), 'os' => $os);
-        if (isset($GLOBALS['config']['os'][$os]['os_group'])) {
-            $device['os_group'] = $GLOBALS['config']['os'][$os]['os_group'];
+        if (isset($GLOBALS['config']['os'][$os]['group'])) {
+            $device['os_group'] = $GLOBALS['config']['os'][$os]['group'];
         }
         //var_dump($GLOBALS['config']['os'][$os]);
 
@@ -26,9 +22,8 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
         $dev_cache[$host]['lastchecked'] = time();
         $dev_cache[$host]['device_id']  = $device['device_id'];
         $dev_cache[$host]['os']         = $device['os'];
-        if (isset($device['os_group'])) {
-            $dev_cache[$host]['os_group'] = $device['os_group'];
-        }
+        $dev_cache[$host]['version']    = ''; // empty, for prevent try db queries
+        $dev_cache[$host]['os_group']   = $device['os_group'] ?? '';
         $GLOBALS['dev_cache'] = $dev_cache;
 
         // Override config syslog filter
@@ -49,10 +44,10 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
     }
 
 
-    public function providerProcessSyslogLine() {
-      
+    public static function providerProcessSyslogLine() {
+
         $result = [];
-      
+
         // Linux/Unix
         $result[] = [ 'linux||9||6||6||CRON[3196]:||2018-03-13 06:25:01|| (root) CMD (test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily ))||CRON',
                       [ 'facility'  => 'cron', 'priority' => '6', 'level' => '6',
@@ -102,7 +97,7 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
                         'msg'       => '[sshd] Unban 116.98.170.132',
                         'msg_orig'  => 'NOTICE [sshd] Unban 116.98.170.132', ]
         ];
-        
+
         // from group definition
         $result[] = [ 'linux||10||5||5||sshd[9071]:||2018-03-20 17:40:43|| PAM 2 more authentication failures; logname= uid=0 euid=0 tty=ssh ruser= rhost=221.194.47.243  user=root||sshd',
                       [ 'facility'  => 'authpriv', 'priority' => '5', 'level' => '5',
@@ -128,7 +123,7 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
                         'msg'       => 'pam_krb5: authentication failure; logname=root uid=0 euid=0 tty=ssh ruser= rhost=123.213.132.231',
                         'msg_orig'  => 'pam_krb5: authentication failure; logname=root uid=0 euid=0 tty=ssh ruser= rhost=123.213.132.231', ]
         ];
-    
+
         $result[] = [ 'freebsd||14||6||6||kernel:||2018-03-21 13:07:05|| Mar 21 13:07:05 somehost syslogd: exiting on signal 15||kernel',
                       [ 'facility'  => 'console', 'priority' => '6', 'level' => '6',
                         'tag'       => 'kernel', 'program' => 'KERNEL',
@@ -192,7 +187,7 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
                         'msg'       => 'Line protocol on Interface GigabitEthernet1/0/7, changed state to up',
                         'msg_orig'  => 'test-originid: Oct  2 15:17:50: %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet1/0/7, changed state to up', ]
         ];
-      
+
         // Unknown program and tag
         $result[] = [ 'ios||23||7||7||12602:||2016-10-24 11:34:02|| Oct 24 11:34:01.275: VSTACK_ERR: ||12602',
                       [ 'facility'  => 'local7', 'priority' => '7', 'level' => '7',
@@ -710,18 +705,18 @@ class IncludesSyslogTest extends \PHPUnit\Framework\TestCase {
                                            ));
 
     // OBS-3614
-    $result[] = [ 'netscaler||16||5||5||||2021-01-26 13:47:07|| 01/26/2021:12:47:07 GMT DCRX-ANS-N004 0-PPE-0 : default EVENT DEVICEDOWN 62431870 0 :  Device "server_serviceGroup_NSSVC_TCP_172.16.200.150:636(SVG_TST_LDAPS_ADMB?DC-BRU-150?636)" - State DOWN||',
+    $result[] = [ 'netscaler||16||5||5||||2021-01-26 13:47:07|| 01/26/2021:12:47:07 GMT netscaler 0-PPE-0 : default EVENT DEVICEDOWN 62431870 0 :  Device "server_serviceGroup_NSSVC_TCP_172.16.200.150:636(SVG_TST_LDAPS_ADMB?DC-BRU-150?636)" - State DOWN||',
                   [ 'facility'  => 'local0', 'priority' => '5', 'level' => '5',
                     'tag'       => 'DEVICEDOWN', 'program' => 'EVENT',
                     'msg'       => 'Device "server_serviceGroup_NSSVC_TCP_172.16.200.150:636(SVG_TST_LDAPS_ADMB?DC-BRU-150?636)" - State DOWN',
-                    'msg_orig'  => '01/26/2021:12:47:07 GMT DCRX-ANS-N004 0-PPE-0 : default EVENT DEVICEDOWN 62431870 0 :  Device "server_serviceGroup_NSSVC_TCP_172.16.200.150:636(SVG_TST_LDAPS_ADMB?DC-BRU-150?636)" - State DOWN',
+                    'msg_orig'  => '01/26/2021:12:47:07 GMT netscaler 0-PPE-0 : default EVENT DEVICEDOWN 62431870 0 :  Device "server_serviceGroup_NSSVC_TCP_172.16.200.150:636(SVG_TST_LDAPS_ADMB?DC-BRU-150?636)" - State DOWN',
                   ]
     ];
-    $result[] = [ 'netscaler||16||5||5||||2021-01-26 13:47:07|| 10/03/2013:16:49:07 GMT dk-lb001a PPE-4 : UI CMD_EXECUTED 10367926 : User so_readonly - Remote_ip 10.70.66.56 - Command "stat lb vserver" - Status "Success"||',
+    $result[] = [ 'netscaler||16||5||5||||2021-01-26 13:47:07|| 10/03/2013:16:49:07 GMT netscaler PPE-4 : UI CMD_EXECUTED 10367926 : User so_readonly - Remote_ip 10.70.66.56 - Command "stat lb vserver" - Status "Success"||',
                   [ 'facility'  => 'local0', 'priority' => '5', 'level' => '5',
                     'tag'       => 'CMD_EXECUTED', 'program' => 'UI',
                     'msg'       => 'User so_readonly - Remote_ip 10.70.66.56 - Command "stat lb vserver" - Status "Success"',
-                    'msg_orig'  => '10/03/2013:16:49:07 GMT dk-lb001a PPE-4 : UI CMD_EXECUTED 10367926 : User so_readonly - Remote_ip 10.70.66.56 - Command "stat lb vserver" - Status "Success"',
+                    'msg_orig'  => '10/03/2013:16:49:07 GMT netscaler PPE-4 : UI CMD_EXECUTED 10367926 : User so_readonly - Remote_ip 10.70.66.56 - Command "stat lb vserver" - Status "Success"',
                   ]
     ];
 

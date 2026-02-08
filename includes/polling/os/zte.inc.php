@@ -29,7 +29,7 @@ if (preg_match('/ROS Version V(?<ros_version>\d[\w\.]+)(?<hw1>[\w\ -]+)? Softwar
 
     $version  = $matches['version'] . ', ROS ' . $matches['ros_version'];
     $hardware = $matches['hardware'];
-} elseif (preg_match('Router Operating System Software ZTE Corporation (?<hw1>[\w\ ]+)(?:\/(?<hw2>[\w\ ]+))?\ +V(?<version>\d[\w\.]+) [\w\ ]+ZXROS V(?<ros_version>\d[\w\.]+)/', $poll_device['sysDescr'], $matches)) {
+} elseif (preg_match('/Router Operating System Software ZTE Corporation (?<hw1>[\w\ ]+)(?:\/(?<hw2>[\w\ ]+))?\ +V(?<version>\d[\w\.]+) [\w\ ]+ZXROS V(?<ros_version>\d[\w\.]+)/', $poll_device['sysDescr'], $matches)) {
     // ZXR10 Router Operating System Software ZTE Corporation Based on ZXROS Compiled:
     // ZXR10 Router Operating System Software ZTE Corporation ZXSS10 B100 V2.00.60.P4.e08 Based on ZXROS V4.6.02.a Compiled:Jul 1 2011, 04:06:56
     // ZXR10 Router Operating System Software ZTE Corporation ZXSS10 B200/ZXUN B200 ATCA V2.13.10.P21.B02 Based on ZXROS V4.6.02.a Compiled:Aug 18 2015, 00:36:54
@@ -71,11 +71,7 @@ if (preg_match('/ROS Version V(?<ros_version>\d[\w\.]+)(?<hw1>[\w\ -]+)? Softwar
     // W812 ZXV10_WLAN_V1.0.02_9A
 
     $version = $matches['version'];
-    if (isset($matches['hw1'])) {
-        $hardware = $matches['hw1'];
-    } else {
-        $hardware = $matches['hw2'];
-    }
+    $hardware = $matches['hw1'] ?? $matches['hw2'];
 } elseif (preg_match('/^ZXR10 (?<hardware>[\w\-]+) NOS (?<version>\d[\w\.]+)/', $poll_device['sysDescr'], $matches)) {
     // ZXR10 3904 NOS 9.05
     // ZXR10 3904 NOS 9.07p5.ospf2/DS-P6-068-E0

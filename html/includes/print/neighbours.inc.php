@@ -70,15 +70,6 @@ function print_neighbours($vars)
 
         $string .= '  <tbody>' . PHP_EOL;
 
-        $protocol_classmap = [
-            'cdp'  => 'success',
-            'lldp' => 'warning',
-            'amap' => 'primary',
-            'mndp' => 'error',
-            'fdp'  => 'delayed',
-            'edp'  => 'suppressed'
-        ];
-
         foreach ($neighbours['entries'] as $entry) {
             $string .= '  <tr class="' . $entry['row_class'] . '">' . PHP_EOL;
 
@@ -128,11 +119,7 @@ function print_neighbours($vars)
                 $string .= '    <td><span class="entity">' . escape_html($entry['remote_port']) . '</span></td>' . PHP_EOL;
             }
 
-            if (isset($protocol_classmap[$entry['protocol']])) {
-                $entry['protocol_class'] = 'label-' . $protocol_classmap[$entry['protocol']];
-            }
-
-            $string .= '    <td><span class="label ' . $entry['protocol_class'] . '">' . strtoupper($entry['protocol']) . '</span></td>' . PHP_EOL;
+            $string .= '    <td>' . get_type_class_label(strtoupper($entry['protocol'])) . '</td>' . PHP_EOL;
             $string .= '    <td class="text-nowrap">' . format_uptime(get_time() - $entry['last_change_unixtime'], 'shorter') . ' ago</td>' . PHP_EOL;
             if ($_SESSION['userlevel'] > 7) {
                 $string .= '    <td>' . generate_popup_link('autodiscovery', $entry['autodiscovery_id']) . '</td>' . PHP_EOL;

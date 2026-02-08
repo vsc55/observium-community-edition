@@ -62,7 +62,7 @@ function discover_sensor_definition($device, $mib, $entry) {
 
     $counters = []; // Reset per-class counters for each MIB
 
-    $sensors_count = count($sensor_array);
+    $sensors_count = safe_count($sensor_array);
     foreach ($sensor_array as $index => $sensor) {
         $options = [];
 
@@ -135,25 +135,11 @@ function discover_sensor_definition($device, $mib, $entry) {
         }
 
         // Unit
-        if (isset($entry['unit'])) {
-            // Static unit definition
-            $options['sensor_unit'] = $entry['unit'];
-        }
-        if (isset($entry['oid_unit'])) {
-            if (isset($sensor[$entry['oid_unit']])) {
-                // Unit in same table
-                $unit = $sensor[$entry['oid_unit']];
-            } elseif (str_contains_array($entry['oid_unit'], '.')) {
-                // Unit is outside from table with single index, see VERTIV-V5-MIB
-                $unit = snmp_cache_oid($device, $entry['oid_unit'], $mib);
-            }
-            // Translate unit from specific Oid
-            if (isset($entry['map_unit'][$unit])) {
-                $options['sensor_unit'] = $entry['map_unit'][$unit];
-            }
+        if ($unit = entity_unit_definition($device, $entry, $sensor, 'sensor')) {
+            $options['sensor_unit'] = $unit;
         }
 
-        $value = snmp_fix_numeric($sensor[$entry['oid']], $options['sensor_unit']);
+        $value = snmp_fix_numeric($sensor[$entry['oid']], $options['sensor_unit'], $entry['mib']);
         if (!discovery_check_value_valid($device, $value, $entry, 'sensor')) {
             continue;
         }
@@ -278,7 +264,7 @@ function discover_sensor_ng($device, $class, $mib, $object, $oid, $index, $senso
     }
     // Another hack for FIBERSTORE-MIB/FS-SWITCH-MIB multi-lane DOM sensors
     // Append unit as sensor type part
-    if (isset($options['sensor_unit']) && str_starts($options['sensor_unit'], 'split')) {
+    if (isset($options['sensor_unit']) && str_starts_with($options['sensor_unit'], 'split')) {
         $type .= '-' . $options['sensor_unit'];
     }
 
@@ -286,11 +272,16 @@ function discover_sensor_ng($device, $class, $mib, $object, $oid, $index, $senso
     if (!safe_empty($value)) {
         // Some silly devices report data with spaces and commas
         // STRING: "  20,4"
-        $value = snmp_fix_numeric($value, $options['sensor_unit']);
+        $value = snmp_fix_numeric($value, $options['sensor_unit'], $mib);
     }
 
     // SI unit for this sensor class
     $sensor_unit_to = $GLOBALS['config']['sensor_types'][$class]['symbol'];
+
+    if (isset($GLOBALS['valid']['sensor'][$class][$type][$index])) {
+        print_debug("Sensor skipped by valid already exist: $class->$type->$index");
+        return FALSE;
+    }
 
     if (is_numeric($value)) {
         // $attrib_type = 'sensor_addition';
@@ -317,8 +308,7 @@ function discover_sensor_ng($device, $class, $mib, $object, $oid, $index, $senso
     }
 
     // Check sensor ignore filters
-    if (entity_descr_check($sensor_descr, 'sensor')) {
-        print_debug("Sensor skipped by ignored description: '$sensor_descr'");
+    if (entity_descr_check($sensor_descr, 'sensor')) { // Limit descr to 255 chars accordingly as in DB
         return FALSE;
     }
 
@@ -335,6 +325,7 @@ function discover_sensor_ng($device, $class, $mib, $object, $oid, $index, $senso
             $$key = NULL;
         }
     }
+
     // Auto calculate high/low limits if not passed
     $limit_auto = !isset($options['limit_auto']) || (bool)$options['limit_auto'];
 
@@ -1110,7 +1101,7 @@ function get_sensor_cached_value($device, $oid_cache, &$sensor_db) {
         if ($class === "runtime" && empty($sensor_db['sensor_unit']) && str_contains($sensor_value, ':')) {
             $sensor_db['sensor_unit'] = 'timeticks';
         }
-        $sensor_value = snmp_fix_numeric($sensor_value, $sensor_db['sensor_unit']);
+        $sensor_value = snmp_fix_numeric($sensor_value, $sensor_db['sensor_unit'], $sensor_db['sensor_mib']);
 
         // Papouch TME hack, was added in r2337 by @adama
         if (sensor_value_retry($device, $sensor_value, $sensor_db)) {
@@ -1136,6 +1127,26 @@ function get_sensor_cached_value($device, $oid_cache, &$sensor_db) {
             print_warning("No IPMI sensor data available.");
             return FALSE;
         }
+    } elseif ($sensor_db['poller_type'] === "custom") {
+        // Custom sensor polling - load sensor_type specific file
+        $sensor_poll = [];
+
+        $type_file   = $GLOBALS['config']['install_dir'] . "/includes/polling/sensors/" . $sensor_db['sensor_type'] . ".inc.php";
+        if (is_file($type_file)) {
+            print_debug("Including custom sensor poller: " . $sensor_db['sensor_type']);
+            include($type_file);
+            return $sensor_poll['sensor_value'] ?? FALSE;
+        }
+
+        $object_file = $GLOBALS['config']['install_dir'] . "/includes/polling/sensors/" . $sensor_db['sensor_object'] . ".inc.php";
+        if (is_file($object_file)) {
+            print_debug("Including custom sensor poller: " . $sensor_db['sensor_type']);
+            include($object_file);
+            return $sensor_poll['sensor_value'] ?? FALSE;
+        }
+
+        print_warning("Custom sensor poller not found: " . $sensor_db['sensor_type']);
+        return FALSE;
     } else {
         print_error("Unknown sensor poller type.");
         return FALSE;
@@ -1175,7 +1186,7 @@ function sensor_value_retry($device, &$sensor_value, $sensor_db) {
         sleep(1); // Give the TME some time to reset
         $i++;
         print_debug("Retry ($i) get {$sensor_db['sensor_class']} sensor value..");
-        $sensor_value = snmp_fix_numeric(snmp_get_oid($device, $sensor_db['sensor_oid'], 'SNMPv2-MIB'), $sensor_db['sensor_unit']);
+        $sensor_value = snmp_fix_numeric(snmp_get_oid($device, $sensor_db['sensor_oid'], 'SNMPv2-MIB'), $sensor_db['sensor_unit'], $sensor_db['sensor_mib']);
         if ($i === 4) {
             break;
         }
@@ -1239,7 +1250,8 @@ function sensor_addition($device, $sensor_value, $attribs = [], $sensor_db = [])
     $mib = $sensor_db['sensor_mib'];
 
     if (isset($attribs['sensor_convert'])) {
-        switch ($attribs['sensor_convert']) {
+        print_debug("Sensor convert requested '{$attribs['sensor_convert']}'");
+        switch (strtolower($attribs['sensor_convert'])) {
             case 'tmnx_rx_power':
                 $oids = [
                     'tmnxDDMExtCalRxPower0.' . $sensor_db['sensor_index'],
@@ -1250,13 +1262,32 @@ function sensor_addition($device, $sensor_value, $attribs = [], $sensor_db = [])
                 ];
                 $entry = snmp_get_multi_oid($device, $oids, [], $mib);
                 $entry = $entry[$sensor_db['sensor_index']];
+                print_debug(" from $sensor_value'");
                 $sensor_value = value_unit_tmnx_rx_power($sensor_value, $entry['tmnxDDMExtCalRxPower0'], $entry['tmnxDDMExtCalRxPower1'],
                                                          $entry['tmnxDDMExtCalRxPower2'], $entry['tmnxDDMExtCalRxPower3'], $entry['tmnxDDMExtCalRxPower4']);
+                print_debug(" to '$sensor_value'");
                 break;
 
             case 'sysuptime':
                 //r($sensor_value);
-                $sensor_value = timeticks_to_sec(snmp_cache_oid($device, "sysUpTime.0", "SNMPv2-MIB"), TRUE) - $sensor_value;
+                if (!isset($GLOBALS['config']['os'][$device['os']]['snmp']['noindex'])) {
+                    $sysuptime = snmp_cache_oid($device, "sysUpTime.0", "SNMPv2-MIB");
+                } else {
+                    $sysuptime = snmp_cache_oid($device, "sysUpTime", "SNMPv2-MIB");
+                }
+                $sysuptime = timeticks_to_sec($sysuptime, TRUE);
+                print_debug(" from '".$sysuptime." - $sensor_value'");
+                $sensor_value = $sysuptime - $sensor_value;
+                print_debug(" to '$sensor_value'");
+                //r($sensor_value);
+                break;
+
+            case 'snmptime':
+            case 'snmpendtime':
+                //r($sensor_value);
+                print_debug(" from '".snmp_endtime()." - $sensor_value'");
+                $sensor_value = snmp_endtime() - $sensor_value;
+                print_debug(" to '$sensor_value'");
                 //r($sensor_value);
                 break;
         }
@@ -1267,6 +1298,83 @@ function sensor_addition($device, $sensor_value, $attribs = [], $sensor_db = [])
     }
 
     return $sensor_value;
+}
+
+/**
+ * Convert the value of sensor from known unit to defined SI unit (used in poller/discovery)
+ *
+ * @param float|string $value     Value
+ * @param string       $unit_from Unit name/symbol for value
+ * @param string       $class     Type of value
+ * @param string|array $unit_to   Unit name/symbol for convert value (by default used sensor class default unit)
+ *
+ * @return array       Array with values converted to unit_from
+ */
+function value_to_units($value, $unit_from, $class, $unit_to = []) {
+    global $config;
+
+    // Convert symbols to lib supported units
+    $unit_from = str_replace([ '<sup>', '</sup>' ], [ '^', '' ], $unit_from); // I.e. mg/m<sup>3</sup> => mg/m^3
+    $unit_from = html_entity_decode($unit_from);                              // I.e. &deg;C => °C
+
+    // Non numeric values
+    if (!is_numeric($value)) {
+        return [ $unit_from => $value ];
+    }
+
+    switch ($class) {
+        case 'temperature':
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Temperature($value, $unit_from);
+            break;
+
+        case 'pressure':
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Pressure($value, $unit_from);
+            break;
+
+        case 'power':
+        case 'dbm':
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Power($value, $unit_from);
+            break;
+
+        case 'waterflow':
+        case 'airflow':
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\VolumeFlow($value, $unit_from);
+            break;
+
+        case 'velocity':
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Velocity($value, $unit_from);
+            break;
+
+        case 'lifetime':
+        case 'uptime':
+        case 'time':
+            if (empty($unit_from)) {
+                $unit_from = 's';
+            }
+            $value_from = new PhpUnitsOfMeasure\PhysicalQuantity\Time($value, $unit_from);
+            break;
+
+        default:
+            // Unknown, return original value
+            return [ $unit_from => $value ];
+    }
+
+    // Use our default unit (if not passed)
+    if (empty($unit_to) && isset($config['sensor_types'][$class]['symbol'])) {
+        $unit_to = $config['sensor_types'][$class]['symbol'];
+    }
+
+    // Convert to units
+    $units = [];
+    foreach ((array)$unit_to as $to) {
+        // Convert symbols to lib supported units
+        $tou = str_replace([ '<sup>', '</sup>' ], [ '^', '' ], $to); // I.e. mg/m<sup>3</sup> => mg/m^3
+        $tou = html_entity_decode($tou);                             // I.e. &deg;C => °C
+
+        $units[$to] = $value_from->toUnit($tou);
+    }
+
+    return $units;
 }
 
 /**

@@ -43,7 +43,7 @@ if (!isset($cache_discovery['f5-bigip-system-mib'])) {
 }
 
 $cache_ports = dbFetchRows('SELECT `ifName`,`ifIndex` FROM `ports` WHERE `device_id` = ?', [$device['device_id']]);
-foreach ($cache_ports as $row => $port) {
+foreach ($cache_ports as $port) {
     $cache_ports[$port['ifName']] = $port['ifIndex'];
 }
 
@@ -109,7 +109,7 @@ foreach ($cache_discovery['f5-bigip-system-mib']['chassis'] as $type => $cache) 
 
 // Build and array of stuff by slot
 foreach ($cache_discovery['f5-bigip-system-mib']['slot'] as $type => $sensors) {
-    foreach ($sensors as $tmp => $sensor)
+    foreach ($sensors as $sensor)
         switch ($type) {
             case 'cpu':
                 $slots[$sensor['sysCpuSensorSlot']]['cpu'] = $sensor;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,18 +8,18 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Memcache;
+namespace Phpfastcache\Drivers\Memcache;
 
-use phpFastCache\Core\Item\ExtendedCacheItemInterface;
-use phpFastCache\Core\Item\ItemBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Drivers\Memcache\Driver as MemcacheDriver;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use Phpfastcache\Core\Item\{ExtendedCacheItemInterface, ItemBaseTrait};
+use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
+use Phpfastcache\Drivers\Memcache\Driver as MemcacheDriver;
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException};
 
 /**
  * Class Item
@@ -26,30 +27,25 @@ use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
  */
 class Item implements ExtendedCacheItemInterface
 {
-    use ItemBaseTrait;
+    use ItemBaseTrait {
+        ItemBaseTrait::__construct as __BaseConstruct;
+    }
 
     /**
      * Item constructor.
-     * @param \phpFastCache\Drivers\Memcache\Driver $driver
+     * @param Driver $driver
      * @param $key
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
     public function __construct(MemcacheDriver $driver, $key)
     {
-        if (is_string($key)) {
-            $this->key = $key;
-            $this->driver = $driver;
-            $this->driver->setItem($this);
-            $this->expirationDate = new \DateTime();
-        } else {
-            throw new phpFastCacheInvalidArgumentException(sprintf('$key must be a string, got type "%s" instead.', gettype($key)));
-        }
+        $this->__BaseConstruct($driver, $key);
     }
 
     /**
      * @param ExtendedCacheItemPoolInterface $driver
-     * @throws phpFastCacheInvalidArgumentException
      * @return static
+     * @throws PhpfastcacheInvalidArgumentException
      */
     public function setDriver(ExtendedCacheItemPoolInterface $driver)
     {
@@ -57,8 +53,8 @@ class Item implements ExtendedCacheItemInterface
             $this->driver = $driver;
 
             return $this;
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Invalid driver instance');
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Invalid driver instance');
     }
 }

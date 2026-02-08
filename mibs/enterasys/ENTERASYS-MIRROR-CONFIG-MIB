@@ -1,3 +1,5 @@
+-- ################################################################################
+
 ENTERASYS-MIRROR-CONFIG-MIB DEFINITIONS ::= BEGIN
 
 --  enterasys-mirror-config-mib.txt
@@ -6,59 +8,59 @@ ENTERASYS-MIRROR-CONFIG-MIB DEFINITIONS ::= BEGIN
 --
 --
 
---  This module provides authoritative definitions for Enterasys 
---  Networks' Mirroring Configuration MIB. 
+--  This module provides authoritative definitions for Extreme
+--  Networks' Mirroring Configuration MIB.
 
 --
 --  This module will be extended, as needed.
 
---  Enterasys Networks reserves the right to make changes in this
+--  Extreme Networks reserves the right to make changes in this
 --  specification and other information contained in this document
---  without prior notice.  The reader should consult Enterasys Networks
+--  without prior notice.  The reader should consult Extreme Networks
 --  to determine whether any such changes have been made.
 --
---  In no event shall Enterasys Networks be liable for any incidental,
+--  In no event shall Extreme Networks be liable for any incidental,
 --  indirect, special, or consequential damages whatsoever (including
 --  but not limited to lost profits) arising out of or related to this
---  document or the information contained in it, even if Enterasys
+--  document or the information contained in it, even if Extreme
 --  Networks has been advised of, known, or should have known, the
 --  possibility of such damages.
 --
---  Enterasys Networks grants vendors, end-users, and other interested
---  parties a non-exclusive license to use this Specification in 
---  connection with the management of Enterasys Networks products.
+--  Extreme Networks grants vendors, end-users, and other interested
+--  parties a non-exclusive license to use this Specification in
+--  connection with the management of Extreme Networks products.
 
---  Copyright <August, 2012> Enterasys Networks, Inc.
+--  Copyright <May, 2014> Extreme Networks, Inc.
 
 IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE, Unsigned32
         FROM SNMPv2-SMI
-    RowStatus, StorageType
+    RowStatus, StorageType, TruthValue
         FROM SNMPv2-TC
     MODULE-COMPLIANCE, OBJECT-GROUP
         FROM SNMPv2-CONF
-    ifIndex
+    ifIndex, InterfaceIndexOrZero
         FROM IF-MIB
-    SnmpAdminString 
+    SnmpAdminString
         FROM SNMP-FRAMEWORK-MIB
     etsysModules
         FROM ENTERASYS-MIB-NAMES;
 
 etsysMirrorConfigMIB MODULE-IDENTITY
-    LAST-UPDATED "201208221216Z"  -- Wed Aug 22 12:16 UTC 2012
-    ORGANIZATION "Enterasys Networks, Inc"
+    LAST-UPDATED "201405211201Z"  -- Wed May 21 12:01 UTC 2014
+    ORGANIZATION "Extreme Networks, Inc"
     CONTACT-INFO
-        "Postal:  Enterasys Networks
-                  50 Minuteman Rd.
-                  Andover, MA 01810-1008
-                  USA
-         Phone:   +1 978 684 1000
-         E-mail:  support@enterasys.com
-         WWW:     http://www.enterasys.com"
-   
+        "Postal:  Extreme Networks, Inc.
+                  145 Rio Robles
+                  San Jose, CA 95134 USA
+
+         Phone:   +1 408 579-2800
+         E-mail:  support@extremenetworks.com
+         WWW:     http://www.extremenetworks.com"
+
     DESCRIPTION
         "This MIB module defines a portion of the SNMP MIB under
-         the Enterasys Networks enterprise OID pertaining to 
+         the Enterasys Networks enterprise OID pertaining to
          Network Mirroring configuration on a device.
 
         Terminology used
@@ -69,6 +71,15 @@ etsysMirrorConfigMIB MODULE-IDENTITY
         endpoints."
 
 
+    REVISION    "201405211201Z"  -- Wed May 21 12:01 UTC 2014
+    DESCRIPTION "Added etsysMirrorDestinationControlLoopbackPort
+                 and etsysMirrorDestinationControlLoopbackPortReq
+                 for mirror loopback-port support.
+
+                 Addition of mirror source configuration
+                 objects: etsysMirrorSourceTable and
+                 etsysMirrorSystemMaxMirrorSources."
+
     REVISION    "201208221216Z"  -- Wed Aug 22 12:16 UTC 2012
     DESCRIPTION "Added the etsysMirrorSystemMaxMirrorFirstN
                  and etsysMirrorDestinationControlMirrorFirstN
@@ -77,7 +88,7 @@ etsysMirrorConfigMIB MODULE-IDENTITY
     REVISION    "200908101856Z"  -- Mon Aug 10 18:56 UTC 2009
     DESCRIPTION "The initial version of this MIB module."
 
-    ::= { etsysModules 72 } 
+    ::= { etsysModules 72 }
 
 
 --
@@ -93,7 +104,7 @@ etsysMirrorConfig OBJECT IDENTIFIER ::= { etsysMirrorConfigMIB 2 }
 
 
 -- -------------------------------------------------------------
--- The Mirror System Group 
+-- The Mirror System Group
 -- -------------------------------------------------------------
 
 etsysMirrorSystemMaxLocalMirrors OBJECT-TYPE
@@ -101,7 +112,7 @@ etsysMirrorSystemMaxLocalMirrors OBJECT-TYPE
     MAX-ACCESS   read-only
     STATUS       current
     DESCRIPTION
-        "This value represents the maximum number of local mirrors 
+        "This value represents the maximum number of local mirrors
          that the device supports."
     ::= { etsysMirrorSystem 1 }
 
@@ -110,16 +121,16 @@ etsysMirrorSystemMaxRemoteMirrors OBJECT-TYPE
     MAX-ACCESS   read-only
     STATUS       current
     DESCRIPTION
-        "This value represents the maximum number of remote mirrors 
+        "This value represents the maximum number of remote mirrors
          that the device supports."
     ::= { etsysMirrorSystem 2 }
-   
+
 etsysMirrorSystemMaxLocalMirrorDestinationPorts OBJECT-TYPE
     SYNTAX       Unsigned32
     MAX-ACCESS   read-only
     STATUS       current
     DESCRIPTION
-        "This value represents the maximum number of destination 
+        "This value represents the maximum number of destination
          ports supported for a local mirror."
     ::= { etsysMirrorSystem 3 }
 
@@ -128,7 +139,7 @@ etsysMirrorSystemMaxMirrorDestinationControlGroups OBJECT-TYPE
     MAX-ACCESS   read-only
     STATUS       current
     DESCRIPTION
-        "This value represents the maximum number of 
+        "This value represents the maximum number of
          rows in the etsysMirrorDestinationControlTable."
     ::= { etsysMirrorSystem 4 }
 
@@ -137,15 +148,25 @@ etsysMirrorSystemMaxMirrorFirstN OBJECT-TYPE
     MAX-ACCESS   read-only
     STATUS       current
     DESCRIPTION
-        "This value represents the maximum configurable number 
-        of initial packets of a flow that can be mirrored. 
+        "This value represents the maximum configurable number
+        of initial packets of a flow that can be mirrored.
         If this value is 0 this feature is not supported."
     ::= { etsysMirrorSystem 5 }
 
+etsysMirrorSystemMaxMirrorSources OBJECT-TYPE
+    SYNTAX       Unsigned32
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "This value represents the maximum number of
+         rows in the etsysMirrorSourceTable."
+    ::= { etsysMirrorSystem 6 }
+
 
 -- -------------------------------------------------------------
--- The Mirror Table 
+-- The Mirror Destination Port Table
 -- -------------------------------------------------------------
+
 etsysMirrorDestinationNextAvailableIndex OBJECT-TYPE
     SYNTAX      Unsigned32 (0|1..4294967295)
     MAX-ACCESS  read-only
@@ -175,15 +196,15 @@ etsysMirrorDestinationControlTable OBJECT-TYPE
     MAX-ACCESS      not-accessible
     STATUS          current
     DESCRIPTION
-        "Controls the setup of mirror destination ports on 
-         the managed device." 
+        "Controls the setup of mirror destination ports on
+         the managed device."
    ::= { etsysMirrorConfig 2 }
 
 etsysMirrorDestinationControlEntry OBJECT-TYPE
     SYNTAX      EtsysMirrorDestinationControlEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "A conceptual row in the etsysMirrorDestinationControlTable."
     INDEX { etsysMirrorDestinationControlIndex }
     ::= { etsysMirrorDestinationControlTable 1 }
@@ -199,12 +220,16 @@ EtsysMirrorDestinationControlEntry ::=
         etsysMirrorDestinationControlRowStatus
             RowStatus,
         etsysMirrorDestinationControlMirrorFirstN
-            Unsigned32
+            Unsigned32,
+        etsysMirrorDestinationControlLoopbackPort
+            InterfaceIndexOrZero,
+        etsysMirrorDestinationControlLoopbackPortReq
+            TruthValue
     }
 
 etsysMirrorDestinationControlIndex OBJECT-TYPE
     SYNTAX      Unsigned32
-    MAX-ACCESS  not-accessible 
+    MAX-ACCESS  not-accessible
     STATUS      current
     DESCRIPTION
         "A unique arbitrary index for this etsysMirrorDestinationControlEntry.
@@ -214,8 +239,8 @@ etsysMirrorDestinationControlIndex OBJECT-TYPE
 
 
 etsysMirrorDestinationControlOwner OBJECT-TYPE
-    SYNTAX       SnmpAdminString 
-    MAX-ACCESS   read-create 
+    SYNTAX       SnmpAdminString
+    MAX-ACCESS   read-create
     STATUS       current
     DESCRIPTION
         "Administratively assigned name of the owner of this entry.
@@ -226,8 +251,8 @@ etsysMirrorDestinationControlOwner OBJECT-TYPE
     ::= { etsysMirrorDestinationControlEntry 2 }
 
 etsysMirrorDestinationControlStorageType OBJECT-TYPE
-    SYNTAX      StorageType 
-    MAX-ACCESS  read-create 
+    SYNTAX      StorageType
+    MAX-ACCESS  read-create
     STATUS      current
     DESCRIPTION
         "The memory realization of the conceptual row.
@@ -238,29 +263,29 @@ etsysMirrorDestinationControlStorageType OBJECT-TYPE
     ::= { etsysMirrorDestinationControlEntry 3 }
 
 etsysMirrorDestinationControlRowStatus OBJECT-TYPE
-    SYNTAX      RowStatus 
-    MAX-ACCESS  read-create 
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-create
     STATUS      current
     DESCRIPTION
         "This object manages the creation and deletion of this entry.
 
          active(1)        -- Indicates that this entry is available
-                             for use by the managed device. 
-                             
+                             for use by the managed device.
+
          notInService(2)  -- Indicates that this entry exists in the
                              agent but is not available for use by
-                             the managed device.   
+                             the managed device.
 
          notReady(3)      -- Entry is missing information in order to
-                             be available for use by the managed 
-                             device. 
+                             be available for use by the managed
+                             device.
 
          createAndGo(4)   -- A new entry will be created in this table
-                             and the new entry will transition to the 
-                             active state. 
+                             and the new entry will transition to the
+                             active state.
 
          createAndWait(5) -- A new entry will be created in this table
-                             and the new entry will transition to the 
+                             and the new entry will transition to the
                              notInService state.
 
          destroy(6)       -- Deletes the row and any associated
@@ -268,11 +293,11 @@ etsysMirrorDestinationControlRowStatus OBJECT-TYPE
     ::= { etsysMirrorDestinationControlEntry 4 }
 
 etsysMirrorDestinationControlMirrorFirstN OBJECT-TYPE
-    SYNTAX      Unsigned32 
-    MAX-ACCESS  read-create 
+    SYNTAX      Unsigned32
+    MAX-ACCESS  read-create
     STATUS      current
     DESCRIPTION
-        "When this object is set to a nonzero value, 
+        "When this object is set to a nonzero value,
          only the first N packets for a particular flow
          assigned to this index will be mirrored. Otherwise
          all packets from the flow are to be mirrored.
@@ -281,8 +306,42 @@ etsysMirrorDestinationControlMirrorFirstN OBJECT-TYPE
          by the etsysMirrorSystemMaxMirrorFirstN
          object."
     DEFVAL { 0 }
-
     ::= { etsysMirrorDestinationControlEntry 5 }
+
+etsysMirrorDestinationControlLoopbackPort OBJECT-TYPE
+    SYNTAX      InterfaceIndexOrZero
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+        "The ifIndex of the mirror loopback-port used by the
+         mirror controlled by this entry. A value of '0'
+         indicates that there is no loopback-port associated
+         with the mirror. A mirror loopback-port is an unused port
+         and will not be available for switching user data traffic
+         while a loopback-port is required for the mirror. If the
+         loopback-port is not required to perform the mirror the
+         port's status will be determined by the mirroring
+         implementation."
+    ::= { etsysMirrorDestinationControlEntry 6 }
+
+etsysMirrorDestinationControlLoopbackPortReq OBJECT-TYPE
+    SYNTAX      TruthValue
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "This object indicates if a mirror loopback-port is
+         required by the mirror controlled by this entry.
+         The value of this object may change after modifying
+         the mirror (e.g., adding a destination), so it is
+         stongly encouraged that if a loop-back port is not
+         already set that this object be polled after
+         modifying the mirror.
+
+         true(1)  - Indicates a mirror loopback-port is required.
+
+         false(2) - Indicates mirror loopback-port is not required."
+    ::= { etsysMirrorDestinationControlEntry 7 }
+
 
 etsysMirrorDestinationPortTable OBJECT-TYPE
     SYNTAX          SEQUENCE OF EtsysMirrorDestinationPortEntry
@@ -296,7 +355,7 @@ etsysMirrorDestinationPortEntry OBJECT-TYPE
     SYNTAX      EtsysMirrorDestinationPortEntry
     MAX-ACCESS  not-accessible
     STATUS      current
-    DESCRIPTION 
+    DESCRIPTION
         "A conceptual row in the etsysMirrorDestinationPortTable ."
     INDEX { etsysMirrorDestinationControlIndex, ifIndex }
     ::= { etsysMirrorDestinationPortTable 1 }
@@ -310,8 +369,8 @@ EtsysMirrorDestinationPortEntry ::=
     }
 
 etsysMirrorDestinationPortStorageType OBJECT-TYPE
-    SYNTAX      StorageType 
-    MAX-ACCESS  read-create 
+    SYNTAX      StorageType
+    MAX-ACCESS  read-create
     STATUS      current
     DESCRIPTION
         "The memory realization of the conceptual row.
@@ -322,35 +381,164 @@ etsysMirrorDestinationPortStorageType OBJECT-TYPE
     ::= { etsysMirrorDestinationPortEntry 1 }
 
 etsysMirrorDestinationPortRowStatus OBJECT-TYPE
-    SYNTAX      RowStatus 
-    MAX-ACCESS  read-create 
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-create
     STATUS      current
     DESCRIPTION
         "This object manages the creation and deletion of this entry.
 
          active(1)        -- Indicates that this entry is available
-                             for use by the managed device. 
-                             
+                             for use by the managed device.
+
          notInService(2)  -- Indicates that this entry exists in the
                              agent but is not available for use by
-                             the managed device. 
+                             the managed device.
 
          notReady(3)      -- Entry is missing information in order to
-                             be available for use by the managed 
+                             be available for use by the managed
                              device. A transition to this state will
                              happen when the etsysMirrorDestinationIfIndex
                              object for this entry is 0 (zero).
 
          createAndGo(4)   -- A new entry will be created in this table
-                             and the new entry will transition to the 
-                             active state. 
+                             and the new entry will transition to the
+                             active state.
 
          createAndWait(5) -- A new entry will be created in this table
-                             and the new entry will transition to the 
+                             and the new entry will transition to the
                              notInService state.
 
          destroy(6)       -- Deletes this row. "
     ::= { etsysMirrorDestinationPortEntry 2 }
+
+
+-- -------------------------------------------------------------
+-- The Mirror Source Table
+-- -------------------------------------------------------------
+etsysMirrorSourceTable OBJECT-TYPE
+    SYNTAX          SEQUENCE OF EtsysMirrorSourceEntry
+    MAX-ACCESS      not-accessible
+    STATUS          current
+    DESCRIPTION
+        "This table controls the configuration of mirror source interfaces.
+         A row in this table defines mirroring source to destination
+         relationships.
+
+         In order to configure a row, the source interface MUST be present
+         as an ifEntry in the ifTable.
+
+         An attempt to create a row in this table for an interface that the
+         agent does not support as a mirroring source will fail and return
+         noCreation(11)."
+   ::= { etsysMirrorConfig 4 }
+
+etsysMirrorSourceEntry OBJECT-TYPE
+    SYNTAX      EtsysMirrorSourceEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+        "A conceptual row in the etsysMirrorSourceTable."
+    INDEX { ifIndex }
+    ::= { etsysMirrorSourceTable 1 }
+
+EtsysMirrorSourceEntry ::=
+    SEQUENCE {
+        etsysMirrorSourceIngressDestinationIndex
+            Unsigned32,
+        etsysMirrorSourceEgressDestinationIndex
+            Unsigned32,
+        etsysMirrorSourceStorageType
+            StorageType,
+        etsysMirrorSourceRowStatus
+            RowStatus
+    }
+
+etsysMirrorSourceIngressDestinationIndex OBJECT-TYPE
+    SYNTAX      Unsigned32
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+        "Specifies the mirror destinations for traffic received on
+         this interface.
+
+         To define the destinations set this object's value to
+         an etsysMirrorDestinationControlIndex value.
+
+         Setting this object to a nonzero value that is not a
+         configured etsysMirrorDestinationControlIndex will fail
+         and return inconsistentValue(12) error.
+
+         If the agent is unable to mirror traffic to all the interfaces
+         in the destination group then the set will fail and return
+         inconsistentValue(12).
+
+         Destroying the row in etsysMirrorDestinationControlTable that
+         this object refers to will result in this object being reset
+         to zero.
+
+         When this object's value is zero no traffic received on the source
+         is mirrored."
+    DEFVAL { 0 }
+    ::= { etsysMirrorSourceEntry 1 }
+
+etsysMirrorSourceEgressDestinationIndex OBJECT-TYPE
+    SYNTAX      Unsigned32
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+        "Specifies the mirror destinations for traffic transmitted
+         out this interface.
+
+         To define the destinations set this object's
+         value to an etsysMirrorDestinationControlIndex value.
+
+         Setting this object to a nonzero value that is not a
+         configured etsysMirrorDestinationControlIndex value will fail
+         and return inconsistentValue(12) error.
+
+         If the agent is unable to mirror traffic to all the interfaces
+         in the destination group then the set will fail and return
+         inconsistentValue(12).
+
+         Destroying the row in etsysMirrorDestinationControlTable that
+         this object refers to will result in the object being reset
+         to zero.
+
+         When this object's value is zero no traffic transmitted out the source
+         is mirrored."
+    DEFVAL { 0 }
+    ::= { etsysMirrorSourceEntry 2 }
+
+etsysMirrorSourceStorageType OBJECT-TYPE
+    SYNTAX      StorageType
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+        "The memory realization of the conceptual row.
+         volatile(2)    -- is lost upon reboot.
+         nonVolatile(3) -- is persistent across reboots.
+         permanent(4)   -- there are no writable objects.
+         readOnly(5)    -- agent created rows."
+    DEFVAL { nonVolatile }
+    ::= { etsysMirrorSourceEntry 3 }
+
+etsysMirrorSourceRowStatus OBJECT-TYPE
+    SYNTAX      RowStatus
+    MAX-ACCESS  read-create
+    STATUS      current
+    DESCRIPTION
+        "This object manages the creation and deletion of this entry.
+
+         active(1)        -- Indicates that this entry is available
+                             for use by the managed device.
+
+         createAndGo(4)   -- A new entry will be created in this table
+                             and the new entry will transition to the
+                             active state.
+
+         destroy(6)       -- Deletes this row. "
+    ::= { etsysMirrorSourceEntry 4 }
+
 
 -- -------------------------------------------------------------
 -- Conformance Information
@@ -368,9 +556,9 @@ etsysMirrorCompliances OBJECT IDENTIFIER ::= { etsysMirrorConformance 2 }
 etsysMirrorSystemGroup OBJECT-GROUP
     OBJECTS {
         etsysMirrorSystemMaxLocalMirrors,
-        etsysMirrorSystemMaxRemoteMirrors, 
+        etsysMirrorSystemMaxRemoteMirrors,
         etsysMirrorSystemMaxLocalMirrorDestinationPorts,
-        etsysMirrorSystemMaxMirrorDestinationControlGroups 
+        etsysMirrorSystemMaxMirrorDestinationControlGroups
     }
     STATUS deprecated
     DESCRIPTION
@@ -394,12 +582,12 @@ etsysMirrorConfigGroup OBJECT-GROUP
 etsysMirrorSystemGroup2 OBJECT-GROUP
     OBJECTS {
         etsysMirrorSystemMaxLocalMirrors,
-        etsysMirrorSystemMaxRemoteMirrors, 
+        etsysMirrorSystemMaxRemoteMirrors,
         etsysMirrorSystemMaxLocalMirrorDestinationPorts,
         etsysMirrorSystemMaxMirrorDestinationControlGroups,
         etsysMirrorSystemMaxMirrorFirstN
     }
-    STATUS current
+    STATUS deprecated
     DESCRIPTION
         "A collection of objects providing basic mirroring system
          information."
@@ -415,10 +603,46 @@ etsysMirrorConfigGroup2 OBJECT-GROUP
         etsysMirrorDestinationPortStorageType,
         etsysMirrorDestinationPortRowStatus
     }
-    STATUS current
+    STATUS deprecated
     DESCRIPTION
         "A collection of objects relating to mirror configuration."
     ::= { etsysMirrorGroups 4 }
+
+etsysMirrorSystemGroup3 OBJECT-GROUP
+    OBJECTS {
+        etsysMirrorSystemMaxLocalMirrors,
+        etsysMirrorSystemMaxRemoteMirrors,
+        etsysMirrorSystemMaxLocalMirrorDestinationPorts,
+        etsysMirrorSystemMaxMirrorDestinationControlGroups,
+        etsysMirrorSystemMaxMirrorFirstN,
+        etsysMirrorSystemMaxMirrorSources
+    }
+    STATUS current
+    DESCRIPTION
+        "A collection of objects providing basic mirroring system
+         information."
+    ::= { etsysMirrorGroups 5 }
+
+etsysMirrorConfigGroup3 OBJECT-GROUP
+    OBJECTS {
+        etsysMirrorDestinationNextAvailableIndex,
+        etsysMirrorDestinationControlOwner,
+        etsysMirrorDestinationControlStorageType,
+        etsysMirrorDestinationControlRowStatus,
+        etsysMirrorDestinationControlMirrorFirstN,
+        etsysMirrorDestinationControlLoopbackPort,
+        etsysMirrorDestinationControlLoopbackPortReq,
+        etsysMirrorDestinationPortStorageType,
+        etsysMirrorDestinationPortRowStatus,
+        etsysMirrorSourceIngressDestinationIndex,
+        etsysMirrorSourceEgressDestinationIndex,
+        etsysMirrorSourceStorageType,
+        etsysMirrorSourceRowStatus
+    }
+    STATUS current
+    DESCRIPTION
+        "A collection of objects relating to mirror configuration."
+    ::= { etsysMirrorGroups 6 }
 
 -- -------------------------------------------------------------
 -- Compliance statements
@@ -437,7 +661,7 @@ etsysMirrorCompliance MODULE-COMPLIANCE
     ::= { etsysMirrorCompliances 1 }
 
 etsysMirrorCompliance2 MODULE-COMPLIANCE
-    STATUS      current
+    STATUS      deprecated
     DESCRIPTION
         "The compliance statement for devices that support the Enterasys
          Mirror MIB."
@@ -447,5 +671,23 @@ etsysMirrorCompliance2 MODULE-COMPLIANCE
                            etsysMirrorConfigGroup2 }
 
     ::= { etsysMirrorCompliances 2 }
+
+etsysMirrorCompliance3 MODULE-COMPLIANCE
+    STATUS      current
+    DESCRIPTION
+        "The compliance statement for devices that support the Enterasys
+         Mirror MIB."
+
+    MODULE
+        MANDATORY-GROUPS { etsysMirrorSystemGroup3,
+                           etsysMirrorConfigGroup3 }
+
+    OBJECT etsysMirrorSourceRowStatus
+    WRITE-SYNTAX RowStatus { active(1), createAndGo(4), destroy(6) }
+    DESCRIPTION
+        "The states createAndWait, notInService and notReady are not
+         supported for writing."
+
+    ::= { etsysMirrorCompliances 3 }
 
 END

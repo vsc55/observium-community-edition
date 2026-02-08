@@ -10,7 +10,7 @@
  *
  */
 
-if (empty($hardware) && strpos($poll_device['sysDescr'], 'olive')) {
+if (empty($hardware) && str_contains($poll_device['sysDescr'], 'olive')) {
     $hardware = 'Olive';
     $serial   = '';
 }

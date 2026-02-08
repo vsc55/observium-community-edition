@@ -30,7 +30,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 
   --ACL TABLE
 		 nmsMacAclTable OBJECT-TYPE
-			  SYNTAX  SEQUENCE OF nmsMacAclEntry
+			  SYNTAX  SEQUENCE OF NmsMacAclEntry
 			  ACCESS  not-accessible
 			  STATUS  mandatory
 			  DESCRIPTION
@@ -39,7 +39,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 			  ::= { nmsMacAclMIB 1 }
 
 		  nmsMacAclEntry OBJECT-TYPE
-			  SYNTAX  nmsMacAclEntry
+			  SYNTAX  NmsMacAclEntry
 			  ACCESS  not-accessible
 			  STATUS  mandatory
 			  DESCRIPTION
@@ -48,7 +48,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 			  INDEX   { nmsMacAclname }
 			  ::= { nmsMacAclTable 1 }
 
-		  nmsMacAclEntry ::= SEQUENCE {
+		  NmsMacAclEntry ::= SEQUENCE {
 				nmsMacAclname			DisplayString,
 				nmsMacAclnulecnt 		INTEGER,
 				nmsMacAclmergeenable		INTEGER,
@@ -98,7 +98,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 
 --MAC ACL RULE TABLE
 				nmsMacAclRuleTable OBJECT-TYPE
-						SYNTAX	SEQUENCE OF nmsMacAclRuleEntry
+						SYNTAX	SEQUENCE OF NmsMacAclRuleEntry
 						ACCESS	not-accessible
 						STATUS	mandatory
 						DESCRIPTION
@@ -106,7 +106,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 						::= { nmsMacAclMIB 2 }
 
 				nmsMacAclRuleEntry OBJECT-TYPE
-						 SYNTAX  nmsMacAclRuleEntry
+						 SYNTAX  NmsMacAclRuleEntry
 						 ACCESS  not-accessible
 						 STATUS  mandatory
 						 DESCRIPTION
@@ -114,7 +114,7 @@ nmsMacAclMIB	MODULE-IDENTITY
 						 INDEX	 { nmsMacAclRulename, nmsMacAclRuleid }
 						::= { nmsMacAclRuleTable 1 }
 
-				nmsMacAclRuleEntry ::= SEQUENCE {
+				NmsMacAclRuleEntry ::= SEQUENCE {
 						nmsMacAclRulename			DisplayString,
 						nmsMacAclRuleid				INTEGER,
 						nmsMacAclRuleopt				INTEGER,

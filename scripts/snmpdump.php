@@ -14,7 +14,7 @@
 chdir(dirname($argv[0]));
 
 // Get options before definitions!
-$options = getopt("h:f:o:cdqV", [], $opt_index);
+$options = getopt("h:f:o:m:t:r:icdqV", [], $opt_index);
 
 include("../includes/observium.inc.php");
 
@@ -37,7 +37,7 @@ if (isset($options['h'])) {
     if (is_intnum($options['h'])) {
         $device = device_by_id_cache($options['h']);
         //print_vars($device);
-    } elseif (is_valid_hostname($options['h'])) {
+    } elseif (is_valid_hostname($options['h']) || get_ip_version($options['h'])) {
         $device = device_by_name($options['h']);
 
         if (!$device && $add = array_slice($argv, $opt_index)) {
@@ -80,31 +80,52 @@ USAGE:
 $scriptname [-cqdV] -h device [-f filename]
 
 EXAMPLE:
- ./scripts/snmpdump.php -c -h <device>       Show snmpwalk commands for make snmpdump specific device (exist in db)
- ./scripts/snmpdump.php -h <device>          Make snmpdump for specific device (exist in db) to file <hostname>.snmpwalk
+  ./scripts/snmpdump.php -c -h <device>       Show snmpwalk commands for make snmpdump specific device (exist in db)
+  ./scripts/snmpdump.php -h <device>          Make snmpdump for specific device (exist in db) to file <hostname>.snmpwalk
  
- ./scripts/snmpdump.php -h <hostname> <community>  Make snmpdump for specific hostname with v2 community to file <hostname>.snmpwalk
-                                                   Can use snmp v1/2c/3 auth params same as for ./add_device.php
+  ./scripts/snmpdump.php -h <hostname> <community>  Make snmpdump for specific hostname with v2 community to file <hostname>.snmpwalk
+                                                    Can use snmp v1/2c/3 auth params same as for ./add_device.php
 
 OPTIONS:
- -h <device id> | <device hostname>          Device hostname or id (required).
- -f                                          Filename for store snmpdump (default: <hostname>.snmpwalk).
-                                             For write to stdout use -f stdout
- -c                                          Show snmpwalk commands for self run.
- -o                                          Start Numeric Oid (default: .)
- -q                                          Quiet output.
- -V                                          Show observium version and exit.
- -VV                                         Show observium and used programs versions and exit.
+  -h <device id> | <device hostname>          Device hostname or id (required).
+  -f <filename>                               Filename for store snmpdump (default: <hostname>.snmpwalk).
+                                              For write to stdout use -f stdout
+  -t <timeout>                                SNMP timeout in seconds (default as configured for device or 1 sec)
+  -r <retries>                                SNMP retry count (default is 5)
+  -m <max-repetition>                         Set snmpbulkwalk Max Repetition value. Set it to 0 for disable SNMP bulk walk.
+  -i                                          Set no increase flag for snmpwalk (-Cc).
+  -o <oid>                                    Start Numeric Oid (default: .)
+  -c                                          Show snmpwalk commands for self run.
+  -q                                          Quiet output.
+  -V                                          Show observium version and exit.
+  -VV                                         Show observium and used programs versions and exit.
 
 DEBUGGING OPTIONS:
- -d                                          Enable debugging output.
- -dd                                         More verbose debugging output.
+  -d                                          Enable debugging output.
+  -dd                                         More verbose debugging output.
 
 %rInvalid arguments!%n", 'color', FALSE);
     exit;
 }
 
 $oid = $options['o'] ?? NULL;
+
+if (isset($options['t']) && is_numeric($options['t'])) {
+    // snmp timeout in seconds
+    $device['snmp_timeout'] = (int)$options['t'];
+}
+if (isset($options['r']) && is_numeric($options['r'])) {
+    // snmp retries count
+    $device['snmp_retries'] = (int)$options['r'];
+}
+if (isset($options['m']) && is_numeric($options['m'])) {
+    // snmpbulkwalk max-repetition
+    $device['snmp_maxrep'] = (int)$options['m'];
+}
+if (isset($options['i'])) {
+    // snmp no increase
+    $device['snmp_noincrease'] = TRUE;
+}
 
 if (cli_is_piped()) {
     $options['f'] = 'stdout';

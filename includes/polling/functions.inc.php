@@ -130,8 +130,9 @@ function poll_device($device, $options) {
     $alert_rules = cache_alert_rules();
     $alert_table = cache_device_alert_table($device['device_id']);
 
-    print_debug_vars($alert_rules);
-    print_debug_vars($alert_table);
+    // too big tables, collect only for very hard development: -ddd
+    print_debug_vars($alert_rules, 3);
+    print_debug_vars($alert_table, 3);
 
     $status = 0;
 
@@ -156,7 +157,7 @@ function poll_device($device, $options) {
 
     $host_rrd_dir = $config['rrd_dir'] . "/" . $device['hostname'];
     // Create device RRD directory (without remote rrdcached)
-    if (!OBS_RRD_NOLOCAL && !is_dir($host_rrd_dir)) {
+    if (!OBS_RRD_REMOTE && !is_dir($host_rrd_dir)) {
         mkdir($host_rrd_dir);
         print_cli("Created directory : $host_rrd_dir");
     }
@@ -167,7 +168,7 @@ function poll_device($device, $options) {
     print_cli_data("Device status", $device_status['message'], 1);
 
     // device cached dns ip
-    if ($dns_ip = is_pingable_cache_dns($device['hostname'])) {
+    if ($dns_ip = dns_resolve_cached($device['hostname'])) {
         // Store not empty dns ip
         if ($device['ip'] != $dns_ip) {
             $device['ip']       = $dns_ip;
@@ -285,6 +286,8 @@ function poll_device($device, $options) {
                     array_unshift($poll_modules, $module);
                 } elseif (is_file($config['install_dir'] . "/includes/polling/$module.inc.php")) {
                     $poll_modules[] = $module;
+                } else {
+                    print_debug("Poller module '$module' not really exists!");
                 }
             }
 
@@ -307,12 +310,12 @@ function poll_device($device, $options) {
         echo(PHP_EOL);
 
         foreach ($poll_modules as $module) {
-            print_debug(PHP_EOL . "including: includes/polling/$module.inc.php");
 
             print_cli_heading("Module Start: %R" . $module);
 
             $m_start = utime();
 
+            print_debug(PHP_EOL . "including: includes/polling/$module.inc.php");
             include($config['install_dir'] . "/includes/polling/$module.inc.php");
 
             $m_run                                    = elapsed_time($m_start, 4);
@@ -423,9 +426,6 @@ function poll_device($device, $options) {
             // Keep discovery history and perf too
             if (isset($old_device_state['discovery_history'])) {
                 $device_state['discovery_history'] = $old_device_state['discovery_history'];
-            }
-            if (isset($old_device_state['discovery_mod_perf'])) {
-                $device_state['discovery_mod_perf'] = $old_device_state['discovery_mod_perf'];
             }
             unset($poller_history, $old_device_state);
 

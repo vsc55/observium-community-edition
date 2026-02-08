@@ -91,7 +91,10 @@ final class HtmlHighlighter implements Highlighter
         $string = trim($string);
 
         // Added by Observium Developers. IN list truncated for a long list
-        $string = preg_replace('!(IN</span>\s*)(\()([^\)]+)(\))!', '$1$2<div class="text-truncate" onclick="revealHiddenOverflow(this)">$3</div>$4', $string);
+        if (str_contains($string, 'IN</span>')) {
+            //r($string);
+            $string = preg_replace('!(IN</span>\s*)(\()(.+?</span>)(\))!', '$1$2<div class="text-truncate" onclick="revealHiddenOverflow(this)">$3</div>$4', $string);
+        }
 
         if (! $this->usePre) {
             return $string;

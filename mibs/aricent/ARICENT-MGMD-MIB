@@ -1,13 +1,12 @@
 -- Copyright (C) 2010-2012 Aricent Group . All Rights Reserved
 
---$Id: fsmgmd.mib,v 1.12 2016/06/24 09:42:22 siva Exp $
 ARICENT-MGMD-MIB DEFINITIONS ::= BEGIN
    IMPORTS 
     OBJECT-TYPE,  Counter32, Integer32, enterprises,
     MODULE-IDENTITY, Unsigned32, IpAddress FROM SNMPv2-SMI
+    RowStatus FROM SNMPv2-TC
     InetAddress, InetAddressType FROM INET-ADDRESS-MIB 
-    InterfaceIndex FROM IF-MIB
-    RowStatus FROM SNMPv2-TC;
+    InterfaceIndex FROM IF-MIB; 
 
 fsmgmdMIB MODULE-IDENTITY
     LAST-UPDATED "201209050000Z" 

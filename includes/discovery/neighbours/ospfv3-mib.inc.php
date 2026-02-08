@@ -39,7 +39,7 @@ if (snmp_status()) {
     $ospf_array = snmpwalk_cache_oid($device, 'ospfv3NbrIfId', $ospf_array, 'OSPFV3-MIB');
     print_debug_vars($ospf_array);
 
-    foreach ($ospf_array as $index => $entry) {
+    foreach ($ospf_array as $entry) {
         $ip            = hex2ip($entry['ospfv3NbrAddress']);
         $ip_compressed = ip_compress($ip);
         if ($ip_compressed === '::') {

@@ -15,6 +15,7 @@ require_once($config['install_dir'] . "/includes/entities/device.inc.php");
 require_once($config['install_dir'] . "/includes/entities/port.inc.php");
 require_once($config['install_dir'] . "/includes/entities/processor.inc.php");
 require_once($config['install_dir'] . "/includes/entities/storage.inc.php");
+require_once($config['install_dir'] . "/includes/entities/mempool.inc.php");
 require_once($config['install_dir'] . "/includes/entities/sensor.inc.php");
 require_once($config['install_dir'] . "/includes/entities/status.inc.php");
 require_once($config['install_dir'] . "/includes/entities/counter.inc.php");
@@ -25,7 +26,7 @@ require_once($config['install_dir'] . "/includes/entities/sla.inc.php");
 require_once($config['install_dir'] . "/includes/entities/ip-address.inc.php");
 require_once($config['install_dir'] . "/includes/entities/routing.inc.php");
 require_once($config['install_dir'] . "/includes/entities/wifi.inc.php");
-//require_once($config['install_dir'] . "/includes/entities/p2p-radio.inc.php");
+require_once($config['install_dir'] . "/includes/entities/stp.inc.php");
 
 /**
  *
@@ -136,8 +137,8 @@ function get_entity_attribs($entity_type, $entity_id, $refresh = FALSE)
  *
  * @return boolean
  */
-function set_entity_attrib($entity_type, $entity_id, $attrib_type, $attrib_value, $device_id = NULL)
-{
+function set_entity_attrib($entity_type, $entity_id, $attrib_type, $attrib_value, $device_id = NULL) {
+
     if (is_array($entity_id)) {
         // Passed entity array, instead id
         $translate = entity_type_translate_array($entity_type);
@@ -156,7 +157,7 @@ function set_entity_attrib($entity_type, $entity_id, $attrib_type, $attrib_value
 
     // If we don't have a device_id, try to work out what it should be
     if (!$device_id) {
-        if (isset($entity) && isset($entity['device_id'])) {
+        if (isset($entity['device_id'])) {
             $device_id = $entity['device_id'];
         } else {
             $entity    = get_entity_by_id_cache($entity_type, $entity_id);
@@ -178,13 +179,13 @@ function set_entity_attrib($entity_type, $entity_id, $attrib_type, $attrib_value
 
     //if (dbFetchCell("SELECT COUNT(*) FROM `entity_attribs` WHERE `entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?", array($entity_type, $entity_id, $attrib_type)))
     if (dbExist('entity_attribs', '`entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?', [$entity_type, $entity_id, $attrib_type])) {
-        $return = dbUpdate(['attrib_value' => $attrib_value], 'entity_attribs', '`entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?', [$entity_type, $entity_id, $attrib_type]);
-    } else {
-        $return = dbInsert(['device_id' => $device_id, 'entity_type' => $entity_type, 'entity_id' => $entity_id, 'attrib_type' => $attrib_type, 'attrib_value' => $attrib_value], 'entity_attribs');
-        if ($return !== FALSE) {
-            $return = TRUE;
-        } // Note dbInsert return IDs if exist or 0 for not indexed tables
+        return dbUpdate(['attrib_value' => $attrib_value], 'entity_attribs', '`entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?', [$entity_type, $entity_id, $attrib_type]);
     }
+
+    $return = dbInsert(['device_id' => $device_id, 'entity_type' => $entity_type, 'entity_id' => $entity_id, 'attrib_type' => $attrib_type, 'attrib_value' => $attrib_value], 'entity_attribs');
+    if ($return !== FALSE) {
+        $return = TRUE;
+    } // Note dbInsert return IDs if exist or 0 for not indexed tables
 
     return $return;
 }
@@ -218,7 +219,7 @@ function del_entity_attrib($entity_type, $entity_id, $attrib_type)
         unset($GLOBALS['cache']['entity_attribs_all'][$entity_type][$entity_id]);
     }
 
-    return dbDelete('entity_attribs', '`entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?', [$entity_type, $entity_id, $attrib_type]);
+    return dbDelete('entity_attribs', '`entity_type` = ? AND `entity_id` = ? AND `attrib_type` = ?', [ $entity_type, $entity_id, $attrib_type ]);
 }
 
 /**
@@ -296,7 +297,7 @@ function get_device_entities_attribs($device_id, $entity_types = NULL)
  * if $check_sysORID is TRUE, we fetch the device's supplied list as well - should only be FALSE in the sysORID code
  *
  * @param array        $device            Device array
- * @param string|array $mib               MIB name
+ * @param string|array $mib               MIB name (or array of MIB names)
  * @param boolean      $check_permissions Check device specific MIB permissions (if FALSE ignores it)
  * @param boolean      $check_sysORID     Check if MIB exist in sysOROID table
  *
@@ -306,15 +307,14 @@ function is_device_mib($device, $mib, $check_permissions = TRUE, $check_sysORID 
 {
     global $config;
 
-    if (is_array_list($mib)) {
+    if (is_array_flat($mib)) {
         // Recursive check multiple MIBs
-        $return = FALSE;
         foreach ($mib as $entry) {
-            if ($return = is_device_mib($device, $entry, $check_permissions, $check_sysORID)) {
-                break;
+            if (is_device_mib($device, $entry, $check_permissions, $check_sysORID)) {
+                return TRUE;
             }
         }
-        return $return;
+        return FALSE;
     }
 
     $mib_permitted = in_array($mib, get_device_mibs($device, $check_sysORID)); // Check if mib available for device
@@ -765,10 +765,13 @@ function set_device_object_enable($device, $object, $mib = '', $remove = FALSE, 
 
 /* End mib functions */
 
-// DOCME needs phpdoc block
-// TESTME needs unit testing
-function get_entity_by_id_cache($entity_type, $entity_id)
-{
+/**
+ * @param string $entity_type
+ * @param string|numeric $entity_id
+ *
+ * @return array|false|mixed|null
+ */
+function get_entity_by_id_cache($entity_type, $entity_id) {
     global $cache;
 
     if (is_array($cache[$entity_type][$entity_id])) {
@@ -903,10 +906,14 @@ function cache_entities_by_id($entity_type, $entity_ids)
  *
  * @return false|array Array with entity specific IDs
  */
-function get_entity_ids_ip_by_network($entity_type, $network, $add_where = '')
-{
+function get_entity_ids_ip_by_network($entity_type, $network, $add_where = '') {
 
-    // Recursive query for array of networks
+    if ($add_where) {
+        // Additional query, ie limit by device_id or port_id
+        $add_where = preg_replace('/^\s*AND\s*/', '', $add_where);
+    }
+
+    // Recursive query for an array of networks
     if (is_array($network)) {
         $ids = [];
         foreach ($network as $entry) {
@@ -926,12 +933,25 @@ function get_entity_ids_ip_by_network($entity_type, $network, $add_where = '')
         return FALSE;
     }
 
+    //bdump($entity_type);
+    //bdump($network);
+    if (str_contains($entity_type, '.')) {
+        // Ability force ip version over entity type param (for device/port entity type)
+        [ $entity_type, $ip_version ] = explode('.', $entity_type);
+        if (str_contains($ip_version, '4')) {
+            // Force request IPv4 address
+            $network_array['ip_type'] = 'ipv4';
+        }
+        if (str_contains($ip_version, '6')) {
+            // Force request IPv6 address
+            $network_array['ip_type'] = 'ipv6';
+        }
+    }
+
     $query = 'SELECT ';
-    $join  = '';
-    $where = ' WHERE 1 ';
     switch ($entity_type) {
         case 'ipv4':
-            // Force request IPv6 address
+            // Force request IPv4 address
             $network_array['ip_type'] = 'ipv4';
             $query                    .= ' `ipv4_address_id`';
             break;
@@ -941,7 +961,7 @@ function get_entity_ids_ip_by_network($entity_type, $network, $add_where = '')
             $query                    .= ' `ipv6_address_id`';
             break;
         case 'ip':
-            $query .= ($network_array['ip_version'] == 4) ? ' `ipv4_address_id`' : ' `ipv6_address_id`';
+            $query .= $network_array['ip_version'] == 4 ? ' `ipv4_address_id`' : ' `ipv6_address_id`';
             break;
 
         case 'device':
@@ -953,65 +973,92 @@ function get_entity_ids_ip_by_network($entity_type, $network, $add_where = '')
         case 'ports':
             $query .= ' DISTINCT `port_id`';
             break;
+
+        default:
+            // unknown entity
+            return FALSE;
     }
 
-    $params = [];
+    //bdump($network_array);
+
+    //$negative = isset($network_array['negative']) && $network_array['negative'];
+    $negative = FALSE; // Keep only positive matching
+
+    $where_array = [];
     switch ($network_array['ip_type']) {
         case 'ipv4':
             $query .= ' FROM `ipv4_addresses`';
             if ($network_array['query_type'] === 'single') {
                 // Exactly IP match
-                //$where .= ' AND BINARY `ipv4_binary` = ?';
-                $where .= ' AND `ipv4_binary` = ?';
+                if ($negative) {
+                    $where_array[] = '`ipv4_binary` != ' . binary_to_hex(inet_pton($network_array['address']));
+                } else {
+                    $where_array[] = '`ipv4_binary` = ' . binary_to_hex(inet_pton($network_array['address']));
+                }
                 //var_dump($network_array['address_binary']);
-                $params[] = [binary_to_hex($network_array['address_binary'])];
             } elseif ($network_array['query_type'] === 'network') {
                 // Match IP in network
-                $where    .= ' AND `ipv4_binary` >= ? AND `ipv4_binary` <= ?';
-                $params[] = [binary_to_hex($network_array['network_start_binary'])];
-                $params[] = [binary_to_hex($network_array['network_end_binary'])];
+                //$where_array[] = '(`ipv4_binary` >= ? AND `ipv4_binary` <= ?)';
+                $where_array[] = '(`ipv4_binary` BETWEEN ' . binary_to_hex(inet_pton($network_array['network_start'])) .
+                                 ' AND ' . binary_to_hex(inet_pton($network_array['network_end'])) . ')';
+            } elseif ($network_array['query_type'] === 'any') {
+                // query any not empty address
+                $where_array[] = "(`ipv4_address` IS NOT NULL AND `ipv4_address` <> '')";
             } else {
                 // Match IP addresses by part of string
-                $where .= generate_query_values_and($network_array['address'], 'ipv4_address', $network_array['query_type']);
+                if ($negative) {
+                    $network_array['query_type'] = 'not ' . $network_array['query_type'];
+                }
+                $where_array[] = generate_query_values($network_array['address'], 'ipv4_address', $network_array['query_type']);
             }
             break;
+
         case 'ipv6':
             $query .= ' FROM `ipv6_addresses`';
             if ($network_array['query_type'] === 'single') {
                 // Exactly IP match
-                $where    .= ' AND `ipv6_binary` = ?';
-                $params[] = [binary_to_hex($network_array['address_binary'])];
+                if ($negative) {
+                    $where_array[] = '`ipv6_binary` != ' . binary_to_hex(inet_pton($network_array['address']));
+                } else {
+                    $where_array[] = '`ipv6_binary` = ' . binary_to_hex(inet_pton($network_array['address']));
+                }
             } elseif ($network_array['query_type'] === 'network') {
                 // Match IP in network
-                $where    .= ' AND `ipv6_binary` >= ? AND `ipv6_binary` <= ?';
-                $params[] = [binary_to_hex($network_array['network_start_binary'])];
-                $params[] = [binary_to_hex($network_array['network_end_binary'])];
+                //$where_array[] = '(`ipv6_binary` >= ? AND `ipv6_binary` <= ?)';
+                $where_array[] = '(`ipv6_binary` BETWEEN ' . binary_to_hex(inet_pton($network_array['network_start'])) .
+                                 ' AND ' . binary_to_hex(inet_pton($network_array['network_end'])) . ')';
+            } elseif ($network_array['query_type'] === 'any') {
+                // query any not empty address
+                $where_array[] = "(`ipv6_address` IS NOT NULL AND `ipv6_address` <> '')";
             } else {
                 // Match IP addresses by part of string
-                $where .= ' AND (' . generate_query_values($network_array['address'], 'ipv6_address', $network_array['query_type']) .
-                          ' OR ' . generate_query_values($network_array['address'], 'ipv6_compressed', $network_array['query_type']) . ')';
+                if ($negative) {
+                    $network_array['query_type'] = 'not ' . $network_array['query_type'];
+                }
+                $where_array[] = '(' . generate_query_values($network_array['address'], 'ipv6_address', $network_array['query_type']) .
+                                 ' OR ' . generate_query_values($network_array['address'], 'ipv6_compressed', $network_array['query_type']) . ')';
             }
             break;
     }
 
     if (FALSE) {
         // Ignore disabled/deleted/ignored
-        $where .= ' AND `device_id` NOT IN (SELECT `device_id` FROM `devices` WHERE `disabled` = "1" OR `ignore` = "1")';
-        $where .= ' AND `port_id` NOT IN (SELECT `port_id` FROM `ports` WHERE `deleted` = "1" OR `ignore` = "1")';
+        $where_array[] = '`device_id` NOT IN (SELECT `device_id` FROM `devices` WHERE `disabled` = "1" OR `ignore` = "1")';
+        $where_array[] = '`port_id` NOT IN (SELECT `port_id` FROM `ports` WHERE `deleted` = "1" OR `ignore` = "1")';
     } else {
         // Always ignore deleted ports
-        $join = ' LEFT JOIN `ports` USING (`device_id`, `port_id`) ';
-        // IS NULL allow to search addresses without associated port
-        $where .= ' AND (`ports`.`deleted` != "1" OR `ports`.`deleted` IS NULL)';
+        $query .= ' LEFT JOIN `ports` USING (`device_id`, `port_id`) ';
+        // IS NULL allow searching addresses without associated port
+        $where_array[] = '(`ports`.`deleted` IS NULL OR `ports`.`deleted` != "1")';
     }
-    $query .= $join;
-    $where .= $add_where; // Additional query, ie limit by device_id or port_id
 
-    return dbFetchColumn($query . $where, $params);
-    //$ids = dbFetchColumn($query . $where, $params);
+    $where  = generate_where_clause($where_array, $add_where);
+
+    //$ids = dbFetchColumn($query . $where);
     //print_vars($ids);
 
-    //return $ids;
+    //return dbFetchColumn($query . $where, NULL, TRUE);
+    return dbFetchColumn($query . $where);
 }
 
 // DOCME needs phpdoc block
@@ -1032,7 +1079,10 @@ function entity_index_tags($index, $i = NULL) {
     $tags['index']      = $index;            // Index in descr
     $tags['index_text'] = snmp_oid_to_string($index);
     foreach (explode('.', $index) as $k => $idx) {
-        $tags['index' . $k] = $idx;          // Index parts
+        // Index parts
+        $tags['index' . $k]  = $idx;
+        // Add zeroid index parts, for ability to covert ie: 1.2.3 -> 10203
+        $tags['index0' . $k] = zeropad($idx);
     }
     if (is_numeric($i)) {
         // entity counter++
@@ -1046,9 +1096,7 @@ function entity_index_tags($index, $i = NULL) {
 // A little inefficient.
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function entity_name($type, $entity)
-{
-    global $config, $entity_cache;
+function entity_name($type, $entity) {
 
     if (is_numeric($entity)) {
         $entity = get_entity_by_id_cache($type, $entity);
@@ -1056,18 +1104,14 @@ function entity_name($type, $entity)
 
     $translate = entity_type_translate_array($type);
 
-    $text = $entity[$translate['name_field']];
-
-    return ($text);
+    return $entity[$translate['name_field']];
 }
 
 // Returns a text name from an entity type and an id
 // A little inefficient.
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function entity_short_name($type, $entity)
-{
-    global $config, $entity_cache;
+function entity_short_name($type, $entity) {
 
     if (is_numeric($entity)) {
         $entity = get_entity_by_id_cache($type, $entity);
@@ -1075,18 +1119,14 @@ function entity_short_name($type, $entity)
 
     $translate = entity_type_translate_array($type);
 
-    $text = $entity[$translate['name_field']];
-
-    return ($text);
+    return $entity[$translate['name_field']];
 }
 
 // Returns a text description from an entity type and an id
 // A little inefficient.
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function entity_descr($type, $entity)
-{
-    global $config, $entity_cache;
+function entity_descr($type, $entity) {
 
     if (is_numeric($entity)) {
         $entity = get_entity_by_id_cache($type, $entity);
@@ -1094,111 +1134,99 @@ function entity_descr($type, $entity)
 
     $translate = entity_type_translate_array($type);
 
-    $text = $entity[$translate['entity_descr_field']];
-
-    return ($text);
+    return $entity[$translate['entity_descr_field']];
 }
 
-function entity_descr_check(&$descr, $entity_type, $entity = [])
-{
+/**
+ * Check and normalize entity description based on type-specific ignore rules.
+ *
+ * @param string &$descr       Entity description (modified in-place)
+ * @param string $entity_type  Type of the entity (sensor, storage, etc)
+ * @param int|false $limit_len Limit descr to 255 chars accordingly as in DB (optional)
+ * @return bool  TRUE if description should be ignored/skipped, FALSE otherwise
+ */
+function entity_descr_check(&$descr, $entity_type, $limit_len = 255) {
     global $config;
 
+    // Ignore empty descriptions or non-string input
     if (safe_empty($descr) || is_array($descr)) {
-        // Ignore empty (or arrays because currently we check only descr
-        print_debug("Skipped by empty description: $descr ");
+        print_debug("Skipped: description is empty or array [" . var_export($descr, TRUE) . "]");
         return TRUE;
     }
-    // Clean description (multiple spaces to single)
+    // Normalize description
     $descr     = trim(preg_replace('/\s{2,}/', ' ', $descr));
-    $limit_len = 255;
 
-    // Select entity ignore config
-    switch ($entity_type) {
-        case 'sensor':
-        case 'status':
-            $ignore_equals   = $config['ignore_sensor'];
-            $ignore_contains = $config['ignore_sensor_string'];
-            $ignore_regexp   = $config['ignore_sensor_regexp'];
-            break;
+    // Entity-type config mapping
+    $config_map = [
+        // entity          config key
+        //'sensor'        => 'sensor',
+        'sensors'       => 'sensor',
+        'status'        => 'sensor',
+        'statuses'      => 'sensor',
+        //'counter'       => 'counter',
+        'counters'      => 'counter',
+        'storage'       => 'mount',
+        'storages'      => 'mount',
+        //'processor'     => 'processor',
+        'processors'    => 'processor',
+        //'mempool'       => 'mempool',
+        'mempools'      => 'mempool',
+        //'toner'         => 'toner',
+        'toners'        => 'toner',
+        'printersupply' => 'toner',
+        'printersupplies' => 'toner',
+        //'lsp'           => 'lsp',
+        'graph'         => 'graphs',
+        //'graphs'        => 'graphs',
+        //'xdp'           => 'xdp',
+    ];
 
-        case 'counter':
-            $ignore_equals   = $config['ignore_counter'];
-            $ignore_contains = $config['ignore_counter_string'];
-            $ignore_regexp   = $config['ignore_counter_regexp'];
-            break;
+    // split subtype, i.e.: graphs.fw -> $config['graphs']['ignore_fw_regexp']
+    if (str_contains($entity_type, '.')) {
+        [ $entity_type, $subtype ] = explode('.', $entity_type);
+    } else {
+        $subtype = 'name';
+    }
+    $entity_key      = $config_map[$entity_type] ?? $entity_type;
+    $ignore_equals   = $config["ignore_{$entity_key}"]        ?? $config[$entity_key]["ignore_{$subtype}"]        ?? [];
+    $ignore_contains = $config["ignore_{$entity_key}_string"] ?? $config[$entity_key]["ignore_{$subtype}_string"] ?? [];
+    $ignore_regexp   = $config["ignore_{$entity_key}_regexp"] ?? $config[$entity_key]["ignore_{$subtype}_regexp"] ?? [];
 
-        case 'storage':
-            $ignore_equals   = $config['ignore_mount'];
-            $ignore_contains = $config['ignore_mount_string'];
-            $ignore_regexp   = $config['ignore_mount_regexp'];
-            $limit_len       = FALSE;
-            break;
-
-        case 'processor':
-            $ignore_equals   = $config['ignore_processor'];
-            $ignore_contains = $config['ignore_processor_string'];
-            $ignore_regexp   = $config['ignore_processor_regexp'];
-            break;
-
-        case 'mempool':
-            $ignore_equals   = $config['ignore_mempool'];
-            $ignore_contains = $config['ignore_mempool_string'];
-            $ignore_regexp   = $config['ignore_mempool_regexp'];
-            break;
-
-        case 'toner':
-        case 'printersupply':
-            $ignore_equals   = $config['ignore_toner'];
-            $ignore_contains = $config['ignore_toner_string'];
-            $ignore_regexp   = $config['ignore_toner_regexp'];
-            break;
-
-        case 'lsp':
-            $ignore_equals   = $config['ignore_lsp'];
-            $ignore_contains = $config['ignore_lsp_string'];
-            $ignore_regexp   = $config['ignore_lsp_regexp'];
-            break;
-
-        default:
-            $ignore_equals_key   = 'ignore_' . $entity_type;
-            $ignore_contains_key = 'ignore_' . $entity_type . '_string';
-            $ignore_regexp_key   = 'ignore_' . $entity_type . '_regexp';
-            if (isset($config[$ignore_equals_key]) ||
-                isset($config[$ignore_contains_key]) ||
-                isset($config[$ignore_regexp_key])) {
-                // Generic entity ignore
-                $ignore_equals   = $config[$ignore_equals_key];
-                $ignore_contains = $config[$ignore_contains_key];
-                $ignore_regexp   = $config[$ignore_regexp_key];
-            } else {
-                // Unknown entity, no checks
-                return FALSE;
-            }
+    // If there are no ignore settings for this entity type, skip checks
+    if (empty($ignore_equals) && empty($ignore_contains) && empty($ignore_regexp)) {
+        // Unknown entity, no checks
+        return FALSE;
     }
 
-    foreach ((array)$ignore_equals as $bi) {
-        if (strcasecmp($bi, $descr) == 0) {
-            print_debug("Skipped by equals: $bi, $descr ");
+    // Ignore if description matches any "equals" string (case-insensitive)
+    foreach ((array)$ignore_equals as $val) {
+        if (strcasecmp($val, $descr) === 0) {
+            print_debug("Skipped by equals: '$val' == '$descr'");
             return TRUE;
         }
     }
-    foreach ((array)$ignore_contains as $bi) {
-        if (stripos($descr, $bi) !== FALSE) {
-            print_debug("Skipped by contains: $bi, $descr ");
+    // Ignore if description contains any string
+    foreach ((array)$ignore_contains as $val) {
+        if (stripos($descr, $val) !== FALSE) {
+            print_debug("Skipped by contains: '$val' in '$descr'");
             return TRUE;
         }
     }
-    foreach ((array)$ignore_regexp as $bi) {
-        if (preg_match($bi, $descr) > 0) {
-            print_debug("Skipped by regexp: $bi, $descr ");
+    // Ignore if description matches any regexp
+    foreach ((array)$ignore_regexp as $pattern) {
+        if (@preg_match($pattern, $descr) > 0) {
+            print_debug("Skipped by regexp: $pattern matches '$descr'");
             return TRUE;
         }
     }
 
     // Limit descr to 255 chars accordingly as in DB
-    if ($limit_len && strlen($descr) > $limit_len) {
-        $descr = check_extension_exists('mbstring') ? mb_substr($descr, 0, $limit_len) : substr($descr, 0, $limit_len);
-        print_debug("Description truncated to $limit_len chars: '$descr'");
+    if ($limit_len) {
+        $old_descr = $descr;
+        $descr = truncate_len($old_descr, $limit_len);
+        if (OBS_DEBUG && $old_descr !== $descr) {
+            print_debug("Description truncated to $limit_len chars: '$descr'");
+        }
     }
 
     return FALSE;
@@ -1305,21 +1333,19 @@ function entity_descr_definition($entity_type, $definition, $descr_entry, $count
 }
 
 /**
- * Rule-based entity linking.
+ * Generate measured entity label from definition and entity data
  *
- * @param $entity_type
- * @param $definition
- * @param $device
- * @param $entity
+ * Processes measured_label, measured_label_match patterns, and label transforms
+ * to produce a standardised entity label for sorting and grouping.
  *
- * @return array
+ * @param array $definition MIB definition containing measured_label config
+ * @param array $entity     Entity data for template substitution
+ * @param array &$options   Options array to populate (passed by reference)
+ *
+ * @return void             Modifies $options array directly
  */
-function entity_measured_match_definition($device, $definition, $entity = [], $entity_type = NULL) {
-    // $entity_type unused currently
-
-    $options = [];
-
-    // Just append label for sorting and grouping
+function entity_measured_label_definition($definition, $entity, &$options) {
+    // Just append a label for sorting and grouping
     if (isset($definition['measured_label'])) {
         $options['measured_entity_label'] = array_tag_replace($entity, $definition['measured_label']);
 
@@ -1337,10 +1363,35 @@ function entity_measured_match_definition($device, $definition, $entity = [], $e
                 }
             }
         }
+
+        // Transform labels
+        // Example in ISM-PERFORMANCE-MIB definition
+        if (!safe_empty($options['measured_entity_label']) && isset($definition['measured_label_transform'])) {
+            $options['measured_entity_label'] = string_transform($options['measured_entity_label'], $definition['measured_label_transform']);
+        }
     }
+}
+
+/**
+ * Rule-based entity linking.
+ *
+ * @param $entity_type
+ * @param $definition
+ * @param $device
+ * @param $entity
+ *
+ * @return array
+ */
+function entity_measured_match_definition($device, $definition, $entity = [], $entity_type = NULL) {
+    // $entity_type unused currently
+
+    $options = [];
+
+    // Generate measured entity label
+    entity_measured_label_definition($definition, $entity, $options);
 
     if (isset($definition['entity_match'])) {
-        // Just alternative definition key
+        // Just an alternative definition key
         $definition['measured_match'] = $definition['entity_match'];
     }
     if (!isset($definition['measured_match'])) {
@@ -1441,7 +1492,7 @@ function entity_measured_match_definition($device, $definition, $entity = [], $e
                             $options['entPhysicalIndex_measured'] = $measured['ifIndex'];
                             $options['measured_entity_label']     = $measured['port_label'];
                             $options['port_label']                = $measured['port_label'];
-                            print_debug('Linked to port ' . $measured['port_id'] . ' via ifDescr');
+                            print_debug('Linked to port ' . $measured['port_id'] . ' via ' . $rule['field']);
                             $measured_found = TRUE;
                         }
                         break;
@@ -1479,11 +1530,21 @@ function entity_measured_match_definition($device, $definition, $entity = [], $e
         } // Stop foreach if measured match found
     }
 
+    // Fallback for port (convert to fiber with label)
+    if (!$measured_found && $definition['measured'] === 'port') {
+        $options['measured_class']            = 'fiber';
+        //$options['measured_entity']           = $measured['port_id'];
+        //$options['entPhysicalIndex_measured'] = $measured['ifIndex'];
+        $options['port_label']                = $entity['index'];
+        $options['measured_entity_label']     = $entity['index'];
+        print_debug('Fallback measured association to fiber ' . $entity['index'] . ' via index');
+    }
+
     // If passed $entity_type arg, do something
     switch ($entity_type) {
         case 'ip-address':
         case 'ip-addresses':
-            // Return measured array instead options
+            // Return measured array instead of options
             if ($measured_found) {
                 $options = $measured;
             }
@@ -1491,6 +1552,44 @@ function entity_measured_match_definition($device, $definition, $entity = [], $e
     }
 
     return $options;
+}
+
+function entity_object_definition(&$definition, $object, $entity_type = NULL) {
+    // Determine identifier for entity object using 3-tier priority
+    if (!safe_empty($object) && !is_numeric($object)) {
+        // Tier 1: Text key (traditional named entry)
+        $definition['object'] = $object;
+        return $object;
+    }
+
+    switch ($entity_type) {
+        case 'storage':
+        case 'mempool':
+
+            // Tier 2: Table value
+            if (!empty($definition['table'])) {
+                $definition['object'] = $definition['table'];
+                return $definition['table'];
+            }
+
+            $primary_oids = [ 'oid_total', 'oid_used', 'oid_free', 'oid_perc' ];
+            break;
+
+        default:
+            // Common for sensors & etc
+            $primary_oids = [ 'oid', 'oid_next' ];
+    }
+
+    // Tier 3: OID priority (for scalars)
+    foreach ($primary_oids as $oid_key) {
+        if (isset($definition[$oid_key])) {
+            $definition['object'] = $definition[$oid_key];
+            return $definition[$oid_key];
+        }
+    }
+
+    // Skip broken definitions - this fallback should never be used
+    return NULL;
 }
 
 function entity_class_definition($device, $definition, $entity, $entity_type = NULL) {
@@ -1501,25 +1600,26 @@ function entity_class_definition($device, $definition, $entity, $entity_type = N
     }
 
     if (isset($definition['oid_class'], $entity[$definition['oid_class']])) {
+        $entity_class = snmp_hexstring($entity[$definition['oid_class']]);
         // Use the mapped class based on the value from oid_class
-        if (isset($definition['map_class'][$entity[$definition['oid_class']]])) {
-            print_debug('map_class found: ' . $entity[$definition['oid_class']] . ' - ' . $definition['map_class'][$entity[$definition['oid_class']]]);
-            return $definition['map_class'][$entity[$definition['oid_class']]];
+        if (isset($definition['map_class'][$entity_class])) {
+            print_debug('map_class found: ' . $entity_class . ' - ' . $definition['map_class'][$entity_class]);
+            return $definition['map_class'][$entity_class];
         }
         if (isset($definition['map_class_regex'])) {
             // Match by regex. See FIREBRICK-MONITORING
             foreach ($definition['map_class_regex'] as $pattern => $class) {
-                if (preg_match($pattern, $entity[$definition['oid_class']])) {
-                    print_debug('map_class_regex found: ' . $entity[$definition['oid_class']] . ' - ' . $class);
+                if (preg_match($pattern, $entity_class)) {
+                    print_debug('map_class_regex found: ' . $entity_class . ' - ' . $class);
                     return $class;
                 }
             }
         }
         if ($entity_type !== 'status') {
-            print_debug('Value from oid_class (' . $entity[$definition['oid_class']] . ') does not match any configured values in map_class!');
+            print_debug('Value from oid_class (' . $entity_class . ') does not match any configured values in map_class!');
             return FALSE; // Break foreach. Proceed to next!
         }
-        return $entity[$definition['oid_class']];
+        return $entity_class;
     }
 
     if (isset($definition['map_class_index'])) {
@@ -1539,7 +1639,45 @@ function entity_class_definition($device, $definition, $entity, $entity_type = N
     if ($entity_type !== 'status') {
         print_debug('No class hardcoded and no oid_class (' . $definition['oid_class'] . ') found in table walk!');
     }
-    return ''; // Break foreach. Proceed to next!
+    return '';
+}
+
+function entity_unit_definition($device, $definition, $entity, $entity_type = NULL) {
+    // Determine the sensor unit
+    if (isset($definition['unit'])) {
+        // Use the hardcoded unit when available
+        return $definition['unit'];
+    }
+
+    if (isset($definition['oid_unit'])) {
+        if (isset($entity[$definition['oid_unit']])) {
+            // Unit in same table
+            $unit = snmp_hexstring($entity[$definition['oid_unit']]);
+        } elseif (str_contains($definition['oid_unit'], '.')) {
+            // Unit is outside from table with single index, see VERTIV-V5-MIB
+            $unit = snmp_cache_oid($device, $definition['oid_unit'], $definition['mib']);
+        } else {
+            return NULL;
+        }
+
+        // Translate unit from specific Oid
+        if (isset($definition['map_unit'][$unit])) {
+            print_debug('map_unit found: ' . $unit . ' - ' . $definition['map_unit'][$unit]);
+            return $definition['map_unit'][$unit];
+        }
+
+        if (isset($definition['map_unit_regex'])) {
+            // Match by regex.
+            foreach ($definition['map_unit_regex'] as $pattern => $runit) {
+                if (preg_match($pattern, $unit)) {
+                    print_debug('map_unit_regex found: ' . $unit . ' - ' . $runit);
+                    return $runit;
+                }
+            }
+        }
+    }
+
+    return NULL;
 }
 
 function entity_scale_definition($device, $definition, $entity, $entity_type = NULL) {
@@ -1675,12 +1813,16 @@ function entity_limits_definition($device, $definition, $entity, $scale = 1) {
             // Single param oid (outside table)
             $limit_warn = snmp_cache_oid($device, $definition[$oid_limit], $definition['mib']);
         }
-        $limit_warn = snmp_fix_numeric($limit_warn, $definition['limit_unit']);
+        $limit_warn = snmp_fix_numeric($limit_warn, $definition['limit_unit'], $definition['mib']);
     } elseif (isset($definition['limit_warn'])) {
         $limit_warn = $definition['limit_warn'];
     }
 
     // Check limits oids if set
+    if (isset($definition['limit_invalid'])) {
+        // Fix incorrect definition
+        $definition['invalid_limit'] = $definition['limit_invalid'];
+    }
     foreach (['limit_low', 'limit_low_warn', 'limit_high', 'limit_high_warn'] as $limit) {
         $oid_limit     = 'oid_' . $limit;
         $invalid_limit = 'invalid_' . $limit;
@@ -1896,49 +2038,41 @@ function entity_type_translate_array($entity_type)
  *
  * @return bool
  */
-function is_entity_permitted($entity_id, $entity_type, $device_id = NULL, $permissions = NULL)
-{
-    if ($_SESSION['userlevel'] >= 5) {
-        // User not limited (userlevel >= 5)
-        if (OBS_DEBUG) {
-            $debug_msg = "PERMISSIONS CHECK. Entity type: $entity_type, Entity ID: $entity_id, Device ID: " . ($device_id ?: 'NULL') . ", Allowed: TRUE.";
-            if (isset($GLOBALS['notifications'])) {
-                $GLOBALS['notifications'][] = ['text' => $debug_msg, 'severity' => 'debug'];
-            } else {
-                print_debug($debug_msg);
-            }
-        }
-        return TRUE;
-    }
-
-    if (is_null($permissions) && isset($GLOBALS['permissions'])) {
-        // Note, pass permissions array by param used in permissions_cache()
-        $permissions = (array)$GLOBALS['permissions'];
-    }
+function is_entity_permitted($entity_id, $entity_type, $device_id = NULL, $permissions = NULL) {
 
     if (!is_numeric($device_id) && $entity_type !== "group") {
         $device_id = get_device_id_by_entity_id($entity_id, $entity_type);
     }
 
-    if (is_numeric($device_id) && device_permitted($device_id)) {
-        $allowed = TRUE;
-    } elseif (isset($permissions[$entity_type][$entity_id]) && $permissions[$entity_type][$entity_id]) {
-        $allowed = TRUE;
-    } elseif (isset($GLOBALS['auth']) && is_graph()) {
-        $allowed = $GLOBALS['auth'];
-    } else {
-        $allowed = FALSE;
+    if ($_SESSION['userlevel'] >= 5) {
+        // User not limited (userlevel >= 5)
+        entity_permission_debug_msg('READ', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+
     }
 
-    if (OBS_DEBUG) {
-        $debug_msg = "PERMISSIONS CHECK. Entity type: $entity_type, Entity ID: $entity_id, Device ID: " . ($device_id ?: 'NULL') . ", Allowed: " . ($allowed ? 'TRUE' : 'FALSE') . ".";
-        if (isset($GLOBALS['notifications'])) {
-            $GLOBALS['notifications'][] = ['text' => $debug_msg, 'severity' => 'debug'];
-        } else {
-            print_debug($debug_msg);
-        }
+    if (isset($GLOBALS['auth']) && is_graph()) {
+        entity_permission_debug_msg('GRAPH', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+
     }
-    return $allowed;
+    if (is_numeric($device_id) && device_permitted($device_id)) {
+        entity_permission_debug_msg('READ', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+    }
+
+    if (is_null($permissions)) {
+        // Permissions stored by permissions_cache($_SESSION['user_id']);
+        $permissions = (array) mem_cache_get('user_permissions');
+    }
+
+    if (isset($permissions[$entity_type][$entity_id]) && $permissions[$entity_type][$entity_id]) {
+        entity_permission_debug_msg('READ', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+    }
+
+    entity_permission_debug_msg('READ', FALSE, $entity_id, $entity_type, $device_id);
+    return FALSE;
 }
 
 /**
@@ -1951,13 +2085,7 @@ function is_entity_permitted($entity_id, $entity_type, $device_id = NULL, $permi
  *
  * @return bool
  */
-function is_entity_write_permitted($entity_id, $entity_type, $device_id = NULL, $permissions = NULL)
-{
-
-    if (is_null($permissions) && isset($GLOBALS['permissions'])) {
-        // Note, pass permissions array by param used in permissions_cache()
-        $permissions = (array)$GLOBALS['permissions'];
-    }
+function is_entity_write_permitted($entity_id, $entity_type, $device_id = NULL, $permissions = NULL) {
 
     if (!is_numeric($device_id)) {
         $device_id = get_device_id_by_entity_id($entity_id, $entity_type);
@@ -1965,25 +2093,40 @@ function is_entity_write_permitted($entity_id, $entity_type, $device_id = NULL, 
 
     if ($_SESSION['userlevel'] >= 9) {
         // User has global device/entity write permissions
-        $allowed = TRUE;
-    } elseif (is_numeric($device_id) && isset($permissions['device'][$device_id]) && $permissions['device'][$device_id] === "rw") {
-        // User has device write permissions
-        $allowed = TRUE;
-    } elseif (isset($permissions[$entity_type][$entity_id]) && $permissions[$entity_type][$entity_id] === "rw") {
-        $allowed = TRUE;
-    } else {
-        $allowed = FALSE;
+        entity_permission_debug_msg('WRITE', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
     }
 
-    if (OBS_DEBUG) {
-        $debug_msg = "WRITE PERMISSIONS CHECK. Entity type: $entity_type, Entity ID: $entity_id, Device ID: " . ($device_id ?: 'NULL') . ", Allowed: " . ($allowed ? 'TRUE' : 'FALSE') . ".";
-        if (isset($GLOBALS['notifications'])) {
-            $GLOBALS['notifications'][] = ['text' => $debug_msg, 'severity' => 'debug'];
-        } else {
-            print_debug($debug_msg);
-        }
+    if (is_null($permissions)) {
+        // Permissions stored by permissions_cache($_SESSION['user_id']);
+        $permissions = (array) mem_cache_get('user_permissions');
     }
-    return $allowed;
+
+    if (is_numeric($device_id) && isset($permissions['device'][$device_id]) && $permissions['device'][$device_id] === "rw") {
+        // User has device write permissions
+        entity_permission_debug_msg('WRITE', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+    }
+    if (isset($permissions[$entity_type][$entity_id]) && $permissions[$entity_type][$entity_id] === "rw") {
+        entity_permission_debug_msg('WRITE', TRUE, $entity_id, $entity_type, $device_id);
+        return TRUE;
+    }
+
+    entity_permission_debug_msg('WRITE', FALSE, $entity_id, $entity_type, $device_id);
+    return FALSE;
+}
+
+function entity_permission_debug_msg($msg, $allowed, $entity_id, $entity_type, $device_id = NULL) {
+    if (!OBS_DEBUG) {
+        return;
+    }
+
+    $debug_msg = "$msg PERMISSIONS CHECK. Entity type: $entity_type, Entity ID: $entity_id, Device ID: " . ($device_id ?: 'NULL') . ", Allowed: " . ($allowed ? 'TRUE' : 'FALSE') . ".";
+    if (isset($GLOBALS['notifications'])) {
+        $GLOBALS['notifications'][] = ['text' => $debug_msg, 'severity' => 'debug'];
+    } else {
+        print_message($debug_msg);
+    }
 }
 
 /**

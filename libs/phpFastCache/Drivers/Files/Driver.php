@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,63 +8,89 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Files;
+namespace Phpfastcache\Drivers\Files;
 
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Core\Pool\IO\IOHelperTrait;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Util\Directory;
+use Exception;
+use FilesystemIterator;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface, IO\IOHelperTrait};
+use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException, PhpfastcacheIOException};
+use Phpfastcache\Util\Directory;
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
+ *
+ * Important NOTE:
+ * We are using getKey instead of getEncodedKey since this backend create filename that are
+ * managed by defaultFileNameHashFunction and not defaultKeyHashFunction
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
-    use DriverBaseTrait, IOHelperTrait;
-
-    /**
-     *
-     */
-    const FILE_DIR = 'files';
+    use IOHelperTrait;
+    use DriverBaseTrait {
+        DriverBaseTrait::__construct as private __parentConstruct;
+    }
 
     /**
      * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
+     * @param Config $config
+     * @param string $instanceId
      */
-    public function __construct(array $config = [])
+    public function __construct(Config $config, string $instanceId)
     {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        }
+        $this->__parentConstruct($config, $instanceId);
     }
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
-        return is_writable($this->getPath()) || @mkdir($this->getPath(), $this->getDefaultChmod(), true);
+        return is_writable($this->getPath()) || mkdir($concurrentDirectory = $this->getPath(), $this->getDefaultChmod(), true) || is_dir($concurrentDirectory);
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @return bool
      */
-    protected function driverWrite(CacheItemInterface $item)
+    protected function driverConnect(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return null|array
+     */
+    protected function driverRead(CacheItemInterface $item)
+    {
+        $file_path = $this->getFilePath($item->getKey(), true);
+
+        try{
+            $content = $this->readFile($file_path);
+        }catch (PhpfastcacheIOException $e){
+            return null;
+        }
+
+        return $this->decode($content);
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverWrite(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
@@ -76,126 +103,48 @@ class Driver implements ExtendedCacheItemPoolInterface
              * Force write
              */
             try {
-                return $this->writefile($file_path, $data, $this->config[ 'secureFileManipulation' ]);
-            } catch (\Exception $e) {
+                return $this->writefile($file_path, $data, $this->getConfig()->isSecureFileManipulation());
+            } catch (Exception $e) {
                 return false;
             }
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return null|array
-     */
-    protected function driverRead(CacheItemInterface $item)
-    {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        $file_path = $this->getFilePath($item->getKey(), true);
-        if (!file_exists($file_path)) {
-            return null;
-        }
-
-        $content = $this->readfile($file_path);
-
-        return $this->decode($content);
-
-    }
-
-    /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
             $file_path = $this->getFilePath($item->getKey(), true);
-            if (file_exists($file_path) && @unlink($file_path)) {
-                clearstatcache(true, $file_path);
-                $dir = dirname($file_path);
-                if (!(new \FilesystemIterator($dir))->valid()) {
-                    rmdir($dir);
+            if (\file_exists($file_path) && @\unlink($file_path)) {
+                \clearstatcache(true, $file_path);
+                $dir = \dirname($file_path);
+                if (!(new FilesystemIterator($dir))->valid()) {
+                    \rmdir($dir);
                 }
                 return true;
-            } else {
-                return false;
             }
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+
+            return false;
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
      * @return bool
+     * @throws \Phpfastcache\Exceptions\PhpfastcacheIOException
      */
-    protected function driverClear()
+    protected function driverClear(): bool
     {
-        return (bool)Directory::rrmdir($this->getPath(true));
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        return true;
-    }
-
-    /**
-     * @param string $optionName
-     * @param mixed $optionValue
-     * @return bool
-     * @throws phpFastCacheInvalidArgumentException
-     */
-    public static function isValidOption($optionName, $optionValue)
-    {
-        DriverBaseTrait::isValidOption($optionName, $optionValue);
-        switch ($optionName) {
-            case 'path':
-                return is_string($optionValue);
-                break;
-
-            case 'default_chmod':
-                return is_numeric($optionValue);
-                break;
-
-            case 'securityKey':
-                return is_string($optionValue);
-                break;
-            case 'htaccess':
-                return is_bool($optionValue);
-                break;
-
-            case 'secureFileManipulation':
-                return is_bool($optionValue);
-                break;
-
-            default:
-                return false;
-                break;
-        }
-    }
-
-    /**
-     * @return array
-     */
-    public static function getValidOptions()
-    {
-        return ['path', 'default_chmod', 'securityKey', 'htaccess', 'secureFileManipulation'];
-    }
-
-    /**
-     * @return array
-     */
-    public static function getRequiredOptions()
-    {
-        return ['path'];
+        return Directory::rrmdir($this->getPath(true));
     }
 }

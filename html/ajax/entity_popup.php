@@ -26,7 +26,7 @@ $vars = get_vars([ 'JSON', 'POST', 'GET' ]);
 $vars['page'] = "popup";
 
 if (isset($vars['debug'])) {
-    r($vars);
+    bdump($vars);
 }
 
 switch ($vars['entity_type']) {
@@ -76,7 +76,7 @@ switch ($vars['entity_type']) {
 
     case "mac":
         if (preg_match('/^' . OBS_PATTERN_MAC . '$/i', $vars['entity_id'])) {
-            // Other way by using Pear::Net_MAC, see here: http://pear.php.net/manual/en/package.networking.net-mac.importvendors.php
+            // Another way by using Pear::Net_MAC, see here: http://pear.php.net/manual/en/package.networking.net-mac.importvendors.php
             if ($response = get_http_def('macvendors_mac', [ 'mac' => format_mac($vars['entity_id']) ])) {
                 echo 'MAC vendor: ' . escape_html($response);
             } else {
@@ -100,16 +100,36 @@ switch ($vars['entity_type']) {
                 exit;
             }
 
-            $response    = '';
+            $header    = [];
             if ($reverse_dns = gethostbyaddr6($ip)) {
-                $response .= '<h4>' . escape_html($reverse_dns) . '</h4><hr />' . PHP_EOL;
+                $header[] = escape_html($reverse_dns);
+            }
+            if ($whois = ip_whois($ip)) {
+                //bdump($whois);
+                if (preg_match('/^Country:\s+(?<country>\w+)/im', $whois, $match)) {
+                    //bdump($match['country']);
+                    //$header[] = get_icon_country($match['country']);
+                    array_unshift($header, get_icon_country($match['country']));
+                }
+                if (preg_match('/^NetName:\s+(?<name>\S+)/im', $whois, $match)) {
+                    //bdump($match['name']);
+                    $header[] = escape_html($match['name']) . ' ';
+                }
+                if (preg_match('/^CIDR:\s+(?<cidr>\S+)/im', $whois, $match)) {
+                    //bdump($match['cidr']);
+                    $header[] = escape_html($match['cidr']) . ' ';
+                }
+
+                $whois = '<pre class="small">' . escape_html($whois) . '</pre>';
+            }
+            if ($header) {
+                $header = '<h4>' . implode(' | ', $header) . '</h4><hr />' . PHP_EOL;
+            } else {
+                $header = '';
             }
 
-            // WHOIS
-            $response .= escape_html(ip_whois($ip));
-
-            if ($response) {
-                $cache_entry = '<pre class="small">' . $response . '</pre>';
+            if ($header || $whois) {
+                $cache_entry = $header . $whois;
                 // @session_start();
                 // $_SESSION['cache']['response_' . $vars['entity_type'] . '_' . $ip] = '<pre class="small">' . $response . '</pre>';
                 // session_commit();

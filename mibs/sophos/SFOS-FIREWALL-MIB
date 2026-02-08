@@ -30,10 +30,8 @@ IMPORTS
 		FROM SNMPv2-CONF
 	DisplayString,
 	TEXTUAL-CONVENTION,
-	PhysAddress
-		FROM SNMPv2-TC
-        Ipv6Address
-                FROM IPV6-TC;
+	MacAddress
+                FROM SNMPv2-TC;
 
 sophosMIB	MODULE-IDENTITY
 	  LAST-UPDATED	"201812180000Z"
@@ -133,12 +131,28 @@ SubscriptionStatusType ::= TEXTUAL-CONVENTION
 
 IPSecVPNConnectionType ::= TEXTUAL-CONVENTION
         STATUS				current
-        DESCRIPTION		"enumerated type for IPSec VPN Conn type"
+        DESCRIPTION		"enumerated type for IPsec VPN connections"
         SYNTAX INTEGER	{
 							host-to-host		( 1 ),
-							site-to-site		( 2 )
+							site-to-site		( 2 ),
+							tunnel-interface	( 3 )
 						}
-						
+
+IPSecVPNConnectionStatus ::= TEXTUAL-CONVENTION
+        STATUS				current
+        DESCRIPTION		"enumerated type for IPsec VPN connection status"
+        SYNTAX INTEGER  {
+							inactive		( 0 ),
+							active			( 1 ),
+							partially-active	( 2 )
+						}
+IPSecVPNActivationStatus ::= TEXTUAL-CONVENTION
+        STATUS				current
+        DESCRIPTION		"enumerated type for IPsec VPN activation status"
+        SYNTAX INTEGER  {
+							inactive		( 0 ),
+							active			( 1 )
+						}
 -- End of enums
 
 -- SFOS-XG MIB
@@ -563,7 +577,7 @@ sfosDeviceHAAuxAdminIP OBJECT-TYPE
 	::= { sfosDeviceHAMonitoringPort 2 }
 
 sfosDeviceHAAuxAdminIPv6 OBJECT-TYPE
-	SYNTAX			Ipv6Address
+	SYNTAX			InetAddress
 	MAX-ACCESS		read-only
 	STATUS			current
 	DESCRIPTION	"SFOS Auxiliary Admin IPv6"
@@ -745,16 +759,18 @@ SfosIPSecVpnTunnelEntry ::= SEQUENCE {
 	sfosIPSecVpnConnId			Integer32,
 	sfosIPSecVpnConnName			DisplayString,
 	sfosIPSecVpnConnDes			DisplayString,
-	sfosIPSecVpnPolicyName			DisplayString,
+	sfosIPSecVpnPolicyUsed			DisplayString,
 	sfosIPSecVpnConnMode			DisplayString,
 	sfosIPSecVpnConnType			IPSecVPNConnectionType,
 	sfosIPSecVpnLocalgwPort			DisplayString,
-	sfosIPSecVpnActiveTunnel		Integer32
+	sfosIPSecVpnActiveTunnel		Integer32,
+	sfosIPSecVpnConnStatus			IPSecVPNConnectionStatus,
+	sfosIPSecVpnActivated			IPSecVPNActivationStatus
 }
 
 sfosIPSecVpnConnId OBJECT-TYPE
     SYNTAX      Integer32 (1..65535)
-    MAX-ACCESS  not-accessible
+    MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
         "An index value that uniquely identifies a VPN tunnel within the sfosIPSecVpnTunnelTable"
@@ -776,12 +792,12 @@ sfosIPSecVpnConnDes OBJECT-TYPE
         "Descriptive of the tunnel"
     ::= { sfosIPSecVpnTunnelEntry 3 }
 
-sfosIPSecVpnPolicyName OBJECT-TYPE
+sfosIPSecVpnPolicyUsed OBJECT-TYPE
     SYNTAX      DisplayString
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
-        "Policy Name of IPSec tunnel"
+        "Policy Name of IPsec tunnel"
     ::= { sfosIPSecVpnTunnelEntry 4 }	
 
 sfosIPSecVpnConnMode OBJECT-TYPE
@@ -789,7 +805,7 @@ sfosIPSecVpnConnMode OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
-        "Connection mode of IPSec tunnel"
+        "Connection mode of IPsec tunnel"
     ::= { sfosIPSecVpnTunnelEntry 5 }	
 
 sfosIPSecVpnConnType OBJECT-TYPE
@@ -797,7 +813,7 @@ sfosIPSecVpnConnType OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
-        "Connection Type of IPSec Tunnel"
+        "Connection Type of IPsec Tunnel"
     ::= { sfosIPSecVpnTunnelEntry 6 }
 
 sfosIPSecVpnLocalgwPort OBJECT-TYPE
@@ -805,7 +821,7 @@ sfosIPSecVpnLocalgwPort OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
-        "Port name which is  used as local gateway for IPSec tunnel"
+        "Port name which is  used as local gateway for IPsec tunnel"
     ::= { sfosIPSecVpnTunnelEntry 7 }
 
 sfosIPSecVpnActiveTunnel OBJECT-TYPE
@@ -813,8 +829,24 @@ sfosIPSecVpnActiveTunnel OBJECT-TYPE
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
-        "Count of active tunnel"
+        "Count of total tunnels configured"
     ::= { sfosIPSecVpnTunnelEntry 8 }
+
+sfosIPSecVpnConnStatus OBJECT-TYPE
+    SYNTAX      IPSecVPNConnectionStatus
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+         "Connection status of IPsec tunnel"
+    ::= { sfosIPSecVpnTunnelEntry 9 }
+
+sfosIPSecVpnActivated OBJECT-TYPE
+    SYNTAX      IPSecVPNActivationStatus
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+         "Activation status of IPsec tunnel"
+    ::= { sfosIPSecVpnTunnelEntry 10 }
 
 -- sfosVPNInfo.sfosIPSecVPNPolicyInfo
 
@@ -850,7 +882,7 @@ SfosIPSecVpnPolicyEntry ::= SEQUENCE {
 }
 
 sfosIPSecVpnPolicyId OBJECT-TYPE
-    SYNTAX      Integer32
+    SYNTAX      Integer32 (1..65535)
     MAX-ACCESS  read-only
     STATUS      current
     DESCRIPTION 
@@ -957,7 +989,7 @@ SfosDeviceAPEntry ::= SEQUENCE {
 	sfosDeviceAPName	DisplayString,
 	sfosDeviceAPModel	DisplayString,
 	sfosDeviceAPIPAddress	IpAddress,
-	sfosDeviceAPMacAddress	PhysAddress,
+	sfosDeviceAPMacAddress	MacAddress,
 	sfosDeviceAPStatus	APStatusType,
 	sfosDeviceAPClientCount	Integer32
 }
@@ -1084,7 +1116,7 @@ sfosNotificationAlerts		OBJECT IDENTIFIER ::=  { sfosXGTrap 1 }
 
 -- sfosXGTrap.sfosNotificationAlerts
 sfosTrapMessage	OBJECT-TYPE
-	SYNTAX			DisplayString (SIZE(0..256))
+	SYNTAX			DisplayString (SIZE(0..255))
 	MAX-ACCESS		read-only
 	STATUS			current
 	DESCRIPTION	"Trap raw log line "
@@ -1110,7 +1142,7 @@ sfosBasicCompliance MODULE-COMPLIANCE
        MODULE  -- this module
        MANDATORY-GROUPS { sfosDeviceStatusGroup, sfosDeviceStatsGroup, sfosServiceStatusGroup,
 			sfosLicInfoGroup, sfosHAStatusGroup, sfosIPSecInfoGroup,
-			sfosWiFiInfoGroup, sfosTrapInfoGroup }
+			sfosWiFiInfoGroup, sfosTrapInfoGroup, sfosNotificationGroup }
 
        ::= { sfosXGMIBCompliances 1 }
 
@@ -1223,11 +1255,13 @@ sfosIPSecInfoGroup OBJECT-GROUP
 	sfosIPSecVpnConnId,
 	sfosIPSecVpnConnName,
 	sfosIPSecVpnConnDes,
-	sfosIPSecVpnPolicyName,
+	sfosIPSecVpnPolicyUsed,
 	sfosIPSecVpnConnMode,
 	sfosIPSecVpnConnType,
 	sfosIPSecVpnLocalgwPort,
 	sfosIPSecVpnActiveTunnel,
+	sfosIPSecVpnConnStatus,
+	sfosIPSecVpnActivated,
 	sfosIPSecVpnPolicyId,
 	sfosIPSecVpnPolicyName,
 	sfosIPSecVpnPolicyKeyLife,
@@ -1261,11 +1295,20 @@ sfosWiFiInfoGroup OBJECT-GROUP
 	DESCRIPTION "A collection of objects providing SFOS WiFi module Info"
 	::= { sfosXGMIBGroups 7 }
 
-sfosTrapInfoGroup NOTIFICATION-GROUP
-	NOTIFICATIONS {
-		sfosNotification }
+sfosTrapInfoGroup OBJECT-GROUP
+	OBJECTS {
+		sfosTrapMessage
+	}
 	STATUS current
 	DESCRIPTION "A collection of objects providing SFOS Trap Info"
 	::= { sfosXGMIBGroups 8 }
+
+sfosNotificationGroup NOTIFICATION-GROUP
+	NOTIFICATIONS {
+		sfosNotification
+	}
+	STATUS current
+	DESCRIPTION "A collection of objects providing SFOS Trap Info"
+	::= { sfosXGMIBGroups 9 }
 
 END

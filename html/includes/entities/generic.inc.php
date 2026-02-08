@@ -10,7 +10,88 @@
  *
  */
 
-// F5 TEMP STUFF
+// TESTME needs unit testing
+// DOCME needs phpdoc block
+function bill_permitted($bill_id) {
+
+    if (!is_intnum($bill_id)) {
+        // simple check if bill id is valid
+        entity_permission_debug_msg('READ', FALSE, $bill_id, 'bill', NULL);
+        return FALSE;
+    }
+
+    if ($_SESSION['userlevel'] >= 5) {
+        // global read
+        entity_permission_debug_msg('READ', TRUE, $bill_id, 'bill', NULL);
+        return TRUE;
+    }
+
+    // Permissions stored by permissions_cache($_SESSION['user_id']);
+    $permissions = (array) mem_cache_get('user_permissions');
+    if ($permissions['bill'][$bill_id]) {
+        entity_permission_debug_msg('READ', TRUE, $bill_id, 'bill', NULL);
+        return TRUE;
+    }
+
+    entity_permission_debug_msg('READ', FALSE, $bill_id, 'bill', NULL);
+    return FALSE;
+}
+
+
+// TESTME needs unit testing
+// DOCME needs phpdoc block
+function application_permitted($app_id, $device_id = NULL) {
+
+    if (!is_intnum($app_id)) {
+        // simple check if app id is valid
+        entity_permission_debug_msg('READ', FALSE, $app_id, 'application', $device_id);
+        return FALSE;
+    }
+
+    if (!$device_id) {
+        $device_id = get_device_id_by_app_id($app_id);
+    }
+    if (!$device_id) {
+        // device not exist
+        entity_permission_debug_msg('READ', FALSE, $app_id, 'application', $device_id);
+        return FALSE;
+    }
+
+    if ($_SESSION['userlevel'] >= 5) {
+        // global read
+        entity_permission_debug_msg('READ', TRUE, $app_id, 'application', $device_id);
+        return TRUE;
+    }
+    if (device_permitted($device_id)) {
+        // device already permitted
+        entity_permission_debug_msg('READ', TRUE, $app_id, 'application', $device_id);
+        return TRUE;
+    }
+
+    // Permissions stored by permissions_cache($_SESSION['user_id']);
+    $permissions = (array) mem_cache_get('user_permissions');
+    if ($permissions['application'][$app_id]) {
+        entity_permission_debug_msg('READ', TRUE, $app_id, 'application', $device_id);
+        return TRUE;
+    }
+
+    entity_permission_debug_msg('READ', FALSE, $app_id, 'application', $device_id);
+    return FALSE;
+}
+
+function entity_permitted_array(&$entities, $entity_type) {
+
+    $entity_type_data = entity_type_translate_array($entity_type);
+
+    // Strip out the entities the user isn't allowed to see, if they don't have global view rights
+    if (!isset($_SESSION['user_limited']) || $_SESSION['user_limited']) {
+        foreach ($entities as $key => $entity) {
+            if (!is_entity_permitted($entity[$entity_type_data['id_field']], $entity_type, $entity['device_id'])) {
+                unset($entities[$key]);
+            }
+        }
+    }
+}
 
 function print_f5_lb_virtual_table_header($vars)
 {
@@ -74,6 +155,31 @@ function accesspoint_by_id($ap_id, $refresh = '0')
     $ap = dbFetchRow("SELECT * FROM `accesspoints` WHERE `accesspoint_id` = ?", [$ap_id]);
 
     return $ap;
+}
+
+function generate_entity_mib_cell($entity, $vars) {
+    if (!is_array($vars)) {
+        // passed entity type string instead vars
+        $vars = [ 'entity_type' => $vars ];
+    }
+    $translate = entity_type_translate_array($vars['entity_type']);
+
+    $string = '      <td><span class="label-group">';
+    if (!safe_empty($entity[$translate['table_fields']['mib']])) {
+        $mib = escape_html($entity[$translate['table_fields']['mib']]);
+        $string .= '<span class="label label-primary"><a href="' . OBSERVIUM_MIBS_URL . '/'
+                   . $mib . '/" target="_blank">' . $mib . '</a></span>';
+        if (!safe_empty($entity[$translate['table_fields']['object']])) {
+            $object = escape_html($entity[$translate['table_fields']['object']]);
+            $string .= '<span class="label label-success"><a href="' . OBSERVIUM_MIBS_URL . '/'
+                       . $mib . '/#' . $object . '" target="_blank">' . $object . '</a></span>';
+        }
+    } elseif (isset($translate['table_fields']['type']) && !safe_empty($entity[$translate['table_fields']['type']])) {
+        $string .= '<span class="label label-success">' . escape_html($entity[$translate['table_fields']['type']]) . '</span>';
+    }
+    $string .= '<span class="label label-delayed">' . escape_html($entity[$translate['table_fields']['index']]) . '</span></span></td>' . PHP_EOL;
+
+    return $string;
 }
 
 function generate_entity_popup_graphs($entity, $vars)

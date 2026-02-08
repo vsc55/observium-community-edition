@@ -14,8 +14,8 @@
 chdir(dirname($argv[0]));
 
 //$options['d'] = array(TRUE, TRUE);
-include_once("includes/observium.inc.php");
-include_once("html/includes/functions.inc.php");
+include_once(__DIR__ . "/includes/observium.inc.php");
+include_once(__DIR__ . "/html/includes/functions.inc.php");
 
 // Disable sql profiling, this is a background process without any way to display it
 $config['profile_sql'] = FALSE;
@@ -23,6 +23,7 @@ $config['profile_sql'] = FALSE;
 $rules        = cache_syslog_rules();
 $device_rules = cache_syslog_rules_assoc();
 $maint        = cache_alert_maintenance();
+$cur_rules    = get_obs_attrib('syslog_rules_changed', TRUE) ?: 0;
 $config_unixtime = get_time();
 
 $_SESSION['userlevel'] = 10; // Hardcode this to max to ensure links and the like are created
@@ -47,7 +48,7 @@ while ($line = fgets($s)) {
     */
 
     // Update syslog ruleset if they've changed. (this query should be cheap).
-    $new_rules = get_obs_attrib('syslog_rules_changed');
+    $new_rules = get_obs_attrib('syslog_rules_changed', TRUE);
     // Also detect if MySQL server has gone away
     if (empty($new_rules)) {
         if (function_exists('dbPing') && dbErrorNo() === 2006 && dbPing() === FALSE) {

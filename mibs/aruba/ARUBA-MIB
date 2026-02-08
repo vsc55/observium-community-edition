@@ -1,4 +1,4 @@
--- ArubaOS 8.11.2.0_87947
+-- ArubaOS 8.12.0.4_91755
 ARUBA-MIB DEFINITIONS ::= BEGIN
 
    IMPORTS
@@ -594,6 +594,30 @@ ap615 OBJECT IDENTIFIER ::= {apProducts 134}
 
 --ap503, this object is the SYSOID
 ap503 OBJECT IDENTIFIER ::= {apProducts 137}
+
+--ap605H, this object is the SYSOID
+ap605H OBJECT IDENTIFIER ::= {apProducts 140}
+
+--ap674, this object is the SYSOID
+ap674 OBJECT IDENTIFIER ::= {apProducts 143}
+
+--ap675, this object is the SYSOID
+ap675 OBJECT IDENTIFIER ::= {apProducts 144}
+
+--ap677, this object is the SYSOID
+ap677 OBJECT IDENTIFIER ::= {apProducts 145}
+
+--ap679, this object is the SYSOID
+ap679 OBJECT IDENTIFIER ::= {apProducts 146}
+
+--ap675EX, this object is the SYSOID
+ap675EX OBJECT IDENTIFIER ::= {apProducts 147}
+
+--ap677EX, this object is the SYSOID
+ap677EX OBJECT IDENTIFIER ::= {apProducts 148}
+
+--ap679EX, this object is the SYSOID
+ap679EX OBJECT IDENTIFIER ::= {apProducts 149}
 
 --Undefined ap.
 apUndefined OBJECT IDENTIFIER ::= { apProducts 9999}

@@ -9,7 +9,13 @@ if (is_readable('/etc/mysql/debian.cnf'))
 }
 else if (is_readable('/root/.my.cnf'))
 {
-	$mysql_ini = preg_replace('/^\s*#/', ';', file_get_contents('/root/.my.cnf'));
+    $mysql_ini = preg_replace('/^\s*#/', ';', file_get_contents('/root/.my.cnf'));
+}
+else
+{
+    $mysql_user = '';
+    $mysql_pass = '';
+    return;
 }
 
 $mysql_cnf  = $mysql_ini ? parse_ini_string($mysql_ini, true) : [];

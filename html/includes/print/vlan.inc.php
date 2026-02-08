@@ -28,7 +28,7 @@ function get_vlans($vars) {
         $vlans[$vlan['vlan_vlan']]['counts']['ports_tagged']   = 0;
         $vlans[$vlan['vlan_vlan']]['counts']['ports_untagged'] = 0;
     }
-    foreach ($vlans as $vlan => &$entry) {
+    foreach ($vlans as &$entry) {
         $entry['counts']['devices'] = safe_count($entry['devices']);
     }
     //r($vlans);

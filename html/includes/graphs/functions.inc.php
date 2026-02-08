@@ -96,7 +96,7 @@ function graph_from_definition($vars, $type, $subtype, $device)
         $cmd_def .= " DEF:" . $ds_name . "_max=" . $ds['file'] . ":" . $ds_name . ":MAX";
 
         if (!empty($ds['cdef'])) {
-            $ds_name  = $ds_name . "_c";
+            $ds_name .= "_c";
             $cmd_cdef .= " CDEF:" . $ds_name . "=" . $ds['cdef'] . "";
             $cmd_cdef .= " CDEF:" . $ds_name . "_min=" . $ds['cdef'] . "";
             $cmd_cdef .= " CDEF:" . $ds_name . "_max=" . $ds['cdef'] . "";
@@ -186,8 +186,8 @@ function graph_error($string) {
             $font_height = 12;
 
             if ($height >= 90) {
-                $width  = $width + 75;                            // RRD graphs are 75px wider than request value
-                $height = $height + 37;                           // RRD graphs are taller than request value
+                $width += 75;                            // RRD graphs are 75px wider than request value
+                $height += 37;                           // RRD graphs are taller than request value
             }
 
             if ($width > 350) {

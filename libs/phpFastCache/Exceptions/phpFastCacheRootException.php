@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,20 +8,21 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Exceptions;
+namespace Phpfastcache\Exceptions;
 
-use Psr\Cache\CacheException;
+use Exception;
 
 /**
- * Class phpFastCacheRootException
- * @package phpFastCache\Exceptions
+ * Class PhpfastcacheRootException
+ * @package Phpfastcache\Exceptions
  */
-class phpFastCacheRootException extends \Exception implements CacheException
+class PhpfastcacheRootException extends Exception implements PhpfastcacheExceptionInterface
 {
 
 }

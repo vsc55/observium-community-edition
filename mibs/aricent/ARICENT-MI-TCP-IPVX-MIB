@@ -1,7 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmstcpipvx.mib,v 1.1 2013/01/23 11:55:40 siva Exp $
-
 ARICENT-MI-TCP-IPVX-MIB DEFINITIONS ::= BEGIN
      IMPORTS
      MODULE-IDENTITY, OBJECT-TYPE,
@@ -14,6 +12,11 @@ ARICENT-MI-TCP-IPVX-MIB DEFINITIONS ::= BEGIN
      CONTACT-INFO "support@aricent.com"
      DESCRIPTION " This mib module is for TCP module with virtual routing
      and forwarding support."
+
+     REVISION "201211080000Z"
+     DESCRIPTION
+         "Initial version."
+
      ::=  { enterprises aricent-communication-holding-ltd(29601) iss(2) 75 }
 
 --Table(for making Scalar objects in stdtcpipvx.mib  to Tabular objects )

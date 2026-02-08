@@ -146,9 +146,9 @@ IMPORTS
                    ::= { cardSys 3 }
 
 
--- Notifications   --cardCPUUtil
+-- Notifications
 	cardSysNotifications OBJECT IDENTIFIER
-                                ::= { cardSys 4 }
+         ::= { cardSys 4 }
 
 
 	cardSysNotification NOTIFICATION-TYPE

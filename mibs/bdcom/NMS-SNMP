@@ -10,13 +10,13 @@
 NMS-SNMP DEFINITIONS ::= BEGIN
 
 IMPORTS
-    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,INTEGER,
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     Integer32, Unsigned32                       FROM SNMPv2-SMI
     MODULE-COMPLIANCE, OBJECT-GROUP,
     NOTIFICATION-GROUP                          FROM SNMPv2-CONF
     DisplayString,MacAddress,RowStatus                     FROM SNMPv2-TC
     nmsMgmt                                      FROM NMS-SMI
-    IpAddress                                   FROM RFC-1155-SMI
+    IpAddress                                   FROM RFC1155-SMI
     sysUpTime,sysObjectID                     FROM RFC1213-MIB;
 
 
@@ -252,7 +252,7 @@ IMPORTS
                        thIsAuthentication
                            INTEGER,
                        thTrapFlag
-                           BIT STRING,
+                           BITS,
                        thRowStatus
                            RowStatus
 	     }
@@ -325,7 +325,7 @@ IMPORTS
                    ::= { snmpTrapHostEntry 7 } 
 	     
                thTrapFlag OBJECT-TYPE
-                   SYNTAX  BIT STRING
+                   SYNTAX  BITS
                    ACCESS  read-write
                    STATUS  mandatory
                    DESCRIPTION

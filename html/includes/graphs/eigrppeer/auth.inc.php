@@ -19,7 +19,9 @@ $data = dbFetchRow("SELECT * FROM `eigrp_peers` WHERE `eigrp_peer_id` = ?", [$va
 if (is_numeric($data['device_id']) && ($auth || device_permitted($data['device_id']))) {
     $device = device_by_id_cache($data['device_id']);
 
-    $rrd_filename = get_rrd_path($device, "eigrp_peer-" . $data['eigrp_vpn'] . "-" . $data['eigrp_as'] . "-" . $data['peer_addr'] . ".rrd");
+    // Poller writes peer RRDs using: safename(strtolower(peer_addr) . '-' . peer_ifindex)
+    $peer_key = safename(strtolower($data['peer_addr']) . '-' . (int)$data['peer_ifindex']);
+    $rrd_filename = get_rrd_path($device, "eigrp_peer-" . $data['eigrp_vpn'] . "-" . $data['eigrp_as'] . "-" . $peer_key . ".rrd");
 
     $auth  = TRUE;
 

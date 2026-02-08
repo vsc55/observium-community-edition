@@ -116,7 +116,7 @@ function print_cbqos_table($vars)
 
         print_cbqos_table_header($vars);
 
-        foreach ($entries as $cbqos_id => $entry) {
+        foreach ($entries as $entry) {
 
             $perc_drop = float_div($entry['DropByte_rate'], $entry['PrePolicyByte_rate']) * 100;
 

@@ -10,7 +10,32 @@
  *
  */
 
-$vlans = dbFetchRows('SELECT * FROM `ports_vlans` AS PV, vlans AS V WHERE PV.`port_id` = ? and PV.`device_id` = ? AND V.`vlan_vlan` = PV.vlan AND V.device_id = PV.device_id', [$port['port_id'], $device['device_id']]);
+// Get VLANs for this port (no longer using legacy STP fields)
+$vlans = dbFetchRows('SELECT V.*, PV.vlan FROM `ports_vlans` AS PV, vlans AS V WHERE PV.`port_id` = ? and PV.`device_id` = ? AND V.`vlan_vlan` = PV.vlan AND V.device_id = PV.device_id', [$port['port_id'], $device['device_id']]);
+
+// Get STP data for this port from STP module
+$stp_data = [];
+$stp_ports = dbFetchRows('SELECT sp.*, si.instance_key, si.type, vm.vlan_vlan
+                          FROM `stp_ports` sp
+                          JOIN `stp_instances` si ON sp.stp_instance_id = si.stp_instance_id
+                          LEFT JOIN `stp_vlan_map` vm ON si.stp_instance_id = vm.stp_instance_id
+                          WHERE sp.device_id = ? AND sp.port_id = ?',
+                          [$device['device_id'], $port['port_id']]);
+
+foreach ($stp_ports as $stp_port) {
+    // For PVST, use VLAN from mapping; for others, use instance_key
+    $vlan_id = ($stp_port['type'] === 'pvst' && $stp_port['vlan_vlan']) ?
+               $stp_port['vlan_vlan'] :
+               $stp_port['instance_key'];
+
+    if ($vlan_id > 0) {
+        $stp_data[$vlan_id] = [
+            'state' => $stp_port['state'],
+            'priority' => $stp_port['priority'],
+            'cost' => $stp_port['path_cost']
+        ];
+    }
+}
 
 echo generate_box_open();
 
@@ -28,15 +53,30 @@ foreach ($vlans as $vlan) {
     echo('<td style="width: 100px;" class="entity-title"> Vlan ' . $vlan['vlan'] . '</td>');
     echo('<td style="width: 200px;" class="small">' . $vlan['vlan_name'] . '</td>');
 
-    if ($vlan['state'] == "blocking") {
-        $class = "red";
-    } elseif ($vlan['state'] == "forwarding") {
-        $class = "green";
+    // Get STP data from STP module instead of legacy ports_vlans fields
+    $stp_info = isset($stp_data[$vlan['vlan']]) ? $stp_data[$vlan['vlan']] : null;
+
+    if ($stp_info) {
+        $state = $stp_info['state'];
+        $priority = $stp_info['priority'];
+        $cost = $stp_info['cost'];
+
+        if ($state == "blocking") {
+            $class = "red";
+        } elseif ($state == "forwarding") {
+            $class = "green";
+        } else {
+            $class = "none";
+        }
     } else {
+        // No STP data available
+        $state = '-';
+        $priority = '-';
+        $cost = '-';
         $class = "none";
     }
 
-    echo("<td>" . $vlan['cost'] . "</td><td>" . $vlan['priority'] . "</td><td class=$class>" . $vlan['state'] . "</td>");
+    echo("<td>" . $cost . "</td><td>" . $priority . "</td><td class=" . $class . ">" . $state . "</td>");
 
     $vlan_ports = [];
     $otherports = dbFetchRows("SELECT * FROM `ports_vlans` AS V, `ports` as P WHERE V.`device_id` = ? AND V.`vlan` = ? AND P.port_id = V.port_id", [$device['device_id'], $vlan['vlan']]);

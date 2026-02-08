@@ -1,7 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmsbext.mib,v 1.5 2012/09/07 09:52:05 siva Exp $
-
 ARICENTP-BRIDGE-MIB DEFINITIONS ::= BEGIN
 
 -- -------------------------------------------------------------
@@ -20,7 +18,7 @@ IMPORTS
         FROM ARICENT-MIStdBRIDGE-MIB;
 
 fsPBridgeMIB MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "201906240000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION
@@ -28,6 +26,12 @@ fsPBridgeMIB MODULE-IDENTITY
         for managing Priority and Multicast Filtering, defined by 
         IEEE 802.1D-1998, including Restricted Group Registration 
         defined by IEEE 802.1t-2001."
+
+    REVISION "201906240000Z"
+    DESCRIPTION
+        "Added fsDot1dPortDefaultUserPriorityStatic supporting export 
+        of static (vs dynamic) default user priority settings."
+
     REVISION "201209050000Z"
     DESCRIPTION
         "The Bridge MIB Extension module with multiple instance capability 
@@ -256,6 +260,8 @@ FsDot1dPortPriorityEntry ::=
           fsDot1dPortDefaultUserPriority
              INTEGER,
           fsDot1dPortNumTrafficClasses
+             INTEGER,
+          fsDot1dPortDefaultUserPriorityStatic
              INTEGER
 }
 
@@ -277,6 +283,22 @@ fsDot1dPortNumTrafficClasses OBJECT-TYPE
      "The number of egress traffic classes supported on this
      port.  This object may optionally be read-only."
    ::= { fsDot1dPortPriorityEntry 2 }
+
+fsDot1dPortDefaultUserPriorityStatic OBJECT-TYPE
+   SYNTAX      INTEGER (0..7)
+   MAX-ACCESS  read-only
+   STATUS      current
+   DESCRIPTION
+     "The default ingress User Priority for this port.  This
+     only has effect on media, such as Ethernet, that do not
+     support native User Priority.
+
+     This object represents the static Default User Priority 
+     value. When the fsDot1dPortDefaultUserPriority value is 
+     different than the value of this object, a dynamic 
+     setting is currently applied."
+
+   ::= { fsDot1dPortPriorityEntry 3 }
 
 -- -------------------------------------------------------------
 -- User Priority Regeneration Table

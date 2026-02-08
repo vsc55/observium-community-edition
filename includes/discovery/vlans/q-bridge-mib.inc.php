@@ -45,7 +45,7 @@ $dot1d_baseports = snmp_cache_table($device, 'dot1dBasePortIfIndex', [], 'BRIDGE
 
 // Detect min ifIndex for vlan base ports
 // Why, see here: http://jira.observium.org/browse/OBS-963
-$use_baseports = count($dot1d_baseports) > 0;
+$use_baseports = safe_count($dot1d_baseports) > 0;
 /*
 if ($use_baseports)
 {
@@ -111,12 +111,8 @@ foreach ($dot1q_ports as $vlan_num => $vlan) {
                     $ifIndex  = dbFetchCell("SELECT `ifIndex` FROM `ports` WHERE `device_id` = ? AND `ifDescr` LIKE ? AND `deleted` = ? LIMIT 1", [$device['device_id'], $port_map, 0]);
 
                     $discovery_ports_vlans[$ifIndex][$vlan_num] = [
-                      'vlan' => $vlan_num,
-                      // FIXME. move STP to separate table
-                      //'baseport' => $vlan_port_id,
-                      //'priority' => $vlan_port['dot1dStpPortPriority'],
-                      //'state'    => $vlan_port['dot1dStpPortState'],
-                      //'cost'     => $vlan_port['dot1dStpPortPathCost']
+                      'vlan' => $vlan_num
+                      // STP data moved to separate stp_* tables
                     ];
                 }
             }
@@ -142,12 +138,8 @@ foreach ($dot1q_ports as $vlan_num => $vlan) {
                 $binary_debug[$vlan_num][$i] = $ifIndex; // DEBUG
 
                 $discovery_ports_vlans[$ifIndex][$vlan_num] = [
-                  'vlan' => $vlan_num,
-                  // FIXME. move STP to separate table
-                  //'baseport' => $vlan_port_id,
-                  //'priority' => $vlan_port['dot1dStpPortPriority'],
-                  //'state'    => $vlan_port['dot1dStpPortState'],
-                  //'cost'     => $vlan_port['dot1dStpPortPathCost']
+                  'vlan' => $vlan_num
+                  // STP data moved to separate stp_* tables
                 ];
             }
         }

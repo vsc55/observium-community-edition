@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,14 +8,20 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Core\Item;
+namespace Phpfastcache\Core\Item;
 
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
+use DateInterval;
+use DateTime;
+use DateTimeInterface;
+use Phpfastcache\Event\EventManagerDispatcherTrait;
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
+
 
 /**
  * Trait ItemBaseTrait
@@ -23,6 +30,7 @@ use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
 trait ItemBaseTrait
 {
     use ItemExtendedTrait;
+    use EventManagerDispatcherTrait;
 
     /**
      * @var bool
@@ -40,17 +48,17 @@ trait ItemBaseTrait
     protected $data;
 
     /**
-     * @var \DateTimeInterface
+     * @var DateTimeInterface
      */
     protected $expirationDate;
 
     /**
-     * @var \DateTimeInterface
+     * @var DateTimeInterface
      */
     protected $creationDate;
 
     /**
-     * @var \DateTimeInterface
+     * @var DateTimeInterface
      */
     protected $modificationDate;
 
@@ -119,57 +127,57 @@ trait ItemBaseTrait
     /**
      * @return bool
      */
-    public function isHit()
+    public function isHit(): bool
     {
         return $this->isHit;
     }
 
     /**
      * @param bool $isHit
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function setHit($isHit)
+    public function setHit($isHit): ExtendedCacheItemInterface
     {
-        if (is_bool($isHit)) {
+        if (\is_bool($isHit)) {
             $this->isHit = $isHit;
 
             return $this;
-        } else {
-            throw new phpFastCacheInvalidArgumentException('$isHit must be a boolean');
         }
+
+        throw new PhpfastcacheInvalidArgumentException('$isHit must be a boolean');
     }
 
     /**
-     * @param \DateTimeInterface $expiration
-     * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @param DateTimeInterface $expiration
+     * @return ExtendedCacheItemInterface
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    public function expiresAt($expiration)
+    public function expiresAt($expiration): ExtendedCacheItemInterface
     {
-        if ($expiration instanceof \DateTimeInterface) {
+        if ($expiration instanceof DateTimeInterface) {
             /**
              * @eventName CacheItemExpireAt
              * @param ExtendedCacheItemInterface $this
-             * @param \DateTimeInterface $expiration
+             * @param DateTimeInterface $expiration
              */
             $this->eventManager->dispatch('CacheItemExpireAt', $this, $expiration);
-            $this->expirationDate = $expiration;
+            $this->expirationDate = $this->demutateDatetime($expiration);
         } else {
-            throw new phpFastCacheInvalidArgumentException('$expiration must be an object implementing the DateTimeInterface got: ' . gettype($expiration));
+            throw new PhpfastcacheInvalidArgumentException('$expiration must be an object implementing the DateTimeInterface got: ' . \gettype($expiration));
         }
 
         return $this;
     }
 
     /**
-     * @param \DateInterval|int $time
+     * @param DateInterval|int $time
      * @return $this
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
     public function expiresAfter($time)
     {
-        if (is_numeric($time)) {
+        if (\is_numeric($time)) {
             if ($time <= 0) {
                 /**
                  * 5 years, however memcached or memory cached will gone when u restart it
@@ -181,24 +189,33 @@ trait ItemBaseTrait
             /**
              * @eventName CacheItemExpireAt
              * @param ExtendedCacheItemInterface $this
-             * @param \DateTimeInterface $expiration
+             * @param DateTimeInterface $expiration
              */
             $this->eventManager->dispatch('CacheItemExpireAfter', $this, $time);
 
-            $this->expirationDate = (new \DateTime())->add(new \DateInterval(sprintf('PT%dS', $time)));
-        } else if ($time instanceof \DateInterval) {
-            /**
-             * @eventName CacheItemExpireAt
-             * @param ExtendedCacheItemInterface $this
-             * @param \DateTimeInterface $expiration
-             */
-            $this->eventManager->dispatch('CacheItemExpireAfter', $this, $time);
-
-            $this->expirationDate = (new \DateTime())->add($time);
+            $this->expirationDate = (new DateTime())->add(new DateInterval(\sprintf('PT%dS', $time)));
         } else {
-            throw new phpFastCacheInvalidArgumentException('Invalid date format');
+            if ($time instanceof DateInterval) {
+                /**
+                 * @eventName CacheItemExpireAt
+                 * @param ExtendedCacheItemInterface $this
+                 * @param DateTimeInterface $expiration
+                 */
+                $this->eventManager->dispatch('CacheItemExpireAfter', $this, $time);
+
+                $this->expirationDate = (new DateTime())->add($time);
+            } else {
+                throw new PhpfastcacheInvalidArgumentException(\sprintf('Invalid date format, got "%s"', \gettype($time)));
+            }
         }
 
         return $this;
+    }
+
+    protected function demutateDatetime(\DateTimeInterface $dateTime): \DateTimeInterface
+    {
+        return $dateTime instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($dateTime)
+            : $dateTime;
     }
 }

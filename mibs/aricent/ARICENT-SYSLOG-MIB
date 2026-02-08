@@ -1,14 +1,5 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fssyslg.mib,v 1.19 2015/11/20 10:45:33 siva Exp $
-
--- SYSLOG MIB Definition
- 
--- MIB for 'SysLog and Email alert'
- 
--- The 'SysLog' MIB definition is as follows:
- 
- 
 ARICENT-SYSLOG-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
@@ -23,12 +14,12 @@ IMPORTS
 
 
    fsSyslog MODULE-IDENTITY 
-      LAST-UPDATED "201209050000Z" 
+      LAST-UPDATED "202108310000Z" 
       ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
       CONTACT-INFO "support@aricent.com" 
       DESCRIPTION
          "The MIB for Syslog."
-      REVISION "201209050000Z"
+      REVISION "202108310000Z"
       DESCRIPTION 
          "The MIB for Syslog." 
    ::= { enterprises futuresoftware (2076) 89 }
@@ -544,6 +535,31 @@ fsSyslogLogNoLogServer OBJECT-TYPE
        STATUS  current
        DESCRIPTION    "The Status of the Fwd  Entry."
          ::= {fsSyslogFwdEntry 6}
+
+         
+fsSyslogGlobalLevel OBJECT-TYPE 
+   SYNTAX      Integer32 (0..7)
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+	"Specifies the log level option to be set globally. Intended for cnMaestro use.
+	                          emergency(0), -- For logging messages that 
+                                                -- are equivalent to panic 
+                                                -- condition. 
+                                  alert(1),     -- For logging messages that 
+                                                -- require immediate attention.
+                                  critical(2),  -- For logging critical errors.
+                                  error(3),     -- For logging error messages.
+                                  warning(4),   -- For logging warning messages.
+                                  notice(5),    -- For logging messages that 
+                                                -- require attention
+                                                -- and not errors.
+                                  info(6),      -- For logging informational 
+                                                -- messages.
+                                  debug(7)      -- For logging debug messages."
+
+   DEFVAL  { 3 }
+   ::= { fsSyslogGeneralGroup 20 }         
 
 --Table ends
 

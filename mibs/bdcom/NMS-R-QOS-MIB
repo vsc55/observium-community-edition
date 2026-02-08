@@ -685,7 +685,7 @@ policyWredTable	OBJECT-TYPE
 		::= { policyTable 4 }
 
 
-               PolicyWredEntry OBJECT-TYPE
+               policyWredEntry OBJECT-TYPE
                    SYNTAX  PolicyWredEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
@@ -707,10 +707,10 @@ policyWredTable	OBJECT-TYPE
                            INTEGER,
                        classNameWred
                            DisplayString,
-                       labelChangeType
-                           INTEGER,
-                       labelChangeValue
-                           INTEGER,
+--                       labelChangeType
+--                           INTEGER,
+--                       labelChangeValue
+--                           INTEGER,
                        policyWredMin
                            INTEGER,
 		       policyWredMax
@@ -726,7 +726,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "policyID together with classNum, is the index of this table ."
-                   ::= { PolicyWredEntry 1 } 
+                   ::= { policyWredEntry 1 } 
 
                policyNameWred OBJECT-TYPE
                    SYNTAX  DisplayString
@@ -734,7 +734,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Policy Name ."
-                   ::= { PolicyWredEntry 2 } 
+                   ::= { policyWredEntry 2 } 
 
                classNumWred OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -742,7 +742,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "classNum together with policyID, is the index of this table ."
-                   ::= { PolicyWredEntry 3 } 
+                   ::= { policyWredEntry 3 } 
 
                classIDWred OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -750,7 +750,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Class ID ."
-                   ::= { PolicyWredEntry 4 } 
+                   ::= { policyWredEntry 4 } 
 
                classNameWred OBJECT-TYPE
                    SYNTAX  DisplayString
@@ -758,7 +758,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "The referring class-map name ."
-                   ::= { PolicyWredEntry 5 } 
+                   ::= { policyWredEntry 5 } 
 
                policyWredMin OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -766,7 +766,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Wred Min ."
-                   ::= { PolicyWredEntry 6 } 
+                   ::= { policyWredEntry 6 } 
 
                policyWredMax OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -774,7 +774,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Wred Max ."
-                   ::= { PolicyWredEntry 7 } 
+                   ::= { policyWredEntry 7 } 
 
                policyWredPro OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -782,7 +782,7 @@ policyWredTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Wred Pro ."
-                   ::= { PolicyWredEntry 8 }         
+                   ::= { policyWredEntry 8 }         
 
 --policy_label_table
 policyLabelTable	OBJECT-TYPE
@@ -794,7 +794,7 @@ policyLabelTable	OBJECT-TYPE
 		::= { policyTable 5 }
 
 
-               PolicyLableEntry OBJECT-TYPE
+               policyLableEntry OBJECT-TYPE
                    SYNTAX  PolicyLableEntry
                    ACCESS  not-accessible
                    STATUS  mandatory
@@ -829,7 +829,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "policyID together with classNum, is the index of this table ."
-                   ::= { PolicyLableEntry 1 } 
+                   ::= { policyLableEntry 1 } 
 
                policyNameLabel OBJECT-TYPE
                    SYNTAX  DisplayString
@@ -837,7 +837,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Policy Name ."
-                   ::= { PolicyLableEntry 2 }  
+                   ::= { policyLableEntry 2 }  
                     
                classNumLabel OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -845,7 +845,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "classNum together with policyID, is the index of this table ."
-                   ::= { PolicyLableEntry 3 }
+                   ::= { policyLableEntry 3 }
 
                classIDLabel OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -853,7 +853,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "Class ID ."
-                   ::= { PolicyLableEntry 4 } 
+                   ::= { policyLableEntry 4 } 
 
                classNameLabel OBJECT-TYPE
                    SYNTAX  DisplayString
@@ -861,7 +861,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "The referring class-map name ."
-                   ::= { PolicyLableEntry 5 } 
+                   ::= { policyLableEntry 5 } 
 
                labelChangeType OBJECT-TYPE
                    SYNTAX  INTEGER{
@@ -877,7 +877,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "LabelChangeType of label-map ."
-                   ::= { PolicyLableEntry 6 } 
+                   ::= { policyLableEntry 6 } 
 
                labelChangeValue OBJECT-TYPE
                    SYNTAX  INTEGER
@@ -885,7 +885,7 @@ policyLabelTable	OBJECT-TYPE
                    STATUS  mandatory
                    DESCRIPTION
                            "LabelChangeValue of label-map ."
-                   ::= { PolicyLableEntry 7 } 
+                   ::= { policyLableEntry 7 } 
 
                
 -- interface statistics table

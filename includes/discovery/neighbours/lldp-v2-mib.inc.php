@@ -66,7 +66,7 @@ foreach ($lldp_addr as $index => $entry) {
     //   continue;
     // }
 
-    // Convert from index part
+    // Convert from the index part
     $entry['lldpV2RemManAddrIndex'] = $lldpV2RemManAddrIndex;
     switch ($len) {
         case 4:
@@ -78,8 +78,19 @@ foreach ($lldp_addr as $index => $entry) {
             $addr                                        = snmp2ipv6($addr);
             $lldp_array[$lldp_index]['lldpV2RemManAddr'] = $addr;
             break;
+        case 32:
+            // Other abilities? IPv6?
+            if (str_ends_with($addr, '.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0')) {
+                // IPv4, ie: 10.10.10.150.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0
+                $addr = substr($addr, 0, -56);
+                $lldp_array[$lldp_index]['lldpV2RemManAddr'] = $addr;
+            } else {
+                print_debug("Unknown lldpV2RemManAddr '$addr' with length $len");
+            }
+            break;
         default:
             // Unknown
+            print_debug("Unknown lldpV2RemManAddr '$addr' with length $len");
     }
     $lldp_array[$lldp_index]['lldpV2RemMan'][$addr] = $entry; // For multiple entries
 }

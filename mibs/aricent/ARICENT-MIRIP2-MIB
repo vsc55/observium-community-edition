@@ -1,32 +1,12 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmirip.mib,v 1.8 2013/06/19 13:30:03 siva Exp $
-
--- /*****************************************************************
---  *                                                               *
---  * fsmirip.mib                                                     *
---  *                                                               *
---  * Rip components extracted from fsmirip.mib  PLUS                 *
---  *                                                               *
---  * fsMIRip2Propagate  scalar object to enable                      *
---  *                  Static Route Propagation in RIP              * 
---  * fsMIRip2MaxRoutes  scalar object which defines                  *
---  *                  maximum RIP Routes                           *
---  * fsMIRipTrcFlag     scalar object to enable tracing  in RIP      *
---  *                                                               *
---  ****************************************************************/
--- Proprietary Support
-
 ARICENT-MIRIP2-MIB DEFINITIONS ::= BEGIN 
  
     IMPORTS 
-    OBJECT-TYPE,IpAddress,
-    Counter32, Integer32   FROM SNMPv2-SMI 
-    enterprises            FROM SNMPv2-SMI
-    MODULE-IDENTITY, NOTIFICATION-TYPE	   FROM SNMPv2-SMI
-    InterfaceIndex     FROM IF-MIB    
-    fsMIStdRip2PeerAddress FROM ARICENT-MISTDRIP2-MIB
-    TruthValue, RowStatus, DisplayString, DateAndTime  FROM SNMPv2-TC;
+    OBJECT-TYPE,IpAddress, Counter32, Integer32        FROM SNMPv2-SMI 
+    enterprises, MODULE-IDENTITY, NOTIFICATION-TYPE    FROM SNMPv2-SMI
+    TruthValue, RowStatus, DisplayString, DateAndTime  FROM SNMPv2-TC
+    InterfaceIndex                                     FROM IF-MIB;
     
 
 fsMIRip MODULE-IDENTITY
@@ -78,7 +58,9 @@ fsMIRip2GlobalEntry OBJECT-TYPE
                fsMIRipRowStatus RowStatus,
                fsMIRipAdminStatus INTEGER,
                fsMIRip2LastAuthKeyLifetimeStatus TruthValue,
-               fsMIRipRtCount Integer32
+               fsMIRipRtCount Integer32,
+               fsMIRipSendVersion INTEGER,
+               fsMIRipReceiveVersion INTEGER
              }
 
   
@@ -299,6 +281,46 @@ fsMIRipRtCount  OBJECT-TYPE
     DESCRIPTION
        "The number of routes in a particular context"
     ::= { fsMIRip2GlobalEntry 16 }
+
+ fsMIRipSendVersion  OBJECT-TYPE
+     SYNTAX  INTEGER {
+                doNotSend (1),
+                ripVersion1 (2),
+                rip1Compatible (3),
+                ripVersion2 (4)
+             }
+     MAX-ACCESS read-create
+     STATUS   current
+     DESCRIPTION
+        "This object indicates the rip send version that is set
+        for the router.ripVersion1 implies sending RIP updates compliant
+        with  RFC  1058.   rip1Compatible implies broadcasting RIP-2
+        updates using RFC 1058 route subsumption rules.ripVersion2 implies
+        multicasting RIP-2 updates."
+     DEFVAL { rip1Compatible }
+     ::= { fsMIRip2GlobalEntry 17 }
+
+ fsMIRipReceiveVersion OBJECT-TYPE
+         SYNTAX   INTEGER {
+                     rip1 (1),
+                     rip2 (2),
+                     rip1OrRip2 (3),
+                     doNotRecieve (4)
+                  }
+         MAX-ACCESS   read-create
+         STATUS   current
+         DESCRIPTION
+            "This indicates which version of RIP updates
+            are to be accepted.  Note that rip2 and
+            rip1OrRip2 implies reception of multicast
+            packets.This object is set for the Router."
+        DEFVAL { rip1OrRip2 }
+        ::= { fsMIRip2GlobalEntry 18 }
+
+
+
+
+
 
 --SCALAR_TABLE_END fsMIRip2GeneralGroup
 

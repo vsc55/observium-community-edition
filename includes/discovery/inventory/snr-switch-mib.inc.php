@@ -20,7 +20,7 @@ if (safe_count($ports_array)) {
     $ddminfo_array = snmpwalk_cache_oid($device, "ddmTranscBasicInfoTable", [], 'SNR-SWITCH-MIB');
     print_debug_vars($ddminfo_array);
 
-    foreach ($ports_array as $index => $entry) {
+    foreach ($ports_array as $entry) {
 
         $local_index             = 100 + $entry['portIndex'];
         $inventory[$local_index] = [

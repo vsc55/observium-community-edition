@@ -124,16 +124,21 @@ if (isset($sensors_db['measured'])) {
             'url'   => generate_url(['page' => 'device', 'device' => $device['device_id'], 'tab' => $measured_class . 's', 'view' => 'sensors']),
             'icon'  => empty($measured_icon) ? $config['icon']['sensor'] : $measured_icon
         ];
-        $box_args['header-controls'] = [
-            'controls' => [
-                'compact' => [
-                        'text'   => $show_compact ? 'Full View' : 'Compact View',
-                        'icon'   => $show_compact ? 'glyphicon-th-list' : 'glyphicon-th',
-                        'config' => 'sensors|web_measured_compact', // check this config
-                        'value'  => $show_compact ? 'no' : 'yes', // toggle
+
+        // Only show compact toggle if compact view is supported for this entity type
+        if (!in_array($measured_class, $measured_label_classes, TRUE) ||
+            isset($config['sensor_measured'][$measured_class]['compact'])) {
+            $box_args['header-controls'] = [
+                'controls' => [
+                    'compact' => [
+                            'text'   => $show_compact ? 'Full View' : 'Compact View',
+                            'icon'   => $show_compact ? 'glyphicon-th-list' : 'glyphicon-th',
+                            'config' => 'sensors|web_measured_compact', // check this config
+                            'value'  => $show_compact ? 'no' : 'yes', // toggle
+                    ]
                 ]
-            ]
-        ];
+            ];
+        }
         echo generate_box_open($box_args);
 
         echo ' <table class="table table-condensed table-striped">';

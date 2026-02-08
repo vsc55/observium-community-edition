@@ -10,8 +10,8 @@
  *
  */
 
-function discover_ip_address_definition($device, $mib, $entry)
-{
+function discover_ip_address_definition($device, $mib, $entry) {
+
     echo(' ['); // FIXME
 
     // Check that types listed in skip_if_valid_exist have already been found
@@ -30,14 +30,17 @@ function discover_ip_address_definition($device, $mib, $entry)
         $entry['mib'] = $mib;
     }
 
+    // get snmp flags from options, for correct parsing
+    $flags = get_def_snmp_flags($entry);
+
     // Index delimiter, for split index parts
     // I.e. in HUAWEI-IF-EXT-MIB, CISCOSB-IPv6
-    $index_delimiter = is_flag_set(OBS_SNMP_INDEX_PARTS, $entry['snmp_flags']) ? '->' : '.';
+    $index_delimiter = is_flag_set(OBS_SNMP_INDEX_PARTS, $flags) ? '->' : '.';
 
     // not indexed part, see CPI-UNIFIED-MIB
-    if (is_flag_set(OBS_SNMP_NOINDEX, $entry['snmp_flags']) &&
+    if (is_flag_set(OBS_SNMP_NOINDEX, $flags) &&
         isset($ip_array['']) && count($ip_array) > 1) {
-        $ip_array_extra = $ip_array[''];
+        $ip_array_noindex = $ip_array[''];
         unset($ip_array['']);
     }
 
@@ -48,9 +51,9 @@ function discover_ip_address_definition($device, $mib, $entry)
         foreach (explode($index_delimiter, $index) as $i => $part) {
             $ip_address['index' . $i] = $part;
         }
-        // append extra (not indexed) array
-        if (isset($ip_array_extra)) {
-            $ip_address = array_merge($ip_address, $ip_array_extra);
+        // append an extra (not indexed) array
+        if (isset($ip_array_noindex)) {
+            $ip_address = array_merge($ip_address, $ip_array_noindex);
         }
         print_debug_vars($ip_address);
 
@@ -59,7 +62,7 @@ function discover_ip_address_definition($device, $mib, $entry)
         if (str_contains($ifIndex, '%')) {
             // I.e. in CISCOSB-IPv6, for addresses with ifIndex parts:
             // ipv6z->ff:02:00:00:00:00:00:00:00:00:00:01:ff:a3:3f:49%100000
-            [, $ifIndex] = explode('%', $ifIndex);
+            $ifIndex = explode('%', $ifIndex)[1];
         }
         // Rule-based entity linking
         if (!is_numeric($ifIndex) &&
@@ -88,12 +91,12 @@ function discover_ip_address_definition($device, $mib, $entry)
         if (str_contains($ip, '%')) {
             // I.e. in CISCOSB-IPv6, for addresses with ifIndex parts:
             // ipv6z->ff:02:00:00:00:00:00:00:00:00:00:01:ff:a3:3f:49%100000
-            [$ip] = explode('%', $ip);
+            $ip = explode('%', $ip)[0];
         }
         // IP address with prefix
         if (str_contains($ip, '/')) {
             // I.e. VIPTELA-OPER-VPN address+prefix: 10.123.10.69/32
-            [$ip, $prefix] = explode('/', $ip);
+            [ $ip, $prefix ] = explode('/', $ip);
             if (is_numeric($prefix)) {
                 $data['prefix'] = $prefix;
             } else {
@@ -272,7 +275,7 @@ function gateway2prefix($ip, $gateway) {
             $prefix++;
         }
 
-        // Still not found prefix, try increase now /23 - /8
+        // Still not found prefix, try to increase now /23 - /8
         if ($prefix === 32 && $ip !== $gateway) {
             $tmp_prefix = 23;
             while ($tmp_prefix >= 8) {
@@ -380,19 +383,35 @@ function ip_compress($address, $force = TRUE) {
     if (is_array($address)) {
         $array = [];
         foreach ($address as $entry) {
+            // Call function recursively for each element in array
             $array[] = ip_compress($entry, $force);
         }
         return $array;
     }
 
-    [ $ip, $net ] = explode('/', $address);
-    if (get_ip_version($ip) === 6) {
-        $address = Net_IPv6::compress($ip, $force);
-        if (is_numeric($net) && ($net >= 0) && ($net <= 128)) {
+    // Call function recursively for each element in array
+    [ $ip, $net ] = explode('/', $address, 2);
+    $version = get_ip_version($ip);
+
+    if (!$version) {
+        // Invalid IP address, return empty string for consistency
+        print_debug("DEBUG: ip_compress() requested for incorrect IP address: $address.");
+        return '';
+    }
+    if ($version === 6) {
+        // Compress only IPv6, IPv4 is already in compact form
+        $address = Net_IPv6::compress($ip, (bool)$force);
+        if (is_intnum($net) && ($net >= 0) && ($net <= 128)) {
             $address .= '/' . $net;
         }
+        return $address;
     }
 
+    if (!is_intnum($net) || ($net < 0) || ($net > 32)) {
+        return $ip;
+    }
+
+    // IPv4: return as is (with or without prefix)
     return $address;
 }
 
@@ -584,43 +603,32 @@ function is_ipv6_valid($ipv6_address, $ipv6_prefixlen = NULL)
  * @return string IP type
  */
 function get_ip_type($address) {
-    global $config;
 
     [ $ip, $bits ] = explode('/', trim($address)); // Remove subnet/mask if exist
 
     $ip_version = get_ip_version($ip);
-    switch ($ip_version) {
-        case 4:
-
-            // Detect IPv4 broadcast
-            if (!safe_empty($bits)) {
-                $ip_parse = Net_IPv4::parseAddress($address);
-                if ($ip == $ip_parse->broadcast && $ip_parse->bitmask < 31) { // Do not set /31 and /32 as broadcast!
-                    $ip_type = 'broadcast';
-                    break;
-                }
-            }
-
-        // no break here!
-        case 6:
-
-            $ip_type = ($ip_version == 4) ? 'unicast' : 'reserved'; // Default for any valid address
-            foreach ($config['ip_types'] as $type => $entry) {
-                if (isset($entry['networks']) && match_network_first($ip, $entry['networks'])) {
-                    // Stop loop if IP founded in networks
-                    $ip_type = $type;
-                    break;
-                }
-
-            }
-            break;
-
-        default:
-            // Not valid IP address
-            return FALSE;
+    if (!$ip_version) {
+        // Not valid IP address
+        return FALSE;
     }
 
-    return $ip_type;
+    if ($ip_version === 4 && !safe_empty($bits)) {
+        // Detect IPv4 broadcast
+        $ip_parse = Net_IPv4::parseAddress($address);
+        if ($ip == $ip_parse->broadcast && $ip_parse->bitmask < 31) { // Do not set /31 and /32 as broadcast!
+            return 'broadcast';
+        }
+    }
+
+    foreach ($GLOBALS['config']['ip_types'] as $type => $entry) {
+        if (isset($entry['networks']) && match_network_first($ip, $entry['networks'])) {
+            // Stop loop if IP founded in networks
+            return $type;
+        }
+
+    }
+
+    return ($ip_version === 4) ? 'unicast' : 'reserved'; // Default for any valid address
 }
 
 /**
@@ -639,6 +647,7 @@ function get_ip_type($address) {
  *    - *::B03:1:AF18, 1762::*:AF18 - * matching by any string in address
  *    - ?::B03:1:AF18, 1762::?:AF18 - ? matching by single char
  *    - 1762:b03                    -  match by part of address, matches to 1:AF18:1762::B03, 1762::b03:1:ae00
+ *    - *                           - match any not empty
  *
  * Return array contain this params:
  *    'query_type' - which query type required.
@@ -658,11 +667,17 @@ function get_ip_type($address) {
  * @return array|false Array with parsed network params
  */
 function parse_network($network) {
-    $network = trim($network);
 
     $array = [
-      'query_type' => 'network', // Default query type by valid network with prefix
+        'query_type' => 'network', // Default query type by valid network with prefix
     ];
+
+    $network = trim($network);
+    if (str_starts_with($network, '!')) {
+        // Negative pattern, only for single or
+        $network           = trim(substr($network, 1));
+        $array['negative'] = TRUE;
+    }
 
     if (preg_match('%^' . OBS_PATTERN_IPV4_NET . '$%', $network, $matches)) {
         // Match by valid IPv4 network
@@ -687,9 +702,9 @@ function parse_network($network) {
         } else {
             $address = Net_IPv4::parseAddress($matches['ipv4_network']);
             //print_vars($address);
-            $array['prefix']        = $address -> bitmask . '';
-            $array['network_start'] = $address -> network;
-            $array['network_end']   = $address -> broadcast;
+            $array['prefix']        = $address->bitmask . '';
+            $array['network_start'] = $address->network;
+            $array['network_end']   = $address->broadcast;
             $array['network']       = $array['network_start'] . '/' . $array['prefix']; // Network with prefix
         }
     } elseif (preg_match('%^' . OBS_PATTERN_IPV6_NET . '$%i', $network, $matches)) {
@@ -732,13 +747,17 @@ function parse_network($network) {
         $array['network_end']   = $array['address'];
         $array['network']       = $network . '/' . $array['prefix']; // Add prefix
         $array['query_type']    = 'single';                          // Single IP query
+    } elseif ($network === '*') {
+        // Any address
+        $array['address']    = $network;
+        $array['query_type'] = 'any';
     } elseif (preg_match('/^[\d\.\?\*]+$/', $network)) {
         // Match IPv4 by mask
         $array['ip_version'] = 4;
         $array['ip_type']    = 'ipv4';
         $array['address']    = $network;
-        if (str_contains_array($network, ['?', '*'])) {
-            // If network contains * or !
+        if (str_contains_array($network, [ '?', '*' ])) {
+            // If the network contains * or !
             $array['query_type'] = 'like';
         } else {
             // All other cases
@@ -749,8 +768,8 @@ function parse_network($network) {
         $array['ip_version'] = 6;
         $array['ip_type']    = 'ipv6';
         $array['address']    = $network;
-        if (str_contains_array($network, ['?', '*'])) {
-            // If network contains * or !
+        if (str_contains_array($network, [ '?', '*' ])) {
+            // If the network contains * or !
             $array['query_type'] = 'like';
         } else {
             // All other cases
@@ -759,17 +778,6 @@ function parse_network($network) {
     } else {
         // Not valid network string passed
         return FALSE;
-    }
-
-    // Add binary addresses for single and network queries
-    switch ($array['query_type']) {
-        case 'single':
-            $array['address_binary'] = inet_pton($array['address']);
-            break;
-        case 'network':
-            $array['network_start_binary'] = inet_pton($array['network_start']);
-            $array['network_end_binary']   = inet_pton($array['network_end']);
-            break;
     }
 
     return $array;
@@ -827,13 +835,13 @@ function match_network($ip, $nets, $first = FALSE) {
 
     $match = !$count;
     foreach ($includes as $net) {
-        if ($match = $ip_version === 4 ? Net_IPv4::ipInNetwork($ip, $net) : Net_IPv6::isInNetmask($ip, $net)) {
+        if ($match = ip_in_network($ip, $net, $ip_version)) {
             break; // Stop loop if net found in match
         }
     }
     if ($match && !safe_empty($excludes)) {
         foreach ($excludes as $net) {
-            if ($ip_version === 4 ? Net_IPv4::ipInNetwork($ip, $net) : Net_IPv6::isInNetmask($ip, $net)) {
+            if (ip_in_network($ip, $net, $ip_version)) {
                 $match = FALSE;
                 break;
             }
@@ -846,41 +854,60 @@ function match_network($ip, $nets, $first = FALSE) {
 function match_network_first($ip, $nets) {
 
     $ip_version = get_ip_version($ip);
-    if ($ip_version) {
-        foreach ((array)$nets as $net) {
-            $revert = (bool)preg_match('/^\!/', $net); // NOT match network
-            if ($revert) {
-                $net = preg_replace('/^\!/', '', $net);
-            }
+    if (!$ip_version) {
+        return FALSE;
+    }
 
-            if ($ip_version === 4) {
-                if (!str_contains($net, '.')) {
-                    continue; // NOT IPv4 net, skip
-                }
-                if (!str_contains($net, '/')) {
-                    $net .= '/32'; // NET without mask as single IP
-                }
-                $ip_in_net = Net_IPv4::ipInNetwork($ip, $net);
-            } else {
-                //print_vars($ip); echo(' '); print_vars($net); echo(PHP_EOL);
-                if (!str_contains($net, ':')) {
-                    continue; // NOT IPv6 net, skip
-                }
-                if (!str_contains($net, '/')) {
-                    $net .= '/128'; // NET without mask as single IP
-                }
-                $ip_in_net = Net_IPv6::isInNetmask($ip, $net);
-            }
+    foreach ((array)$nets as $net) {
+        $revert = (bool)preg_match('/^\!/', $net); // NOT match network
+        if ($revert) {
+            $net = preg_replace('/^\!/', '', $net);
+        }
 
-            if ($ip_in_net) {
-                // Return TRUE if IP found in first match
-                // Return FALSE if IP found in network where should NOT match
-                return !$revert;
+        if ($ip_version === 4) {
+            if (!str_contains($net, '.')) {
+                continue; // NOT IPv4 net, skip
             }
+        } elseif (!str_contains($net, ':')) {
+            continue; // NOT IPv6 net, skip
+        }
+
+        if (ip_in_network($ip, $net, $ip_version)) {
+            // Return TRUE if IP found in first match
+            // Return FALSE if IP found in network where should NOT match
+            return !$revert;
         }
     }
 
     return FALSE;
+}
+
+function ip_in_network($ip, $net, $ip_version = NULL) {
+    $ip_version = empty($ip_version) ? get_ip_version($ip) : $ip_version;
+    if (!$ip_version) {
+        return FALSE;
+    }
+
+    // IPv6
+    if ($ip_version === 6) {
+        //print_vars($ip); echo(' '); print_vars($net); echo(PHP_EOL);
+        if (!str_contains($net, ':')) {
+            return FALSE; // NOT IPv6 net, skip
+        }
+        if (!str_contains($net, '/')) {
+            $net .= '/128'; // NET without a prefix as single IP
+        }
+        return Net_IPv6::isInNetmask($ip, $net);
+    }
+
+    // IPv4
+    if (!str_contains($net, '.')) {
+        return FALSE; // NOT IPv4 net, skip
+    }
+    if (!str_contains($net, '/')) {
+        $net .= '/32'; // NET without a prefix as single IP
+    }
+    return Net_IPv4::ipInNetwork($ip, $net);
 }
 
 /**

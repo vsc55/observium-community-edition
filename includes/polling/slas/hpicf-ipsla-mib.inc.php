@@ -32,7 +32,7 @@ $sla_hist = snmpwalk_multipart_oid($device, "hpicfIpSlaHistSummStatus", $sla_his
 foreach ($sla_hist as $sla_index => $hist) {
     // Find latest entry
     $unixtime = 0; // initial
-    foreach ($hist as $hist_index => $tmp) {
+    foreach ($hist as $tmp) {
         if ($tmp['hpicfIpSlaHistSummStartTime'] > $unixtime) {
             $unixtime = $tmp['hpicfIpSlaHistSummStartTime'];
             $entry    = $tmp;

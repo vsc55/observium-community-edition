@@ -39,7 +39,7 @@ lldpStatistics               OBJECT IDENTIFIER ::= { lldpObjects 2 }
 lldpLocalSystemData          OBJECT IDENTIFIER ::= { lldpObjects 3 }
 lldpRemoteSystemsData        OBJECT IDENTIFIER ::= { lldpObjects 4 }
 lldpExtensions               OBJECT IDENTIFIER ::= { lldpObjects 5 }
-lldpExtens                   OBJECT IDENTIFIER ::= { lldpObjects 4 }
+lldpExtens                   OBJECT IDENTIFIER ::= { lldpObjects 6 }
 -- 
 -- ***********************************************************
 -- 

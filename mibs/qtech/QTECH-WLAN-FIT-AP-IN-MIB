@@ -587,11 +587,11 @@ qtechRESUtilization   OBJECT-TYPE
     DESCRIPTION
         "ap Resource Utilization."
     ::= { qtechAirIfInfoStatisticsTableEntry 9 }
----------------------------------------------------------
----------------------------------------------------------    
+
 --**************************************************
 --* apAirIfInfoStatisticsTable starts * 
 --************************************************** 
+
 qtechAirIfTxResendDataTable OBJECT-TYPE
     SYNTAX SEQUENCE OF QtechApAirIfTxResendDataTableEntry
     MAX-ACCESS not-accessible

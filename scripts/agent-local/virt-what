@@ -4,8 +4,8 @@
 # apt-get install -y virt-what
 
 virtwhat=$(command -v virt-what)
-
-if [ -x "$virtwhat" ]; then
+if [[ -x $virtwhat ]]
+then
     echo '<<<virt-what>>>'
     $virtwhat
 fi

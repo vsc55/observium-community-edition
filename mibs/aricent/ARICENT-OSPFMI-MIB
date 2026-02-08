@@ -1,11 +1,6 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsmiospf.mib,v 1.21 2016/05/11 11:38:49 siva Exp $
-
 ARICENT-OSPFMI-MIB DEFINITIONS ::= BEGIN
-
--- Enterprises MIB for OSPF source code product.
-
 
    IMPORTS
       MODULE-IDENTITY, OBJECT-TYPE, Counter32, Gauge32,
@@ -452,7 +447,7 @@ fsMIOspfNotification  OBJECT IDENTIFIER ::= { fsMIOspf 101 }
       ::= { fsMIOspfEntry 30}
 
   fsMIOspfRTStaggeringInterval OBJECT-TYPE
-      SYNTAX     TimeTicks (1000..2147483647)
+      SYNTAX     TimeTicks
       MAX-ACCESS  read-write
       STATUS      current
       DESCRIPTION
@@ -2936,10 +2931,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
             "The time the router will start accepting packets that have 
-            been created with this key.
-            By default, this value is set to 2000-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            been created with this key.If the value is not set, then it 
+            will be taken as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0" 
        ::=  { fsMIOspfIfAuthEntry 5 }
    
    fsMIOspfIfAuthKeyStartGenerate OBJECT-TYPE
@@ -2948,10 +2943,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
            "The time the router will start using this key for packets 
-            generation.
-            By default, this value is set to 2000-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            generation.If the value is not set, then it will be taken 
+            as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0" 
        ::=  { fsMIOspfIfAuthEntry 6 }
    
    fsMIOspfIfAuthKeyStopGenerate OBJECT-TYPE
@@ -2960,11 +2955,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
             "The time the router will stop using this key for packets 
-            generation.
-            By default, this value is set to 2100-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
-
+            generation.If the value is not set, then it will be taken 
+            as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0"   
        ::=  { fsMIOspfIfAuthEntry 7 }
    
    fsMIOspfIfAuthKeyStopAccept OBJECT-TYPE
@@ -2973,11 +2967,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
            "The time the router will stop accepting packets that have 
-            been created with this key.
-            By default, this value is set to 2100-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
-
+            been created with this key.If the value is not set, then it 
+            will be taken as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0" 
        ::=  { fsMIOspfIfAuthEntry 8 }
    
    fsMIOspfIfAuthKeyStatus OBJECT-TYPE
@@ -3066,10 +3059,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
             "The time the router will start accepting packets that have 
-            been created with this key.
-            By default, this value is set to 2000-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            been created with this key.If the value is not set, then it 
+            will be taken as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0" 
        ::=  { fsMIOspfVirtIfAuthEntry 5 }
    
    fsMIOspfVirtIfAuthKeyStartGenerate OBJECT-TYPE
@@ -3078,10 +3071,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
            "The time the router will start using this key for packets 
-            generation.
-            By default, this value is set to 2000-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            generation.If the value is not set, then it will be taken 
+            as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0" 
        ::=  { fsMIOspfVirtIfAuthEntry 6 }
    
    fsMIOspfVirtIfAuthKeyStopGenerate OBJECT-TYPE
@@ -3090,10 +3083,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
             "The time the router will stop using this key for packets 
-            generation.
-            By default, this value is set to 2100-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            generation.If the value is not set, then it will be taken 
+            as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0"  
        ::=  { fsMIOspfVirtIfAuthEntry 7 }
    
    fsMIOspfVirtIfAuthKeyStopAccept OBJECT-TYPE
@@ -3102,10 +3095,10 @@ FsMIOspfVirtNbrEntry ::=
        STATUS      current
        DESCRIPTION
             "The time the router will stop accepting packets that have 
-            been created with this key.
-            By default, this value is set to 2100-01-01,00:00
-            For example, Tuesday May 26, 2022 at 1:30:15 PM should be 
-            configured as 2022-5-26,13:30:15"
+            been created with this key.If the value is not set, then it 
+            will be taken as infinite and displayed as 9999-12-31,23:59:59.0. 
+            For example, Tuesday May 26, 1992 at 1:30:15 PM should be 
+            configured as,  1992-5-26,13:30:15.0"  
        ::=  { fsMIOspfVirtIfAuthEntry 8 }
    
    fsMIOspfVirtIfAuthKeyStatus OBJECT-TYPE

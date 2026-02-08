@@ -13,7 +13,7 @@
 // Build SNMP Cache Array
 
 $port_stats = [];
-$port_oids  = ["ifDescr", "ifAlias", "ifName", "ifType", "ifOperStatus"];
+$port_oids  = [ "ifDescr", "ifAlias", "ifName", "ifType", "ifOperStatus"];
 
 print_cli_data_field("Caching OIDs", 3);
 if (is_device_mib($device, "IF-MIB")) {
@@ -26,7 +26,7 @@ if (is_device_mib($device, "IF-MIB")) {
 }
 print_cli(PHP_EOL); // END CACHING OIDS
 
-
+$port_oids[] = 'ifIndex'; // Append ifIndex
 foreach (get_device_mibs_permitted($device) as $mib) {
     merge_private_mib($device, 'ports', $mib, $port_stats, $port_oids);
 }
@@ -89,7 +89,8 @@ foreach ($port_stats as $ifIndex => $port) {
     // ifAlias.3 = Conexi<F3>n de <E1>rea local* 3
     foreach (['ifAlias', 'ifDescr', 'ifName'] as $oid_fix) {
         if (isset($port[$oid_fix])) {
-            $port[$oid_fix] = snmp_fix_string($port[$oid_fix]);
+            $unit_fix = $oid_fix !== 'ifAlias' ? 'label' : NULL;
+            $port[$oid_fix] = snmp_fix_string($port[$oid_fix], $unit_fix);
         }
     }
 

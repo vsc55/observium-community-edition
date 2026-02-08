@@ -55,9 +55,73 @@ function get_bits_state_array($hex, $mib = NULL, $object = NULL, $bits_def = NUL
  *
  * @return array State array
  */
-function get_state_array($type, $value, $mib = '', $event_map = NULL, $poller_type = 'snmp')
-{
+/**
+ * Get complete states definition for a status type
+ *
+ * @param string $type Status type
+ * @param string $mib MIB name
+ * @param string $poller_type Poller type (snmp, agent, ipmi)
+ * @return array Complete states array or empty array if not found
+ */
+function get_states_definition($type, $mib = '', $poller_type = 'snmp') {
     global $config;
+
+    // Fast path for static status types - check inline states and shared static_states
+    if ($poller_type === 'snmp' && $mib === 'STATIC') {
+        // Direct lookup in already-injected STATIC MIB states
+        if (isset($config['mibs']['STATIC']['states'][$type])) {
+            return $config['mibs']['STATIC']['states'][$type];
+        }
+
+        // Check shared static_states
+        if (isset($config['status']['static_states'][$type])) {
+            return $config['status']['static_states'][$type];
+        }
+
+        // Check inline static states - scan static config for this type
+        if (isset($config['status']['static'])) {
+            foreach ($config['status']['static'] as $status_config) {
+                if ($status_config['type'] === $type && isset($status_config['states'])) {
+                    return $status_config['states'];
+                }
+            }
+        }
+    }
+
+    // Fast path for static status types when MIB not set - check config directly
+    if ($poller_type === 'snmp' && safe_empty($mib) && isset($config['status']['static_states'][$type])) {
+        return $config['status']['static_states'][$type];
+    }
+
+    // Standard MIB lookup
+    if (!safe_empty($mib) && isset($config['mibs'][$mib]['states'][$type])) {
+        return $config['mibs'][$mib]['states'][$type];
+    }
+
+    // Agent/IPMI lookups
+    if (($poller_type === 'agent' || $poller_type === 'ipmi') && isset($config[$poller_type]['states'][$type])) {
+        return $config[$poller_type]['states'][$type];
+    }
+
+    return [];
+}
+
+function get_state_array($type, $value, $mib = '', $event_map = NULL, $poller_type = 'snmp') {
+    global $config;
+
+    // Try to get states definition first
+    $state_def = get_states_definition($type, $mib, $poller_type);
+    if (!empty($state_def)) {
+        $numeric_value = is_numeric($value) ? (int)$value : $value;
+        if (isset($state_def[$numeric_value])) {
+            return [
+                'value' => $numeric_value,
+                'name' => $state_def[$numeric_value]['name'],
+                'event' => $state_def[$numeric_value]['event'],
+                'mib' => $mib ?: ($poller_type == 'snmp' ? 'STATIC' : '')
+            ];
+        }
+    }
 
     $state_array = ['value' => FALSE];
 
@@ -69,12 +133,12 @@ function get_state_array($type, $value, $mib = '', $event_map = NULL, $poller_ty
                 $state_array['value'] = $state; // Numeric value
                 if (isset(array_values($config[$poller_type]['states'][$type])[0]['match'])) {
                     // String value
-                    $match_events         = [
-                      0 => 'exclude',
-                      1 => 'ok',
-                      2 => 'warning',
-                      3 => 'alert',
-                      4 => 'ignore',
+                    $match_events = [
+                        0 => 'exclude',
+                        1 => 'ok',
+                        2 => 'warning',
+                        3 => 'alert',
+                        4 => 'ignore',
                     ];
                     $state_array['name']  = trim($value);
                     $state_array['event'] = $match_events[$state];
@@ -98,17 +162,17 @@ function get_state_array($type, $value, $mib = '', $event_map = NULL, $poller_ty
                 $def_key              = array_key_first($state_def);
                 if (isset($state_def[$def_key]['match'])) {
                     // String value
-                    $match_events        = [
-                      0 => 'exclude',
-                      1 => 'ok',
-                      2 => 'warning',
-                      3 => 'alert',
-                      4 => 'ignore',
+                    $match_events = [
+                        0 => 'exclude',
+                        1 => 'ok',
+                        2 => 'warning',
+                        3 => 'alert',
+                        4 => 'ignore',
                     ];
                     $state_array['name'] = $value;
                     if (isset($state_def[$def_key]['name'])) {
                         // Rare case, for convert numeric states to named, see: GEIST-MIB-V3::waterSensorDampness
-                        foreach ($state_def as $index => $content) {
+                        foreach ($state_def as $content) {
                             if (preg_match($content['match'], $value)) {
                                 //return $match_events[$content['event']];
                                 $state_array['name'] = $content['name'];
@@ -156,8 +220,8 @@ function get_state_array($type, $value, $mib = '', $event_map = NULL, $poller_ty
  *
  * @return integer Note, if definition not found or incorrect value, returns FALSE
  */
-function state_string_to_numeric($type, $value, $mib = '', $poller_type = 'snmp')
-{
+function state_string_to_numeric($type, $value, $mib = '', $poller_type = 'snmp') {
+
     switch ($poller_type) {
         case 'agent':
         case 'ipmi':
@@ -185,13 +249,13 @@ function state_string_to_numeric($type, $value, $mib = '', $poller_type = 'snmp'
         // See QSAN-SNMP-MIB definitions and others
         // 0 -> exclude, 1 -> ok, 2 -> warning, 3 -> alert, 4 -> ignore
         $match_events = [
-          'exclude' => 0,
-          'ok'      => 1,
-          'warning' => 2,
-          'alert'   => 3,
-          'ignore'  => 4,
+            'exclude' => 0,
+            'ok'      => 1,
+            'warning' => 2,
+            'alert'   => 3,
+            'ignore'  => 4,
         ];
-        foreach ($state_def as $index => $content) {
+        foreach ($state_def as $content) {
             if (preg_match($content['match'], trim($value))) {
                 return $match_events[$content['event']];
             }
@@ -199,6 +263,11 @@ function state_string_to_numeric($type, $value, $mib = '', $poller_type = 'snmp'
         return 1; // by default ok
     }
 
+    if (is_numeric($value) && str_contains($value, '.')) {
+        // ATEN-IPMI-MIB::sensorReading.75 = STRING: "0.000"
+        // returned int number converted to float string
+        $value = trim_number($value);
+    }
     if (is_intnum($value)) {
         // Return value if already numeric
         if (isset($state_def[$value])) {
@@ -296,7 +365,7 @@ function discover_status_definition($device, $mib, $entry)
     $status_array = discover_fetch_oids($device, $mib, $entry, $table_oids);
 
     $i            = 0; // Used in descr as $i++
-    $status_count = count($status_array);
+    $status_count = safe_count($status_array);
     foreach ($status_array as $index => $status) {
         $options = [];
 
@@ -403,27 +472,47 @@ function discover_status($device, $numeric_oid, $index, $type, $status_descr, $v
  *
  * @return bool
  */
-function discover_status_ng($device, $mib, $object, $oid, $index, $type, $status_descr, $value = NULL, $options = [])
-{
+function discover_status_ng($device, $mib, $object, $oid, $index, $type, $status_descr, $value = NULL, $options = []) {
+
     global $config;
 
-    $poller_type = (isset($options['poller_type']) ? $options['poller_type'] : 'snmp');
-
+    $poller_type    = $options['poller_type'] ?? 'snmp';
+    $new_definition = $poller_type === 'snmp' && !safe_empty($mib) && !safe_empty($object);
     $status_deleted = 0;
 
     // Init main
     $param_main = [
-      'oid'   => 'status_oid', 'status_descr' => 'status_descr', 'status_deleted' => 'status_deleted',
-      'index' => 'status_index', 'mib' => 'status_mib', 'object' => 'status_object'
+        'oid'   => 'status_oid', 'status_descr' => 'status_descr', 'status_deleted' => 'status_deleted',
+        'index' => 'status_index', 'mib' => 'status_mib', 'object' => 'status_object'
     ];
 
     // Init optional
     $param_opt = [
-      'entPhysicalIndex', 'entPhysicalClass', 'entPhysicalIndex_measured',
-      'measured_class', 'measured_entity', 'measured_entity_label', 'status_map'
+        'entPhysicalIndex', 'entPhysicalClass', 'entPhysicalIndex_measured',
+        'measured_class', 'measured_entity', 'measured_entity_label', 'status_map'
     ];
     foreach ($param_opt as $key) {
         $$key = $options[$key] ?: NULL;
+    }
+
+    print_debug("Discover status: [device: " . $device['hostname'] . ", oid: $oid, index: $index, type: $type, descr: $status_descr, CURRENT: $value, $entPhysicalIndex, $entPhysicalClass]");
+
+    if ($new_definition) {
+        if (isset($GLOBALS['valid']['status'][$mib][$object][$index])) {
+            print_debug("Status skipped by valid already exist: $mib->$object->$index");
+            return FALSE;
+        }
+    } else {
+        // without $mib/$object
+        if (isset($GLOBALS['valid']['status']['__'][$type][$index])) {
+            print_debug("Status skipped by valid already exist: $type->$index");
+            return FALSE;
+        }
+    }
+
+    // Check status ignore filters
+    if (entity_descr_check($status_descr, 'status')) { // Limit descr to 255 chars accordingly as in DB
+        return FALSE;
     }
 
     $state_array = get_state_array($type, $value, $mib, $status_map, $poller_type);
@@ -432,6 +521,7 @@ function discover_status_ng($device, $mib, $object, $oid, $index, $type, $status
         print_debug("Skipped by unknown state value: $value, $status_descr ");
         return FALSE;
     }
+
     if ($state_array['event'] === 'exclude') {
         print_debug("Skipped by 'exclude' event value: " . $config['status_states'][$type][$state]['name'] . ", $status_descr ");
         return FALSE;
@@ -439,17 +529,7 @@ function discover_status_ng($device, $mib, $object, $oid, $index, $type, $status
     $value = $state;
     $index = (string)$index; // Convert to string, for correct compare
 
-    print_debug("Discover status: [device: " . $device['hostname'] . ", oid: $oid, index: $index, type: $type, descr: $status_descr, CURRENT: $value, $entPhysicalIndex, $entPhysicalClass]");
 
-    // Check status ignore filters
-    if (entity_descr_check($status_descr, 'status')) {
-        return FALSE;
-    }
-    //foreach ($config['ignore_sensor'] as $bi)        { if (strcasecmp($bi, $status_descr) == 0)   { print_debug("Skipped by equals: $bi, $status_descr "); return FALSE; } }
-    //foreach ($config['ignore_sensor_string'] as $bi) { if (stripos($status_descr, $bi) !== FALSE) { print_debug("Skipped by strpos: $bi, $status_descr "); return FALSE; } }
-    //foreach ($config['ignore_sensor_regexp'] as $bi) { if (preg_match($bi, $status_descr) > 0)    { print_debug("Skipped by regexp: $bi, $status_descr "); return FALSE; } }
-
-    $new_definition = $poller_type === 'snmp' && !safe_empty($mib) && !safe_empty($object);
     if ($new_definition) {
         $where        = ' WHERE `device_id` = ? AND `status_mib` = ? AND `status_object` = ? AND `status_type` = ? AND `status_index` = ? AND `poller_type`= ?';
         $params       = [$device['device_id'], $mib, $object, $type, $index, $poller_type];

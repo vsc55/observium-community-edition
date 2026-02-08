@@ -48,6 +48,18 @@ function print_syslogs($vars) {
                     $where_array[] = generate_query_values($value, 'device_id');
                     break;
 
+                case 'location':
+                    // Get device_ids for the selected location(s) and filter by those
+                    $location_where = generate_query_values($value, 'location');
+                    $location_devices = dbFetchColumn('SELECT `device_id` FROM `devices` WHERE ' . $location_where);
+                    if (safe_count($location_devices)) {
+                        $where_array[] = generate_query_values($location_devices, 'device_id');
+                    } else {
+                        // No devices with this location, force no results
+                        $where_array[] = '0';
+                    }
+                    break;
+
                 case 'priority':
                     $value = get_var_csv($value);
                     foreach ($value as $k => $v) {
@@ -95,13 +107,9 @@ function print_syslogs($vars) {
     $query_permitted = generate_query_values_and($devices_permitted, 'device_id');
     //r($devices_permitted);
     */
+    $where              = generate_where_clause($where_array, $query_permitted);
 
-    $query              = 'FROM `syslog` ';
-    $query              .= generate_where_clause($where_array, $query_permitted);
-    $query_count        = 'SELECT COUNT(*) ' . $query;
-    $query_count_approx = 'EXPLAIN SELECT * ' . $query; // Fast approximate count
-
-    $query = 'SELECT * ' . $query;
+    $query = 'SELECT * FROM `syslog` ' . $where;
     $query .= ' ORDER BY `seq` DESC ';
     $query .= "LIMIT $start,$pagesize";
 
@@ -109,18 +117,13 @@ function print_syslogs($vars) {
     $entries = dbFetchRows($query);
     // Query syslog count
     if ($pagination && !$short) {
-        dbSetVariable('MAX_EXECUTION_TIME', 500); // Set 0.5 sec maximum query execution time
-        // Exactly count, but it's very SLOW on huge tables
-        $count = dbFetchCell($query_count);
-        dbSetVariable('MAX_EXECUTION_TIME', 0); // Reset maximum query execution time
-        //r($count);
-        if (!is_numeric($count)) {
-            // Approximate count correctly around 100-80%
-            dbQuery('ANALYZE TABLE `syslog`;'); // Update INFORMATION_SCHEMA for more correctly count
-            $tmp            = dbFetchRow($query_count_approx);
-            $count          = $tmp['rows'];
-            $count_estimate = TRUE;
-        }
+        // Approximate count correctly around 100-80%
+        $count = dbApproxCount('syslog', $where);
+        $count_estimate = is_float($count);
+        // if (!$count && safe_empty($entries)) {
+        //     // Prevent incorrect count issues..
+        //     $count = safe_count($entries) * 10;
+        // }
     } else {
         $count = safe_count($entries);
     }
@@ -189,7 +192,7 @@ See <a href="' . OBSERVIUM_DOCS_URL . '/syslog/" target="_blank">Syslog Integrat
             $string = pagination($vars, $count) . $string . pagination($vars, $count);
         }
 
-        if (isset($count_estimate) && $count_estimate == TRUE) {
+        if (isset($count_estimate) && $count_estimate) {
             print_message("The syslog entry counts shown below are an estimate due to SQL query performance limitations. There may be many fewer results than indicated.", "info");
         }
 
@@ -300,8 +303,8 @@ function generate_syslog_row($entry, $vars, $list = NULL)
     $entity_links = $GLOBALS['cache']['entity_links']['ports'][$entry['device_id']];
 
     // Highlight bgp peer links (try only when program match BGP)
-    if ($entry['program'] === 'RPD' || // RPD is program on JunOS
-        str_icontains_array($entry['program'], 'bgp') || str_icontains_array($entry['tag'], 'bgp')) {
+    if ($entry['program'] === 'RPD' || // RPD is 'program' on JunOS
+        str_contains(strtolower($entry['program']), 'bgp') || str_contains(strtolower($entry['tag']), 'bgp')) {
 
         bgp_links_cache($entry);
         $entity_links = array_merge($entity_links, $GLOBALS['cache']['entity_links']['bgp'][$entry['device_id']]);
@@ -316,7 +319,7 @@ function generate_syslog_row($entry, $vars, $list = NULL)
     // Restore escaped quotes (for old entries)
     $entry['message'] = str_replace([ '\"', "\'" ], [ '"', "'" ], $entry['message']);
 
-    $string .= ' ' . html_highlight(escape_html($entry['message']), $entity_links, NULL, TRUE) . '</td>' . PHP_EOL;
+    $string .= ' ' . html_highlight_entities($entry['message'], $entity_links) . '</td>' . PHP_EOL;
 
     // if (!$short)
     // {

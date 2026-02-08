@@ -70,6 +70,8 @@ if (!isset($options['q'])) {
 
 if (isset($options['u']) || isset($options['U']) ||
     (isset($options['h']) && in_array($options['h'], [ 'all', 'odd', 'even', 'none' ]))) {
+
+    // request DB updates and versions check
     $options['u'] = TRUE;
     if (isset($options['f'])) {
         //$options['U'] = TRUE;
@@ -95,27 +97,41 @@ if (isset($options['u']) || isset($options['U']) ||
     unset($db_version);
 }
 
-$where = '';
+if ($options['h'] === "pollers") {
+    // Distributed pollers only (just placeholder as in poller)
+    if (OBS_DISTRIBUTED) {
+        //poll_pollers_distributed();
+        print_debug("Distribution pollers not require discovery.");
+    } elseif (OBSERVIUM_EDITION === 'community') {
+        print_debug("Distribution pollers not available in CE.");
+    } else {
+        print_debug("Distribution pollers not exist on install.");
+    }
+    exit(); // Silent exit
+}
+
+$where_array = [];
+$doing_single = FALSE; // Discovery single device? mostly from poller wrapper
 
 if (isset($options['h'])) {
-    $params = [];
     switch ($options['h']) {
         case 'odd':
             $options['n'] = 1;
             $options['i'] = 2;
             break;
+
         case 'even':
             $options['n'] = 0;
             $options['i'] = 2;
             break;
+
         case 'all':
-            $where = ' ';
+            $where_array[] = ''; // only for skip help message
             $doing = 'all';
             break;
+
         case 'new':
-            $where    = ' AND (`last_discovered` IS NULL OR `last_discovered` = ? OR `force_discovery` = ?)';
-            $params[] = '0000-00-00 00:00:00';
-            $params[] = 1;
+            $where_array[] = "(`last_discovered` IS NULL OR `last_discovered` = '0000-00-00 00:00:00' OR `force_discovery` = 1)";
             $doing    = 'new';
 
             // add new devices on remote poller from actions queue
@@ -128,28 +144,35 @@ if (isset($options['h'])) {
                 run_action_queue('tables_update');
             }
             break;
+
         case 'none':
             //$options['u'] = TRUE;
             break;
+
         default:
-            $doing = $options['h'];
             if (is_numeric($options['h'])) {
-                $where    = ' AND `device_id` = ?';
-                $params[] = $options['h'];
+                $doing_single = TRUE; // Discovery single device! (from wrapper)
+
+                $where_array[] = generate_query_values($options['h'], 'device_id');
+                $doing    = $options['h'];
+            } elseif (is_valid_hostname($options['h']) || get_ip_version($options['h'])) {
+                // Discovery single device as hostname
+                $doing_single = TRUE;
+                $where_array[] = generate_query_values($options['h'], 'hostname');
+                $doing = $options['h'];
             } else {
-                $where    = ' AND `hostname` LIKE ?';
-                $params[] = str_replace('*', '%', $options['h']);
+                $where_array[] = generate_query_values($options['h'], 'hostname', 'LIKE');
+                $doing = $options['h'];
             }
     }
 }
 
-if (isset($options['i'], $options['n']) && $options['i']) {
-    $where    .= ' AND MOD(device_id,' . $options['i'] . ') = ?';
-    $params[] = $options['n'];
+if (isset($options['i'], $options['n']) && is_intnum($options['i']) && is_intnum($options['n'])) {
+    $where_array[] = 'MOD(`device_id`,' . $options['i'] . ') = '.$options['n'];
     $doing    = $options['n'] . '/' . $options['i'];
 }
 
-if (!$where && !$options['u'] && !isset($options['a'])) {
+if (empty($where_array) && !$options['u'] && !isset($options['a'])) {
     print_message("%n
 USAGE:
 $scriptname [-dquV] [-i instances] [-n number] [-m module] [-h device]
@@ -183,11 +206,11 @@ DEBUGGING OPTIONS:
 %rInvalid arguments!%n", 'color', FALSE);
 }
 
-if ($config['version_check'] && ($options['h'] !== 'new' || $options['u'])) {
-    include($config['install_dir'] . '/includes/versioncheck.inc.php');
+if ($config['version_check'] && $options['u']) {
+    include_once($config['install_dir'] . '/includes/versioncheck.inc.php');
 }
 
-if (!$where) {
+if (empty($where_array)) {
 
     // Only update Group/Alert tables
     if (isset($options['a'])) {
@@ -214,21 +237,25 @@ if (!$where) {
     exit;
 }
 
+// Always skip disabled devices
+$where_add = [ '`disabled` = 0' ];
 // For not new devices discovery, skip down devices
 if ($options['h'] !== 'new' && !isset($options['f'])) {
-    $where    .= ' AND `status` = ?';
-    $params[] = 1;
+    $where_add[] = '`status` = 1';
 }
-
-// Discovered device counter
-$discovered_devices = 0;
 
 print_cli_heading("%WStarting discovery run at " . date("Y-m-d H:i:s"), 0);
 
-$where    .= ' AND `poller_id` = ?';
-$params[] = $config['poller_id'];
+// Poller ID
+$where_add[] = generate_query_values($config['poller_id'], 'poller_id');
 
-foreach (dbFetchRows("SELECT * FROM `devices` WHERE `disabled` = 0 $where ORDER BY `last_discovered_timetaken` ASC", $params) as $device) {
+$query = "SELECT * FROM `devices` " . generate_where_clause($where_array, $where_add) . " ORDER BY `last_discovered_timetaken` ASC";
+// Discovered device counter
+$discovered_devices = 0;
+$total_devices = 0;
+foreach (dbFetchRows($query) as $device) {
+    $total_devices++;
+
     // Additional check if device SNMPable, because during
     // discovery many devices (long time), some device can be switched off
     if ($options['h'] === 'new' || is_snmpable($device)) {
@@ -252,8 +279,8 @@ $discovery_time = elapsed_time($start, 4);
 // Update Group/Alert tables
 if (($discovered_devices && !isset($options['m'])) || isset($options['a'])) {
     $silent = isset($options['q']);
-    if (OBS_DISTRIBUTED && !isset($options['a']) && function_exists('add_action_queue') &&
-        $action_id = add_action_queue('tables_update', 'discovery', ['silent' => $silent])) {
+    if (OBS_DISTRIBUTED && !isset($options['a']) && !is_poller_main() &&
+        $action_id = add_action_queue('tables_update', 'discovery', [ 'silent' => $silent ])) {
         print_message("Update alert and group tables added to queue [$action_id].");
         //log_event("Device with hostname '$hostname' added to queue [$action_id] for addition on remote Poller [{$vars['poller_id']}].", NULL, 'info', NULL, 7);
     } else {
@@ -270,7 +297,7 @@ if (($discovered_devices && !isset($options['m'])) || isset($options['a'])) {
 
 if ($discovered_devices) {
     // Single device ID convert to hostname for log
-    if (is_numeric($doing)) {
+    if ($doing_single && is_numeric($doing)) {
         $doing = $device['hostname'];
 
         // This discovery passed from wrapper and with process id
@@ -279,7 +306,32 @@ if ($discovered_devices) {
         }
     }
 } elseif (!isset($options['q']) && !$options['u']) {
-    print_warning("WARNING: 0 devices discovered." . ($options['h'] !== 'new' ? " Did you specify a device that does not exist?" : ''));
+    if ($doing_single && isset($device['hostname'])) {
+        $doing = $device['hostname']; // Single device ID convert to hostname for log
+    }
+
+    if ($doing_single) {
+        $target = is_numeric($doing) ? "id %W$doing%n" : "hostname '%W$doing%n'";
+
+        if ($total_devices) {
+            print_cli("%rERROR:%n Device with $target seems as down or unavailable by some reason.\n\n");
+        } elseif ($target_db = dbFetchRow("SELECT `device_id`, `disabled`, `status`, `poller_id` FROM `devices`" . generate_where_clause($where_array))) {
+            // Add extra error info, when device exist on different poller or disabled
+            if ($target_db['poller_id'] != $config['poller_id']) {
+                print_cli("%rERROR:%n Device with $target is assigned to Remote Poller ID {$target_db['poller_id']}. You must discover it using that poller.\n\n");
+            } elseif ($target_db['disabled']) {
+                print_cli("%rERROR:%n Device with $target is disabled, discovery skipped.\n\n");
+            } elseif (!$target_db['status']) {
+                print_cli("%rERROR:%n Device with $target is down, discovery skipped.\n\n");
+            }
+        } else {
+            print_cli("%rERROR:%n Device with $target does not exist in observium db.\n\n");
+        }
+    } elseif ($options['h'] === 'new') {
+        print_cli("%gINFO:%n 0 new devices discovered.\n\n");
+    } else {
+        print_cli("%yWARNING:%n 0 devices discovered. Did you specify a device that does not exist?\n\n");
+    }
 }
 
 $string = $argv[0] . ": $doing - $discovered_devices devices discovered in $discovery_time secs";
@@ -306,7 +358,7 @@ if (!isset($options['q'])) {
         print_debug("NOTE, \$config['snmp']['hide_auth'] is set to TRUE, snmp community and snmp v3 auth hidden from debug output.");
     }
 
-    print_cli_data('Devices Discovered', $discovered_devices, 0);
+    print_cli_data('Devices Discovered (Total)', $discovered_devices . " ($total_devices)", 0);
     print_cli_data('Discovery Time', $discovery_time . " secs", 0);
     print_cli_data('Definitions', $defs_time . " secs", 0);
     print_cli_data('Memory usage', format_bytes(memory_get_usage(TRUE), 2, 4) .

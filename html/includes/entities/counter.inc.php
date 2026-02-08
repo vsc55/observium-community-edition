@@ -305,9 +305,8 @@ function print_counter_table_header($vars)
     if ($vars['page'] == "device") {
         unset($cols['device']);
     }
-    if ($vars['page'] != "device" || $vars['tab'] == "overview") {
+    if (!($vars['page'] === "device" && $vars['tab'] !== "overview")) {
         unset($cols['mib']);
-        unset($cols['object']);
     }
     if (!$vars['show_class']) {
         unset($cols['class']);
@@ -392,12 +391,12 @@ function generate_counter_row($counter, $vars)
         $table_cols++;
     }
 
-    // FIXME -- Generify this. It's not just for counters.
     if ($vars['page'] === "device" && $vars['tab'] !== "overview") {
-        $row .= '        <td>' . (!safe_empty($counter['counter_mib']) ? '<a href="' . OBSERVIUM_MIBS_URL . '/' . $counter['counter_mib'] . '/" target="_blank">' . nicecase($counter['counter_mib']) . '</a>' : '') .
-                ((!safe_empty($counter['counter_mib']) && !safe_empty($counter['counter_object'])) ? '::' : '') .
-                (!safe_empty($counter['counter_mib']) ? '<a href="' . OBSERVIUM_MIBS_URL . '/' . $counter['counter_mib'] . '/#' . $counter['counter_object'] . '" target="_blank">' . $counter['counter_object'] . '</a>' : '') .
-                '.' . $counter['counter_index'] . '</td>' . PHP_EOL;
+        // $row .= '        <td>' . (!safe_empty($counter['counter_mib']) ? '<a href="' . OBSERVIUM_MIBS_URL . '/' . $counter['counter_mib'] . '/" target="_blank">' . nicecase($counter['counter_mib']) . '</a>' : '') .
+        //         ((!safe_empty($counter['counter_mib']) && !safe_empty($counter['counter_object'])) ? '::' : '') .
+        //         (!safe_empty($counter['counter_mib']) ? '<a href="' . OBSERVIUM_MIBS_URL . '/' . $counter['counter_mib'] . '/#' . $counter['counter_object'] . '" target="_blank">' . $counter['counter_object'] . '</a>' : '') .
+        //         '.' . $counter['counter_index'] . '</td>' . PHP_EOL;
+        $row .= generate_entity_mib_cell($counter, [ 'entity_type' => 'counter' ]);
         $table_cols++;
     }
 

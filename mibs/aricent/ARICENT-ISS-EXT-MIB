@@ -1,22 +1,32 @@
--- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
-
--- $Id: fsissext.mib,v 1.11 2012/09/07 09:52:14 siva Exp $
-
 ARICENT-ISS-EXT-MIB DEFINITIONS ::= BEGIN 
 
 IMPORTS 
    MODULE-IDENTITY, OBJECT-TYPE, 
    Counter32, enterprises, IpAddress, Integer32, Unsigned32   
    FROM SNMPv2-SMI 
-   RowStatus, TEXTUAL-CONVENTION, MacAddress FROM SNMPv2-TC; 
+   RowStatus, TEXTUAL-CONVENTION, MacAddress, TruthValue, DisplayString
+   FROM SNMPv2-TC; 
 
    issExt MODULE-IDENTITY 
-      LAST-UPDATED "201209050000Z" 
+      LAST-UPDATED "202208310000Z" -- August 31, 2022
       ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
-      CONTACT-INFO "support@aricent.com" 
-      DESCRIPTION
-	"The MIB for FutureISSExtension."
-      REVISION "201209050000Z"
+      CONTACT-INFO 
+
+        "ARICENT COMMUNICATIONS SOFTWARE
+         3460 Hillview Avenue,
+         Palo Alto, CA 94304-1388, USA,
+         Phone : +1-650-391-1088
+         E-mail:support@aricent.com"
+
+         DESCRIPTION 
+       "Added issExtL3FilterSynBit to IssExtL3FilterEntry"
+         REVISION "202208310000Z" -- August 31, 2022
+
+         DESCRIPTION 
+       "The enterprise ID 2076 was originally assigned to Future Software Pvt Limited.
+        Future Software is a part of Aricent."
+         REVISION "200702150000Z"
+
       DESCRIPTION 
          "The MIB for FutureISSExtension." 
    ::= { enterprises futuresoftware (2076) 81 8}
@@ -37,7 +47,7 @@ PortList ::= TEXTUAL-CONVENTION
         is not included if its bit has a value of '0'."
     SYNTAX      OCTET STRING
 
-iss    OBJECT IDENTIFIER ::= { enterprises 2076 81 }
+--iss    OBJECT IDENTIFIER ::= { enterprises 2076 81 }
 
 -- ----------------------------------------------------------------- -- 
 -- groups in the MIB  
@@ -46,6 +56,7 @@ iss    OBJECT IDENTIFIER ::= { enterprises 2076 81 }
       issExtRateControl           OBJECT IDENTIFIER ::= { issExt 1 }
       issExtL2Filter              OBJECT IDENTIFIER ::= { issExt 2 }
       issExtL3Filter              OBJECT IDENTIFIER ::= { issExt 3 }
+      issExtFilter                OBJECT IDENTIFIER ::= { issExt 5 }
 
 -- Rate Control Group --------------------------------------------- --
 
@@ -82,6 +93,12 @@ IssExtRateCtrlEntry ::=
       issExtRateCtrlPortRateLimit
          Integer32,
       issExtRateCtrlPortBurstSize
+         Integer32,
+      issExtDefaultRateCtrlStatus
+         INTEGER,
+      issExtRateCtrlPortInputRestoreFilter
+         DisplayString,
+      issExtRateCtrlPortInputRateLimit
          Integer32
   }
 
@@ -169,7 +186,36 @@ issExtRateCtrlPortBurstSize OBJECT-TYPE
    ::= { issExtRateCtrlEntry 6 }
 
 
-   
+issExtDefaultRateCtrlStatus OBJECT-TYPE
+     SYNTAX        INTEGER {disabled(0) , enabled(1)}
+     MAX-ACCESS    read-write
+     STATUS        current
+     DESCRIPTION
+          "Allows to configure the per port status of storm control feature.
+           when value is set as enabled, the packet rates for Broadcast,
+           Multicast and Dlf packets will be set to default values. when
+           disabled, they will be set to 0. Also if user has explicitly set
+           storm control level for any of the three types , then the default
+           rate for that type won't be updated while giving enabled status. "
+    DEFVAL    { disabled }
+    ::= { issExtRateCtrlEntry 7}
+
+issExtRateCtrlPortInputRestoreFilter OBJECT-TYPE
+   SYNTAX                          DisplayString
+   MAX-ACCESS                      read-write
+   STATUS                          current
+   DESCRIPTION
+      "Object is used to restore rate limit input config"
+   ::= { issExtRateCtrlEntry 8 }
+
+issExtRateCtrlPortInputRateLimit OBJECT-TYPE
+   SYNTAX      Integer32 (0..1000)
+   MAX-ACCESS  read-write
+   STATUS      current
+   DESCRIPTION
+      "Configures interface Input Rate Limit.
+       This object configures the input rate limit. The default value for the object is disabled."
+   ::= { issExtRateCtrlEntry 9 }
 
 -- ------------------------------------------------------------------ 
 -- L2 Filter Group --------------------------------------------------
@@ -221,8 +267,15 @@ IssExtL2FilterEntry ::=
       issExtL2FilterOutPortList 
          PortList,
       issExtL2FilterDirection
-         INTEGER
-
+         INTEGER,
+      issExtL2FilterCfiDeiBit
+         INTEGER,
+      issExtL2FilterDP
+         INTEGER,
+      issExtL2FilterDstMacAddrMask
+         MacAddress, 
+      issExtL2FilterSrcMacAddrMask
+         MacAddress 
   }
 
 issExtL2FilterNo OBJECT-TYPE 
@@ -396,6 +449,52 @@ issExtL2FilterDirection OBJECT-TYPE
    DEFVAL  { in } 
    ::= { issExtL2FilterEntry 13 }
 
+issExtL2FilterCfiDeiBit OBJECT-TYPE 
+   SYNTAX      INTEGER {
+                    set (1),
+                    reset (2)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "Specifies the CfiDei bit value in the c-vlan tag or s-vlan tag of 
+       the packet to be applied in the filter."
+   DEFVAL  { set } 
+   ::= { issExtL2FilterEntry 14 }
+
+issExtL2FilterDP OBJECT-TYPE 
+   SYNTAX      INTEGER {
+                    green (1),
+                    yellow (2),
+                    red (3)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "Specifies the drop precedence level to be applied in the filter."
+   DEFVAL  { green } 
+   ::= { issExtL2FilterEntry 15 }
+issExtL2FilterDstMacAddrMask OBJECT-TYPE 
+   SYNTAX      MacAddress
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "This object specifies that the mask used to match the Destination MAC address with the packet. By Default, the Destination
+       Mac Address Mask will be ff:ff:ff:ff:ff:ff  which means macth exactly the Dst Mac specified
+       address"
+
+   ::= { issExtL2FilterEntry 16 }
+
+issExtL2FilterSrcMacAddrMask OBJECT-TYPE 
+   SYNTAX      MacAddress
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "This object specifies that the mask used to match the Source MAC address with the packet. By Default, the Source
+       Mac Address Mask will be ff:ff:ff:ff:ff:ff  which means macth exactly the Src Mac specified
+       address"
+
+   ::= { issExtL2FilterEntry 17}
 -- ------------------------------------------------------------------ 
 -- L3 Filter Group --------------------------------------------------
 
@@ -465,7 +564,9 @@ IssExtL3FilterEntry ::=
       issExtL3FilterMatchCount
          Counter32, 
       issExtL3FilterStatus
-         RowStatus
+         RowStatus,
+      issExtL3FilterSynBit
+         INTEGER
   }
 
 issExtL3FilterNo OBJECT-TYPE 
@@ -503,7 +604,7 @@ issExtL3FilterProtocol OBJECT-TYPE
    ::= { issExtL3FilterEntry 3 }
 
 issExtL3FilterMessageType OBJECT-TYPE 
-   SYNTAX      Integer32 (0..65535)
+   SYNTAX      Integer32 (0..255)
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
@@ -535,7 +636,7 @@ issExtL3FilterMessageType OBJECT-TYPE
    ::= { issExtL3FilterEntry 4 }
 
 issExtL3FilterMessageCode OBJECT-TYPE 
-   SYNTAX      Integer32 (0..65535)
+   SYNTAX      Integer32 (0..255)
    MAX-ACCESS  read-write 
    STATUS      current 
    DESCRIPTION 
@@ -700,7 +801,7 @@ issExtL3FilterRstBit	 OBJECT-TYPE
 	::= { issExtL3FilterEntry 17 }
 
 issExtL3FilterTos		OBJECT-TYPE
-	SYNTAX		Integer32 (-1..7)
+	SYNTAX		Integer32 (0..8)
 	MAX-ACCESS	read-create
 	STATUS		current
 	DESCRIPTION
@@ -709,8 +810,8 @@ issExtL3FilterTos		OBJECT-TYPE
       significant bits) indicate Delay, Throughput and Reliability 
       i.e 'uuuuudtr', u-unused, d-delay, t-throughput, r-reliability.
 		For example '6' indicates low delay and high throughput. 
-                A value of '-1' means, the Tos Field becomes dont care"
-	DEFVAL	{ -1 }
+                A value of '8' means, the Tos Field becomes dont care"
+        DEFVAL  { 8 }
 	::= { issExtL3FilterEntry 18 }
 
 issExtL3FilterDscp		OBJECT-TYPE
@@ -778,5 +879,33 @@ issExtL3FilterStatus OBJECT-TYPE
         object is SET 'notInService'. An entry created in this table is
         be deleted when this object is SET 'destroy'."
    ::= { issExtL3FilterEntry 23 }
+
+issExtL3FilterSynBit	 OBJECT-TYPE
+	SYNTAX	INTEGER	{
+              set(1),
+			  notSet(2),
+			  any(3)	
+			}
+	MAX-ACCESS	read-create
+	STATUS		current
+	DESCRIPTION
+		" The TCP SYN bit to be checked against the packet. The default 
+		value is 'any'(3). It means that SYN bit will not be checked to 
+		decide the action. "
+	DEFVAL	{ any }
+	::= { issExtL3FilterEntry 24 }
+
+issExtEgressFilterMode OBJECT-TYPE 
+   SYNTAX      INTEGER {
+                  ip  (1),
+                  mac (2)
+               }
+   MAX-ACCESS  read-write 
+   STATUS      current 
+   DESCRIPTION 
+      "This object indicates whether to supprt IP based or MAC based PCL 
+      at Egress. The value true indicates IP ACL and false indicates MAC ACL."
+      DEFVAL { ip }
+   ::= { issExtFilter 1 }
 
 END

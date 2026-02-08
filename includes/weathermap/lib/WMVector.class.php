@@ -73,8 +73,8 @@ class WMVector
         $len = $this->length();
 
         if ($len > 0 && $len != 1) {
-            $this->dx = $this->dx / $len;
-            $this->dy = $this->dy / $len;
+            $this->dx /= $len;
+            $this->dy /= $len;
         }
     }
 

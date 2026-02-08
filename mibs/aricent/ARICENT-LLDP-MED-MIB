@@ -1,13 +1,10 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved.
 
--- Aricent LLDP MED Proprietary MIB Definition  
--- This MIB contains MIB objects to configure and retrieve LLDP MED protocol
--- details.
- 
     ARICENT-LLDP-MED-MIB DEFINITIONS ::= BEGIN 
  
     IMPORTS 
-      MODULE-IDENTITY, OBJECT-TYPE, enterprises, Integer32, NOTIFICATION-TYPE, Counter32, Gauge32
+      MODULE-IDENTITY, OBJECT-TYPE, enterprises, Integer32, NOTIFICATION-TYPE, 
+      Counter32, Gauge32
           FROM SNMPv2-SMI
       TruthValue, RowStatus, DisplayString
           FROM SNMPv2-TC

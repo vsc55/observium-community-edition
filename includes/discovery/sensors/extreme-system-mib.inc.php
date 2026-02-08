@@ -29,10 +29,19 @@ $oids['FanStatus'] = snmpwalk_cache_oid($device, 'extremeFanStatusTable', [], $m
 //print_vars($oids);
 
 foreach ($oids['FanStatus'] as $index => $entry) {
-    if (empty($entity_array[$entry['extremeFanEntPhysicalIndex']]['entPhysicalDescr'])) {
-        $descr = 'Fan ' . $index;
-    } else {
+    if (isset($entry['extremeFanPositionFanNum'])) {
+        // Recent firmwares
+        // EXTREME-SYSTEM-MIB::extremeFanPositionSlotNum.101 = Gauge32: 1
+        // EXTREME-SYSTEM-MIB::extremeFanPositionSlotNum.602 = Gauge32: 1
+        // EXTREME-SYSTEM-MIB::extremeFanPositionTrayNum.101 = Gauge32: 1
+        // EXTREME-SYSTEM-MIB::extremeFanPositionTrayNum.602 = Gauge32: 6
+        // EXTREME-SYSTEM-MIB::extremeFanPositionFanNum.101 = Gauge32: 1
+        // EXTREME-SYSTEM-MIB::extremeFanPositionFanNum.602 = Gauge32: 2
+        $descr = 'Fan ' . $entry['extremeFanPositionFanNum'] . ' (Slot ' . $entry['extremeFanPositionSlotNum'] . ', Tray ' . $entry['extremeFanPositionTrayNum'] . ')';
+    } elseif (isset($entity_array[$entry['extremeFanEntPhysicalIndex']]['entPhysicalDescr'])) {
         $descr = $entity_array[$entry['extremeFanEntPhysicalIndex']]['entPhysicalDescr'];
+    } else {
+        $descr = 'Fan ' . $index;
     }
 
     $oid_name = 'extremeFanSpeed';
@@ -88,7 +97,11 @@ foreach ($oids['PowerSupply'] as $index => &$entry) {
         }
     }
     $entry['name'] = $name;
-    $options       = ['entPhysicalIndex' => $entry['extremePowerSupplyEntPhysicalIndex']];
+    $options       = [
+        'entPhysicalIndex' => $entry['extremePowerSupplyEntPhysicalIndex'],
+        'measured_class'   => 'powersupply',
+        'measured_entity_label' => "Power Supply $index",
+    ];
 
     // Power Status
     $descr    = $name;
@@ -96,7 +109,7 @@ foreach ($oids['PowerSupply'] as $index => &$entry) {
     $oid_num  = '.1.3.6.1.4.1.1916.1.1.1.27.1.2.' . $index;
     $value    = $entry[$oid_name];
 
-    discover_status($device, $oid_num, $oid_name . '.' . $index, 'extremePowerSupplyStatus', $descr, $value, array_merge($options, ['entPhysicalClass' => 'powersupply']));
+    discover_status($device, $oid_num, $oid_name . '.' . $index, 'extremePowerSupplyStatus', $descr, $value, array_merge($options, [ 'entPhysicalClass' => 'powersupply' ]));
 
     $oid_name = 'extremePowerSupplyInputPowerUsage';
     $value    = $entry[$oid_name];
@@ -130,7 +143,11 @@ foreach ($oids['PowerSupplyOutput'] as $extremePowerSupplyIndex => $entry1) {
         if ($supply_count > 1) {
             $descr .= ' ' . $extremePowerSupplyOutputSensorIdx;
         }
-        $options = ['entPhysicalIndex' => $supply['extremePowerSupplyEntPhysicalIndex']];
+        $options = [
+            'entPhysicalIndex' => $supply['extremePowerSupplyEntPhysicalIndex'],
+            'measured_class'   => 'powersupply',
+            'measured_entity_label' => "Power Supply $extremePowerSupplyIndex",
+        ];
         $scale   = si_to_scale($entry['extremePowerSupplyOutputUnitMultiplier']);
 
         $oid_name = 'extremePowerSupplyOutputVoltage';

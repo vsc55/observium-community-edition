@@ -1,10 +1,7 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsostest.mib,v 1.9 2016/07/29 09:49:19 siva Exp $
-
 FUTURESOFT-OSPF-TEST-MIB DEFINITIONS ::= BEGIN
 
--- Enterprises MIB of Future software for testing OSPF.
    IMPORTS
       MODULE-IDENTITY, OBJECT-TYPE,
       Unsigned32, Integer32 , IpAddress , enterprises

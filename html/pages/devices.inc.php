@@ -71,6 +71,10 @@ foreach (['os', 'hardware', 'vendor', 'version', 'features', 'type', 'distro'] a
     //r($query_all);
 
     foreach (dbFetchColumn($query_all) as $item) {
+        /// DEVEL
+        // if (str_contains($item, "\r")) {
+        //     r($item);
+        // }
         $group = in_array($item, $selected, TRUE) ? "Listed" : "Other";
         if ($entry === 'os') {
             $name = ['name' => $config['os'][$item]['text'], 'group' => $group];
@@ -97,7 +101,7 @@ if (isset($where_array['location'])) {
     unset($tmp_where_array['location']);
 }
 $query    = "SELECT DISTINCT `devices`.`location` FROM `devices`" . $query_join_geocoding;
-$query    .= generate_where_clause($tmp, $query_permitted);
+$query    .= generate_where_clause($tmp_where_array, $query_permitted);
 $selected = dbFetchColumn($query);
 unset($tmp_where_array);
 
@@ -112,198 +116,229 @@ foreach (get_locations() as $entry) {
 foreach (get_type_groups('device') as $entry) {
     $form_items['group'][$entry['group_id']] = $entry['group_name'];
 }
+
+// Poller filter (for distributed setups)
+if (OBS_DISTRIBUTED) {
+    // Prepend "Default" poller with ID 0
+    $form_items['poller'] = [ 0 => 'Default (ID: 0)' ];
+    $form_items['poller'] += generate_form_values('poller');
+}
 //print_vars($form_items);
 
-$form_items['sort'] = ['hostname' => 'Hostname',
-                       'domain'   => 'Hostname in Domain Order',
-                       'location' => 'Location',
-                       'os'       => 'Operating System',
-                       'version'  => 'Version',
-                       'features' => 'Featureset',
-                       'type'     => 'Device Type',
-                       'uptime'   => 'Uptime'];
+$form_items['sort'] = [
+    'hostname' => 'Hostname',
+    'domain'   => 'Hostname in Domain Order',
+    'location' => 'Location',
+    'os'       => 'Operating System',
+    'version'  => 'Version',
+    'features' => 'Featureset',
+    'type'     => 'Device Type',
+    'uptime'   => 'Uptime'
+];
 
-$form = ['type'          => 'rows',
-         'space'         => '10px',
-         'submit_by_key' => TRUE,
-         'url'           => generate_url($vars)];
+$form = [
+    'type'          => 'rows',
+    'space'         => '10px',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
+];
 // First row
 $form['row'][0]['hostname'] = [
-  'type'        => 'text',
-  'name'        => 'Hostname',
-  'value'       => $vars['hostname'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
+    'type'        => 'text',
+    'name'        => 'Hostname',
+    'value'       => $vars['hostname'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
 $form['row'][0]['location'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Locations',
-  'width'  => '100%', //'180px',
-  'encode' => TRUE,
-  'value'  => $vars['location'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['location']];
-$form['row'][0]['os']       = [
-  'type'   => 'multiselect',
-  'name'   => 'Select OS',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['os'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['os']];
+    'type'   => 'multiselect',
+    'name'   => 'Select Locations',
+    'width'  => '100%', //'180px',
+    'encode' => TRUE,
+    'value'  => $vars['location'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['location']
+];
+$form['row'][0]['os'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select OS',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['os'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['os']
+];
 $form['row'][0]['hardware'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Hardware',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['hardware'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['hardware']];
-$form['row'][0]['vendor']   = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Vendor',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['vendor'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['vendor']];
-$form['row'][0]['group']    = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Groups',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['group'],
-  'values' => $form_items['group']];
-// Select sort pull-rigth
-//$form['row'][0]['sort']     = array(
-//                                'type'        => 'select',
-//                                'icon'        => $config['icon']['sort'],
-//                                'right'       => TRUE,
-//                                'width'       => '100%', //'150px',
-//                                'value'       => $vars['sort'],
-//                                'values'      => $form_items['sort']);
+    'type'   => 'multiselect',
+    'name'   => 'Select Hardware',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['hardware'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['hardware']
+];
+$form['row'][0]['vendor'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select Vendor',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['vendor'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['vendor']
+];
+$form['row'][0]['group'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select Groups',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['group'],
+    'values' => $form_items['group']
+];
 
 // Second row
-$form['row'][1]['sysname']       = [
-  'type'        => 'text',
-  'name'        => 'sysName',
-  'value'       => $vars['sysname'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
+$form['row'][1]['sysname'] = [
+    'type'        => 'text',
+    'name'        => 'sysName',
+    'value'       => $vars['sysname'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
 $form['row'][1]['location_text'] = [
-  'type'        => 'text',
-  'name'        => 'Location',
-  'value'       => $vars['location_text'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
-$form['row'][1]['version']       = [
-  'type'   => 'multiselect',
-  'name'   => 'Select OS Version',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['version'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['version']];
-$form['row'][1]['features']      = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Featureset',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['features'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['features']];
-$form['row'][1]['type']          = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Device Type',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['type'],
-  'groups' => ['Listed', 'Other'], // Order
-  'values' => $form_items['type']];
+    'type'        => 'text',
+    'name'        => 'Location',
+    'value'       => $vars['location_text'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
+$form['row'][1]['version'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select OS Version',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['version'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['version']
+];
+$form['row'][1]['features'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select Featureset',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['features'],
+    'groups' => ['Listed', 'Other'],
+    'values' => $form_items['features']
+];
+$form['row'][1]['type'] = [
+    'type'   => 'multiselect',
+    'name'   => 'Select Device Type',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['type'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['type']
+];
 // Select sort pull-right
 $form['row'][1]['sort'] = [
-  'type'   => 'select',
-  'icon'   => $config['icon']['sort'],
-  'right'  => TRUE,
-  'width'  => '100%', //'150px',
-  'value'  => $vars['sort'],
-  'values' => $form_items['sort']];
+    'type'   => 'select',
+    'icon'   => 'sort',
+    'right'  => TRUE,
+    'width'  => '100%', //'150px',
+    'value'  => $vars['sort'],
+    'values' => $form_items['sort']
+];
 
 // Third row
 $form['row'][2]['sysDescr'] = [
-  'type'        => 'text',
-  'name'        => 'sysDescr',
-  'value'       => $vars['sysDescr'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
-
-
+    'type'        => 'text',
+    'name'        => 'sysDescr',
+    'value'       => $vars['sysDescr'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
 $form['row'][2]['purpose'] = [
-  'type'        => 'text',
-  'name'        => 'Description / Purpose',
-  'value'       => $vars['purpose'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
-
-$form['row'][2]['sysContact'] = [
-  'type'        => 'text',
-  'name'        => 'sysContact',
-  'value'       => $vars['sysContact'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
-
+    'type'        => 'text',
+    'name'        => 'Description / Purpose',
+    'value'       => $vars['purpose'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
+// Show poller filter in distributed setups, otherwise show sysContact
+if (OBS_DISTRIBUTED) {
+    $form['row'][2]['poller_id'] = [
+        'type'   => 'multiselect',
+        'name'   => 'Select Poller',
+        'width'  => '100%',
+        'value'  => $vars['poller_id'],
+        'values' => $form_items['poller']
+    ];
+} else {
+    $form['row'][2]['sysContact'] = [
+        'type'        => 'text',
+        'name'        => 'sysContact',
+        'value'       => $vars['sysContact'],
+        'width'       => '100%', //'180px',
+        'placeholder' => TRUE
+    ];
+}
 $form['row'][2]['distro'] = [
-  'type'   => 'multiselect',
-  'name'   => 'Select Distro',
-  'width'  => '100%', //'180px',
-  'value'  => $vars['distro'],
-  'groups' => ['Listed', 'Other'],
-  'values' => $form_items['distro']];
-
+    'type'   => 'multiselect',
+    'name'   => 'Select Distro',
+    'width'  => '100%', //'180px',
+    'value'  => $vars['distro'],
+    'groups' => [ 'Listed', 'Other' ],
+    'values' => $form_items['distro']
+];
 $form['row'][2]['serial'] = [
-  'type'        => 'text',
-  'name'        => 'Serial Number',
-  'value'       => $vars['serial'],
-  'width'       => '100%', //'180px',
-  'placeholder' => TRUE];
-
+    'type'        => 'text',
+    'name'        => 'Serial Number',
+    'value'       => $vars['serial'],
+    'width'       => '100%', //'180px',
+    'placeholder' => TRUE
+];
 $form['row'][2]['disabled'] = [
-  'type'     => 'switch-ng',
-  //'on-text'       => 'Disabled',
-  'on-color' => 'primary',
-  'on-icon'  => 'icon-eye-close',
-  //'off-text'      => 'Enabled',
-  'off-icon' => 'icon-eye-open',
-  'grid'     => 1,
-  //'size'          => 'large',
-  //'height'        => '15px',
-  'title'    => 'Show Enabled/Disabled',
-  //'placeholder'   => 'Disabled',
-  //'readonly'      => TRUE,
-  //'disabled'      => TRUE,
-  //'submit_by_key' => TRUE,
-  'value'    => $vars['disabled']
+    'type'     => 'switch-ng',
+    //'on-text'       => 'Disabled',
+    'on-color' => 'primary',
+    'on-icon'  => 'icon-eye-close',
+    //'off-text'      => 'Enabled',
+    'off-icon' => 'icon-eye-open',
+    'grid'     => 1,
+    //'size'          => 'large',
+    //'height'        => '15px',
+    'title'    => 'Show Enabled/Disabled',
+    //'placeholder'   => 'Disabled',
+    //'readonly'      => TRUE,
+    //'disabled'      => TRUE,
+    //'submit_by_key' => TRUE,
+    'value'    => $vars['disabled']
 ];
 
 // search button
 $form['row'][2]['search'] = [
-  'type'  => 'submit',
-  //'name'        => 'Search',
-  //'class' => 'btn-primary',
-  //'icon'        => 'icon-search',
-  'grid'  => 1,
-  'right' => TRUE,
+    'type'  => 'submit',
+    //'name'        => 'Search',
+    //'class' => 'btn-primary',
+    //'icon'        => 'icon-search',
+    'grid'  => 1,
+    'right' => TRUE,
 ];
 
-$panel_form = ['type'          => 'rows',
-               'title'         => 'Search Devices',
-               'space'         => '10px',
-               'submit_by_key' => TRUE,
-               'url'           => generate_url($vars)];
+$panel_form = [
+    'type'          => 'rows',
+    'title'         => 'Search Devices',
+    'space'         => '10px',
+    'submit_by_key' => TRUE,
+    'url'           => generate_url($vars)
+];
 
-$panel_form['row'][0] = ['hostname' => $form['row'][0]['hostname'],
-                         'sysname'  => $form['row'][1]['sysname']];
+$panel_form['row'][0]['hostname'] = $form['row'][0]['hostname'];
+$panel_form['row'][0]['sysname']  = $form['row'][1]['sysname'];
 
-$panel_form['row'][1] = ['sysDescr' => $form['row'][2]['sysDescr'],
-                         'purpose'  => $form['row'][2]['purpose']];
+$panel_form['row'][1]['sysDescr'] = $form['row'][2]['sysDescr'];
+$panel_form['row'][1]['purpose']  = $form['row'][2]['purpose'];
 
-$panel_form['row'][2] = ['sysContact' => $form['row'][2]['sysContact'],
-                         'serial'     => $form['row'][2]['serial']];
+if (OBS_DISTRIBUTED) {
+    $panel_form['row'][2]['poller_id'] = $form['row'][2]['poller_id'];
+} else {
+    $panel_form['row'][2]['sysContact'] = $form['row'][2]['sysContact'];
+}
+$panel_form['row'][2]['serial']     = $form['row'][2]['serial'];
 
-$panel_form['row'][3] = ['location'      => $form['row'][0]['location'],
-                         'location_text' => $form['row'][1]['location_text']];
+$panel_form['row'][3]['location']      = $form['row'][0]['location'];
+$panel_form['row'][3]['location_text'] = $form['row'][1]['location_text'];
 
 
 $panel_form['row'][4]['os']      = $form['row'][0]['os'];
@@ -360,11 +395,11 @@ foreach ($navbar['options'] as $option => $array) {
 // Set graph period stuff
 if ($vars['format'] === 'graphs') {
 
-    if (isset($vars['timestamp_from']) && preg_match(OBS_PATTERN_TIMESTAMP, $vars['timestamp_from'])) {
+    if (isset($vars['timestamp_from']) && is_valid_timestamp($vars['timestamp_from'])) {
         $vars['from'] = strtotime($vars['timestamp_from']);
         unset($vars['timestamp_from']);
     }
-    if (isset($vars['timestamp_to']) && preg_match(OBS_PATTERN_TIMESTAMP, $vars['timestamp_to'])) {
+    if (isset($vars['timestamp_to']) && is_valid_timestamp($vars['timestamp_to'])) {
         $vars['to'] = strtotime($vars['timestamp_to']);
         unset($vars['timestamp_to']);
     }
@@ -386,7 +421,7 @@ if ($vars['format'] === 'graphs') {
 //                      'diskio'    => 'Disk I/O',
 //                      'poller_perf' => 'Poll Time'
 //                      );
-foreach (['graphs'] as $type) {
+foreach ([ 'graphs' ] as $type) {
     /// FIXME. Weird graph menu, they too long and not actual for all devices,
     /// but here also not possible use sql query from `device_graphs` because here not stored all graphs
     /// FIXME - We need to register all graphs in `device_graphs` :D
@@ -452,32 +487,36 @@ unset($navbar);
 // Print period options for graphs
 
 if ($vars['format'] === 'graphs') {
-    $form = ['type'          => 'rows',
-             'space'         => '5px',
-             'submit_by_key' => TRUE]; //Do not use url here, because it discards all other vars from url
+    $form = [
+        'type'          => 'rows',
+        'space'         => '5px',
+        'submit_by_key' => TRUE     // Do not use url here, because it discards all other vars from url
+    ];
 
     // Datetime Field
     $form['row'][0]['timestamp'] = [
-      'type'    => 'datetime',
-      'grid'    => 10,
-      'grid_xs' => 10,
-      //'width'       => '70%',
-      //'div_class'   => 'col-lg-10 col-md-10 col-sm-10 col-xs-10',
-      'presets' => TRUE,
-      'min'     => '2007-04-03 16:06:59',  // Hehe, who will guess what this date/time means? --mike
-      // First commit! Though Observium was already 7 months old by that point. --adama
-      'max'     => date('Y-m-d 23:59:59'), // Today
-      'from'    => date('Y-m-d H:i:s', $vars['from']),
-      'to'      => date('Y-m-d H:i:s', $vars['to'])];
+        'type'    => 'datetime',
+        'grid'    => 10,
+        'grid_xs' => 10,
+        //'width'       => '70%',
+        //'div_class'   => 'col-lg-10 col-md-10 col-sm-10 col-xs-10',
+        'presets' => TRUE,
+        'min'     => '2007-04-03 16:06:59',  // Hehe, who will guess what this date/time means? --mike
+        // First commit! Though Observium was already 7 months old by that point. --adama
+        'max'     => date('Y-m-d 23:59:59'), // Today
+        'from'    => date('Y-m-d H:i:s', $vars['from']),
+        'to'      => date('Y-m-d H:i:s', $vars['to'])
+    ];
     // Update button
     $form['row'][0]['update'] = [
-      'type'    => 'submit',
-      //'name'        => 'Search',
-      //'icon'        => 'icon-search',
-      //'div_class'   => 'col-lg-2 col-md-2 col-sm-2 col-xs-2',
-      'grid'    => 2,
-      'grid_xs' => 2,
-      'right'   => TRUE];
+        'type'    => 'submit',
+        //'name'        => 'Search',
+        //'icon'        => 'icon-search',
+        //'div_class'   => 'col-lg-2 col-md-2 col-sm-2 col-xs-2',
+        'grid'    => 2,
+        'grid_xs' => 2,
+        'right'   => TRUE
+    ];
 
     print_form($form);
     unset($form);
@@ -502,45 +541,46 @@ if ($config['geocoding']['enable']) {
 $query .= generate_where_clause($where_array, $query_permitted) . $sort;
 
 // Pagination
-$pagination_html = '';
-if (isset($vars['pagination']) && (!$vars['pagination'] || $vars['pagination'] == 'no')) {
+if (isset($vars['pagination']) && get_var_false($vars['pagination'])) {
     // Skip if pagination set to false
+    $pagination_html = '';
 } elseif ($count = dbFetchCell("SELECT COUNT(*) FROM `devices`" . $query_join_geocoding . generate_where_clause($where_array, $query_permitted))) {
-    pagination($vars, 0, TRUE); // Get default pagesize/pageno
-    $start           = $vars['pagesize'] * $vars['pageno'] - $vars['pagesize'];
-    $query           .= ' LIMIT ' . $start . ',' . $vars['pagesize'];
+    $query          .= generate_query_limit($vars);
     $pagination_html = pagination($vars, $count);
 }
-
-[$format, $subformat] = explode("_", $vars['format'], 2);
-
 //r($query);
+
+[ $format, $subformat ] = explode("_", $vars['format'], 2);
+
+$include_file = $config['html_dir'] . '/pages/devices/' . $format . '.inc.php';
+if (!is_file($include_file)) {
+    print_error("<h4>Error</h4>
+             This should not happen. Please ensure you are on the latest release and then report this to the Observium developers if it continues.");
+
+    return;
+}
 
 $devices = dbFetchRows($query);
 //$devices = dbFetchRows($query, NULL, TRUE);
 
-if (count($devices)) {
-    $include_file = $config['html_dir'] . '/pages/devices/' . $format . '.inc.php';
-    if (is_file($include_file)) {
-        echo $pagination_html;
-        if ($format !== 'graphs') {
-            echo generate_box_open();
-        }
-
-        include($include_file);
-
-        if ($vars['format'] !== 'graphs') {
-            echo generate_box_close();
-        }
-        echo $pagination_html;
-    } else {
-        print_error("<h4>Error</h4>
-                 This should not happen. Please ensure you are on the latest release and then report this to the Observium developers if it continues.");
-    }
-} else {
+if (safe_empty($devices)) {
     print_error("<h4>No devices found</h4>
                Please try adjusting your search parameters.");
+
+    return;
 }
+
+echo $pagination_html;
+if ($format !== 'graphs') {
+    echo generate_box_open();
+}
+
+include($include_file);
+
+if ($vars['format'] !== 'graphs') {
+    echo generate_box_close();
+}
+echo $pagination_html;
 
 
 // EOF

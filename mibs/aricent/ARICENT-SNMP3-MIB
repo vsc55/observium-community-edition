@@ -1,29 +1,37 @@
 -- Copyright (C) 2006-2012 Aricent Group. All Rights Reserved
 
--- $Id: fssnmp3.mib,v 1.12 2015/04/28 12:25:26 siva Exp $
-
 ARICENT-SNMP3-MIB DEFINITIONS ::= BEGIN
   IMPORTS
-          MODULE-IDENTITY, OBJECT-TYPE, 
-   enterprises, Counter32, Unsigned32
+          MODULE-IDENTITY, OBJECT-TYPE, enterprises, 
+          Counter32, Unsigned32, NOTIFICATION-TYPE
               FROM SNMPv2-SMI
-          RowStatus, StorageType
+          RowStatus, StorageType, TruthValue
               FROM SNMPv2-TC
           SnmpTagValue, snmpTargetAddrEntry
-               FROM SNMP-TARGET-MIB
-
-
-       SnmpAdminString
-           FROM SNMP-FRAMEWORK-MIB;
+              FROM SNMP-TARGET-MIB
+          SnmpAdminString, SnmpEngineID
+              FROM SNMP-FRAMEWORK-MIB
+          InetAddress, InetAddressType
+              FROM INET-ADDRESS-MIB;
 
   futuresnmp3 MODULE-IDENTITY
-    LAST-UPDATED "201209050000Z"
+    LAST-UPDATED "202210260000Z"
     ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
     CONTACT-INFO "support@aricent.com"
     DESCRIPTION
             "The MIB module is for managing  SNMP Inform message statistics and
             Agentx-subagent configuration/statistics objects in SNMP
             Version 3."
+
+    REVISION "202210260000Z"
+    DESCRIPTION
+            "Reset SNMP community (v1/v2c) and user (v3) data object defined."
+
+    REVISION "202103300000Z"
+    DESCRIPTION
+            "Added objects in support of shortcut SNMP community (v1/v2c) and
+            secured user (v3) configuration for cnMaestro/XMS platforms."
+
     REVISION "201209050000Z"
     DESCRIPTION
             "The MIB module is for managing  SNMP Inform message statistics and
@@ -38,6 +46,7 @@ ARICENT-SNMP3-MIB DEFINITIONS ::= BEGIN
         futuresnmpagentx      OBJECT IDENTIFIER ::= { futuresnmp3 15 }
         futuresnmptraps       OBJECT IDENTIFIER ::= { futuresnmp3 20 }
         fsSnmpTarget          OBJECT IDENTIFIER ::= { futuresnmp3 25 }
+        cnSnmpAgentMgmtCfg    OBJECT IDENTIFIER ::= { futuresnmp3 30 }
 
 -- SCALAR_TABLE_BEGIN
 
@@ -446,10 +455,30 @@ ARICENT-SNMP3-MIB DEFINITIONS ::= BEGIN
        DEFVAL { 161 }
        ::= { futuresnmp3 19 }
 
+    fsSnmpEngineID OBJECT-TYPE
+        SYNTAX       SnmpEngineID
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "The snmpEngineID of the entity."
+        ::= { futuresnmp3 21 }
        
+    fsSnmpResetCommAndUserData OBJECT-TYPE
+        SYNTAX       TruthValue
+        MAX-ACCESS   read-write
+        STATUS       current
+        DESCRIPTION
+            "Clears SNMP Community and USM User
+            table entries. Setting this attribute
+            to 'true(1)' clears all read-write
+            entries. The value 'false(2)' is 
+            returned when the attribute is queried."
+
+        DEFVAL       { false }
+        ::= { futuresnmp3 22 }
+
 -- SCALAR_TABLE_END
 
-   
 -- ------------------------------------------------------------------ 
 -- The future SNMP agentx Group
 -- ------------------------------------------------------------------ 
@@ -803,5 +832,116 @@ fsSnmpTargetHostName OBJECT-TYPE
      DESCRIPTION
       "This object configures the DNS host name."
      ::= { fsSnmpTargetAddrEntry 1 }
+
+-- *******************************************************************
+--  Cambium SNMP Agent Management Configuration Extensions
+-- *******************************************************************
+
+fsSnmpCnMgmtReadOnlyCommunity OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(0..32))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+        "A human readable string representing the default management
+         read-only community string."
+
+    ::= { cnSnmpAgentMgmtCfg 1 }
+
+fsSnmpCnMgmtReadWriteCommunity OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(0..32))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+        "A human readable string representing the default management
+         read-write community string."
+
+    ::= { cnSnmpAgentMgmtCfg 2 }
+
+fsSnmpCnMgmtTrapRcvrIpAddress OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(0..48))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "The default management SNMP Trap Receiver IP address."
+
+    ::= { cnSnmpAgentMgmtCfg 3 }
+
+fsSnmpCnMgmtUsmUserAuthProtocol OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    none(1),
+                    md5(2),
+                    sha(3),
+                    sha224(4),
+                    sha256(5),
+                    sha384(6),
+                    sha512(7)
+                }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "Authentication protocol options for use with the default
+         management user."
+
+    ::= { cnSnmpAgentMgmtCfg 4 }
+
+fsSnmpCnMgmtUsmUserPrivProtocol OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    none(1),
+                    des(2),
+                    tdes(3),
+                    aes(4),
+                    aes192(5),
+                    aes256(6)
+                }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "Privacy protocol options for use with the default
+         management user."
+
+    ::= { cnSnmpAgentMgmtCfg 5 }
+
+fsSnmpCnMgmtUsmUserAccess OBJECT-TYPE
+    SYNTAX      INTEGER {
+                    readOnly(1),
+                    readWrite(2)
+                }
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION
+        "Management object access options for use with 
+         the default management user."
+
+    ::= { cnSnmpAgentMgmtCfg 6 }
+
+fsSnmpCnMgmtUsmUserAuthKey OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(8..32))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+        "Octets representing the default management 
+         user authentication key."
+
+    ::= { cnSnmpAgentMgmtCfg 7 }
+
+fsSnmpCnMgmtUsmUserPrivKey OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(8..32))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+        "Octets representing the default management 
+         user privacy key."
+
+    ::= { cnSnmpAgentMgmtCfg 8 }
+
+fsSnmpCnMgmtUsmUserName OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE(0..32))
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION 
+        "A human readable string representing the default 
+         management user name."
+
+    ::= { cnSnmpAgentMgmtCfg 9 }
 
 END

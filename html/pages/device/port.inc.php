@@ -16,7 +16,7 @@
  * @var $permit_tabs
  */
 
-if (!isset($vars['view'])) {
+if (!isset($vars['view']) || !is_file($config['html_dir'] . '/pages/device/port/' . $vars['view'] . '.inc.php')) {
     $vars['view'] = "graphs";
 }
 
@@ -95,11 +95,6 @@ if (isset($port_attribs['sros_egress_queues']) || isset($port_attribs['sros_ingr
     $navbar['options']['sros_queues']['text'] = 'CoS Queues';
 }
 
-$navbar['options']['alerts']['text']   = 'Alerts';
-$navbar['options']['alertlog']['text'] = 'Alert Log';
-
-$navbar['options']['events']['text'] = 'Eventlog';
-
 //if (dbFetchCell("SELECT COUNT(*) FROM `ports_adsl` WHERE `port_id` = ?", array($port['port_id'])))
 if (dbExist('ports_adsl', '`port_id` = ?', [$port['port_id']])) {
     $navbar['options']['adsl']['text'] = 'ADSL';
@@ -139,6 +134,11 @@ if (dbExist('juniAtmVp', '`port_id` = ?', [$port['port_id']])) {
     }
 }
 
+$navbar['options']['alerts']['text']   = 'Alerts';
+$navbar['options']['alertlog']['text'] = 'Alert Log';
+
+$navbar['options']['events']['text'] = 'Eventlog';
+
 if (OBSERVIUM_EDITION !== 'community' && $config['enable_billing'] && $_SESSION['userlevel'] >= 9) {
     $navbar['options_right']['bills'] = [
         'text' => 'Create Bill',
@@ -165,6 +165,9 @@ $navbar['brand'] = "Port";
 
 print_navbar($navbar);
 unset($navbar);
+
+register_html_title("Port ".$port['port_label']);
+register_html_title(nicecase($vars['view']));
 
 include($config['html_dir'] . '/pages/device/port/' . $vars['view'] . '.inc.php');
 

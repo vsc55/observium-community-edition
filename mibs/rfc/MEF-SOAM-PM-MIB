@@ -1322,7 +1322,7 @@ mefSoamLmCfgSessionType OBJECT-TYPE
        "
     REFERENCE
        "[MEF SOAM-PM] R3" 
-    DEFVAL { On-Demand }
+    DEFVAL { onDemand }
     ::= { mefSoamLmCfgEntry 31 }
 
 mefSoamLmCfgSessionStatus OBJECT-TYPE

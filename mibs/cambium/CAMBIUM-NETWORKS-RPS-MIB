@@ -10,17 +10,29 @@ IMPORTS
             FROM SNMP-FRAMEWORK-MIB
     ifIndex
             FROM IF-MIB
-    RowStatus, TruthValue
+    DisplayString, RowStatus, TruthValue
             FROM SNMPv2-TC;
 
 cnRPSMib MODULE-IDENTITY
-    LAST-UPDATED "202209082000Z" -- September 08, 2022
+    LAST-UPDATED "202305092000Z" -- May 09, 2023
     ORGANIZATION "Cambium Networks, Inc."
     CONTACT-INFO "cambiumnetworks.com"
     DESCRIPTION
         "This MIB module contains objects related to the
         Removable Power Supply support."
 
+    REVISION    "202305092000Z" -- May 09, 2023
+    DESCRIPTION "Ver 3:
+    - Rename cnRPSMaximumVoltage to cnRPSOutputVoltage
+    - Rename cnRPSMaximumWatts to cnRPSMaximumPower
+    - Add cnRPSCurrentInputPower
+    - Add cnRPSMinimumInputVoltageRating
+    - Add cnRPSMaximumInputVoltageRating
+    - Add cnRPSTemperature
+    - Add cnRPSFaults
+    - Add cnRPSType
+    - Add cnRPSModel
+    - Add cnRPSSerial"
     REVISION    "202209082000Z" -- September 08, 2022
     DESCRIPTION "Ver 2: Add cnRPSCurrentInputVoltage"
     REVISION    "202007030000Z" -- July 03, 2020
@@ -52,12 +64,20 @@ cnRPSTableEntry OBJECT-TYPE
     ::= { cnRPSTable 1 }
 
 CnRPSTableEntry ::= SEQUENCE {
-    cnRPSIndex                  Integer32,
-    cnRPSMaximumVoltage         Integer32,
-    cnRPSMaximumCurrent         Integer32,
-    cnRPSMaximumWatts           Integer32,
-    cnRPSStatus                 INTEGER,
-    cnRPSCurrentInputVoltage    Integer32
+    cnRPSIndex                      Integer32,
+    cnRPSOutputVoltage              Integer32,
+    cnRPSMaximumCurrent             Integer32,
+    cnRPSMaximumPower               Integer32,
+    cnRPSStatus                     INTEGER,
+    cnRPSCurrentInputVoltage        Integer32,
+    cnRPSCurrentInputPower          Integer32,
+    cnRPSMinimumInputVoltageRating  Integer32,
+    cnRPSMaximumInputVoltageRating  Integer32,
+    cnRPSTemperature                Integer32,
+    cnRPSFaults                     BITS,
+    cnRPSType                       INTEGER,
+    cnRPSModel                      DisplayString,
+    cnRPSSerial                     DisplayString
 }
 
 cnRPSIndex OBJECT-TYPE
@@ -69,13 +89,13 @@ cnRPSIndex OBJECT-TYPE
 
     ::= { cnRPSTableEntry 1 }
 
-cnRPSMaximumVoltage OBJECT-TYPE
+cnRPSOutputVoltage OBJECT-TYPE
     SYNTAX         Integer32
     UNITS          "volts"
     MAX-ACCESS     read-only
     STATUS         current
     DESCRIPTION
-        "Maximum voltage of power supply."
+        "Rated output voltage of power supply."
 
     ::= { cnRPSTableEntry 2 }
 
@@ -85,17 +105,17 @@ cnRPSMaximumCurrent OBJECT-TYPE
     MAX-ACCESS     read-only
     STATUS         current
     DESCRIPTION
-        "Maximum current of power supply."
+        "Maximum output current rating of the power supply."
 
     ::= { cnRPSTableEntry 3 }
 
-cnRPSMaximumWatts OBJECT-TYPE
+cnRPSMaximumPower OBJECT-TYPE
     SYNTAX         Integer32
     UNITS          "watts"
     MAX-ACCESS     read-only
     STATUS         current
     DESCRIPTION
-        "Maximum watts of power supply."
+        "Maximum output power rating of the power supply."
 
     ::= { cnRPSTableEntry 4 }
 
@@ -122,9 +142,149 @@ cnRPSCurrentInputVoltage OBJECT-TYPE
 
     ::= { cnRPSTableEntry 6 }
 
+cnRPSCurrentInputPower OBJECT-TYPE
+    SYNTAX         Integer32
+    UNITS          "watts"
+    MAX-ACCESS     read-only
+    STATUS         current
+    DESCRIPTION
+        "Current input power drawn by the power supply."
+
+    ::= { cnRPSTableEntry 7 }
+
+cnRPSMinimumInputVoltageRating OBJECT-TYPE
+    SYNTAX          Integer32
+    UNITS           "volts"
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Minimum input voltage rating of the power supply."
+    ::= { cnRPSTableEntry 8 }
+
+cnRPSMaximumInputVoltageRating OBJECT-TYPE
+    SYNTAX          Integer32
+    UNITS           "volts"
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Maximum input voltage rating of the power supply."
+    ::= { cnRPSTableEntry 9 }
+
+cnRPSTemperature OBJECT-TYPE
+    SYNTAX          Integer32
+    UNITS           "celsius"
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Current temperature of the power supply."
+    ::= { cnRPSTableEntry 10 }
+
+cnRPSFaults OBJECT-TYPE
+    SYNTAX          BITS {  noFault(0),
+                            cml(1),
+                            temperature(2),
+                            inputUnderVoltage(3),
+                            outputOverCurrent(4),
+                            outputOverVoltage(5),
+                            disabled(6),
+                            busy(7),
+                            unknown(8),
+                            other(9),
+                            fan(10),
+                            notPowerGood(11),
+                            mfr(12),
+                            input(13),
+                            outputPower(14),
+                            outputVoltage(15),
+
+                            invalidCommand(16),
+                            invalidData(17),
+                            packetErrorCheckFailed(18),
+                            memoryFaultDetected(19),
+                            processorFaultDetected(20),
+                            otherCommunicationFault(22),
+                            otherMemoryOrLogicFault(23),
+
+                            overTemperatureFault(24),
+                            overTemperatureWarning(25),
+                            underTemperatureWarning(26),
+                            underTemperatureFault(27),
+
+                            outputOverCurrentFault(32),
+                            outputOverCurrentFaultLVShutdown(33),
+                            outputOverCurrentWarning(34),
+                            outputUnderCurrentFault(35),
+                            currentShareFault(36),
+                            inPowerLimitingMode(37),
+                            outputOverPowerFault(38),
+                            outputOverPowerWarning(39),
+
+                            outputOverVoltageFault(40),
+                            outputOverVoltageWarning(41),
+                            outputUnderVoltageWarning(42),
+                            outputUnderVoltageFault(43),
+                            outputMaxMinWarning(44),
+                            tonMaxFault(45),
+                            toffMaxWarning(46),
+                            outputVoltageTrackingError(47),
+
+                            inputOverVoltageFault(48),
+                            inputOverVoltageWarning(49),
+                            inputUnderVoltageWarning(50),
+                            inputUnderVoltageFault(51),
+                            unitOffForLowInputVoltage(52),
+                            inputOverCurrentFault(53),
+                            inputOverCurrentWarning(54),
+                            inputOverPowerWarning(55),
+
+                            fan1Fault(56),
+                            fan2Fault(57),
+                            fan1Warning(58),
+                            fan2Warning(59),
+                            fan1SpeedOverride(60),
+                            fan2SpeedOverride(61),
+                            airFlowFault(62),
+                            airFlowWarning(63)
+                        }
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Faults reported by the power supply."
+    ::= { cnRPSTableEntry 11 }
+
+cnRPSType OBJECT-TYPE
+    SYNTAX          INTEGER {
+                        ac(1),
+                        dc(2)
+                    }
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Power supply type."
+
+    ::= { cnRPSTableEntry 12 }
+
+cnRPSModel OBJECT-TYPE
+    SYNTAX          DisplayString(SIZE(16))
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Power supply model name."
+
+    ::= { cnRPSTableEntry 13 }
+
+cnRPSSerial OBJECT-TYPE
+    SYNTAX          DisplayString(SIZE(16))
+    MAX-ACCESS      read-only
+    STATUS          current
+    DESCRIPTION
+        "Power supply serial number."
+
+    ::= { cnRPSTableEntry 14 }
+
 cnRPSTrapMsg NOTIFICATION-TYPE
      OBJECTS      {
-                    cnRPSMaximumWatts,
+                    cnRPSMaximumPower,
                     cnRPSStatus,
                     cnRPSIndex
                   }

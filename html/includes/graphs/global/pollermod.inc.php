@@ -65,7 +65,7 @@ $units       = 'Seconds';
 $total_units = 'Sec';
 $colours     = 'lgreen';
 
-$scheme_colours = interpolateCubehelixGreen(safe_count($rrd_list));
+$scheme_colours = generate_palette(safe_count($rrd_list), 'interpolateCubehelixGreen');
 
 $scale_min = "0";
 #$scale_max = "100";

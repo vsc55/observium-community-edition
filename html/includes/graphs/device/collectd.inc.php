@@ -70,8 +70,8 @@ if (!$timespan_ok) {
     return error400($graph_identifier, "Unknown timespan requested");
 }
 
-$logscale   = (boolean)read_var('logarithmic', $vars, FALSE);
-$tinylegend = (boolean)read_var('tinylegend', $vars, FALSE);
+$logscale   = (bool)read_var('logarithmic', $vars, FALSE);
+$tinylegend = (bool)read_var('tinylegend', $vars, FALSE);
 
 // Check that at least 1 RRD exists for the specified request
 $all_tinst = collectd_list_tinsts($host, $plugin, $pinst, $type);

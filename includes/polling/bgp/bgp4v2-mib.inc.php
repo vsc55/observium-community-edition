@@ -28,15 +28,15 @@ $vendor_mib = $mib;
 
 $vendor_bgp = snmpwalk_cache_oid($device, $def['oids']['PeerRemoteAs']['oid'], [], $vendor_mib, NULL, OBS_SNMP_ALL_NUMERIC_INDEX);
 if (safe_empty($vendor_bgp)) {
-    $vendor_mib = FALSE; // Unset vendor_mib since not found on device
+    $vendor_mib = FALSE; // Unset vendor_mib since not found on a device
 
     return;
 }
 
 $v_oids = [
-  'PeerState', 'PeerAdminStatus', 'PeerInUpdates', 'PeerOutUpdates',
-  'PeerInTotalMessages', 'PeerOutTotalMessages',
-  'PeerFsmEstablishedTime', 'PeerInUpdateElapsedTime'
+    'PeerState', 'PeerAdminStatus', 'PeerInUpdates', 'PeerOutUpdates',
+    'PeerInTotalMessages', 'PeerOutTotalMessages',
+    'PeerFsmEstablishedTime', 'PeerInUpdateElapsedTime'
 ];
 foreach ($v_oids as $oid) {
     $vendor_oid = $def['oids'][$oid]['oid'];
@@ -47,7 +47,7 @@ foreach ($v_oids as $oid) {
 }
 // Fetch vendor specific counters
 $vendor_counters = [];
-$v_oids          = ['PeerAcceptedPrefixes', 'PeerDeniedPrefixes', 'PeerAdvertisedPrefixes'];
+$v_oids          = [ 'PeerAcceptedPrefixes', 'PeerDeniedPrefixes', 'PeerAdvertisedPrefixes' ];
 foreach ($v_oids as $oid) {
     $vendor_oid = $def['oids'][$oid]['oid'];
     //print_vars($oid);
@@ -55,8 +55,14 @@ foreach ($v_oids as $oid) {
         $vendor_counters = snmpwalk_cache_oid($device, $vendor_oid, $vendor_counters, $vendor_mib, NULL, OBS_SNMP_ALL_NUMERIC_INDEX);
     }
 }
-
-unset($vendor_oid);
+// collect counters per vrf for do not override
+if ($check_vrfs) {
+    $vendor_counters_vrf[$vrf_name] = $vendor_counters;
+} else {
+    // default (main table
+    $vendor_counters_vrf[''] = $vendor_counters;
+}
+unset($vendor_oid, $vendor_counters);
 
 // Collect founded peers and rewrite to pretty array.
 foreach ($vendor_bgp as $idx => $vendor_entry) {
@@ -72,9 +78,9 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
     $vendor_entry['idx'] = $idx;
     $peer_as             = $vendor_entry[$def['oids']['PeerRemoteAs']['oid']];
     $peer                = [
-      'ip'           => $peer_ip === '0.0.0.0' ? '' : $peer_ip,
-      'as'           => $peer_as,
-      'admin_status' => $vendor_entry[$def['oids']['PeerAdminStatus']['oid']]
+        'ip'           => $peer_ip === '0.0.0.0' ? '' : $peer_ip,
+        'as'           => $peer_as,
+        'admin_status' => $vendor_entry[$def['oids']['PeerAdminStatus']['oid']]
     ];
     if ($check_vrfs) {
         $peer['virtual_name'] = $vrf_name;
@@ -97,17 +103,25 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
             // Compare and fix some timers
             $bgp4_time   = $bgp_peers[$peer_ip]['bgpPeerFsmEstablishedTime'];
             $vendor_time = $vendor_entry[$def['oids']['PeerFsmEstablishedTime']['oid']];
-            if (($bgp4_time > $vendor_time) && (($bgp4_time - $vendor_time) > 100000)) {
+            if (($vendor_time > 0) && ($bgp4_time > $vendor_time) && (($bgp4_time - $vendor_time) > 100000)) {
+                // Foundry example:
                 //                                      BGP4-MIB::bgpPeerFsmEstablishedTime.91.210.44.226 = 4207739831
                 // FOUNDRY-BGP4V2-MIB::bgp4V2PeerFsmEstablishedTime.1.1.4.91.210.44.225.1.4.91.210.44.226 = 20146719
+                // Arista example:
+                //                                         BGP4-MIB::bgpPeerFsmEstablishedTime.10.1.20.54 = 7146578
+                //                 ARISTA-BGP4V2-MIB::aristaBgp4V2PeerFsmEstablishedTime.1.1.4.10.1.20.54 = 7146582
                 print_debug("Fixed incorrect BGP4-MIB::bgpPeerFsmEstablishedTime on peer $peer_ip: $bgp4_time -> $vendor_time");
                 $bgp_peers[$peer_ip]['bgpPeerFsmEstablishedTime'] = $vendor_time;
             }
             $bgp4_time   = $bgp_peers[$peer_ip]['bgpPeerInUpdateElapsedTime'];
             $vendor_time = $vendor_entry[$def['oids']['PeerInUpdateElapsedTime']['oid']];
-            if (($bgp4_time > $vendor_time) && (($bgp4_time - $vendor_time) > 100000)) {
+            if (($vendor_time > 0) && ($bgp4_time > $vendor_time) && (($bgp4_time - $vendor_time) > 100000)) {
+                // Foundry example:
                 //                                       BGP4-MIB::bgpPeerInUpdateElapsedTime.91.210.44.226 = 1219919
                 // FOUNDRY-BGP4V2-MIB::bgp4V2PeerInUpdatesElapsedTime.1.1.4.91.210.44.225.1.4.91.210.44.226 = 1219920
+                // Arista example:
+                //                                          BGP4-MIB::bgpPeerInUpdateElapsedTime.10.1.20.54 = 132919154
+                //                 ARISTA-BGP4V2-MIB::aristaBgp4V2PeerInUpdatesElapsedTime.1.1.4.10.1.20.54 = 0
                 print_debug("Fixed incorrect BGP4-MIB::bgpPeerInUpdateElapsedTime on peer $peer_ip: $bgp4_time -> $vendor_time");
                 $bgp_peers[$peer_ip]['bgpPeerInUpdateElapsedTime'] = $vendor_time;
             }
@@ -117,7 +131,7 @@ foreach ($vendor_bgp as $idx => $vendor_entry) {
         //$vendor_peers[$peer_ip][$peer_as] = $vendor_entry;
 
         // Unify peer
-        $vendor_peers[$peer_ip][$peer_as] = ['idx' => $idx];
+        $vendor_peers[$peer_ip][$peer_as] = [ 'idx' => $idx ];
         foreach ($bgp_oids as $bgp_oid) {
             $def_oid = str_replace('bgp', '', $bgp_oid); // bgpPeerState -> PeerState
             if (isset($def['oids'][$def_oid]['transform'])) {

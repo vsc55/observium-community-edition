@@ -250,19 +250,19 @@ s2628G-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 106 }
 
 s2652G-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 107 }
 
-S5750-24GT/8SFP-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 111 }
+S5750-24GT-8SFP-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 111 }
 
-S5750-24GT/8SFP-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 112 }
+S5750-24GT-8SFP-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 112 }
 
-S5750-48GT/4SFP-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 113 }
+S5750-48GT-4SFP-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 113 }
 
-S5750-48GT/4SFP-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 114 }
+S5750-48GT-4SFP-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 114 }
 
 S2928G-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 117 }
 
 S2952G-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 118 }
 
-S2924GT/8SFP-XS-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 120 }
+S2924GT-8SFP-XS-P OBJECT IDENTIFIER ::= { qtechSwitchProducts 120 }
 
 S6200-48XS OBJECT IDENTIFIER ::= { qtechSwitchProducts 123 }
 
@@ -286,7 +286,7 @@ S5750-28GT-L OBJECT IDENTIFIER ::= { qtechSwitchProducts 137 }
 
 S5750-52GT-L OBJECT IDENTIFIER ::= { qtechSwitchProducts 138 }
 
-S5750-24SFP/8GT-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 139 }
+S5750-24SFP-8GT-E OBJECT IDENTIFIER ::= { qtechSwitchProducts 139 }
 
 S6000-86GT10XS OBJECT IDENTIFIER ::= { qtechSwitchProducts 141 }
 
@@ -306,17 +306,17 @@ S6220-48XS4QXS OBJECT IDENTIFIER ::= { qtechSwitchProducts 150 }
 
 S6220-48XT4QXS OBJECT IDENTIFIER ::= { qtechSwitchProducts 151 }
 
-S6000-24GT/8SFP OBJECT IDENTIFIER ::= { qtechSwitchProducts 153 }
+S6000-24GT-8SFP OBJECT IDENTIFIER ::= { qtechSwitchProducts 153 }
 
-S6000-48GT/4SFP OBJECT IDENTIFIER ::= { qtechSwitchProducts 154 }
+S6000-48GT-4SFP OBJECT IDENTIFIER ::= { qtechSwitchProducts 154 }
 
 S2928G-24P OBJECT IDENTIFIER ::= { qtechSwitchProducts 155 }
 
 S2928G-12P OBJECT IDENTIFIER ::= { qtechSwitchProducts 156 }
 
-S5750-24GT/8SFP-S OBJECT IDENTIFIER ::= { qtechSwitchProducts 157 }
+S5750-24GT-8SFP-S OBJECT IDENTIFIER ::= { qtechSwitchProducts 157 }
 
-S5750-48GT/4SFP-S OBJECT IDENTIFIER ::= { qtechSwitchProducts 158 }
+S5750-48GT-4SFP-S OBJECT IDENTIFIER ::= { qtechSwitchProducts 158 }
 
 S2528G-24P OBJECT IDENTIFIER ::= { qtechSwitchProducts 169 }
 

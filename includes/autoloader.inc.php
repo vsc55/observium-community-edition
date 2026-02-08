@@ -10,10 +10,12 @@
  *
  */
 
-
 /**
  * Autoloader for Classes used in Observium
  *
+ * @param string $class_name Name of class
+ *
+ * @return boolean Status of loaded class
  */
 function observium_autoload($class_name) {
     //var_dump($class_name);
@@ -35,11 +37,8 @@ function observium_autoload($class_name) {
             break;
 
         case 'Phpfastcache':
-        case 'phpFastCache':
-            if (PHP_VERSION_ID >= 70300) {
-                $class_array[0] = 'Phpfastcache8';
-                $class_file     = str_replace('_', '/', implode('/', $class_array)) . '.php';
-            }
+            // Phpfastcache 8+
+            $class_file     = str_replace('_', '/', implode('/', $class_array)) . '.php';
             break;
 
         case 'flight':
@@ -55,18 +54,17 @@ function observium_autoload($class_name) {
             }
             break;
 
-        case 'Ramsey':
-            if (PHP_VERSION_ID >= 80000 && $class_array[1] === 'Uuid') {
-                // PHP 7.2+ (for 8.1 required)
-                //$class_array[1] = 'Uuid4';
-                $class_file = str_replace('/Uuid/', '/Uuid4/', $class_file);
+        case 'Doctrine':
+            if (PHP_VERSION_ID >= 80100 && $class_array[1] === 'SqlFormatter') {
+                // PHP 8.1+ (since 1.4+ required)
+                $class_file = str_replace('/SqlFormatter/', '/SqlFormatter15/', $class_file);
                 //$class_file     = str_replace('_', '/', implode('/', $class_array)) . '.php';
             }
             break;
 
         case 'Brick':
             if (PHP_VERSION_ID >= 80000 && $class_array[1] === 'Math') {
-                // PHP 8.0+ (for 0.11 required)
+                // PHP 8.0+ (since 0.11 required)
                 $class_file = str_replace('/Math/', '/Math11/', $class_file);
                 //$class_file     = str_replace('_', '/', implode('/', $class_array)) . '.php';
             }
@@ -92,7 +90,14 @@ function observium_autoload($class_name) {
             break;
 
         case 'Tracy':
-            $status = require_once($base_dir . 'Nette/tracy.php');
+            if (PHP_VERSION_ID >= 80200) {
+                // Tracy 2.11+ requires PHP 8.2+
+                $tracy_loader = $base_dir . 'Nette211/tracy.php';
+            } else {
+                // Tracy 2.9.8 for PHP < 8.2
+                $tracy_loader = $base_dir . 'Nette/tracy.php';
+            }
+            $status = require_once($tracy_loader);
             if (defined('OBS_DEBUG') && OBS_DEBUG > 1 && function_exists('print_message')) {
                 print_message("%WLoad class '$class_name' loader from '{$base_dir}Nette/tracy.php': " . ($status ? '%gOK' : '%rFAIL'), 'console');
             }
@@ -105,7 +110,7 @@ function observium_autoload($class_name) {
             if (strpos($class_name, 'Parsedown') === 0) {
                 $class_file = 'parsedown/' . $class_file;
             } elseif (is_file($base_dir . 'pear/' . $class_file)) {
-                // By default try Pear file
+                // By default, try Pear file
                 $class_file = 'pear/' . $class_file;
             } elseif (is_dir($base_dir . 'pear/' . $class_name)) {
                 // And Pear dir

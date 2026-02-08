@@ -9,7 +9,7 @@ IMPORTS
    aristaMibs                            FROM ARISTA-SMI-MIB;
 
 aristaCvMIB MODULE-IDENTITY
-   LAST-UPDATED "202207270000Z"  -- 27 July 2022
+   LAST-UPDATED "202305020000Z"  -- 02 May 2023
    ORGANIZATION "Arista Networks, Inc."
    CONTACT-INFO
       "Arista Networks, Inc.
@@ -21,6 +21,9 @@ aristaCvMIB MODULE-IDENTITY
 
        E-mail: snmp@arista.com"
    DESCRIPTION  "The MIB for notifications sent by CloudVision (CV)."
+      REVISION      "202305020000Z"
+      DESCRIPTION
+         "Added aristaCvComponents and aristaCvRuleId"
       REVISION           "202207270000Z"
       DESCRIPTION
          "Initial revision."
@@ -95,6 +98,27 @@ aristaCvAlertSource OBJECT-TYPE
       "The URL to the CloudVision page for this event."
    ::= { aristaCvObjects 6 }
 
+aristaCvComponents OBJECT-TYPE
+   SYNTAX CvString
+   MAX-ACCESS  accessible-for-notify
+   STATUS      current
+   DESCRIPTION
+      "The components associated with this event, in a comma-separated value format; each value
+      represents a single component.
+      For devices the hostname is used and the device ID is used when hostname is
+      unavailable; for interfaces the interface ID is used followed by '@' followed by the
+      device component.
+      For example: 'device123,Eth1@device123'"
+   ::= { aristaCvObjects 7 }
+
+aristaCvRuleId OBJECT-TYPE
+   SYNTAX CvString
+   MAX-ACCESS  accessible-for-notify
+   STATUS      current
+   DESCRIPTION
+      "The label of the event generation rule which generated this event"
+   ::= { aristaCvObjects 8 }
+
 --
 -- ARISTA CV MIB Notifications
 --
@@ -106,7 +130,9 @@ aristaCvAlertFiringNotification NOTIFICATION-TYPE
       aristaCvAlertSeverity,
       aristaCvAlertTimestamp,
       aristaCvAlertKey,
-      aristaCvAlertSource
+      aristaCvAlertSource,
+      aristaCvComponents,
+      aristaCvRuleId
    }
    STATUS             current
    DESCRIPTION
@@ -120,7 +146,9 @@ aristaCvAlertResolvedNotification NOTIFICATION-TYPE
       aristaCvAlertSeverity,
       aristaCvAlertTimestamp,
       aristaCvAlertKey,
-      aristaCvAlertSource
+      aristaCvAlertSource,
+      aristaCvComponents,
+      aristaCvRuleId
    }
    STATUS             current
    DESCRIPTION
@@ -152,7 +180,9 @@ aristaCvObjectsGroup    OBJECT-GROUP
       aristaCvAlertSeverity,
       aristaCvAlertTimestamp,
       aristaCvAlertKey,
-      aristaCvAlertSource
+      aristaCvAlertSource,
+      aristaCvComponents,
+      aristaCvRuleId
    }
    STATUS  current
    DESCRIPTION

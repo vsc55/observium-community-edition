@@ -316,18 +316,26 @@ if ($vars['submit']) {
                             //$module_status = is_module_enabled($device, $module, 'discovery');
                             $attrib_set = isset($attribs['discover_' . $module]);
 
-                            // Last module discovery time and row class
+                            // Get last module discovery time from database
                             $module_row_class = '';
-                            if (!isset($device_state['discovery_mod_perf'][$module])) {
+                            $module_perf = dbFetchRow("
+                                SELECT time_taken, discovery_time 
+                                FROM discovery_perf_history 
+                                WHERE device_id = ? AND module = ? 
+                                ORDER BY discovery_time DESC 
+                                LIMIT 1
+                            ", [$device['device_id'], $module]);
+                            
+                            if (safe_empty($module_perf)) {
                                 $module_time = '--';
-                            } elseif ($device_state['discovery_mod_perf'][$module] < 0.01) {
-                                $module_time = $device_state['discovery_mod_perf'][$module] . 's';
+                            } elseif ($module_perf['time_taken'] < 0.01) {
+                                $module_time = round($module_perf['time_taken'], 4) . 's';
                             } else {
-                                $module_time = format_value($device_state['discovery_mod_perf'][$module]) . 's';
+                                $module_time = format_value($module_perf['time_taken']) . 's';
 
-                                if ($device_state['discovery_mod_perf'][$module] > 10) {
+                                if ($module_perf['time_taken'] > 10) {
                                     $module_row_class = 'error';
-                                } elseif ($device_state['discovery_mod_perf'][$module] > 3) {
+                                } elseif ($module_perf['time_taken'] > 3) {
                                     $module_row_class = 'warning';
                                 }
                             }

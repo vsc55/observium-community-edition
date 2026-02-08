@@ -1,37 +1,26 @@
 <?php
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
+//define('OBS_DEBUG', 1);
 
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-include(__DIR__ . '/data/test_definitions.inc.php'); // Fake definitions for testing
-include(__DIR__ . '/../includes/functions.inc.php');
 include(__DIR__ . '/../includes/port-descr-parser.inc.php');
 
 class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
-  /**
-  * @dataProvider providerParser
-  */
-  public function testParser($string, $result) {
-    global $config;
+    /**
+     * @dataProvider providerParser
+     */
+    public function testParser($string, $result) {
+        global $config;
 
-    // Add in custom interface groups for testing
-    $config['int_groups'] = [ 'TestGroup1', 'TestGroup2', 'abr' ];
+        // Add in custom interface groups for testing
+        $config['int_groups'] = [ 'TestGroup1', 'TestGroup2', 'abr' ];
 
-    $this->assertSame($result, custom_port_parser([ 'ifAlias' => $string ]));
-  }
+        $this->assertSame($result, custom_port_parser([ 'ifAlias' => $string ]));
+    }
 
-  public function providerParser() {
+  public static function providerParser() {
     return array(
       array('Cust: Example Customer',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -39,7 +28,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer {CIRCUIT}',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'CIRCUIT',
                   //'speed'   => null,
@@ -47,7 +36,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer [SPEED]',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   //'circuit' => null,
                   'speed'   => 'SPEED',
@@ -55,7 +44,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer (NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -63,7 +52,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer {CIRCUIT} (NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'CIRCUIT',
                   //'speed'   => null,
@@ -71,7 +60,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer {CIRCUIT} [SPEED]',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -79,7 +68,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer [SPEED] (NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   //'circuit' => null,
                   'speed'   => 'SPEED',
@@ -87,7 +76,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -95,7 +84,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: Example Customer{CIRCUIT}[SPEED](NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -103,7 +92,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
             )
       ),
       array('Cust: !@#$%^&*_-=+/|\.,`~";:<>?\' {CIRCUIT}[SPEED](NOTE)',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => '!@#$%^&*_-=+/|\.,`~";:<>?\'',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -112,7 +101,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       // website example
       array('Cust: Example Customer [10Mbit] (T1 Telco Y CCID129031) {EXAMP0001}',
-            array('type'    => 'cust',
+            array('type'    => 'Cust',
                   'descr'   => 'Example Customer',
                   'circuit' => 'EXAMP0001',
                   'speed'   => '10Mbit',
@@ -122,7 +111,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Transit
       array('Transit: Example Provider {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'transit',
+            array('type'    => 'Transit',
                   'descr'   => 'Example Provider',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -132,7 +121,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Core
       array('Core: Example Core {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example Core',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -142,7 +131,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Peering
       array('Peering: Example Peer {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'peering',
+            array('type'    => 'Peering',
                   'descr'   => 'Example Peer',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -152,7 +141,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Server
       array('Server: Example Server {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'server',
+            array('type'    => 'Server',
                   'descr'   => 'Example Server',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -162,7 +151,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # L2TP
       array('L2TP: Example L2TP {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'l2tp',
+            array('type'    => 'L2TP',
                   'descr'   => 'Example L2TP',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -172,7 +161,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Custom: TestGroup1
       array('TestGroup1: Test Group 1 {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'testgroup1',
+            array('type'    => 'TestGroup1',
                   'descr'   => 'Test Group 1',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -182,7 +171,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
 
       # Custom: TestGroup2
       array('TestGroup2: Test Group 2 {CIRCUIT} [SPEED] (NOTE)',
-            array('type'    => 'testgroup2',
+            array('type'    => 'TestGroup2',
                   'descr'   => 'Test Group 2',
                   'circuit' => 'CIRCUIT',
                   'speed'   => 'SPEED',
@@ -194,12 +183,34 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       [
         'ABR: aepripb1 - RIPATRANSONE {OPEN FIBER E0000000044} [1Gbit]',
         [
-          'type'    => 'abr',
+          'type'    => 'ABR',
           'descr'   => 'aepripb1 - RIPATRANSONE',
           'circuit' => 'OPEN FIBER E0000000044',
           'speed'   => '1Gbit',
           //'notes'   => NULL,
         ]
+      ],
+
+      [
+          'Core: Intersite AU-SF AT&T PtP #1 {CirID BFEC.678749.ATI} [100Gbit]',
+          [
+              'type'    => 'Core',
+              'descr'   => 'Intersite AU-SF AT&T PtP #1',
+              'circuit' => 'CirID BFEC.678749.ATI',
+              'speed'   => '100Gbit',
+              //'notes'   => NULL,
+          ]
+      ],
+
+      [
+          'Core: Intersite AU-SF AT&T PtP #1 [100Gbit] {CirID BFEC.678749.ATI}',
+          [
+              'type'    => 'Core',
+              'descr'   => 'Intersite AU-SF AT&T PtP #1',
+              'circuit' => 'CirID BFEC.678749.ATI',
+              'speed'   => '100Gbit',
+              //'notes'   => NULL,
+          ]
       ],
 
       # Errors
@@ -214,7 +225,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken circuit
       array('Core: Example {CIRCUIT',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -223,7 +234,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken circuit
       array('Core: Example CIRCUIT}',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example CIRCUIT',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -232,7 +243,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken speed
       array('Core: Example [SPEED',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -241,7 +252,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken speed
       array('Core: Example SPEED]',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example SPEED',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -250,7 +261,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken notes
       array('Core: Example (NOTE',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example',
                   //'circuit' => null,
                   //'speed'   => null,
@@ -259,7 +270,7 @@ class IncludesPortDescrParserTest extends \PHPUnit\Framework\TestCase {
       ),
       # B0rken notes
       array('Core: Example NOTE)',
-            array('type'    => 'core',
+            array('type'    => 'Core',
                   'descr'   => 'Example NOTE',
                   //'circuit' => null,
                   //'speed'   => null,

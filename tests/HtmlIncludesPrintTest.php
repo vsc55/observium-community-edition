@@ -1,19 +1,5 @@
 <?php
 
-$base_dir = realpath(__DIR__ . '/..');
-$config['install_dir'] = $base_dir;
-
-include(__DIR__ . '/../includes/defaults.inc.php');
-//include(dirname(__FILE__) . '/../config.php'); // Do not include user editable config here
-include(__DIR__ . "/../includes/polyfill.inc.php");
-include(__DIR__ . "/../includes/autoloader.inc.php");
-include(__DIR__ . "/../includes/debugging.inc.php");
-require_once(__DIR__ ."/../includes/constants.inc.php");
-include(__DIR__ . '/../includes/common.inc.php');
-include(__DIR__ . '/../includes/definitions.inc.php');
-include(__DIR__ . '/../includes/functions.inc.php');
-include(__DIR__ . '/../html/includes/functions.inc.php');
-
 class HtmlIncludesPrintTest extends \PHPUnit\Framework\TestCase
 {
   /**
@@ -38,7 +24,7 @@ class HtmlIncludesPrintTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($result, get_table_header($cols, $vars));
   }
 
-  public function providerGetTableHeader()
+  public static function providerGetTableHeader()
   {
     return array(
       array( // Sorting enabled
@@ -107,7 +93,7 @@ class HtmlIncludesPrintTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, generate_table_header($cols, $vars));
     }
 
-    public function providerGenerateTableHeader()
+    public static function providerGenerateTableHeader()
     {
         $ports_basic = [
             'state-marker' => '',
@@ -273,7 +259,7 @@ class HtmlIncludesPrintTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($result, generate_button_group($buttons, $opts));
     }
 
-    public function providerGenerateButtonGroup()
+    public static function providerGenerateButtonGroup()
     {
         return [
             [
@@ -300,7 +286,7 @@ class HtmlIncludesPrintTest extends \PHPUnit\Framework\TestCase
     $this->assertSame($html, generate_form($form));
   }
 
-  public function providerGetForm()
+  public static function providerGetForm()
   {
     // Temporary use direct array, need switch to json+txt includes
 
@@ -543,7 +529,7 @@ FORM;
     $this->assertSame($result, get_markdown($text, TRUE, $extra));
   }
 
-  public function providerGetMarkdown() {
+  public static function providerGetMarkdown() {
     $array = [];
 
     // Simple

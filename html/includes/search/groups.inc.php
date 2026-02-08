@@ -29,15 +29,15 @@ if ($_SESSION['userlevel'] >= 5) {
             $tab_colour = '#194B7F'; // FIXME: This colour pulled from functions.inc.php humanize_device, maybe set it centrally in definitions?
 
             $group_search_results[] = [
-              'url'    => generate_url(['page' => 'group', 'group_id' => $result['group_id']]),
-              'name'   => $name,
-              'colour' => $tab_colour,
-              'icon'   => $entity_type['icon'],
-              'data'   => ['', escape_html($result['group_descr']) . ' | ' . nicecase($result['entity_type']) . ' Group']
+                'url'    => generate_url(['page' => 'group', 'group_id' => $result['group_id']]),
+                'name'   => $name,
+                'colour' => $tab_colour,
+                'icon'   => $entity_type['icon'],
+                'data'   => [ '', $result['group_descr'] . ' | ' . nicecase($result['entity_type']) . ' Group' ]
             ];
 
         }
 
-        $search_results['groups'] = ['descr' => 'Groups found', 'results' => $group_search_results];
+        $search_results['groups'] = [ 'descr' => 'Groups found', 'results' => $group_search_results ];
     }
 }

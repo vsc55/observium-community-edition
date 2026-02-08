@@ -65,13 +65,16 @@ foreach (dbFetchRows($query, [$device['device_id']]) as $entry) {
     $old_version = 'ipv' . $entry['ip_version'];
     $old_vrf     = !safe_empty($entry['virtual_name']) ? $entry['virtual_name'] : '';
 
-    $old_table[$old_vrf][$old_version][$old_if][$old_address] = ['mac' => $old_mac, 'mac_id' => $entry['mac_id']];
+    $old_table[$old_vrf][$old_version][$old_if][$old_address] = [ 'mac' => $old_mac, 'mac_id' => $entry['mac_id'] ];
 }
 print_debug_vars($old_table);
 
 $table_rows = [];
 foreach ($mac_table as $vrf_name => $entry1) {
+    // Per VRF
     foreach ($entry1 as $ip_version => $entry2) {
+        // Per IP version
+        $ip_version = rtrim($ip_version, 'z'); // ipv6z -> ipv6
         foreach ($entry2 as $ifIndex => $entry3) {
             $port_vrf_name = $vrf_name;
             if ($port = get_port_by_index_cache($device, $ifIndex)) {
@@ -95,7 +98,7 @@ foreach ($mac_table as $vrf_name => $entry1) {
                     if ($clean_mac !== $old_mac && $clean_mac !== '000000000000' && $old_mac !== '000000000000') {
                         print_debug("Changed MAC address for $ip from " . format_mac($old_mac) . " to " . format_mac($clean_mac));
                         log_event("MAC changed: $ip : " . format_mac($old_mac) . " -> " . format_mac($clean_mac), $device, "port", $port_id);
-                        dbUpdate(['mac_address' => $clean_mac], 'ip_mac', 'mac_id = ?', [$entry['mac_id']]);
+                        dbUpdate([ 'mac_address' => $clean_mac ], 'ip_mac', 'mac_id = ?', [ $entry['mac_id'] ]);
                         //echo("U");
                         $GLOBALS['module_stats'][$module]['updated']++;
                     } else {
@@ -107,13 +110,13 @@ foreach ($mac_table as $vrf_name => $entry1) {
                 } else {
                     // new entry
                     $insert = [
-                      'device_id'    => $device['device_id'],
-                      'port_id'      => $port_id,
-                      'mac_ifIndex'  => $ifIndex,
-                      'mac_address'  => $clean_mac,
-                      'ip_address'   => $ip,
-                      'ip_version'   => str_replace('ipv', '', $ip_version),
-                      'virtual_name' => safe_empty($port_vrf_name) ? ['NULL'] : $port_vrf_name
+                        'device_id'    => $device['device_id'],
+                        'port_id'      => $port_id,
+                        'mac_ifIndex'  => $ifIndex,
+                        'mac_address'  => $clean_mac,
+                        'ip_address'   => $ip,
+                        'ip_version'   => str_replace('ipv', '', $ip_version),
+                        'virtual_name' => safe_empty($port_vrf_name) ? [ 'NULL' ] : $port_vrf_name
                     ];
                     dbInsert($insert, 'ip_mac');
                     print_debug("Added MAC address " . format_mac($clean_mac) . " for $ip");
@@ -142,9 +145,9 @@ foreach ($mac_table as $vrf_name => $entry1) {
 // Remove expired ARP/NDP entries
 $remove_mac_ids = [];
 print_debug_vars($old_table);
-foreach ($old_table as $vrf_name => $entry1) {
-    foreach ($entry1 as $ip_version => $entry2) {
-        foreach ($entry2 as $ifIndex => $entry3) {
+foreach ($old_table as $entry1) {
+    foreach ($entry1 as $entry2) {
+        foreach ($entry2 as $entry3) {
             foreach ($entry3 as $ip => $entry) {
                 $remove_mac_ids[] = $entry['mac_id'];
 

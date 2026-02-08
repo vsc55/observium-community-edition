@@ -24,11 +24,12 @@ IMPORTS
     TEXTUAL-CONVENTION,
     DisplayString,
     MacAddress,
-    TruthValue
+    TruthValue,
+    Unsigned32
         FROM SNMPv2-TC
 
-    Unsigned32
-        FROM NMS-TC
+--    Unsigned32
+--        FROM NMS-TC
 
 
     nmsPibToMib

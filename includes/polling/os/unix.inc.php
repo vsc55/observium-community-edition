@@ -10,6 +10,8 @@
  *
  */
 
+$sysDescr_distro = FALSE; // Detect distro by sysDescr ?
+
 switch ($device['os']) {
     case 'aix':
         [ $hardware, , $os_detail, ] = explode("\n", $poll_device['sysDescr']);
@@ -31,6 +33,7 @@ switch ($device['os']) {
             $kernel = $matches[1];
         }
         //$hardware = rewrite_unix_hardware($poll_device['sysDescr']);
+        $sysDescr_distro = TRUE; // Detect distro by sysDescr ?
         break;
 
     case 'dragonfly':
@@ -45,6 +48,10 @@ switch ($device['os']) {
         break;
 
     case 'openbsd':
+        if (!empty($version)) {
+            // Already set by definitions
+            break;
+        }
     case 'solaris':
     case 'opensolaris':
         [, , $version, $features] = explode(' ', $poll_device['sysDescr']);
@@ -253,6 +260,12 @@ switch ($device['os']) {
                 // do not override MIB defined versions
                 $version = $kernel;
             }
+
+            if (isset($config['os'][$device['os']]['type']) &&
+                in_array($config['os'][$device['os']]['type'], [ 'server', 'hypervisor', 'blade', 'workstation' ])) {
+
+                $sysDescr_distro = TRUE; // Detect distro by sysDescr (only for servers
+            }
         }
 
         // detect os version by installed packages (ie proxmox & ucs)
@@ -335,9 +348,15 @@ if (isset($agent_data['distro']['SCRIPTVER'])) {
         // distro version 1.2 and above: "Linux|4.4.0-53-generic|amd64|Ubuntu|16.04|kvm"
         // distro version 2.0 and above: "Linux|4.4.0-116-generic|amd64|Ubuntu|16.04|kvm|"
         //                               "Linux|4.4.0|amd64|Ubuntu|16.04||openvz"
+        //                               "OpenBSD|GENERIC.MP#0|amd64||7.6|kvm|"
         [ $osname, $kernel, $arch, $distro, $distro_ver, $virt, $cont ] = explode('|', $os_data);
         if (empty($virt) && strlen($cont)) {
             $virt = $cont;
+        }
+        if ($osname !== 'Linux' && empty($distro)) {
+            // Non Linux return os version
+            $version = $distro_ver;
+            unset($distro_ver);
         }
     } else {
         // Very old distro, not supported now: "Ubuntu 12.04"
@@ -346,7 +365,7 @@ if (isset($agent_data['distro']['SCRIPTVER'])) {
 }
 
 // Detect some distro by kernel strings
-if (!isset($distro)) {
+if (!isset($distro) && $sysDescr_distro) {
     if ($poll_device['sysObjectID'] === '.1.3.6.1.4.1.8072.3.2.10' && str_starts_with($poll_device['sysDescr'], 'Linux ')) {
         if (preg_match('/ \d[\.\d]+(\-\d+)?(\-[a-z]+)? #(\d+(~(?<distro_ver>[\d\.]+))?\-Ubuntu|\d{12}) /', $poll_device['sysDescr'], $matches)) {
             // * Ubuntu (old):
@@ -375,6 +394,45 @@ if (!isset($distro)) {
             // Linux hostname 6.1.0-25-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.106-3 (2024-08-26) x86_64
 
             $distro = 'Debian';
+        } elseif (preg_match('/(?<kernel>\S+)\-Unraid #\d/i', $poll_device['sysDescr'], $matches)) {
+            // * unRAID (old):
+            // Linux hostname 3.9.6p-unRAID #23 SMP Wed Jun 26 19:25:49 PDT 2013 i686
+            // Unraid 6.10.x:
+            // Linux hostname 5.15.40-Unraid #1 SMP x86_64 GNU/Linux
+            // Unraid 6.12.4:
+            // Linux hostname 6.1.55-Unraid #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux
+            $distro = 'unRAID';
+            // version can detect only by kernel
+            if (version_compare($matches['kernel'], '6.12.40', '>=')) {
+                // 7.2
+                $distro_ver = '7.2';
+            } elseif (version_compare($matches['kernel'], '6.12', '>=')) {
+                // 7.1
+                $distro_ver = '7.1';
+            } elseif (version_compare($matches['kernel'], '6.6', '>=')) {
+                // 7.0
+                $distro_ver = '7.0';
+            } elseif (version_compare($matches['kernel'], '6.1', '>=')) {
+                // 6.12
+                $distro_ver = '6.12';
+            } elseif (version_compare($matches['kernel'], '5.19', '>=')) {
+                // 6.11
+                $distro_ver = '6.11';
+            } elseif (version_compare($matches['kernel'], '5.15', '>=')) {
+                // 6.10
+                $distro_ver = '6.10';
+            } elseif (version_compare($matches['kernel'], '5.10', '>=')) {
+                // 6.9
+                $distro_ver = '6.9';
+            } elseif (version_compare($matches['kernel'], '4.19.98', '>=')) {
+                // 6.8
+                $distro_ver = '6.8';
+            } elseif (version_compare($matches['kernel'], '4.19', '>=')) {
+                // 6.7
+                $distro_ver = '6.7';
+            } else {
+                // too old
+            }
         } elseif (preg_match('/\d\-pve | PVE /', $poll_device['sysDescr'])) {
             // * Proxmox (Debian)
             // Linux hostname 6.8.12-1-pve #1 SMP PREEMPT_DYNAMIC PMX 6.8.12-1 (2024-08-05T16:17Z) x86_64
@@ -415,6 +473,11 @@ if (!isset($distro)) {
             // Linux hostname 5.15.86-0-virt #1-Alpine SMP Mon, 02 Jan 2023 09:28:30 +0000 x86_64 Linux
 
             $distro = 'Alpine';
+        } elseif (preg_match('/^Linux \S+ \d\S+\-gentoo(\-\S+)? #\d+ /', $poll_device['sysDescr'])) {
+            // * Gentoo
+            // Linux hostname 6.6.41-gentoo-dist #1 SMP PREEMPT_DYNAMIC Thu Jul 18 14:37:53 -00 2024 x86_64
+
+            $distro = 'Gentoo';
         } elseif (preg_match('/^Linux \S+ \d\S+\d+(\-\w+)?\-ARCH #\d/', $poll_device['sysDescr'])) {
             // * Arch Linux
             // Linux hostname 2.6.37-ARCH #1 SMP PREEMPT Sat Jan 29 20:00:33 CET 2011 x86_64
@@ -432,6 +495,7 @@ if (!isset($distro)) {
 
         } elseif (preg_match('/ \d[\.\d]+(\-\d+[\.\d]*\.el(?<distro_ver>\d+(_\d+)?))/', $poll_device['sysDescr'], $matches)) {
             // * CentOS 5:
+            // Linux hostname 2.6.18-92.el5 #1 SMP Tue Jun 10 18:49:47 EDT 2008 i686
             // Linux hostname 2.6.18-274.12.1.el5 #1 SMP Tue Nov 29 13:37:46 EST 2011 x86_64
             // * OracleLinux 6:
             // Linux hostname 2.6.32-131.0.15.el6.x86_64 #1 SMP Fri May 20 15:04:03 EDT 2011 x86_64
@@ -441,28 +505,38 @@ if (!isset($distro)) {
             // Linux hostname 3.10.0-327.el7.x86_64 #1 SMP Thu Oct 29 17:29:29 EDT 2015 x86_64
             // Linux hostname 3.10.0-229.20.1.el7.x86_64 #1 SMP Thu Sep 24 12:23:56 EDT 2015 x86_64
             // Linux hostname 4.18.0-240.22.1.el8_3.x86_64 #1 SMP Thu Mar 25 14:36:04 EDT 2021 x86_64
+            // Linux hostname 4.18.0-513.24.1.el8_9.x86_64 #1 SMP Thu Apr 11 17:14:20 UTC 2024 x86_64
+            // * Rocky Linux 8/9
+            // Linux hostname 4.18.0-477.10.1.el8_8.x86_64 #1 SMP Tue May 16 11:38:37 UTC 2023 x86_64
+            // Linux hostname 5.14.0-284.11.1.el9_2.x86_64 #1 SMP PREEMPT_DYNAMIC Tue May 9 17:09:15 UTC 2023 x86_64
+            // * AlmaLinux 9
+            // Linux hostname 5.14.0-362.24.1.el9_3.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Mar 14 21:32:07 UTC 2024 x86_64
 
             // Detect distro by packages
             $distro_def = [
                 // redhat-release-server-6Server-6.7.0.3.el6
                 // redhat-release-8.3-1.0.el8
-                ['name'      => 'redhat-release', 'regex' => '/^redhat\-release[\-_](?<version>\d.*)/', 'distro' => 'RedHat',
-                 'transform' => [['action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1'],
-                                 ['action' => 'replace', 'from' => '-', 'to' => '.']]],
+                [ 'name'      => 'redhat-release', 'regex' => '/^redhat\-release[\-_](?<version>\d.*)/', 'distro' => 'RedHat',
+                  'transform' => [ [ 'action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1' ],
+                                   [ 'action' => 'replace', 'from' => '-', 'to' => '.' ] ] ],
                 // centos-release-6-3.el6.centos.9
                 // centos-release-6-9.el6.12.3
                 // centos-release-7-6.1810.2.el7.centos
-                ['name'      => 'centos-release', 'regex' => '/^centos\-release[\-_](?<version>\d.*)/', 'distro' => 'CentOS',
-                 'transform' => [['action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1'],
-                                 ['action' => 'replace', 'from' => '-', 'to' => '.']]],
+                [ 'name'      => 'centos-release', 'regex' => '/^centos\-release[\-_](?<version>\d.*)/', 'distro' => 'CentOS',
+                  'transform' => [ [ 'action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1' ],
+                                   [ 'action' => 'replace', 'from' => '-', 'to' => '.' ] ] ],
                 // rocky-release-8.5-3.el8
-                ['name'      => 'rocky-release', 'regex' => '/^rocky\-release[\-_](?<version>\d.*)/', 'distro' => 'Rocky',
-                 'transform' => [['action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1'],
-                                 ['action' => 'replace', 'from' => '-', 'to' => '.']]],
+                [ 'name'      => 'rocky-release', 'regex' => '/^rocky\-release[\-_](?<version>\d.*)/', 'distro' => 'Rocky',
+                  'transform' => [ [ 'action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1' ],
+                                   [ 'action' => 'replace', 'from' => '-', 'to' => '.' ] ] ],
+                // almalinux-release-9.6-1.el9
+                [ 'name'      => 'almalinux-release', 'regex' => '/^almalinux\-release[\-_](?<version>\d.*)/', 'distro' => 'AlmaLinux',
+                  'transform' => [ [ 'action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1' ],
+                                   [ 'action' => 'replace', 'from' => '-', 'to' => '.' ] ] ],
                 // oraclelinux-release-6Server-1.0.2
                 // fixme. need more examples
             ];
-            $metatypes  = ['distro', 'distro_ver'];
+            $metatypes  = [ 'distro', 'distro_ver' ];
             foreach (poll_device_unix_packages($device, $metatypes, $distro_def) as $metatype => $value) {
                 $$metatype = $value;
             }
@@ -478,23 +552,38 @@ if (!isset($distro)) {
             // Detect distro_ver by packages
             $distro_def = [
                 // photon-release-4.0-2.ph4
-                ['name'      => 'photon-release', 'regex' => '/^photon\-release[\-_](?<version>\d.*)/', 'distro' => 'Photon',
-                 'transform' => [['action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1'],
-                                 ['action' => 'replace', 'from' => '-', 'to' => '.']]],
+                [ 'name'      => 'photon-release', 'regex' => '/^photon\-release[\-_](?<version>\d.*)/', 'distro' => 'Photon',
+                  'transform' => [ [ 'action' => 'preg_replace', 'from' => '/^(\d+[\.\-]\d+).*/', 'to' => '$1' ],
+                                   [ 'action' => 'replace', 'from' => '-', 'to' => '.' ] ] ],
             ];
-            $metatypes  = ['distro_ver'];
+            $metatypes  = [ 'distro_ver' ];
             foreach (poll_device_unix_packages($device, $metatypes, $distro_def) as $metatype => $value) {
                 $$metatype = $value;
             }
         } elseif (preg_match('/ \d[\.\d]+(\-\d+[\.\d]*\.fc(?<distro_ver>\d+(_\d+)?))/', $poll_device['sysDescr'], $matches)) {
             // * Fedora
             // Linux hostname 5.3.7-301.fc31.x86_64 #1 SMP Mon Oct 21 19:18:58 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+            // Linux hostname 6.8.7-200.fc39.x86_64 #1 SMP PREEMPT_DYNAMIC Wed Apr 17 16:03:21 UTC 2024 x86_64
             $distro     = 'Fedora';
             $distro_ver = str_replace('_', '.', $matches['distro_ver']);
+        } elseif (preg_match('/^Linux \S+ \d\S+\d+(\-\w+)?\-MANJARO #\d+/', $poll_device['sysDescr'], $matches)) {
+            // * Manjaro
+            // Linux hostname 5.10.105-1-MANJARO #1 SMP PREEMPT Fri Mar 11 14:12:33 UTC 2022 x86_64
+            // Linux hostname 6.8.3-1-MANJARO #1 SMP PREEMPT_DYNAMIC Thu Apr 11 18:36:42 UTC 2024 x86_64 GNU/Linux
+            $distro     = 'Manjaro';
+        }  elseif (preg_match('/^Linux \S+ \d\S+\d+\-smp #\d+/', $poll_device['sysDescr'], $matches)) {
+            // * Slackware:
+            // Linux hostname 2.6.21.5-smp #2 SMP Tue Jun 19 14:58:11 CDT 2007 i686
+            // Linux hostname 6.1.70-smp #1 SMP Fri May 10 14:22:11 CDT 2024 x86_64
+            $distro     = 'Slackware';
         }
-        // * Slackware:
-        // Linux hostname 2.6.21.5-smp #2 SMP Tue Jun 19 14:58:11 CDT 2007 i686
-    } elseif ($poll_device['sysObjectID'] === '.1.3.6.1.4.1.8072.3.2.8' && str_starts($poll_device['sysDescr'], 'FreeBSD ')) {
+    } elseif ($poll_device['sysObjectID'] === '.1.3.6.1.4.1.8072.3.2.10' && str_starts_with($poll_device['sysDescr'], 'uClinux ')) {
+        // Veeeeeeeeery old Linux variant https://web.archive.org/web/20181018130303/http://www.uclinux.org/index.html
+        // The Embedded Linux/Microcontroller project is a port of Linux to systems without a Memory Management Unit (MMU).
+
+        // uClinux hotname 2.6.25-uc0 #18 Thu Jun 11 14:17:15 UTC 2020 m68knommu
+        $distro = 'uClinux';
+    } elseif ($poll_device['sysObjectID'] === '.1.3.6.1.4.1.8072.3.2.8' && str_starts_with($poll_device['sysDescr'], 'FreeBSD ')) {
         // * HardenedBSD
         if (str_contains($poll_device['sysDescr'], '-HBSD ')) {
             $distro = 'HardenedBSD';
@@ -506,20 +595,18 @@ if (!isset($distro)) {
 }
 
 // Hardware/vendor "extend" support
-if (is_device_mib($device, 'UCD-SNMP-MIB')) {
-    $hw = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.2.3.1.1.8.104.97.114.100.119.97.114.101', 'UCD-SNMP-MIB');
-    if (strlen($hw)) {
-        $hardware = rewrite_unix_hardware($poll_device['sysDescr'], $hw);
-        $vendor   = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.3.3.1.1.6.118.101.110.100.111.114', 'UCD-SNMP-MIB');
-        if (!snmp_status()) {
-            // Alternative with manufacturer
-            $vendor = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.3.3.1.1.12.109.97.110.117.102.97.99.116.117.114.101.114', 'UCD-SNMP-MIB');
-        }
-        $serial = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.4.3.1.1.6.115.101.114.105.97.108', 'UCD-SNMP-MIB');
-        //if (str_contains_array($serial, 'denied') || str_starts($serial, [ '0123456789', '..', 'Not Specified' ]))
-        if (!is_valid_param($serial, 'serial')) {
-            unset($serial);
-        }
+if (is_device_mib($device, 'UCD-SNMP-MIB') &&
+    $hw = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.2.3.1.1.8.104.97.114.100.119.97.114.101', 'UCD-SNMP-MIB')) {
+
+    $hardware = rewrite_unix_hardware($poll_device['sysDescr'], $hw);
+    $vendor   = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.3.3.1.1.6.118.101.110.100.111.114', 'UCD-SNMP-MIB');
+    if (!snmp_status()) {
+        // Alternative with manufacturer
+        $vendor = snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.3.3.1.1.12.109.97.110.117.102.97.99.116.117.114.101.114', 'UCD-SNMP-MIB');
+    }
+    $serial = trim(snmp_get_oid($device, '.1.3.6.1.4.1.2021.7890.4.3.1.1.6.115.101.114.105.97.108', 'UCD-SNMP-MIB'));
+    if (!is_valid_param($serial, 'serial')) {
+        unset($serial);
     }
 }
 
@@ -545,6 +632,6 @@ if (!$features && isset($distro)) {
     $features = trim("$distro $distro_ver");
 }
 
-unset($hw, $data, $os_data);
+unset($hw, $data, $os_data, $sysDescr_distro);
 
 // EOF

@@ -18,8 +18,8 @@ if ($_SESSION['userlevel'] < 7) {
     return;
 }
 
-include($config['html_dir'] . '/includes/alerting-navbar.inc.php');
-include($config['html_dir'] . '/includes/contacts-navbar.inc.php');
+include($config['html_dir'] . '/includes/navbars/alerting.inc.php');
+include($config['html_dir'] . '/includes/navbars/contacts.inc.php');
 
 if ($contact = get_contact_by_id($vars['contact_id'])) {
 
@@ -40,8 +40,8 @@ if ($contact = get_contact_by_id($vars['contact_id'])) {
               'name' => 'sysContact',
               'docs' => $transport
             ];
-        } elseif (isset($config['transports'][$transport])) {
-            $data = $config['transports'][$transport];
+        } elseif (isset($definitions['transports'][$transport])) {
+            $data = $definitions['transports'][$transport];
         } else {
             $data = [
               'name' => nicecase($transport) . ' (Missing)',

@@ -730,7 +730,14 @@
             jnxCosQstatDepthAverage                CounterBasedGauge64,
             jnxCosQstatDepthCurrent                CounterBasedGauge64,
             jnxCosQstatDepthPeak                   CounterBasedGauge64,
-            jnxCosQstatDepthMax                    CounterBasedGauge64
+            jnxCosQstatDepthMax                    CounterBasedGauge64,
+
+             -- ECN CE packet/byte stats
+            jnxCosQstatEcnCEPkts                   Counter64,
+            jnxCosQstatEcnCEPktRate                CounterBasedGauge64,
+            jnxCosQstatEcnCEBytes                  Counter64,
+            jnxCosQstatEcnCEByteRate               CounterBasedGauge64
+
     }
 
     jnxCosQstatIfIndex OBJECT-TYPE 
@@ -1278,6 +1285,40 @@
             For unsupported platform, returns '0'"
         ::= { jnxCosQstatEntry 60 }
 
+    -- ECN-CE Marked packet stats
+    jnxCosQstatEcnCEPkts OBJECT-TYPE
+        SYNTAX      Counter64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The number of packets ECN CE at the output queue."
+        ::= { jnxCosQstatEntry 61 }
+
+    jnxCosQstatEcnCEPktRate OBJECT-TYPE
+        SYNTAX      CounterBasedGauge64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The ECN CE marked packet rate (expressed in packets per second)
+            for the queue."
+        ::= { jnxCosQstatEntry 62 }
+
+    jnxCosQstatEcnCEBytes OBJECT-TYPE
+        SYNTAX      Counter64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The total number of bytes that are ECN CE marked at the output queue."
+        ::= { jnxCosQstatEntry 63 }
+
+    jnxCosQstatEcnCEByteRate OBJECT-TYPE
+        SYNTAX      CounterBasedGauge64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The current ECN CE marked byte rate (expressed in bytes per second)
+            for the queue."
+        ::= { jnxCosQstatEntry 64 }
 
         -- ***************************************************************
         --  Per interface cos stats flags
@@ -1461,7 +1502,14 @@
             jnxCosInvQstatMHpRedDropBytes              Counter64,
             jnxCosInvQstatMHpRedDropByteRate           CounterBasedGauge64,
             jnxCosInvQstatHpRedDropBytes               Counter64,
-            jnxCosInvQstatHpRedDropByteRate            CounterBasedGauge64
+            jnxCosInvQstatHpRedDropByteRate            CounterBasedGauge64,
+
+             -- ECN CE packet/byte stats
+            jnxCosInvQstatEcnCEPkts                    Counter64,
+            jnxCosInvQstatEcnCEPktRate                CounterBasedGauge64,
+            jnxCosInvQstatEcnCEBytes                   Counter64,
+            jnxCosInvQstatEcnCEByteRate               CounterBasedGauge64
+
     }
 
     -- Table Index
@@ -1931,6 +1979,42 @@
             TCP bytes were RED-dropped at the output on the given
             interface.  See jnxCosQstatHpRedDropByteRate."
         ::= { jnxCosInvQstatEntry 48 }
+
+    -- ECN-CE Marked packet stats
+    jnxCosInvQstatEcnCEPkts OBJECT-TYPE
+        SYNTAX      Counter64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The number of packets ECN CE at the output queue."
+        ::= { jnxCosInvQstatEntry 49 }
+
+    jnxCosInvQstatEcnCEPktRate OBJECT-TYPE
+        SYNTAX      CounterBasedGauge64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The ECN CE marked packet rate (expressed in packets per second)
+            for the queue."
+        ::= { jnxCosInvQstatEntry 50 }
+
+    jnxCosInvQstatEcnCEBytes OBJECT-TYPE
+        SYNTAX      Counter64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The total number of bytes that are ECN CE marked at the output queue."
+        ::= { jnxCosInvQstatEntry 51 }
+
+    jnxCosInvQstatEcnCEByteRate OBJECT-TYPE
+        SYNTAX      CounterBasedGauge64
+        MAX-ACCESS  read-only
+        STATUS      current
+        DESCRIPTION
+            "The current ECN CE marked byte rate (expressed in bytes per second)
+            for the queue."
+        ::= { jnxCosInvQstatEntry 52 }
+
 
    -- ***************************************************************
    --  Per ingress queue stats table

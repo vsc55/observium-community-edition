@@ -205,6 +205,27 @@ nmsNatObjects   OBJECT IDENTIFIER ::= { nmsNatMIB 1 }
 	                      "A textual string containing information about the
 	                      protocol context of the session."
 	              ::= { nmsNatSessionEntryJD 12 }
+
+		  nmsNATLimitedHostSessionsJD OBJECT-TYPE
+			    SYNTAX     INTEGER
+			    ACCESS 	   read-only
+			    STATUS     current
+			    DESCRIPTION
+			            ""
+			    ::= { nmsNatSessionEntryJD 13 } 
+			    
+		  nmsNATHostFlowsJD OBJECT-TYPE
+			    SYNTAX     INTEGER
+			    ACCESS 	   read-only
+			    STATUS     current
+			    DESCRIPTION
+			            "The original transport port of the session endpoint that
+			             belongs to the public network. If this is an ICMP
+			             session then the value contains the ICMP request ID."
+			    ::= { nmsNatSessionEntryJD 14 } 
+			    
+
+
 			
 			
 			-- wangba mib .3		                               

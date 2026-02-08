@@ -136,7 +136,7 @@ if (!empty($agent_data['app']['mysql'])) {
     ];
 
     $valuesb = [];
-    foreach ($mapping_status as $key => $value) {
+    foreach ($mapping_status as $value) {
         $valuesb[$value] = $map[$value];
     }
 

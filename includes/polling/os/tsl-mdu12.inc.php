@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -11,8 +10,7 @@
  *
  */
 
-$ident = snmp_get($device, 'mdu12Ident.0', '-Oqv', 'TSL-MIB');
-
-[$hardware, $version] = explode(' ', $ident);
+// Too old system, unknown compatibility
+[ $hardware, $version ] = explode(' ', snmp_get_oid($device, 'mdu12Ident.0', 'TSL-MIB'));
 
 // EOF

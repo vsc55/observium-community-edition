@@ -30,13 +30,13 @@ foreach ($xups_array as $index => $entry) {
     // Input
     if (isset($entry['xupsInputPhase'])) {
         $descr = "Input";
-        $options = [];
+        $options = ['measured_class' => 'input'];
         if ($xups_base['xupsInputNumPhases'] > 1) {
             $descr .= " Phase $index";
 
-            $options  = [
+            $options = [
                 'measured_entity_label' => "Input Phase $index",
-                'measured_class' => 'phase'
+                'measured_class' => 'input_phase'
             ];
         }
 

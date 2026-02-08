@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,119 +8,106 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Leveldb;
+namespace Phpfastcache\Drivers\Leveldb;
 
 use LevelDB as LeveldbClient;
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Core\Pool\IO\IOHelperTrait;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Exceptions\phpFastCacheLogicException;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface, IO\IOHelperTrait};
+use Phpfastcache\Exceptions\{PhpfastcacheCoreException, PhpfastcacheInvalidArgumentException, PhpfastcacheLogicException};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
  * @property LeveldbClient $instance Instance of driver service
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
-    use DriverBaseTrait, IOHelperTrait;
+    use DriverBaseTrait;
+    use IOHelperTrait;
 
-    const LEVELDB_FILENAME = '.database';
-
-    /**
-     * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        } else {
-            $this->driverConnect();
-        }
-    }
-
-    /**
-     * @return string
-     * @throws \phpFastCache\Exceptions\phpFastCacheCoreException
-     */
-    public function getLeveldbFile()
-    {
-        return $this->getPath() . '/' . self::LEVELDB_FILENAME;
-    }
+    protected const LEVELDB_FILENAME = '.database';
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
         return extension_loaded('Leveldb');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * Close connection on destruct
      */
-    protected function driverWrite(CacheItemInterface $item)
+    public function __destruct()
     {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            return $this->instance->set($item->getKey(), $this->encode($this->driverPreWrap($item)));
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
+        if ($this->instance instanceof LeveldbClient) {
+            $this->instance->close();
+            $this->instance = null;
         }
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return null|array
      */
     protected function driverRead(CacheItemInterface $item)
     {
         $val = $this->instance->get($item->getKey());
-        if ($val == false) {
+        if (!$val) {
             return null;
-        } else {
-            return $this->decode($val);
         }
+
+        return $this->decode($val);
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @param CacheItemInterface $item
      * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
+    {
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            return (bool)$this->instance->set($item->getKey(), $this->encode($this->driverPreWrap($item)));
+        }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
             return $this->instance->delete($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
         }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /**
      * @return bool
      */
-    protected function driverClear()
+    protected function driverClear(): bool
     {
         if ($this->instance instanceof LeveldbClient) {
             $this->instance->close();
@@ -132,28 +120,26 @@ class Driver implements ExtendedCacheItemPoolInterface
     }
 
     /**
-     * @return bool
-     * @throws phpFastCacheLogicException
+     * @return string
+     * @throws PhpfastcacheCoreException
      */
-    protected function driverConnect()
+    public function getLeveldbFile(): string
     {
-        if ($this->instance instanceof LeveldbClient) {
-            throw new phpFastCacheLogicException('Already connected to Leveldb database');
-        } else {
-            $this->instance = $this->instance ?: new LeveldbClient($this->getLeveldbFile());
-        }
-
-        return true;
+        return $this->getPath() . '/' . self::LEVELDB_FILENAME;
     }
 
     /**
-     * Close connection on destruct
+     * @return bool
+     * @throws PhpfastcacheLogicException
      */
-    public function __destruct()
+    protected function driverConnect(): bool
     {
         if ($this->instance instanceof LeveldbClient) {
-            $this->instance->close();
-            $this->instance = null;
+            throw new PhpfastcacheLogicException('Already connected to Leveldb database');
         }
+
+        $this->instance = $this->instance ?: new LeveldbClient($this->getLeveldbFile());
+
+        return true;
     }
 }

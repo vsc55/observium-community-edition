@@ -1,12 +1,11 @@
 <?php
-
 /**
- * Observium Network Management and Monitoring System
- * Copyright (C) 2006-2015, Adam Armstrong - http://www.observium.org
+ * Observium
  *
- * @package        observium
- * @subpackage     webui
- * @author         Adam Armstrong <adama@observium.org>
+ *   This file is part of Observium.
+ *
+ * @package    observium
+ * @subpackage web
  * @copyright  (C) Adam Armstrong
  *
  */
@@ -19,7 +18,5 @@ $vars['entity_id']   = $vars['port'];
 
 // Print Alert Log
 print_alert_log($vars);
-
-register_html_title('Alert Log');
 
 // EOF

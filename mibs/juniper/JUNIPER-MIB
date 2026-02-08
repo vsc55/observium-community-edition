@@ -255,6 +255,12 @@ jnxBoxAnatomy MODULE-IDENTITY
     DESCRIPTION
                "Added new trap: jnxPsePoePdDeviceMgrFault.
                 Added new trap: jnxPsePoePdDeviceMgrOK."
+
+    REVISION     "202406050000Z"    -- Jun 05, 2024
+    DESCRIPTION
+               "Added new trap: jnxPsePoePdVoltInjFault.
+                Added new trap: jnxPsePoePdVoltInjOK."
+
     ::= { jnxMibs 1 }
 
 --
@@ -2643,6 +2649,19 @@ JnxChassisId ::= TEXTUAL-CONVENTION
                  detected PD device manager fault."
         ::= { jnxPoeTraps 1 }
 
+    jnxPsePoePdVoltInjFault NOTIFICATION-TYPE
+        OBJECTS         { jnxContentsContainerIndex,
+                          jnxContentsL1Index,
+                          jnxContentsL2Index,
+                          jnxContentsL3Index,
+                          jnxContentsDescr }
+        STATUS          current
+        DESCRIPTION
+                "A jnxPsePoePdVoltInjFault trap signifies that
+                 the SNMP entity, acting in an agent role, has
+                 detected PD voltage injection fault."
+        ::= { jnxPoeTraps 2 }
+
     -- Traps for alarm cleared conditions
 
     jnxPsePoePdDeviceMgrOK NOTIFICATION-TYPE
@@ -2657,5 +2676,18 @@ JnxChassisId ::= TEXTUAL-CONVENTION
                  the SNMP entity, acting in an agent role,
                  has recovered from the PD device manager fault state"
         ::= { jnxPoeOKTraps 1 }
+
+    jnxPsePoePdVoltInjOK NOTIFICATION-TYPE
+        OBJECTS         { jnxContentsContainerIndex,
+                          jnxContentsL1Index,
+                          jnxContentsL2Index,
+                          jnxContentsL3Index,
+                          jnxContentsDescr }
+        STATUS          current
+        DESCRIPTION
+                "A jnxPsePoePdVoltInjOK trap signifies that
+                 the SNMP entity, acting in an agent role,
+                 has recovered from the PD voltage injection fault"
+        ::= { jnxPoeOKTraps 2 }
 
 END

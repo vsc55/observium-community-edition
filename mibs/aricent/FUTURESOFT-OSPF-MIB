@@ -1,11 +1,6 @@
 -- Copyright (C) 2006-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsospf.mib,v 1.29 2016/05/11 11:38:49 siva Exp $
-
 FUTURESOFT-OSPF-MIB DEFINITIONS ::= BEGIN
-
--- Enterprises MIB of Future software for FutureOSPF source code product.
-
 
    IMPORTS
       MODULE-IDENTITY, OBJECT-TYPE, Counter32, Gauge32,

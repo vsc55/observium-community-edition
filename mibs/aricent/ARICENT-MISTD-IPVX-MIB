@@ -1,6 +1,5 @@
 -- Copyright (C) 2009-2012 Aricent Group . All Rights Reserved
 
---    $Id: fsmsipvx.mib,v 1.8 2016/02/27 10:14:06 siva Exp $
 ARICENT-MISTD-IPVX-MIB DEFINITIONS ::= BEGIN
 
    IMPORTS
@@ -22,16 +21,23 @@ ARICENT-MISTD-IPVX-MIB DEFINITIONS ::= BEGIN
 
   
       fsMIStdIp MODULE-IDENTITY
-         LAST-UPDATED "201209050000Z"
+         LAST-UPDATED "201911250000Z"
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE"
          CONTACT-INFO "support@aricent.com"
 
          DESCRIPTION
             " The MIB module for MIIPvx "
+
+         REVISION "201911250000Z"
+         DESCRIPTION
+            "Added objects supporting simplified default gateway access
+            (fsMIStdInetCidrDefaultGatewayType, fsMIStdInetCidrDefaultGateway)."
+
          REVISION "201209050000Z"
          DESCRIPTION
             "The MIB is the standard IPVX mib with virtual routing and
             forwarding support. "
+
      ::=  { enterprises aricent-communication-holding-ltd(29601) iss(2) 37}
 
 --
@@ -3744,5 +3750,33 @@ fsMIStdIpProxyArpSubnetOption OBJECT-TYPE
 DEFVAL { enabled }
 ::= { fsMIStdIp 19 }
 
+--
+-- Default gateway attributes
+--
+
+fsMIStdInetCidrDefaultGatewayType OBJECT-TYPE
+    SYNTAX       InetAddressType
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "The type of the fsMIStdInetCidrDefaultGateway address, 
+         as defined in the InetAddress MIB.
+
+         Value set to unknown(0) when a default gateway is
+         not defined."
+
+    ::= { fsMIStdIp 20 }
+
+fsMIStdInetCidrDefaultGateway OBJECT-TYPE
+    SYNTAX       InetAddress (SIZE(16))
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "The default gateway address.
+
+         If a default gateway is not defined, a zero length
+         string is returned."
+
+    ::= { fsMIStdIp 21 }
 
 END

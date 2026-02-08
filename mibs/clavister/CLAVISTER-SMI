@@ -1,12 +1,3 @@
--- ########################################################################
--- #
--- # CLAVISTER-SMI:  Clavister AB
--- # 
--- # Copyright (c) by Clavister AB
--- # All rights reserved.
--- #
--- ########################################################################
-
 CLAVISTER-SMI DEFINITIONS ::= BEGIN
 
 IMPORTS
@@ -65,4 +56,3 @@ clavisterSystemTrapInfo OBJECT IDENTIFIER ::= { clavisterSystem 1 }
 clavisterSystemStats OBJECT IDENTIFIER ::= { clavisterSystem 2 }
 
 END -- end of module CLAVISTER-SMI.
-

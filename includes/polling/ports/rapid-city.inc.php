@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Observium
  *
@@ -15,8 +14,11 @@
 $entries = snmpwalk_cache_oid($device, 'rcPortOperDuplex', [], 'RAPID-CITY');
 //$entries = snmpwalk_cache_oid($device, 'rcPortHighSecureEnable', $entries, 'RAPID-CITY');
 foreach ($entries as $ifIndex => $entry) {
-    // Set ifDuplex
-    $port_stats[$ifIndex]['ifDuplex'] = $entry['rcPortOperDuplex'];
+    // Set ifDuplex, unified
+    switch ($entry['rcPortOperDuplex']) {
+        case 'half': $port_stats[$ifIndex]['ifDuplex'] = 'halfDuplex'; break;
+        case 'full': $port_stats[$ifIndex]['ifDuplex'] = 'fullDuplex'; break;
+    }
 }
 
 /*

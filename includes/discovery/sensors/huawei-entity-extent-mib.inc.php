@@ -16,17 +16,12 @@
 //HUAWEI-ENTITY-EXTENT-MIB::hwEntityBomEnDesc.67371017 = STRING: Finished Board,S9700,EH1D2L08QX2E,8-Port 40GE QSFP+ Interface Card(X2E,QSFP+),20M TCAM
 //HUAWEI-ENTITY-EXTENT-MIB::hwEntityBomEnDesc.68419593 = STRING: Finished Board,S12700,ET1D2X48SX2S,48-Port 10GE SFP+ Interface Card(X2S,SFP+)
 
-$huawei['sensors_names'] = snmpwalk_cache_oid($device, 'hwEntityBomEnDesc', [], 'HUAWEI-ENTITY-EXTENT-MIB');
-//$huawei['sensors_names'] = snmpwalk_cache_oid($device, 'entPhysicalName',   $huawei['sensors_names'], 'ENTITY-MIB');
-//$huawei['sensors_names'] = snmpwalk_cache_oid($device, 'entPhysicalAlias',  $huawei['sensors_names'], 'ENTITY-MIB');
-
-$huawei['temp']    = snmpwalk_cache_oid($device, 'hwEntityTemperature', [], 'HUAWEI-ENTITY-EXTENT-MIB');
-$huawei['voltage'] = snmpwalk_cache_oid($device, 'hwEntityVoltage', [], 'HUAWEI-ENTITY-EXTENT-MIB');
-$huawei['fan']     = snmpwalk_cache_oid($device, 'hwFanStatusEntry', [], 'HUAWEI-ENTITY-EXTENT-MIB');
-print_debug_vars($huawei);
+$hwEntityBomEnDesc = snmpwalk_cache_oid($device, 'hwEntityBomEnDesc', [], 'HUAWEI-ENTITY-EXTENT-MIB');
 
 // Temperatures
-foreach ($huawei['temp'] as $index => $entry) {
+$oids = snmpwalk_cache_oid($device, 'hwEntityTemperature', [], 'HUAWEI-ENTITY-EXTENT-MIB');
+print_debug_vars($oids);
+foreach ($oids as $index => $entry) {
     $oid_name = 'hwEntityTemperature';
     $oid_num  = ".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11.$index";
 
@@ -37,43 +32,47 @@ foreach ($huawei['temp'] as $index => $entry) {
             $descr = snmp_get_oid($device, "entPhysicalName.$index", 'ENTITY-MIB');
         }
         if (empty($descr)) {
-            $descr_array = explode(',', $huawei['sensors_names'][$index]['hwEntityBomEnDesc']);
-            $descr       = end($descr_array);
+            $descr = array_last(explode(',', $hwEntityBomEnDesc[$index]['hwEntityBomEnDesc']));
         }
+        $descr = rewrite_entity_name($descr);
 
-        $options               = ['limit_high' => snmp_get_oid($device, "hwEntityTemperatureThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB')];
-        $options['rename_rrd'] = "huawei-$index";
+        $options = [ 'limit_high' => snmp_get_oid($device, "hwEntityTemperatureThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB'),
+                     'rename_rrd' => "huawei-$index" ];
 
         discover_sensor_ng($device, 'temperature', $mib, $oid_name, $oid_num, $index, $descr, 1, $value, $options);
     }
 }
 
 // Voltages
-foreach ($huawei['voltage'] as $index => $entry) {
+$oids = snmpwalk_cache_oid($device, 'hwEntityVoltage', [], 'HUAWEI-ENTITY-EXTENT-MIB');
+print_debug_vars($oids);
+foreach ($oids as $index => $entry) {
     $oid_name = 'hwEntityVoltage';
     $oid_num  = ".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.13.$index";
 
     $value = $entry[$oid_name];
     if ($value != 0 && $value <= 1000) {
-        if (strlen($huawei['sensors_names'][$index]['hwEntityBomEnDesc'])) {
-            $descr_array = explode(',', $huawei['sensors_names'][$index]['hwEntityBomEnDesc']);
-            $descr       = end($descr_array);
+        if (!safe_empty($hwEntityBomEnDesc[$index]['hwEntityBomEnDesc'])) {
+            $descr = array_last(explode(',', $hwEntityBomEnDesc[$index]['hwEntityBomEnDesc']));
         } else {
             $descr = snmp_get_oid($device, "entPhysicalAlias.$index", 'ENTITY-MIB');
             if (empty($descr)) {
                 $descr = snmp_get_oid($device, "entPhysicalName.$index", 'ENTITY-MIB');
             }
         }
+        $descr = rewrite_entity_name($descr);
 
-        $options = ['limit_high' => snmp_get_oid($device, "hwEntityVoltageHighThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB'),
-                    'limit_low'  => snmp_get_oid($device, "hwEntityVoltageLowThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB')];
+        $options = [ 'limit_high' => snmp_get_oid($device, "hwEntityVoltageHighThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB'),
+                     'limit_low'  => snmp_get_oid($device, "hwEntityVoltageLowThreshold.$index", 'HUAWEI-ENTITY-EXTENT-MIB') ];
 
         $options['rename_rrd'] = "huawei-$index";
         discover_sensor_ng($device, 'voltage', $mib, $oid_name, $oid_num, $index, $descr, 1, $value, $options);
     }
 }
 
-foreach ($huawei['fan'] as $index => $entry) {
+$oids = snmpwalk_cache_oid($device, 'hwFanStatusEntry', [], 'HUAWEI-ENTITY-EXTENT-MIB');
+print_debug_vars($oids);
+foreach ($oids as $index => $entry) {
     if ($entry['hwEntityFanPresent'] === 'absent') {
         continue;
     }
@@ -94,6 +93,7 @@ foreach ($huawei['fan'] as $index => $entry) {
     $value    = $entry[$oid_name];
     discover_status($device, $oid_num, $index, 'huawei-entity-ext-mib-fan-state', $descr, $value, ['entPhysicalClass' => 'fan']);
 }
+unset($oids, $hwEntityBomEnDesc);
 
 // Optical sensors
 //$entity_array   = snmpwalk_cache_oid($device, 'HwOpticalModuleInfoEntry', array(), 'HUAWEI-ENTITY-EXTENT-MIB');
@@ -105,32 +105,32 @@ $entity_array = [];
  * See: https://jira.observium.org/browse/OBS-1362 (initially power hack was added)
  *      https://jira.observium.org/browse/OBS-2937 (issue with different scales sensor and limits)
  */
-$power_class       = 'power';
-$power_scale       = 0.000001;
+$power_class  = 'power';
+$power_scale  = 0.000001;
 
 foreach (snmpwalk_cache_oid($device, 'hwEntityOpticalTemperature', [], 'HUAWEI-ENTITY-EXTENT-MIB') as $index => $entry) {
     // Ignore optical sensors with temperature of zero or negative
     if ($entry['hwEntityOpticalTemperature'] > 1) {
         $optical_oids  = [
-          'hwEntityOpticalVoltage.' . $index,
-          'hwEntityOpticalBiasCurrent.' . $index,
-          'hwEntityOpticalRxPower.' . $index,
-          'hwEntityOpticalRxHighThreshold.' . $index,
-          'hwEntityOpticalRxHighWarnThreshold.' . $index,
-          'hwEntityOpticalRxLowThreshold.' . $index,
-          'hwEntityOpticalRxLowWarnThreshold.' . $index,
-          'hwEntityOpticalTxPower.' . $index,
-          'hwEntityOpticalTxHighThreshold.' . $index,
-          'hwEntityOpticalTxHighWarnThreshold.' . $index,
-          'hwEntityOpticalTxLowThreshold.' . $index,
-          'hwEntityOpticalTxLowWarnThreshold.' . $index,
-          // Multi Lane transceivers
-          'hwEntityOpticalLaneBiasCurrent.' . $index,
-          'hwEntityOpticalLaneRxPower.' . $index,
-          'hwEntityOpticalLaneTxPower.' . $index,
-          // Transceiver descriptions
-          'hwEntityOpticalVenderPn.' . $index,
-          'hwEntityOpticalVenderName.' . $index,
+            'hwEntityOpticalVoltage.' . $index,
+            'hwEntityOpticalBiasCurrent.' . $index,
+            'hwEntityOpticalRxPower.' . $index,
+            'hwEntityOpticalRxHighThreshold.' . $index,
+            'hwEntityOpticalRxHighWarnThreshold.' . $index,
+            'hwEntityOpticalRxLowThreshold.' . $index,
+            'hwEntityOpticalRxLowWarnThreshold.' . $index,
+            'hwEntityOpticalTxPower.' . $index,
+            'hwEntityOpticalTxHighThreshold.' . $index,
+            'hwEntityOpticalTxHighWarnThreshold.' . $index,
+            'hwEntityOpticalTxLowThreshold.' . $index,
+            'hwEntityOpticalTxLowWarnThreshold.' . $index,
+            // Multi Lane transceivers
+            'hwEntityOpticalLaneBiasCurrent.' . $index,
+            'hwEntityOpticalLaneRxPower.' . $index,
+            'hwEntityOpticalLaneTxPower.' . $index,
+            // Transceiver descriptions
+            'hwEntityOpticalVenderPn.' . $index,
+            'hwEntityOpticalVenderName.' . $index,
         ];
         $optical_entry = snmp_get_multi_oid($device, $optical_oids, [], 'HUAWEI-ENTITY-EXTENT-MIB');
         if (isset($optical_entry[$index])) {
@@ -150,16 +150,16 @@ foreach (snmpwalk_cache_oid($device, 'hwEntityOpticalTemperature', [], 'HUAWEI-E
 print_debug_vars($entity_array);
 
 $rx_limit_oids = [
-  'limit_high'      => 'hwEntityOpticalRxHighThreshold',
-  'limit_high_warn' => 'hwEntityOpticalRxHighWarnThreshold',
-  'limit_low'       => 'hwEntityOpticalRxLowThreshold',
-  'limit_low_warn'  => 'hwEntityOpticalRxLowWarnThreshold'
+    'limit_high'      => 'hwEntityOpticalRxHighThreshold',
+    'limit_high_warn' => 'hwEntityOpticalRxHighWarnThreshold',
+    'limit_low'       => 'hwEntityOpticalRxLowThreshold',
+    'limit_low_warn'  => 'hwEntityOpticalRxLowWarnThreshold'
 ];
 $tx_limit_oids = [
-  'limit_high'      => 'hwEntityOpticalTxHighThreshold',
-  'limit_high_warn' => 'hwEntityOpticalTxHighWarnThreshold',
-  'limit_low'       => 'hwEntityOpticalTxLowThreshold',
-  'limit_low_warn'  => 'hwEntityOpticalTxLowWarnThreshold'
+    'limit_high'      => 'hwEntityOpticalTxHighThreshold',
+    'limit_high_warn' => 'hwEntityOpticalTxHighWarnThreshold',
+    'limit_low'       => 'hwEntityOpticalTxLowThreshold',
+    'limit_low_warn'  => 'hwEntityOpticalTxLowWarnThreshold'
 ];
 
 foreach ($entity_array as $index => $entry) {
@@ -238,7 +238,7 @@ foreach ($entity_array as $index => $entry) {
             hwEntityOpticalRxLowWarnThreshold.16850463 = No Such Object available on this agent at this OID
             hwEntityOpticalLaneRxPower.16850463 = -1.21,-1.51,-1.83,-2.18
              */
-            [$lane1_rxpower] = explode(',', $entry['hwEntityOpticalLaneRxPower']);
+            $lane1_rxpower = explode(',', $entry['hwEntityOpticalLaneRxPower'])[0];
             if (($entry['hwEntityOpticalRxPower'] != -1) && float_cmp($entry['hwEntityOpticalRxPower'] * 0.01, $lane1_rxpower, 0.01) === 0) {
                 $power_scale_multi = 1;
             }
@@ -349,6 +349,6 @@ foreach ($entity_array as $index => $entry) {
 
 }
 
-unset($entity_array, $huawei);
+unset($entity_array);
 
 // EOF

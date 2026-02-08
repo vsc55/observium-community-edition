@@ -43,7 +43,7 @@ foreach ($results as $result) {
     $descr = !safe_empty($result['ifAlias']) ? truncate($result['ifAlias'], 80) : '';
     $type  = rewrite_iftype($result['ifType']);
     if (!safe_empty($result['ifPhysAddress'])) {
-        $mac = ' | ' . html_highlight(format_mac($result['ifPhysAddress']), $queryString);
+        $mac = ' | ' . format_mac($result['ifPhysAddress']);
     } else {
         $mac = '';
     }
@@ -54,8 +54,8 @@ foreach ($results as $result) {
         'colour' => $result['table_tab_colour'],
         'icon'   => $config['icon']['port'],
         'data'   => [
-            escape_html($device_name),
-            $type . $mac . ' | ' . html_highlight(escape_html($descr), $queryString)
+            $device_name,
+            $type . $mac . ' | ' . $descr
         ],
     ];
 }

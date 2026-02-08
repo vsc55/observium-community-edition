@@ -19,10 +19,10 @@ class WeatherMapDataSource_snmp extends WeatherMapDataSource {
 	{
 		// We can keep a list of unresponsive nodes, so we can give up earlier
 		$this->down_cache = array();
-	
+
 		if(function_exists('snmpget')) { return(TRUE); }
 		wm_debug("SNMP DS: snmpget() not found. Do you have the PHP SNMP module?\n");
-				
+
 		return(FALSE);
 	}
 
@@ -48,25 +48,25 @@ class WeatherMapDataSource_snmp extends WeatherMapDataSource {
 		$timeout = 1000000;
 		$retries = 2;
 		$abort_count = 0;
-		
+
 		$in_result = NULL;
 		$out_result = NULL;
-		
+
 		if($map->get_hint("snmp_timeout") != '') {
 			$timeout = intval($map->get_hint("snmp_timeout"));
 			wm_debug("Timeout changed to ".$timeout." microseconds.\n");
 		}
-		
+
 		if($map->get_hint("snmp_abort_count") != '') {
 			$abort_count = intval($map->get_hint("snmp_abort_count"));
 			wm_debug("Will abort after $abort_count failures for a given host.\n");
 		}
-		
+
 		if($map->get_hint("snmp_retries") != '') {
 			$retries = intval($map->get_hint("snmp_retries"));
 			wm_debug("Number of retries changed to ".$retries.".\n");
 		}
-		
+
 		if(preg_match("/^snmp:([^:]+):([^:]+):([^:]+):([^:]+)$/",$targetstring,$matches))
 		{
 			$community = $matches[1];
@@ -91,7 +91,7 @@ class WeatherMapDataSource_snmp extends WeatherMapDataSource {
 				{
 					$was2 = snmp_get_valueretrieval();
 				}
-		
+
 				if(function_exists('snmp_set_oid_output_format'))
 				{
 					snmp_set_oid_output_format  ( SNMP_OID_OUTPUT_NUMERIC  );
@@ -129,9 +129,9 @@ class WeatherMapDataSource_snmp extends WeatherMapDataSource {
 						$this->down_cache[$host]++; 
 					}
 				}
-				
+
 				wm_debug ("SNMP ReadData: Got $in_result and $out_result\n");
-				
+
 				$data_time = time();
 
 				if(function_exists("snmp_set_quick_print"))
@@ -146,7 +146,7 @@ class WeatherMapDataSource_snmp extends WeatherMapDataSource {
 		}
 
 		wm_debug ("SNMP ReadData: Returning (".($data[IN]===NULL?'NULL':$data[IN]).",".($data[OUT]===NULL?'NULL':$data[OUT]).",$data_time)\n");
-		
+
 		return( array($data[IN], $data[OUT], $data_time) );
 	}
 }

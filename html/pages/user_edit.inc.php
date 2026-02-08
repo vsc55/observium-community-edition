@@ -528,6 +528,9 @@ if ($vars['user_id']) {
                 // Device permissions
                 print_device_permission_box('user', $user_permissions, $vars);
 
+                // Poller permissions
+                print_poller_permission_box('user', $user_permissions, $vars);
+
                 // Port permissions
                 print_port_permission_box('user', $user_permissions, $vars);
 

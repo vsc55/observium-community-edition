@@ -667,7 +667,7 @@ function get_autodiscovery_device_id($device, $hostname, $ip = NULL, $mac = NULL
     $check_mac = $ip_type === 'private' && !safe_empty($mac);
 
     // Check previous autodiscovery rounds as mostly correct!
-    if (!$check_mac) {
+    if ($ip_type !== 'private' && !$check_mac) {
         print_debug("AUTODISCOVERY DEVEL: skipped for Private IPs [$ip] and checks by MAC address [$mac].");
         $autodiscovery_entry = get_autodiscovery_entry($hostname, $ip, $device['device_id']);
         if (isset($autodiscovery_entry['last_reason']) && $autodiscovery_entry['last_reason'] === 'ok') {
@@ -697,7 +697,7 @@ function get_autodiscovery_device_id($device, $hostname, $ip = NULL, $mac = NULL
                     }
                 }
             } elseif ($check_mac) {
-                // Do not set remote device by private ip when really should be found by MAC address
+                // Do not set a remote device by private ip when really should be found by MAC address
                 $remote_device_id = NULL;
             }
         }
@@ -832,7 +832,10 @@ function discover_device($device, $options = NULL) {
         if (!(in_array($module, $modules_forced) || is_module_enabled($device, $module))) {
             continue;
         }
-        //if ($attribs['discover_'.$module] || ( $module_status && !isset($attribs['discover_'.$module])))
+        if (!is_file($config['install_dir'] . "/includes/discovery/$module.inc.php")) {
+            print_debug("Discovery module '$module' not really exists!");
+            continue;
+        }
 
         $m_start                          = utime();
         $GLOBALS['module_stats'][$module] = [];
@@ -840,7 +843,8 @@ function discover_device($device, $options = NULL) {
 
         print_cli_heading("Module Start: %R" . $module);
 
-        include("includes/discovery/$module.inc.php");
+        print_debug(PHP_EOL . "including: includes/discovery/$module.inc.php");
+        include($config['install_dir'] . "/includes/discovery/$module.inc.php");
 
         $GLOBALS['module_stats'][$module]['time'] = elapsed_time($m_start, 4);
         print_module_stats($device, $module);
@@ -890,15 +894,15 @@ function discover_device($device, $options = NULL) {
         }
         print_debug_vars($discovery_history);
 
-        // Keep per module perf stats
+        // Store discovery performance history to database
         $discovery_mod_perf = [];
         foreach ($GLOBALS['module_stats'] as $module => $entry) {
             $discovery_mod_perf[$module] = $entry['time'];
         }
+        discovery_perf_log($device['device_id'], $discovery_mod_perf);
 
         $device_state                       = $old_device_state; // Keep old devices state (from poller)
         $device_state['discovery_history']  = $discovery_history;
-        $device_state['discovery_mod_perf'] = $discovery_mod_perf;
 
         unset($discovery_history, $old_device_state);
 
@@ -928,8 +932,9 @@ function discover_device($device, $options = NULL) {
     }
     del_process_info($device); // Remove process info
 
-    // Clean cache vars
-    unset($cache_discovery, $GLOBALS['cache']['snmp'], $GLOBALS['cache_snmp'][$device['device_id']]);
+    // Clean memory cache & vars
+    mem_cache_reset();
+    unset($cache_discovery, $GLOBALS['cache']['snmp']);
 
     return $device_time;
 }
@@ -1202,17 +1207,68 @@ function discover_fetch_oids($device, $mib, $def, $table_oids) {
     return $array;
 }
 
-function get_def_snmp_flags($def) {
-    // SNMP flags
+function get_def_snmp_flags($def, $snmp_default = []) {
+    // SNMP flags: numeric indexes, disable display hint, convert multiline
     $flags = OBS_SNMP_ALL_NUMERIC_INDEX | OBS_SNMP_DISPLAY_HINT | OBS_SNMP_CONCAT;
-    // Allow custom definition flags
-    if (isset($def['snmp_flags'])) {
+
+    // Allow custom definition flags (use options instead!)
+    if (isset($def['snmp_flags']) && is_int($def['snmp_flags'])) {
         if (is_flag_set(OBS_SNMP_TABLE, $def['snmp_flags'])) {
             // If table output is used, exclude numeric index
             $flags ^= OBS_SNMP_NUMERIC_INDEX;
         }
         return $flags | $def['snmp_flags'];
     }
+
+    // Use a default snmp option, when snmp_flags and options not defined
+    if (!isset($def['snmp']) && !safe_empty($snmp_default)) {
+        $def['snmp'] = (array)$snmp_default;
+    }
+
+    // Use snmp options
+    if (isset($def['snmp']) && !safe_empty($def['snmp'])) {
+        if (!is_array($def['snmp'])) {
+            // allow simple, one option
+            $def['snmp'] = (array)$def['snmp'];
+        }
+        if (array_is_list($def['snmp'])) {
+            // Convert simple options to key => true
+            $def['snmp'] = array_fill_keys($def['snmp'], TRUE);
+        }
+
+        if (isset($def['snmp']['utf8'])) {
+            // force convert to utf8, hexified snmp output
+            $flags = OBS_SNMP_ALL_UTF8 | OBS_SNMP_NUMERIC_INDEX;
+        } elseif (isset($def['snmp']['ascii'])) {
+            // force hex string to ascii string
+            $flags = OBS_SNMP_ALL_ASCII | OBS_SNMP_NUMERIC_INDEX; // | OBS_SNMP_CONCAT
+        }
+
+        if (isset($def['snmp']['noindex'])) {
+            // Oid not have an index part, return as '' index
+            $flags |= OBS_SNMP_NOINDEX;
+        }
+        if (isset($def['snmp']['noincrease'])) {
+            //  Try refetch with NOINCREASE
+            $flags |= OBS_SNMP_NOINCREASE;
+        }
+        if (isset($def['snmp']['table'])) {
+            $flags |= OBS_SNMP_TABLE;
+            // If table output is used, exclude numeric index
+            $def['snmp']['index_string'] = TRUE;
+        }
+        if (isset($def['snmp']['index_string'])) {
+            // allow strings in indexes
+            $flags ^= OBS_SNMP_NUMERIC_INDEX;
+            // do not strip quotes
+            $flags ^= OBS_QUOTES_STRIP;
+        }
+        if (isset($def['snmp']['index_parts'])) {
+            // append an index parts flag (see ip-address discovery)
+            $flags |= OBS_SNMP_INDEX_PARTS;
+        }
+    }
+
     // Force UTF decode?
     //$flags = $flags | OBS_SNMP_HEX | OBS_DECODE_UTF8;
 
@@ -1261,7 +1317,7 @@ function fetch_def_oids_walks($device, $mib, $def, $table_oids) {
             $oids_tmp = ($table_oid === 'oids') ? array_keys($def[$table_oid]) : (array)$def[$table_oid];
             foreach ($oids_tmp as $get_oid) {
                 // Do not walk limit/unit/scale oids with passed indexes (they should be fetched by get)
-                if (str_contains_array($table_oid, [ 'limit', 'unit', 'scale', 'total', 'count' ]) && str_contains($get_oid, '.')) {
+                if (str_contains($get_oid, '.') && str_contains_array($table_oid, [ 'limit', 'unit', 'scale', 'total', 'count' ])) {
                     continue;
                 }
 
@@ -1326,7 +1382,7 @@ function fetch_def_oids_entphysical($device, $def, &$array) {
     if (isset($def['entPhysical_parent']) && $def['entPhysical_parent']) {
         $oids_tmp = [];
 
-        foreach ($entPhysicalTable as $entPhysicalIndex => $entPhysicalEntry) {
+        foreach ($entPhysicalTable as $entPhysicalEntry) {
             foreach (['entPhysicalDescr', 'entPhysicalAlias', 'entPhysicalName'] as $oid_tmp) {
                 $oids_tmp[] = $oid_tmp . '.' . $entPhysicalEntry['entPhysicalContainedIn'];
             }
@@ -1409,10 +1465,12 @@ function fetch_oids_lldp_addr($device, &$lldp_array) {
 
         // Convert from index part
         $lldpAddressFamily = array_shift($index_array);
-        if ($lldpAddressFamily == 1 && safe_count($index_array) === 4) {
+        if (safe_count($index_array) === 4) {
             // Incorrect indexes
+            // lldpRemManAddrIfId.7200.1.1.0.192.168.0.3 = 0
             // lldpRemManAddrIfId.7800.28.1.1.10.99.0.10 = 2
             // lldpRemManAddrIfId.32900.4.1.2.42.14.17.6 = 2
+            $lldpAddressFamily = 1; // Force IPv4
             $len = 4;
         } else {
             $len = array_shift($index_array);
@@ -1528,7 +1586,7 @@ function discover_neighbour($port, $protocol, $neighbour)
     } //elseif (is_bad_xdp($neighbour['remote_hostname'], $neighbour['remote_platform']) || empty($neighbour['remote_hostname']))
     if (safe_empty($neighbour['remote_hostname']) || is_bad_xdp($neighbour['remote_hostname'])) {
         // Note in neighbour discovery, ignore only hostname!
-        print_debug("Hostname ignored, skip neighbour.");
+        print_debug("Hostname '{$neighbour['remote_hostname']}' ignored, skip neighbour.");
         return NULL;
     }
 
@@ -1559,8 +1617,8 @@ function discover_neighbour($port, $protocol, $neighbour)
         }
         // Last change as unixtime
         // FIXME. Need convert in db schema last_change to unixtime
-        if (is_numeric($neighbour['last_change']) && $neighbour['last_change'] > OBS_MIN_UNIXTIME) {
-            $update['last_change'] = ['FROM_UNIXTIME(' . $neighbour['last_change'] . ')'];
+        if (is_valid_unixtime($neighbour['last_change'])) {
+            $update['last_change'] = [ 'FROM_UNIXTIME(' . $neighbour['last_change'] . ')' ];
         }
         $id = dbInsert($update, 'neighbours');
 
@@ -1577,11 +1635,11 @@ function discover_neighbour($port, $protocol, $neighbour)
         }
         // Last change as unixtime
         // FIXME. Need convert in db schema last_change to unixtime
-        if (is_numeric($neighbour['last_change']) && $neighbour['last_change'] > OBS_MIN_UNIXTIME &&
+        if (is_valid_unixtime($neighbour['last_change']) &&
             abs($neighbour['last_change'] - $neighbour_db['last_change_unixtime']) > 90) {
-            $update['last_change'] = ['FROM_UNIXTIME(' . $neighbour['last_change'] . ')'];
+            $update['last_change'] = [ 'FROM_UNIXTIME(' . $neighbour['last_change'] . ')' ];
         }
-        if (count($update)) {
+        if (!empty($update)) {
             dbUpdate($update, 'neighbours', '`neighbour_id` = ?', [$neighbour_db['neighbour_id']]);
             $GLOBALS['module_stats']['neighbours']['updated']++; //echo('U');
         } else {
@@ -1619,12 +1677,10 @@ function discover_storage(&$valid, $device, $storage_index, $storage_type, $stor
     //$storage_mib  = strtolower($storage_mib);
 
     // Check storage ignore filters
-    if (entity_descr_check($storage_descr, 'storage')) {
+    if (entity_descr_check($storage_descr, 'storage', FALSE)) { // Do not limit descr, text field
         return FALSE;
     }
-    //foreach ($config['ignore_mount'] as $bi)        { if (strcasecmp($bi, $storage_descr) == 0)   { print_debug("Skipped by equals: $bi, $storage_descr "); return FALSE; } }
-    //foreach ($config['ignore_mount_string'] as $bi) { if (stripos($storage_descr, $bi) !== FALSE) { print_debug("Skipped by strpos: $bi, $storage_descr "); return FALSE; } }
-    //foreach ($config['ignore_mount_regexp'] as $bi) { if (preg_match($bi, $storage_descr) > 0)    { print_debug("Skipped by regexp: $bi, $storage_descr "); return FALSE; } }
+
     // Search duplicates for same mib/descr
     if (in_array($storage_descr, array_values((array)$valid[$storage_mib]))) {
         print_debug("Skipped by already exist: $storage_descr ");
@@ -1697,15 +1753,12 @@ function discover_mempool(&$valid, $device, $mempool_index, $mempool_mib, $mempo
     print_debug($device['device_id'] . " -> $mempool_index, $mempool_mib::" . $options['table'] . ", $mempool_descr, $mempool_multiplier, $mempool_total, $mempool_used");
 
     // Check mempool ignore filters
-    if (entity_descr_check($mempool_descr, 'mempool')) {
+    if (entity_descr_check($mempool_descr, 'mempool')) { // Limit descr to 255 chars accordingly as in DB
         return FALSE;
     }
-    //foreach ($config['ignore_mempool'] as $bi)        { if (strcasecmp($bi, $mempool_descr) == 0)   { print_debug("Skipped by equals: $bi, $mempool_descr "); return FALSE; } }
-    //foreach ($config['ignore_mempool_string'] as $bi) { if (stripos($mempool_descr, $bi) !== FALSE) { print_debug("Skipped by strpos: $bi, $mempool_descr "); return FALSE; } }
-    //foreach ($config['ignore_mempool_regexp'] as $bi) { if (preg_match($bi, $mempool_descr) > 0)    { print_debug("Skipped by regexp: $bi, $mempool_descr "); return FALSE; } }
 
     // Init $options -> regular variables until all others have been converted to be inside $options (FIXME)
-    $param_opt = ['table' => 'mempool_table'];
+    $param_opt = ['table' => 'mempool_object'];
     foreach ($param_opt as $key => $varname) {
         $$varname = $options[$key] ?: NULL;
     }
@@ -1713,7 +1766,7 @@ function discover_mempool(&$valid, $device, $mempool_index, $mempool_mib, $mempo
     // Limit mempool_multiplier input to fit the MySQL field (FLOAT(14,5))
     $mempool_multiplier = round($mempool_multiplier, 5);
 
-    $params       = ['mempool_index', 'mempool_mib', 'mempool_descr', 'mempool_multiplier', 'mempool_hc', 'mempool_table'];
+    $params       = ['mempool_index', 'mempool_mib', 'mempool_descr', 'mempool_multiplier', 'mempool_hc', 'mempool_object'];
     $params_state = ['mempool_total', 'mempool_used', 'mempool_free', 'mempool_perc'];
 
     if (!is_numeric($mempool_total) || $mempool_total <= 0 || !is_numeric($mempool_used)) {
@@ -1724,12 +1777,13 @@ function discover_mempool(&$valid, $device, $mempool_index, $mempool_mib, $mempo
         $mempool_multiplier = 1;
     }
 
-    if (!(isset($options['table']) && isset($config['mibs'][$mempool_mib]['mempool'][$options['table']]))) {
+    if (!(isset($options['table'], $config['mibs'][$mempool_mib]['mempool'][$options['table']]))) {
         // Scale for non-definitions based
         $mempool_total *= $mempool_multiplier;
         $mempool_used  *= $mempool_multiplier;
     }
-    $mempool_db = dbFetchRow("SELECT * FROM `mempools` WHERE `device_id` = ? AND `mempool_index` = ? AND `mempool_mib` = ?", [$device['device_id'], $mempool_index, $mempool_mib]);
+
+    $mempool_db = dbFetchRow("SELECT * FROM `mempools` WHERE `device_id` = ? AND `mempool_index` = ? AND `mempool_mib` = ? AND `mempool_object` = ?", [$device['device_id'], $mempool_index, $mempool_mib, $mempool_object]);
 
     if (!isset($mempool_db['mempool_id'])) {
         $mempool_free = $mempool_total - $mempool_used;
@@ -1749,7 +1803,7 @@ function discover_mempool(&$valid, $device, $mempool_index, $mempool_mib, $mempo
         //foreach ($params_state as $param) { $update_state[$param] = $$param; }
         //dbInsert($update_state, 'mempools-state');
         $GLOBALS['module_stats']['mempools']['added']++; //echo('+');
-        log_event("Memory pool added: mib $mempool_mib" . ($mempool_table ? "::$mempool_table" : '') . ", index $mempool_index, descr $mempool_descr", $device, 'mempool', $id);
+        log_event("Memory pool added: mib $mempool_mib" . ($mempool_object ? "::$mempool_object" : '') . ", index $mempool_index, descr $mempool_descr", $device, 'mempool', $id);
     } else {
         $update = [];
         foreach ($params as $param) {
@@ -1760,7 +1814,7 @@ function discover_mempool(&$valid, $device, $mempool_index, $mempool_mib, $mempo
         if (count($update)) {
             dbUpdate($update, 'mempools', '`mempool_id` = ?', [$mempool_db['mempool_id']]);
             $GLOBALS['module_stats']['mempools']['updated']++; //echo('U');
-            log_event("Memory pool updated: mib $mempool_mib" . ($mempool_table ? "::$mempool_table" : '') . ", index $mempool_index, descr $mempool_descr", $device, 'mempool', $mempool_db['mempool_id']);
+            log_event("Memory pool updated: mib $mempool_mib" . ($mempool_object ? "::$mempool_object" : '') . ", index $mempool_index, descr $mempool_descr", $device, 'mempool', $mempool_db['mempool_id']);
         } else {
             $GLOBALS['module_stats']['mempools']['unchanged']++; //echo('.');
         }
@@ -1776,15 +1830,12 @@ function discover_printersupply($device, $options = [])
 {
 
     // Check toner ignore filters
-    if (entity_descr_check($options['description'], 'printersupply')) {
+    if (entity_descr_check($options['description'], 'printersupply')) { // Limit descr to 255 chars accordingly as in DB
         return FALSE;
     }
     if (discovery_check_if_type_exist($options, 'printersupply')) {
         return FALSE;
     }
-    //foreach ($config['ignore_toner'] as $bi)        { if (strcasecmp($bi, $options['description']) == 0)   { print_debug("Skipped by equals: $bi, " . $options['description']); return FALSE; } }
-    //foreach ($config['ignore_toner_string'] as $bi) { if (stripos($options['description'], $bi) !== FALSE) { print_debug("Skipped by strpos: $bi, " . $options['description']); return FALSE; } }
-    //foreach ($config['ignore_toner_regexp'] as $bi) { if (preg_match($bi, $options['description']) > 0)    { print_debug("Skipped by regexp: $bi, " . $options['description']); return FALSE; } }
 
     //if (dbFetchCell("SELECT COUNT(`supply_id`) FROM `printersupplies` WHERE `device_id` = ? AND `supply_index` = ?", array($device['device_id'], $options['index'])) == '0')
     if (!dbExist('printersupplies', '`device_id` = ? AND `supply_index` = ?', [$device['device_id'], $options['index']])) {
@@ -1862,6 +1913,11 @@ function discover_inventory($device, $index, $inventory_tmp, $mib) {
         'entPhysicalContainedIn', 'entPhysicalParentRelPos', 'entPhysicalMfgName', 'ifIndex', 'inventory_mib'
     ];
 
+    $descr_oids = [
+        'entPhysicalDescr', 'entPhysicalName', 'entPhysicalHardwareRev', 'entPhysicalFirmwareRev',
+        'entPhysicalSoftwareRev', 'entPhysicalSerialNum', 'entPhysicalMfgName', 'entPhysicalModelName',
+        'entPhysicalAlias', 'entPhysicalAssetID',
+    ];
     $numeric_oids = [ 'entPhysicalContainedIn', 'entPhysicalParentRelPos', 'ifIndex' ]; // DB type 'int'
 
     if (!is_array($inventory_tmp) || !is_numeric($index)) {
@@ -1874,7 +1930,11 @@ function discover_inventory($device, $index, $inventory_tmp, $mib) {
     // Rewrites
     $rewrites = $GLOBALS['config']['rewrites']['inventory'];
     foreach ($entPhysical_oids as $oid) {
-        $inventory[$oid] = str_replace(['"', "'"], '', snmp_fix_string($inventory_tmp[$oid]));
+        if (in_array($oid, $descr_oids)) {
+            $inventory[$oid] = str_replace([ '"', "'" ], '', snmp_fix_string($inventory_tmp[$oid], 'descr'));
+        } else {
+            $inventory[$oid] = snmp_fix_string($inventory_tmp[$oid]);
+        }
 
         if (isset($rewrites[$oid][$inventory[$oid]])) {
             $inventory[$oid] = $rewrites[$oid][$inventory[$oid]];
@@ -1888,6 +1948,10 @@ function discover_inventory($device, $index, $inventory_tmp, $mib) {
     if (safe_empty($inventory['entPhysicalName']) && $inventory['entPhysicalDescr']) {
         // JunOS EVO return empty entPhysicalName
         $inventory['entPhysicalName'] = $inventory['entPhysicalDescr'];
+    }
+    if ($inventory['entPhysicalSerialNum']) {
+        // JunOS EVO return empty entPhysicalName
+        $inventory['entPhysicalSerialNum'] = preg_replace([ '!^S/N !', '/^BUILTIN/' ], '', $inventory['entPhysicalSerialNum']);
     }
 
     $query        = 'SELECT * FROM `entPhysical` WHERE `device_id` = ? AND `entPhysicalIndex` = ? AND `inventory_mib` = ?';
@@ -1956,10 +2020,14 @@ function check_valid_inventory($device) {
 
 // DOCME needs phpdoc block
 // TESTME needs unit testing
-function is_bad_xdp($hostname, $platform = '')
-{
+function is_bad_xdp($hostname, $platform = '') {
     global $config;
 
+    // if (entity_descr_check($hostname, 'xdp.hostname', FALSE)) {
+    //     // $config['xdp']['ignore_hostname']
+    //     // $config['xdp']['ignore_hostname_regex']
+    //     return TRUE;
+    // }
     // Ignore Hostname string
     if (is_array($config['xdp']['ignore_hostname']) && str_contains_array($hostname, $config['xdp']['ignore_hostname'])) {
         return TRUE;
@@ -1974,7 +2042,12 @@ function is_bad_xdp($hostname, $platform = '')
         }
     }
 
-    if (strlen($platform)) {
+    if (!safe_empty($platform)) {
+        // if (entity_descr_check($platform, 'xdp.platform', FALSE)) {
+        //     // $config['xdp']['ignore_platform']
+        //     // $config['xdp']['ignore_platform_regex']
+        //     return TRUE;
+        // }
         // Ignore Platform string
         if (is_array($config['xdp']['ignore_platform']) &&
             str_icontains_array($platform, $config['xdp']['ignore_platform'])) {
@@ -1997,8 +2070,7 @@ function is_bad_xdp($hostname, $platform = '')
 // TESTME needs unit testing
 // FIXME don't pass valid, use this as a global variable
 function discover_lsp(&$valid, $device, $lsp_index, $lsp_mib, $lsp_name, $lsp_state, $lsp_uptime, $lsp_total_uptime, $lsp_primary_uptime, $lsp_proto,
-                      $lsp_transitions, $lsp_path_changes, $lsp_bandwidth, $lsp_octets, $lsp_packets, $lsp_polled)
-{
+                      $lsp_transitions, $lsp_path_changes, $lsp_bandwidth, $lsp_octets, $lsp_packets, $lsp_polled) {
 
     print_debug($device['device_id'] . " -> $lsp_index, $lsp_mib, $lsp_name, $lsp_state, $lsp_uptime, $lsp_total_uptime, $lsp_primary_uptime, $lsp_proto, " .
                 "$lsp_transitions, $lsp_path_changes, $lsp_bandwidth, $lsp_octets, $lsp_packets, $lsp_polled");
@@ -2006,12 +2078,10 @@ function discover_lsp(&$valid, $device, $lsp_index, $lsp_mib, $lsp_name, $lsp_st
     $lsp_mib = strtolower($lsp_mib);
 
     // Check lsp ignore filters
-    if (entity_descr_check($lsp_name, 'lsp')) {
+    if (entity_descr_check($lsp_name, 'lsp')) { // Limit descr to 255 chars accordingly as in DB
         return FALSE;
     }
-    //foreach ($config['ignore_lsp'] as $bi)        { if (strcasecmp($bi, $lsp_name) == 0)   { print_debug("Skipped by equals: $bi, $lsp_name "); return FALSE; } }
-    //foreach ($config['ignore_lsp_string'] as $bi) { if (stripos($lsp_name, $bi) !== FALSE) { print_debug("Skipped by strpos: $bi, $lsp_name "); return FALSE; } }
-    //foreach ($config['ignore_lsp_regexp'] as $bi) { if (preg_match($bi, $lsp_name) > 0)    { print_debug("Skipped by regexp: $bi, $lsp_name "); return FALSE; } }
+
     // Search duplicates for same mib/descr
     if (!safe_empty($valid[$lsp_mib]) && in_array($lsp_name, array_values($valid[$lsp_mib]))) {
         print_debug("Skipped by already exist: $lsp_name ");
@@ -2111,6 +2181,31 @@ function process_lshw_node($device, $node, $parent_index = 0)
             process_lshw_node($device, $child, $node_id);
         }
     }
+}
+
+function discovery_perf_log($device_id, $discovery_mod_perf) {
+    if (!is_array($discovery_mod_perf) || safe_empty($discovery_mod_perf)) {
+        return FALSE;
+    }
+
+    $inserts = [];
+    foreach ($discovery_mod_perf as $module => $time_taken) {
+        if ($time_taken !== NULL && is_numeric($time_taken)) {
+            $inserts[] = [
+                'device_id' => $device_id,
+                'module' => $module, 
+                'time_taken' => round($time_taken, 3),
+                'discovery_time' => date('Y-m-d H:i:s')
+            ];
+        }
+    }
+
+    if (!safe_empty($inserts)) {
+        dbInsertMulti($inserts, 'discovery_perf_history');
+        print_debug("Logged discovery performance for " . count($inserts) . " modules");
+    }
+
+    return count($inserts);
 }
 
 // EOF

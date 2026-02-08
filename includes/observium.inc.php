@@ -16,9 +16,10 @@ define('OBS_SCRIPT_NAME', $scriptname);
 define('OBS_PROCESS_NAME', basename($scriptname, '.php'));
 
 // Clear config array, we're starting with a clean state
+
+/** @global array $config */
 $config = [];
 
-//$config['install_dir'] = dirname(__DIR__, 1);
 $config['install_dir'] = realpath(__DIR__ . '/..');
 
 require($config['install_dir'] . "/includes/defaults.inc.php");
@@ -33,7 +34,7 @@ require_once($config['install_dir'] . "/includes/common.inc.php");
 
 // Die if exec/proc_open functions disabled in php.ini. This configuration is not capable of running Observium.
 if (!is_exec_available()) {
-    die;
+    die(1);
 }
 
 // Always set CLI locale to EN, because we use parsing strings
@@ -63,7 +64,7 @@ require($config['install_dir'] . "/includes/definitions.inc.php");
 require_once($config['install_dir'] . "/includes/db.inc.php");
 
 // Connect to database
-if (OBS_DB_SKIP !== TRUE) {
+if (!db_skip()) {
     db_config();
     $GLOBALS[OBS_DB_LINK] = dbOpen($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name']);
 }
@@ -71,31 +72,30 @@ if (OBS_DB_SKIP !== TRUE) {
 // Include more necessary supporting files
 require_once($config['install_dir'] . "/includes/functions.inc.php");
 
-// Connect to database
-// if (!defined('OBS_DB_SKIP') || OBS_DB_SKIP !== TRUE) {
-//   $GLOBALS[OBS_DB_LINK] = dbOpen($config['db_host'], $config['db_user'], $config['db_pass'], $config['db_name']);
-// }
-
 if (!isset($GLOBALS[OBS_DB_LINK]) || !$GLOBALS[OBS_DB_LINK]) {
-    if (defined('OBS_DB_SKIP') && OBS_DB_SKIP === TRUE) {
-        print_warning("WARNING: In PHP Unit tests we can skip DB connect. But if you test db functions, check your configs.");
+    if (db_skip()) {
+        print_warning("NOTE: Database connection skipped by request. Database is not connected.");
+    } elseif (isset($options['V'])) {
+        print_warning("NOTE: Database is not connected. Versions display without Database information.");
     } else {
         print_message("%yDB not connected, please check database connection configuration.%r\nDB Error " . dbErrorNo() . ": " . dbError() . "%n", 'color');
-        http_response_code(500);
-        die; // Die if not PHP Unit tests
+        if (!is_cli()) {
+            http_response_code(500);
+        }
+        die(1); // Die if not PHP Unit tests
     }
 } elseif (!(isset($options['u']) || isset($options['V'])) && !get_db_version()) {
     if (!dbQuery('SELECT 1 FROM `devices` LIMIT 1;')) {
         // DB schema isn't installed, install first
         print_error("DB schema not installed, first install it.");
-        die;
+        die(1);
     }
 } else {
     // Disable STRICT mode for DB session (we not fully support them)
     $db_modes = explode(',', dbFetchCell("SELECT @@SESSION.sql_mode;"));
-    //SQL WARNINGS[
+    //SQL WARNINGS
     //  3135: 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE' and 'ERROR_FOR_DIVISION_BY_ZERO' sql modes should be used with strict mode. They will be merged with strict mode in a future release.
-    //]
+    //
     $db_modes_exclude = [ 'STRICT_TRANS_TABLES', 'STRICT_ALL_TABLES', 'ONLY_FULL_GROUP_BY',
                           'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'ERROR_FOR_DIVISION_BY_ZERO' ];
     $db_modes_update  = [];
@@ -120,12 +120,17 @@ if (!isset($GLOBALS[OBS_DB_LINK]) || !$GLOBALS[OBS_DB_LINK]) {
         //get_timezone(TRUE);
     }
 
-    // Reset Opcache in WUI
-    if (OBS_PROCESS_NAME === 'index' && @get_obs_attrib('opcache_reset')) {
-        if (function_exists('opcache_reset') && opcache_reset()) {
-            print_debug("PHP Opcache WUI was reset.");
+    // Reset Opcache after fatal errors or version updates
+    // This flag is set by error handlers or update scripts
+    if (function_exists('opcache_reset') && @get_obs_attrib('opcache_reset')) {
+        if (opcache_reset()) {
+            print_debug("PHP Opcache was reset (triggered by fatal error or update).");
         }
-        del_obs_attrib('opcache_reset');
+        // Only delete flag on index page (web) to ensure all PHP-FPM workers get it
+        // CLI processes reset immediately and don't need coordination
+        if (OBS_PROCESS_NAME === 'index' || PHP_SAPI === 'cli') {
+            del_obs_attrib('opcache_reset');
+        }
     }
     //else {
     //print_vars(OBS_PROCESS_NAME);
@@ -156,11 +161,19 @@ if (isset($config['php_memory_limit_min']) &&
 }
 
 // Init RRDcached
-if (isset($config['rrdcached']) && !preg_match('!^\s*(unix:)?/!i', $config['rrdcached'])) {
-    // RRD files located on remote server
-    define('OBS_RRD_NOLOCAL', TRUE);
+if (isset($config['rrdcached'])) {
+    if (empty($config['rrdcached']) || !is_string($config['rrdcached'])) {
+        // Prevent use possible broken rrdcached config entries
+        print_debug("RRD ERROR: Incorrect rrdcached config is passed. It's should be string with unix socket or host:port.");
+        print_debug_vars($config['rrdcached']);
+        unset($config['rrdcached']);
+        define('OBS_RRD_REMOTE', FALSE);
+    } else {
+        // RRD files located on remote server
+        define('OBS_RRD_REMOTE', !preg_match('!^\s*(unix:)?/!i', $config['rrdcached']));
+    }
 } else {
-    define('OBS_RRD_NOLOCAL', FALSE);
+    define('OBS_RRD_REMOTE', FALSE);
 }
 
 // Init StatsD
@@ -201,15 +214,20 @@ if (!is_executable($config['fping6']) && version_compare(get_versions('fping'), 
 // Disable nonexistent features in CE, do not try to turn on, it will not give effect
 if (OBSERVIUM_EDITION === 'community') {
     $config['enable_billing']    = 0;
+    $config['enable_bfd']        = 0;
     $config['api']['enabled']    = 0;
     $config['web_theme_default'] = 'light';
 
     // Disabled (not exist) modules
-    unset($config['poller_modules']['oids'],
-      $config['poller_modules']['loadbalancer'],
-      $config['poller_modules']['aruba-controller'],
-      $config['poller_modules']['netscaler-vsvr'],
-      $config['poller_name']);
+    unset(
+        $config['poller_modules']['oids'], $config['discovery_modules']['oids'],
+        $config['poller_modules']['loadbalancer'],
+        $config['poller_modules']['aruba-controller'],
+        $config['poller_modules']['netscaler-vsvr'],
+        $config['poller_modules']['lsp'], $config['discovery_modules']['lsp'],
+        $config['poller_modules']['bfd'],
+        $config['poller_name']
+    );
 }
 
 // Self hostname for observium server
@@ -264,7 +282,7 @@ if (isset($config['auth_ldap_kerberized']) && $config['auth_ldap_kerberized'] &&
 $config['geocoding']['api'] = strtolower(trim($config['geocoding']['api']));
 if (!isset($config['geo_api'][$config['geocoding']['api']]) ||
     !$config['geo_api'][$config['geocoding']['api']]['enable']) {
-    $config['geocoding']['api'] = 'geocodefarm';
+    $config['geocoding']['api'] = 'arcgis';
 }
 if (!empty($config['geocoding']['api_key']) && empty($config['geo_api'][$config['geocoding']['api']]['key'])) {
     // Deprecated option.
@@ -377,13 +395,21 @@ if (isset($config['web_enable_showtech'])) {
 if (isset($config['show_overview_tab'])) {
     $config['web_show_overview'] = $config['show_overview_tab'];
 }
+if (isset($config['overview_show_sysDescr'])) {
+    $config['web_show_overview_extra'] = $config['overview_show_sysDescr'];
+}
 if (isset($config['show_locations'])) {
     $config['web_show_locations'] = $config['show_locations'];
 }
 
+// Override some web show configs for API
+if (defined('OBS_API') && OBS_API) {
+    $config['web_show_disabled'] = TRUE; // Always show disabled, use own api filters instead
+}
+
 /* End fixate config options */
 
-// Generate poller id if we're a partitioned poller and we don't yet have one.
+// Generate poller id if we're a partitioned poller, and we don't yet have one.
 if (OBSERVIUM_EDITION === 'community') {
     // Distributed pollers not available on community edition
     $config['poller_id'] = 0;
@@ -391,7 +417,7 @@ if (OBSERVIUM_EDITION === 'community') {
     // Not possible Distributed pollers in CE
     define('OBS_DISTRIBUTED', FALSE);
 } else {
-    $config['poller_id'] = check_local_poller_id($options);
+    $config['poller_id'] = check_local_poller_id($options ?? []);
     // OBS_DISTRIBUTED defined in check_local_poller_id()
 }
 

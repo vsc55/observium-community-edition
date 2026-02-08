@@ -51,7 +51,7 @@
               ::= { nmslDhcpServer 1 }
 
           nmslDhcpServerLeaseTable OBJECT-TYPE
-              SYNTAX  SEQUENCE OF nmslDhcpServerLeaseEntry
+              SYNTAX  SEQUENCE OF NmslDhcpServerLeaseEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -59,7 +59,7 @@
               ::= { nmslDhcpServer 2 }
 
           nmslDhcpServerLeaseEntry OBJECT-TYPE
-              SYNTAX  nmslDhcpServerLeaseEntry
+              SYNTAX  NmslDhcpServerLeaseEntry
               ACCESS  not-accessible
               STATUS  mandatory
               DESCRIPTION
@@ -67,7 +67,7 @@
               INDEX { Address }
               ::= { nmslDhcpServerLeaseTable 1 }
 
-          nmslDhcpServerLeaseEntry ::=
+          NmslDhcpServerLeaseEntry ::=
               SEQUENCE {
                   Address
                       IpAddress,

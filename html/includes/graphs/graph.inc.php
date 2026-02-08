@@ -19,18 +19,18 @@ $total_start = utime();
 
 // Init global var for information about generated graph
 $graph_return = [
-  'status'        => FALSE, // --> $GLOBALS['rrd_status']
-  'command'       => '',    // --> $GLOBALS['exec_status']['command'] added in rrdtool_graph()
-  'output'        => '',    // --> $GLOBALS['exec_status']['stdout']  added in rrdtool_graph()
-  'runtime'       => 0,     // --> $GLOBALS['exec_status']['runtime'] added in rrdtool_graph()
-  'total'         => 0,     // total runtime for graph script
-  'rrds'          => [],    // list of used rrd files           added in get_rrd_path()
-  'filename'      => '',    // Generated image filename
-  'descr'         => '',    // graph description if exist
-  'valid_options' => [],    // hrm, used somewhere
+    'status'        => FALSE, // --> $GLOBALS['rrd_status']
+    'command'       => '',    // --> $GLOBALS['exec_status']['command'] added in rrdtool_graph()
+    'output'        => '',    // --> $GLOBALS['exec_status']['stdout']  added in rrdtool_graph()
+    'runtime'       => 0,     // --> $GLOBALS['exec_status']['runtime'] added in rrdtool_graph()
+    'total'         => 0,     // total runtime for graph script
+    'rrds'          => [],    // list of used rrd files           added in get_rrd_path()
+    'filename'      => '',    // Generated image filename
+    'descr'         => '',    // graph description if exist
+    'valid_options' => [],    // hrm, used somewhere
 ];
 
-preg_match('/^(?P<type>[a-z0-9A-Z-]+)_(?P<subtype>[a-z0-9A-Z-_]+)/', $vars['type'], $graphtype);
+preg_match(OBS_PATTERN_GRAPH_TYPE, $vars['type'], $graphtype);
 
 if (isset($vars['format']) && array_key_exists($vars['format'], $config['graph_formats'])) {
     $extension  = $config['graph_formats'][$vars['format']]['extension'];
@@ -110,21 +110,26 @@ if (isset($period)) {
 }
 
 $graph_include      = FALSE;
-$definition_include = FALSE;
+//$definition_include = FALSE;
+// variables for detecting are definition of file graph
+$is_graph_file       = is_file($config['html_dir'] . "/includes/graphs/$type/$subtype.inc.php");
+$is_graph_definition = isset($config['graph_types'][$type][$subtype]['ds']) &&
+                       is_array($config['graph_types'][$type][$subtype]['ds']);
 //print_message("Graph type: $type, subtype: $subtype");
 
-if (is_file($config['html_dir'] . "/includes/graphs/$type/$subtype.inc.php")) {
+if ($is_graph_file) {
     $graph_include = $config['html_dir'] . "/includes/graphs/$type/$subtype.inc.php";
-} elseif (is_array($config['graph_types'][$type][$subtype]['ds'])) {
+} elseif ($is_graph_definition) {
     // Init tags array
     $tags = [];
 
     // Additional include with define some graph variables like $unit_text, $graph_title
     // Currently only for indexed definitions
-    if ($config['graph_types'][$type][$subtype]['index'] &&
-        is_file($config['html_dir'] . "/includes/graphs/$type/definition.inc.php")) {
-        $definition_include = $config['html_dir'] . "/includes/graphs/$type/definition.inc.php";
-    }
+    /// FIXME. Unused.
+    // if ($config['graph_types'][$type][$subtype]['index'] &&
+    //     is_file($config['html_dir'] . "/includes/graphs/$type/definition.inc.php")) {
+    //     $definition_include = $config['html_dir'] . "/includes/graphs/$type/definition.inc.php";
+    // }
     $graph_include = $config['html_dir'] . "/includes/graphs/generic_definition.inc.php";
 } elseif (is_file($config['html_dir'] . "/includes/graphs/$type/graph.inc.php")) {
     $graph_include = $config['html_dir'] . "/includes/graphs/$type/graph.inc.php";
@@ -134,9 +139,9 @@ if ($graph_include) {
     include($config['html_dir'] . "/includes/graphs/$type/auth.inc.php");
 
     if (isset($auth) && $auth) {
-        if ($definition_include) {
-            include_once($definition_include);
-        }
+        // if ($definition_include) {
+        //     include_once($definition_include);
+        // }
         include($graph_include);
 
         // Requested a rigid height graph, probably for the dashboard.
@@ -153,7 +158,7 @@ if ($graph_include) {
                 print_debug('legend too tall: ' . $graph_return['legend_lines'] * $line_height);
                 $vars['legend'] = 'no';
             } else { // Legend fits
-                $height = $height - ($graph_return['legend_lines'] * $line_height);
+                $height -= $graph_return['legend_lines'] * $line_height;
             }
         }
 
@@ -204,19 +209,23 @@ if ($error_msg) {
             rrdtool_graph($graphfile, $rrd_options);
             //print_debug($rrd_cmd);
             if (is_file($graphfile)) {
+                $graphsize = filesize($graphfile);
+
                 if ($vars['image_data_uri'] == TRUE) {
-                    $image_data_uri = data_uri($graphfile, $mimetype);
+                    $image_data_uri = $graphsize ? data_uri($graphfile, $mimetype) : graph_error("Graph Empty Error");
                 } elseif (!OBS_DEBUG) {
-                    //$fd = fopen($graphfile, 'rb');
-                    header('Content-type: ' . $mimetype);
-                    header('Content-Disposition: inline; filename="' . basename($graphfile) . '"');
-                    header('Content-Length: ' . filesize($graphfile));
-                    $out = readfile($graphfile);
-                    //fpassthru($fd);
-                    //fclose($fd);
+                    if ($graphsize) {
+                        header('Content-type: ' . $mimetype);
+                        header('Content-Disposition: inline; filename="' . basename($graphfile) . '"');
+                        header('Content-Length: ' . $graphsize);
+                        $out = readfile($graphfile);
+                    } else {
+                        // Temp dir full?
+                        $out = graph_error("Graph Empty Error");
+                    }
                 } else {
                     external_exec('/bin/ls -l ' . $graphfile);
-                    echo('<img src="' . data_uri($graphfile, $mimetype) . '" alt="graph" />');
+                    echo('<img src="' . $graphsize ? data_uri($graphfile, $mimetype) : graph_error("Graph Empty Error") . '" alt="graph" />');
                 }
                 unlink($graphfile);
             } else {

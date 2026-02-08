@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * This file is part of phpFastCache.
@@ -7,31 +8,39 @@
  *
  * For full copyright and license information, please see the docs/CREDITS.txt file.
  *
- * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> http://www.phpfastcache.com
+ * @author Khoa Bui (khoaofgod)  <khoaofgod@gmail.com> https://www.phpfastcache.com
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  *
  */
+declare(strict_types=1);
 
-namespace phpFastCache\Drivers\Memcache;
+namespace Phpfastcache\Drivers\Memcache;
 
+use DateTime;
+use Exception;
 use Memcache as MemcacheSoftware;
-use phpFastCache\Core\Pool\DriverBaseTrait;
-use phpFastCache\Core\Pool\ExtendedCacheItemPoolInterface;
-use phpFastCache\Entities\DriverStatistic;
-use phpFastCache\Exceptions\phpFastCacheDriverCheckException;
-use phpFastCache\Exceptions\phpFastCacheDriverException;
-use phpFastCache\Exceptions\phpFastCacheInvalidArgumentException;
-use phpFastCache\Util\MemcacheDriverCollisionDetectorTrait;
+use Phpfastcache\Cluster\AggregatablePoolInterface;
+use Phpfastcache\Config\ConfigurationOption;
+use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Entities\DriverStatistic;
+use Phpfastcache\Exceptions\{PhpfastcacheDriverException, PhpfastcacheInvalidArgumentException};
+use Phpfastcache\Util\{MemcacheDriverCollisionDetectorTrait};
 use Psr\Cache\CacheItemInterface;
+
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
  * @property MemcacheSoftware $instance
+ * @property Config $config Config object
+ * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface
+class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
 {
-    use DriverBaseTrait, MemcacheDriverCollisionDetectorTrait;
+    use DriverBaseTrait {
+        __construct as protected __parentConstruct;
+    }
+    use MemcacheDriverCollisionDetectorTrait;
 
     /**
      * @var int
@@ -40,60 +49,93 @@ class Driver implements ExtendedCacheItemPoolInterface
 
     /**
      * Driver constructor.
-     * @param array $config
-     * @throws phpFastCacheDriverException
+     * @param ConfigurationOption $config
+     * @param string $instanceId
+     * @throws PhpfastcacheDriverException
      */
-    public function __construct(array $config = [])
+    public function __construct(ConfigurationOption $config, string $instanceId)
     {
         self::checkCollision('Memcache');
-        $this->setup($config);
-
-        if (!$this->driverCheck()) {
-            throw new phpFastCacheDriverCheckException(sprintf(self::DRIVER_CHECK_FAILURE, $this->getDriverName()));
-        } else {
-            $this->driverConnect();
-
-            if (array_key_exists('compress_data', $config) && $config[ 'compress_data' ] === true) {
-                $this->memcacheFlags = MEMCACHE_COMPRESSED;
-            }
-        }
+        $this->__parentConstruct($config, $instanceId);
     }
 
     /**
      * @return bool
      */
-    public function driverCheck()
+    public function driverCheck(): bool
     {
         return class_exists('Memcache');
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return mixed
-     * @throws phpFastCacheInvalidArgumentException
+     * @return DriverStatistic
      */
-    protected function driverWrite(CacheItemInterface $item)
+    public function getStats(): DriverStatistic
     {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            $ttl = $item->getTtl();
+        $stats = (array)$this->instance->getstats();
+        $stats['uptime'] = (isset($stats['uptime']) ? $stats['uptime'] : 0);
+        $stats['version'] = (isset($stats['version']) ? $stats['version'] : 'UnknownVersion');
+        $stats['bytes'] = (isset($stats['bytes']) ? $stats['version'] : 0);
 
-            // Memcache will only allow a expiration timer less than 2592000 seconds,
-            // otherwise, it will assume you're giving it a UNIX timestamp.
-            if ($ttl >= 2592000) {
-                $ttl = $item->getExpirationDate()->getTimestamp();
-            }
+        $date = (new DateTime())->setTimestamp(time() - $stats['uptime']);
 
-            return $this->instance->set($item->getKey(), $this->driverPreWrap($item), $this->memcacheFlags, $ttl);
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
+        return (new DriverStatistic())
+            ->setData(implode(', ', array_keys($this->itemInstances)))
+            ->setInfo(sprintf("The memcache daemon v%s is up since %s.\n For more information see RawData.", $stats['version'], $date->format(DATE_RFC2822)))
+            ->setRawData($stats)
+            ->setSize((int)$stats['bytes']);
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
+     * @return bool
+     */
+    protected function driverConnect(): bool
+    {
+        $this->instance = new MemcacheSoftware();
+
+        if (count($this->getConfig()->getServers()) < 1) {
+            $this->getConfig()->setServers(
+               [
+                    [
+                        'host' => $this->getConfig()->getHost(),
+                        'path' => $this->getConfig()->getPath(),
+                        'port' => $this->getConfig()->getPort(),
+                    ]
+                ]
+            );
+        }
+
+        foreach ($this->getConfig()->getServers() as $server) {
+            try {
+                /**
+                 * If path is provided we consider it as an UNIX Socket
+                 */
+                if (!empty($server['path']) && !$this->instance->addServer($server['path'], 0)) {
+                    $this->fallback = true;
+                } elseif (!empty($server['host']) && !$this->instance->addServer($server['host'], $server['port'])) {
+                    $this->fallback = true;
+                }
+            } catch (Exception $e) {
+                $this->fallback = true;
+            }
+
+            /**
+             * Since Memcached does not throw
+             * any error if not connected ...
+             */
+            if (!$this->instance->getServerStatus(
+                !empty($server['path']) ? $server['path'] : $server['host'],
+                !empty($server['port']) ? $server['port'] : 0
+            )) {
+                throw new PhpfastcacheDriverException('Memcache seems to not be connected');
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param CacheItemInterface $item
      * @return null|array
      */
     protected function driverRead(CacheItemInterface $item)
@@ -102,83 +144,50 @@ class Driver implements ExtendedCacheItemPoolInterface
 
         if ($val === false) {
             return null;
-        } else {
-            return $val;
         }
+
+        return $val;
     }
 
     /**
-     * @param \Psr\Cache\CacheItemInterface $item
-     * @return bool
-     * @throws phpFastCacheInvalidArgumentException
+     * @param CacheItemInterface $item
+     * @return mixed
+     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(CacheItemInterface $item)
+    protected function driverWrite(CacheItemInterface $item): bool
+    {
+        /**
+         * Check for Cross-Driver type confusion
+         */
+        if ($item instanceof Item) {
+            $ttl = $item->getExpirationDate()->getTimestamp() - time();
+
+            // Memcache will only allow a expiration timer less than 2592000 seconds,
+            // otherwise, it will assume you're giving it a UNIX timestamp.
+            if ($ttl > 2592000) {
+                $ttl = time() + $ttl;
+            }
+            return $this->instance->set($item->getKey(), $this->driverPreWrap($item), $this->memcacheFlags, $ttl);
+        }
+
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+    }
+
+    /**
+     * @param CacheItemInterface $item
+     * @return bool
+     * @throws PhpfastcacheInvalidArgumentException
+     */
+    protected function driverDelete(CacheItemInterface $item): bool
     {
         /**
          * Check for Cross-Driver type confusion
          */
         if ($item instanceof Item) {
             return $this->instance->delete($item->getKey());
-        } else {
-            throw new phpFastCacheInvalidArgumentException('Cross-Driver type confusion detected');
-        }
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverClear()
-    {
-        return $this->instance->flush();
-    }
-
-    /**
-     * @return bool
-     */
-    protected function driverConnect()
-    {
-        $this->instance = new MemcacheSoftware();
-        $servers = (!empty($this->config[ 'servers' ]) && is_array($this->config[ 'servers' ]) ? $this->config[ 'servers' ] : []);
-        if (count($servers) < 1) {
-            $servers = [
-              [
-                'host' => !empty($this->config[ 'host' ]) ? $this->config[ 'host' ] : '127.0.0.1',
-                'path' => !empty($this->config[ 'path' ]) ? $this->config[ 'path' ] : false,
-                'port' => !empty($this->config[ 'port' ]) ? $this->config[ 'port' ] : 11211,
-                'sasl_user' => !empty($this->config[ 'sasl_user' ]) ? $this->config[ 'sasl_user' ] : false,
-                'sasl_password' =>!empty($this->config[ 'sasl_password' ]) ? $this->config[ 'sasl_password' ]: false,
-              ],
-            ];
         }
 
-        foreach ($servers as $server) {
-            try {
-                /**
-                 * If path is provided we consider it as an UNIX Socket
-                 */
-                if(!empty($server[ 'path' ]) && !$this->instance->addServer($server[ 'path' ], 0)){
-                    $this->fallback = true;
-                }else if (!empty($server[ 'host' ]) && !$this->instance->addServer($server[ 'host' ], $server[ 'port' ])) {
-                    $this->fallback = true;
-                }
-
-                if (!empty($server[ 'sasl_user' ]) && !empty($server[ 'sasl_password' ])) {
-                    throw new phpFastCacheDriverException('Unlike Memcached, Memcache does not support SASL authentication');
-                }
-            } catch (\Exception $e) {
-                $this->fallback = true;
-            }
-
-            /**
-             * Since Memcached does not throw
-             * any error if not connected ...
-             */
-            if(!$this->instance->getServerStatus(!empty($server[ 'path' ]) ? $server[ 'path' ] : $server[ 'host' ], !empty($server[ 'port' ]) ? $server[ 'port' ] : 0)){
-                throw new phpFastCacheDriverException('Memcache seems to not be connected');
-            }
-        }
-
-        return true;
+        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
     }
 
     /********************
@@ -188,21 +197,10 @@ class Driver implements ExtendedCacheItemPoolInterface
      *******************/
 
     /**
-     * @return DriverStatistic
+     * @return bool
      */
-    public function getStats()
+    protected function driverClear(): bool
     {
-        $stats = (array)$this->instance->getstats();
-        $stats[ 'uptime' ] = (isset($stats[ 'uptime' ]) ? $stats[ 'uptime' ] : 0);
-        $stats[ 'version' ] = (isset($stats[ 'version' ]) ? $stats[ 'version' ] : 'UnknownVersion');
-        $stats[ 'bytes' ] = (isset($stats[ 'bytes' ]) ? $stats[ 'version' ] : 0);
-
-        $date = (new \DateTime())->setTimestamp(time() - $stats[ 'uptime' ]);
-
-        return (new DriverStatistic())
-          ->setData(implode(', ', array_keys($this->itemInstances)))
-          ->setInfo(sprintf("The memcache daemon v%s is up since %s.\n For more information see RawData.", $stats[ 'version' ], $date->format(DATE_RFC2822)))
-          ->setRawData($stats)
-          ->setSize($stats[ 'bytes' ]);
+        return $this->instance->flush();
     }
 }

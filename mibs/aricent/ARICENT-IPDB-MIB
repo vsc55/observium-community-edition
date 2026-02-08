@@ -1,18 +1,11 @@
 -- Copyright (C) 2007-2012 Aricent Group . All Rights Reserved
 
--- $Id: fsipdb.mib,v 1.5 2012/09/07 09:52:05 siva Exp $
-
--- IP-BINDING-DATABASE Proprietary MIB Definition
-
--- This MIB contains scalars and tables used to configure/storing
--- (HOST, IP) binding informations.
-
    ARICENT-IPDB-MIB DEFINITIONS ::= BEGIN
       IMPORTS
          MODULE-IDENTITY, OBJECT-TYPE,
          enterprises, IpAddress, Counter32,
          Integer32, Unsigned32                    FROM SNMPv2-SMI
-         RowStatus, MacAddress, TruthValue        FROM SNMPv2-TC
+         RowStatus, MacAddress                    FROM SNMPv2-TC
          InterfaceIndex                           FROM IF-MIB;
 
 
@@ -41,20 +34,6 @@ fsipdb  MODULE-IDENTITY
         ::=  { enterprises aricent-communication-holding-ltd(29601) 
         iss(2) 2}
 
--- -------------------------------------------------------------
--- Textual Conventions
--- -------------------------------------------------------------
-
-Ipv6Address ::= TEXTUAL-CONVENTION
-    DISPLAY-HINT "2x:"
-    STATUS       current
-    DESCRIPTION
-       "This data type is used to model IPv6 addresses.
-        This is a binary string of 16 octets in network
-         byte-order."
-    SYNTAX       OCTET STRING (SIZE (16))
-
-
 -- ***************************************************************************
 --                         Groups in the MIB
 -- ***************************************************************************
@@ -63,9 +42,6 @@ Ipv6Address ::= TEXTUAL-CONVENTION
     fsIpDbBindings              OBJECT IDENTIFIER ::= { fsipdb 3 }
     fsIpDbInterface             OBJECT IDENTIFIER ::= { fsipdb 4 }
     fsIpDbSrcGuard              OBJECT IDENTIFIER ::= { fsipdb 5 }
-    fsIpArpInspect              OBJECT IDENTIFIER ::= { fsipdb 6 }
-    fsIpDbv6Static              OBJECT IDENTIFIER ::= { fsipdb 7 }
-    fsIpDbv6Bindings            OBJECT IDENTIFIER ::= { fsipdb 8 }
 
 -- ***************************************************************************
 --                               SCALARS
@@ -139,55 +115,6 @@ Ipv6Address ::= TEXTUAL-CONVENTION
             has to give the value 6." 
           ::= { fsIpDbScalars 5 }
 
-    fsIpDbv6DynamicDbSaveStatus OBJECT-TYPE
-        SYNTAX      INTEGER {
-                            enable(1),
-                            disable (2)
-        }
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "This object indicates whether the dynamic binding entries present in the
-             binding table can be saved and restored upon system reboot.
-
-             If this object is set to 'enable', the dynamic entries in the binding table
-             will be saved in addition to the static binding entries.
-
-             If this object is set to 'disable', the dynamic entries in the binding table
-             will not be saved.
-
-             The default value is enable
-             If dynamic binding entries need not be saved, then this object should be configured
-             as 'disabled' before initiating the configuration save opertion in the system.
-
-             This object is supported for IPV6 binding database and not for IPV4 binding database."
-
-        DEFVAL  { enable }
-        ::= { fsIpDbScalars 6 }
-
-
-    fsIpDbClearBindingStatus OBJECT-TYPE
-        SYNTAX          TruthValue
-        MAX-ACCESS      read-write
-        STATUS          current
-        DESCRIPTION
-	 "This object removes all dynamically learnt (host, IP) Binding entries 
-	  from the binding table fsIpDbBindingTable, when it is set as 'true'. 
-	  After flush/clear, this object is set to 'false'"
-
-    DEFVAL  { false }
-    ::= { fsIpDbScalars 7 }
-
-    fsIpDbv6ClearBindingStatus OBJECT-TYPE
-        SYNTAX          TruthValue
-        MAX-ACCESS      read-write
-        STATUS          current
-        DESCRIPTION
-	 "This object removes all dynamically learnt (host, IPv6) Binding entries
-	  from the binding table fsIpDbv6BindingTable, when it is set as 'true'. 
-	  After flush/clear, this object is set to 'false'"
-    DEFVAL  { false }
-    ::= { fsIpDbScalars 8 }
 
 -- ***************************************************************************
 --                               GROUPS
@@ -469,9 +396,7 @@ Ipv6Address ::= TEXTUAL-CONVENTION
         fsIpDbIntfNoOfVlanBindings          Counter32,
         fsIpDbIntfNoOfVlanStaticBindings    Counter32,
         fsIpDbIntfNoOfVlanDHCPBindings      Counter32,
-        fsIpDbIntfNoOfVlanPPPBindings       Counter32,
-        fsIpDbIntfNoOfVlanDHCPv6Bindings    Counter32,
-        fsIpDbIntfNoOfVlanStaticv6Bindings  Counter32
+        fsIpDbIntfNoOfVlanPPPBindings       Counter32
     }
 
     fsIpDbIntfVlanId OBJECT-TYPE
@@ -518,24 +443,6 @@ Ipv6Address ::= TEXTUAL-CONVENTION
             configured through PPP for a VLAN at a given time. "
     ::= { fsIpDbInterfaceEntry 5 }
 
-    fsIpDbIntfNoOfVlanDHCPv6Bindings OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This indicates the total number of (host, IPv6) bindings
-           learnt through DHCPv6 for a VLAN at a given time. "
-    ::= { fsIpDbInterfaceEntry 6 }
-
-    fsIpDbIntfNoOfVlanStaticv6Bindings OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This indicates the total number of static (host, IPv6) bindings
-           for a VLAN at a given time. "
-    ::= { fsIpDbInterfaceEntry 7 }
-
 -- ======================================================
 -- IP source guard table
 -- ======================================================
@@ -545,19 +452,19 @@ fsIpDbSrcGuardConfigTable   OBJECT-TYPE
     STATUS              current
     DESCRIPTION
     " This table provides the objects to enable or disable
-    IP/IPv6 source guard on each non routed Layer 2 interfaces. 
+    IP source guard on each non routed Layer 2 interfaces. 
 
-    When DHCP/DHCPv6 Snooping is enabled at an interface, a list of
+    When DHCP Snooping is enabled at an interface, a list of 
     IP addresses is obtained through DHCP snooping for this 
     particular interface and these list of IP address are 
-    maintained in IP/IPv6 binding database along with the MAC, 
+    maintained in IP binding database along with the MAC, 
     VLAN ID and interface index. This database can be populated 
     using static configuration also. 
     
-    If IP/IPv6 source guard is enabled, incoming IP traffic on an 
-    interface are allowed when there is a matching entry in IP/IPv6 
+    If IP source guard is enabled, incoming IP traffic on an 
+    interface are allowed when there is a matching entry in IP 
     binding database. Else, all incoming IP traffic on an 
-    interface are allowed irrespective of the IP/IPv6 binding database."
+    interface are allowed irrespective of the IP binding database."
     ::= { fsIpDbSrcGuard 1 }
 
 
@@ -567,14 +474,13 @@ fsIpDbSrcGuardConfigEntry   OBJECT-TYPE
     STATUS              current
     DESCRIPTION
     " Each row instance contains the configuration to enable
-    or disable IP/IPv6 source guard on a physical interface. " 
+    or disable IP source guard on a physical interface. " 
     INDEX { fsIpDbSrcGuardIndex }
     ::= { fsIpDbSrcGuardConfigTable 1 }
 
 FsIpDbSrcGuardConfigEntry ::= SEQUENCE {
     fsIpDbSrcGuardIndex  InterfaceIndex,
-    fsIpDbSrcGuardStatus INTEGER,
-    fsIpDbv6SrcGuardStatus INTEGER
+    fsIpDbSrcGuardStatus INTEGER
 }
 
 fsIpDbSrcGuardIndex OBJECT-TYPE
@@ -582,7 +488,7 @@ fsIpDbSrcGuardIndex OBJECT-TYPE
     MAX-ACCESS   not-accessible 
     STATUS       current
     DESCRIPTION
-       "This indicates the interface identifier for which the IP/IPv6 source 
+       "This indicates the interface identifier for which the IP source 
         guard configuration is applied." 
     ::= { fsIpDbSrcGuardConfigEntry  1 }
 
@@ -618,434 +524,6 @@ fsIpDbSrcGuardStatus  OBJECT-TYPE
     
     DEFVAL  { disable }
     ::= { fsIpDbSrcGuardConfigEntry 2 }
-
-fsIpDbv6SrcGuardStatus  OBJECT-TYPE
-    SYNTAX              INTEGER {
-                            enable(1),
-                            disable (2)
-    }
-    MAX-ACCESS          read-write
-    STATUS              current
-    DESCRIPTION
-        " This object indicates the IPv6 source guard status of an
-        interface.
-
-        If this object is set to 'disable', IPv6 source guard feature
-        is disabled and all incoming IPv6 traffic on this interface
-        will be allowed.
-
-        If this object is set to 'enable', IPv6 source guard is enabled on
-        the fsIpDbSrcGuardIndex with Source IPv6 and MAC address filtering
-        mode. The switch allows the IPv6 traffic when the source IPv6 and MAC
-        address matches with an entry in Ipv6 binding database.
-
-        When there is no IPv6 binding entries and IPv6 source guard is
-        enabled, switch drops all types of packets other than DHCP
-        packet. "
-
-    DEFVAL  { disable }
-    ::= { fsIpDbSrcGuardConfigEntry 3 }
-
--- ======================================================
--- ARP Inspection related objects 
--- ======================================================
-
-    fsIpArpInspectionStatus OBJECT-TYPE 
-        SYNTAX      INTEGER {
-                        enabled(1), 
-                        disabled(2)
-                    }
-        MAX-ACCESS  read-write 
-        STATUS      current 
-        DESCRIPTION 
-            "Contains the informations whether ARP Inspection is
-             enabled/disabled in the switch"
-        DEFVAL { 2 }
-    ::= { fsIpArpInspect 1 }
-
-    fsIpArpInsValidateOption OBJECT-TYPE 
-        SYNTAX      BITS {
-                        srcmac(1), 
-                        dstmac(2),
-                        ip(3)
-                    }
-        MAX-ACCESS  read-write 
-        STATUS      current 
-        DESCRIPTION 
-              "This object contains configuration support to enable/disable additional validation of ARP packets.
-               This configuration is applicable when ARP inspection status is enabled in the switch.
-               src-mac: This checks the source MAC address in the Ethernet header against the sender MAC address in the ARP body for both ARP requests and responses.
-               dst-mac: This checks the destination MAC address in the Ethernet header against the target MAC address in ARP body for ARP responses.
-               ip addr: This checks the ARP body for invalid and unexpected IP addresses i,e 0.0.0.0, 255.255.255.255, and all IP multicast addresses.
-               Sender IP addresses are checked in all ARP requests and responses, and target IP addresses are checked only in ARP responses."
-        DEFVAL { 0 }
-    ::= { fsIpArpInspect 2 }
-    
-    fsIpArpInsArpPktsForwarded OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This object indicates the total number of ARP packets forwarded
-             after dynamic ARP inspection.
-
-             When ARP inspection is configured on specific VLANs, then the 
-             statistics in the ARP inspection VLAN table alone is applicable. 
-            "
-
-    ::= { fsIpArpInspect 3 }
-
-    fsIpArpInsArpPktsDropped OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This object indicates the total number of ARP packets dropped
-             as a result of dynamic ARP inspection.
-
-             When ARP inspection is configured on specific VLANs, then the 
-             statistics in the ARP inspection VLAN table alone is applicable. 
-            "
-    ::= { fsIpArpInspect 4 }
-
-    fsIpArpInsIPValidFailures OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This object indicates the total number of ARP packets dropped
-             due to IP validation failures.
-
-             When ARP inspection is configured on specific VLANs, then the 
-             statistics in the ARP inspection VLAN table alone is applicable. 
-            "
-    ::= { fsIpArpInspect 5 }
-
-    fsIpArpInsDestMACFailures OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This object indicates the total number of ARP packets dropped
-             due to Destination MAC validation failures.
-
-             When ARP inspection is configured on specific VLANs, then the 
-             statistics in the ARP inspection VLAN table alone is applicable. 
-            "
-    ::= { fsIpArpInspect 6 }
-
-    fsIpArpInsSrcMACFailures OBJECT-TYPE
-        SYNTAX          Counter32
-        MAX-ACCESS      read-only
-        STATUS          current
-        DESCRIPTION
-            "This object indicates the total number of ARP packets dropped
-             due to Source MAC validation failures.
-
-             When ARP inspection is configured on specific VLANs, then the 
-             statistics in the ARP inspection VLAN table alone is applicable. 
-            "
-    ::= { fsIpArpInspect 7 }
-
-    fsIpArpInsGlobalStatsClear OBJECT-TYPE
-        SYNTAX          TruthValue
-        MAX-ACCESS      read-write
-        STATUS          current
-        DESCRIPTION
-             "This object is used to clear Dynamic ARP inspection global statistics.
-
-              Setting this object to true will cause the statistics to be reset
-              and setting this object to false will have no effect.
-              This object reverts back to false after clearing the statistics."
-
-     DEFVAL  { false }
-    ::= { fsIpArpInspect 8 }
-
-    fsIpArpInsVlanTable OBJECT-TYPE
-        SYNTAX  SEQUENCE OF FsIpArpInsVlanEntry
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            " This table contains information of arp inspection status(enable/disable) and drop and forwarded statistics on each vlan"
-    ::= { fsIpArpInspect 9 }
-
-    fsIpArpInsVlanEntry OBJECT-TYPE
-        SYNTAX FsIpArpInsVlanEntry
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            "Each entry contains the informations whether ARP Inspection is 
-            enabled/disabled on the given Vlan."
-        INDEX { fsIpArpInsVlanId }
-    ::= { fsIpArpInsVlanTable 1 }
-
-    FsIpArpInsVlanEntry ::= SEQUENCE {
-        fsIpArpInsVlanId                Integer32,
-        fsIpArpInsVlanStatus            INTEGER,
-        fsIpArpInsVlanArpPktsForwarded  Integer32,
-        fsIpArpInsVlanArpPktsDropped    Integer32,
-        fsIpArpInsVlanIPValidFailures   Integer32,
-        fsIpArpInsVlanDestMACFailures   Integer32,
-        fsIpArpInsVlanSrcMACFailures    Integer32,
-        fsIpArpInsVlanClearStats        TruthValue,
-        fsIpArpInsVlanRowStatus          RowStatus
-    }
-
-    fsIpArpInsVlanId OBJECT-TYPE
-        SYNTAX      Integer32 (1..4094)
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-             "Vlan ID of the VLAN to which this table-entry is associated."
-    ::= { fsIpArpInsVlanEntry  1 }
-
-    fsIpArpInsVlanStatus OBJECT-TYPE
-        SYNTAX      INTEGER { enabled (1), disabled (2) }
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-             "Setting this object Enables or disables IP ARP Inspection status in the given VLAN.
-              This configuration is applicable only when ARP inspecion status is enabled in the switch globally"
-        DEFVAL  { 2 }
-    ::= { fsIpArpInsVlanEntry 2 }
-
-    fsIpArpInsVlanArpPktsForwarded  OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-only
-        STATUS      current
-        DESCRIPTION
-            "This object specifies the total number of arp packets forwarded
-             on this VLAN."
-    ::= { fsIpArpInsVlanEntry  3 }
-
-    fsIpArpInsVlanArpPktsDropped  OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-only
-        STATUS      current
-        DESCRIPTION
-            "This object specifies the total number of arp packets dropped
-             on this VLAN."
-    ::= { fsIpArpInsVlanEntry  4 }
-
-    fsIpArpInsVlanIPValidFailures  OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-only
-        STATUS      current
-        DESCRIPTION
-            "This object specifies the total number of arp packets dropped
-             due to IP validation failures on this VLAN."
-    ::= { fsIpArpInsVlanEntry  5 }
-
-    fsIpArpInsVlanDestMACFailures  OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-only
-        STATUS      current
-        DESCRIPTION
-            "This object specifies the total number of arp packets dropped
-             due to DEST MAC validation failures on this VLAN."
-    ::= { fsIpArpInsVlanEntry  6 }
-
-    fsIpArpInsVlanSrcMACFailures  OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-only
-        STATUS      current
-        DESCRIPTION
-            "This object specifies the total number of arp packets dropped
-             due to SRC MAC validation failures."
-    ::= { fsIpArpInsVlanEntry  7 }
-
-    fsIpArpInsVlanClearStats  OBJECT-TYPE
-        SYNTAX      TruthValue
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-              "This object is used to clear all Dynamic ARP inspection statistics of this VLAN.
-              Setting this object to true will cause the statistics to be reset
-              and setting this object to false will have no effect.
-              This object revert backs to false after clearing the statistics."
-     DEFVAL  { false }
-    ::= { fsIpArpInsVlanEntry  8 }
-
-    fsIpArpInsVlanRowStatus OBJECT-TYPE
-        SYNTAX      RowStatus
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-              "This object specifies Row-Status of VLAN entry"
-    ::= { fsIpArpInsVlanEntry 9 }
-
--- ********************** (HOST, IPv6) Static Bindings *************************
-
-    fsIpDbv6StaticBindingTable OBJECT-TYPE
-        SYNTAX  SEQUENCE OF FsIpDbv6StaticBindingEntry
-        MAX-ACCESS      not-accessible
-        STATUS          current
-        DESCRIPTION
-            "This table contains the static Host IPv6 configuration
-             information."
-    ::= { fsIpDbv6Static 1}
-
-    fsIpDbv6StaticBindingEntry OBJECT-TYPE
-        SYNTAX FsIpDbv6StaticBindingEntry
-        MAX-ACCESS      not-accessible
-        STATUS          current
-        DESCRIPTION
-            "A single entry contains the binding information of a single
-             host connected to the system."
-        INDEX {
-                fsIpDbv6StaticHostVlanId,
-                fsIpDbv6StaticHostMac
-              }
-    ::= { fsIpDbv6StaticBindingTable 1 }
-
-
-    FsIpDbv6StaticBindingEntry ::= SEQUENCE {
-        fsIpDbv6StaticHostVlanId      Integer32,
-        fsIpDbv6StaticHostMac         MacAddress,
-        fsIpDbv6StaticHostIp          Ipv6Address,
-        fsIpDbv6StaticInIfIndex       Integer32,
-        fsIpDbv6StaticBindingStatus   RowStatus
-    }
-
-
-    fsIpDbv6StaticHostVlanId OBJECT-TYPE
-        SYNTAX      Integer32 (1..4094)
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            "The VLAN ID to which the host belongs. This is an index of
-             the table."
-    ::= { fsIpDbv6StaticBindingEntry 1 }
-
-    fsIpDbv6StaticHostMac OBJECT-TYPE
-        SYNTAX      MacAddress
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            "MAC address of the Host. This is an index of the table."
-    ::= { fsIpDbv6StaticBindingEntry 2 }
-
-    fsIpDbv6StaticHostIp OBJECT-TYPE
-        SYNTAX      Ipv6Address
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "IPv6 address of the Host."
-    ::= { fsIpDbv6StaticBindingEntry 3 }
-
-    fsIpDbv6StaticInIfIndex OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "Indicates the interface to which the host is connected."
-    ::= { fsIpDbv6StaticBindingEntry 4 }
-
-
-    fsIpDbv6StaticBindingStatus OBJECT-TYPE
-        SYNTAX      RowStatus
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "The rowstatus of the Ipv6 binding table entry. All the objects in the
-             table must be filled before making the rowstatus as active."
-    ::= { fsIpDbv6StaticBindingEntry 6 }
-
--- ********************** (HOST, IPv6) Binding Database ************************
-
-    fsIpDbv6BindingTable OBJECT-TYPE
-        SYNTAX  SEQUENCE OF FsIpDbv6BindingEntry
-        MAX-ACCESS      not-accessible
-        STATUS          current
-        DESCRIPTION
-            "This table contains the information about all the hosts connected
-             to the system, their MAC Address, VLAN, IPv6 address"
-    ::= { fsIpDbv6Bindings 1}
-
-    fsIpDbv6BindingEntry OBJECT-TYPE
-        SYNTAX FsIpDbv6BindingEntry
-        MAX-ACCESS      not-accessible
-        STATUS          current
-        DESCRIPTION
-            "A single entry contains the binding information of a single
-             host connected to the system."
-        INDEX {
-                fsIpDbv6HostVlanId,
-                fsIpDbv6HostMac
-              }
-    ::= { fsIpDbv6BindingTable 1 }
-
-     FsIpDbv6BindingEntry ::= SEQUENCE {
-        fsIpDbv6HostVlanId        Integer32,
-        fsIpDbv6HostMac           MacAddress,
-        fsIpDbv6HostBindingType   INTEGER,
-        fsIpDbv6HostIp            Ipv6Address,
-        fsIpDbv6HostInIfIndex     Integer32,
-        fsIpDbv6HostRemLeaseTime  Integer32
-    }
-
-    fsIpDbv6HostVlanId OBJECT-TYPE
-        SYNTAX      Integer32 (1..4094)
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            "The VLAN ID to which the host belongs. This is an index of
-             the table."
-    ::= { fsIpDbv6BindingEntry 1 }
-
-    fsIpDbv6HostMac OBJECT-TYPE
-        SYNTAX      MacAddress
-        MAX-ACCESS  not-accessible
-        STATUS      current
-        DESCRIPTION
-            "MAC address of the Host. This is an index of the table."
-    ::= { fsIpDbv6BindingEntry 2 }
-
-    fsIpDbv6HostBindingType OBJECT-TYPE
-        SYNTAX      INTEGER { static (1), dhcp (2)}
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "Specifies whether the entry was configured through static configuration
-             or dynamically learnt through DHCPv6.
-	     
-	     This object is in read-write mode for dynamic entry configuration save purpose.
-             This object cannot be configured by user."
-    ::= { fsIpDbv6BindingEntry 3 }
-
-    fsIpDbv6HostIp OBJECT-TYPE
-        SYNTAX      Ipv6Address
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "IPv6 address of the Host.
-	     
-	     This object is in read-write mode for dynamic entry configuration save purpose.
-             This object cannot be configured by user."
-    ::= { fsIpDbv6BindingEntry 4 }
-
-    fsIpDbv6HostInIfIndex OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "Indicates the interface to which the host is connected.
-	     
-	     This object is in read-write mode for dynamic entry configuration save purpose.
-             This object cannot be configured by user."
-    ::= { fsIpDbv6BindingEntry 5 }
-
-    fsIpDbv6HostRemLeaseTime OBJECT-TYPE
-        SYNTAX      Integer32
-        MAX-ACCESS  read-write
-        STATUS      current
-        DESCRIPTION
-            "The Remaining lease time in seconds for the (host, IPv6) binding.
-             Applicable only if the fsIpDbv6BindingType is DHCPv6.
-	     
-	     This object is in read-write mode for dynamic entry configuration save purpose.
-             This object cannot be configured by user."
-    ::= { fsIpDbv6BindingEntry 6 }
 
 
 END

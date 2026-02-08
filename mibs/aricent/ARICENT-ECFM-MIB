@@ -1,6 +1,6 @@
 -- Copyright (C) 2015 Aricent. All Rights Reserved.
 
--- $Id: fsecfm.mib,v 1.17 2015/05/27 13:50:15 siva Exp $
+-- $Id: fsecfm.mib,v 1.1.1.1 2018/02/08 06:06:34 siva Exp $
 
 -- ECFM Proprietary MIB Definition 
  
@@ -25,12 +25,15 @@
       LldpChassisIdSubtype           FROM LLDP-MIB      -- [IEEExxx]
       ;
       fsecfm MODULE-IDENTITY 
-         LAST-UPDATED "201209050000Z" 
+         LAST-UPDATED "202311230000Z"
          ORGANIZATION "ARICENT COMMUNICATIONS SOFTWARE" 
          CONTACT-INFO "support@aricent.com" 
-         
          DESCRIPTION 
             " The proprietary MIB module for ECFM. "
+         REVISION "202311230000Z" 
+         DESCRIPTION 
+            " Modified the DEFVAL of fsEcfmTraceOption 
+            to be 0 and not '00040000'H . LOKI-3624"
          REVISION "201209050000Z" 
          DESCRIPTION 
               "The Proprietary MIB for ECFM module"
@@ -147,7 +150,7 @@
               The user has to enter the corresponding integer value for the 
               bits set. For example if bits 8 and 9 are to be set ,then user
               has to give the value 0x300." 
-       DEFVAL { '00040000'H }
+       DEFVAL { 0 }
           ::= { fsEcfmSystem 4 }
 
       fsEcfmLtrCacheStatus OBJECT-TYPE 

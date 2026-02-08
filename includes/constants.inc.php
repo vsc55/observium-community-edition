@@ -74,8 +74,10 @@ const OBS_SNMP_ERROR_REQUEST_TIMEOUT = 1002;
 const OBS_SNMP_ERROR_BULK_REQUEST_TIMEOUT = 1004;
 
 // Common regex patterns
-const OBS_PATTERN_START = '%(?:^|[\s\"\(=])';       // Beginning of any pattern, matched string can start from newline, space, double quote, opening parenthesis, equal sign
-const OBS_PATTERN_END   = '(?:[\s\"\),]|[\:\.]\ |\.?$)%i'; // End of any pattern, matched string can ended with endline, space, double quote, closing parenthesis, comma, dot
+const OBS_PATTERN_START = '%(?:^|[\s\"\(,=])';       // Beginning of any pattern, matched string can start from newline, space, double quote, opening parenthesis, equal sign
+const OBS_PATTERN_START_S = '%(^|[\s\"\(,=])';       // Same with OBS_PATTERN_START but group \1 matching
+const OBS_PATTERN_END   = '(?:[\s\"\),]|[\:\.]\ |\.?$)%i'; // End of any pattern, matched string can end with endline, space, double quote, closing parenthesis, comma, dot
+const OBS_PATTERN_END_S   = '([\s\"\),]|[\:\.]\ |\.?$)%i'; // Same with OBS_PATTERN_END but group \3 matching
 const OBS_PATTERN_END_U = OBS_PATTERN_END . 'u';    // ++Unicode
 
 // IPv4 string in group \1 or 'ipv4'
@@ -140,7 +142,7 @@ const OBS_PATTERN_LATLON      = '/(?:^|[\[(])\s*[\'"]?(?<lat>[+\-]?\d+(?:\.\d+)*
 const OBS_PATTERN_LATLON_ALT  = '/\s*\|[\'"]?(?<lat>[+\-]?\d+(?:\.\d+)*)[\'"]?\s*\|\s*[\'"]?(?<lon>[+\-]?\d+(?:\.\d+)*)[\'"]?\s*$/';
 
 // patterns for validating kind of used data
-const OBS_PATTERN_ALPHA    = '/^[\w\.\-]+$/';
+const OBS_PATTERN_ALPHA    = '/^[\w\.\-]+$/';               // is_alpha()
 const OBS_PATTERN_NOPRINT  = '/[^\p{L}\p{N}\p{P}\p{S} ]/u'; // Non-printable UTF8 chars
 const OBS_PATTERN_NOLATIN  = '/[^\p{Common}\p{Latin}]/u';   // Non Latin (UTF8?) chars
 const OBS_PATTERN_VAR_NAME = '/^\w[\w\s\.\-+]*(\[[\w\.\-+]*\])*$/';
@@ -150,12 +152,9 @@ const OBS_PATTERN_PATH_WIN = '@(^([a-z]|[A-Z]):(?=\\(?![\0-\37<>:"/\\|?*])|\/(?!
 const OBS_PATTERN_XSS      = '!((^|<.+=.*?)\s*(J\s*A\s*V\s*A\s*)?S\s*C\s*R\s*I\s*P\s*T\s*:|<\s*/?\s*S\s*C\s*R\s*I\s*P\s*T\s*>|((<\s*\w+.*|.+".*)[\s\/&](o\s*n[\w\s]+|s\s*c\s*r\s*i\s*p\s*t))\s*=|<\s*(i\s*f\s*r\s*a\s*m\s*e|s\s*c\s*r\s*i\s*p\s*t).+s\s*r\s*c\s*=|<.*?=\s*e\s*v\s*a\s*l\s*\(|\s*e\s*v\s*a\s*l\s*\(.*?(a\s*t\s*o\s*b|f\s*r\s*o\s*m\s*C\s*h\s*a\s*r\s*C\s*o\s*d\s*e)\s*\(|\S\s*\'.+[\(\)`].*\'\s*\S)!i';
 
 // Json flags
-define('OBS_JSON_BIGINT_AS_STRING', PHP_VERSION_ID >= 50400 && PHP_INT_SIZE > 4 && !(defined('JSON_C_VERSION'))); // Check if BIGINT supported
-$json_encode = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-if (defined('JSON_PRESERVE_ZERO_FRACTION')) {
-    $json_encode |= JSON_PRESERVE_ZERO_FRACTION;
-}
-$json_decode = OBS_JSON_BIGINT_AS_STRING ? JSON_BIGINT_AS_STRING : 0;
+$json_encode = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION;
+
+$json_decode = PHP_INT_SIZE > 4 && !(defined('JSON_C_VERSION')) ? JSON_BIGINT_AS_STRING : 0; // Check if BIGINT supported
 $json_decode |= JSON_UNESCAPED_UNICODE;
 /* use fix_json_unicode()
 if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
@@ -169,36 +168,38 @@ define('OBS_JSON_DECODE', $json_decode);
 unset($json_encode, $json_decode);
 
 // Detect encrypt module
-if (PHP_VERSION_ID >= 70200 && extension_loaded('sodium')) {
-    // Libsodium is part of php since 7.2
-    define('OBS_ENCRYPT', TRUE);
-    define('OBS_ENCRYPT_MODULE', 'sodium');
-} elseif (extension_loaded('mcrypt')) {
-    // Older php can use mcrypt (not supported since php 7.2)
-    define('OBS_ENCRYPT', TRUE);
-    define('OBS_ENCRYPT_MODULE', 'mcrypt');
-} else {
-    // No encrypt modules found
-    define('OBS_ENCRYPT', FALSE);
-}
+// Libsodium is part of php since 7.2
+define('OBS_ENCRYPT', extension_loaded('sodium'));
 //var_dump(OBS_ENCRYPT);
 
+/** Default versions by distro
+ +----------------+-----------------------+--------------------+--------+-----------------------------+-----------------------------+
+ | Distro         | PHP (base / ext repo) | MySQL / MariaDB    | Python | RRDTool (base / ext repo)   | Net-SNMP (base / ext repo)  |
+ +----------------+-----------------------+--------------------+--------+-----------------------------+-----------------------------+
+ | Debian 10      | 7.3 / 7.4 (backports) | MariaDB 10.3       | 3.7    | 1.7.1 / 1.7.2 (backports)   | 5.8 / 5.9 (backports)       |
+ | Debian 11      | 7.4 / 8.0 (backports) | MariaDB 10.5       | 3.9    | 1.7.2 / 1.8.0 (backports)   | 5.9 / 5.9.1 (backports)     |
+ | Debian 12      | 8.2 / 8.3 (backports) | MariaDB 10.11      | 3.11   | 1.8.0                       | 5.9.1                       |
+ | Ubuntu 20.04   | 7.4 / 8.0 (PPA)       | MySQL 8.0          | 3.8    | 1.7.2 / 1.8.0 (backports)   | 5.8 / 5.9.1 (backports)     |
+ | Ubuntu 22.04   | 8.1 / 8.2 (PPA)       | MySQL 8.0          | 3.10   | 1.7.2 / 1.8.0 (backports)   | 5.9 / 5.9.1 (backports)     |
+ | Ubuntu 24.04   | 8.4 / 8.4 (PPA)       | MySQL 8.0          | 3.12   | 1.8.0                       | 5.9.1                       |
+ | Red Hat 8      | 7.2 / 8.0 (AppStream) | MariaDB 10.3       | 3.6    | 1.7.0 / 1.7.2 (EPEL 8)      | 5.8 / 5.9 (EPEL 8)          |
+ | Red Hat 9      | 8.0 / 8.1 (AppStream) | MariaDB 10.5       | 3.9    | 1.7.2 / 1.8.0 (EPEL 9)      | 5.9 / 5.9.1 (EPEL 9)        |
+ | Red Hat 10*    | 8.2 / 8.3 (AppStream) | MariaDB 10.11      | 3.11   | 1.8.0                       | 5.9.1                       |
+ +----------------+-----------------------+--------------------+--------+-----------------------------+-----------------------------+
+ */
 // Minimum supported versions
-// NOTE. RHEL >= 8.x, Debian >= 10.x
-const OBS_MIN_PHP_VERSION = '7.2.24';     // PHP (24 Oct 2019, https://www.php.net/releases/index.php)
-//const OBS_MIN_PHP_VERSION = '7.3.20';     // PHP (09 Jul 2020, https://www.php.net/releases/index.php)
+const OBS_MIN_PHP_VERSION = '7.3.20';     // PHP (09 Jul 2020, https://www.php.net/releases/index.php)
 //const OBS_MIN_PHP_VERSION = '7.4.19';     // PHP (06 May 2021, https://www.php.net/releases/index.php)
-const OBS_MIN_PYTHON2_VERSION = '2.8.0';  // Python 2.7.18 is the last release of Python 2 (EOL 2020-01-01)
+//const OBS_MIN_PYTHON2_VERSION = '2.7.18';  // Python 2.7.18 is the last release of Python 2 (EOL 2020-01-01)
 const OBS_MIN_PYTHON3_VERSION = '3.6.6';  // Python 3 (27 June 2016, https://www.python.org/doc/versions/)
-const OBS_MIN_MYSQL_VERSION = '5.7.0';    // JSON data type was added in 5.7
+//const OBS_MIN_PYTHON3_VERSION = '3.7.3';  // Python 3 (25 March 2019, https://www.python.org/doc/versions/)
+const OBS_MIN_MYSQL_VERSION = '5.7.8';    // JSON data type was added in 5.7.8
 const OBS_MIN_MARIADB_VERSION = '10.2.7'; // JSON data type was added in 10.2.7: https://mariadb.com/kb/en/json-data-type/
-const OBS_MIN_RRD_VERSION =     '1.5.5';  // RRDTool (10 Nov 2015, https://github.com/oetiker/rrdtool-1.x/tags)
-//const OBS_MIN_RRD_VERSION     = '1.7.0';  // last in RHEL/CentOS 8
+//const OBS_MIN_RRD_VERSION =     '1.5.5';  // RRDTool (10 Nov 2015, https://github.com/oetiker/rrdtool-1.x/tags)
+const OBS_MIN_RRD_VERSION     = '1.7.0';  // last in RHEL/CentOS 8
 
-// Minimum possible unixtime, only for validate passed unixtime
-const OBS_MIN_UNIXTIME = 504921600;       // 01/01/1986 @ 12:00am (UTC), no network devices produced before this date :)
-
-// OBSERVIUM URLs
+// OBSERVIUM constants
+const OBSERVIUM = TRUE; // Check for direct access to includes
 const OBSERVIUM_URL      = 'https://www.observium.org';
 const OBSERVIUM_DOCS_URL = 'https://docs.observium.org';
 const OBSERVIUM_CHANGELOG_URL = 'https://changelog.observium.org';
@@ -206,26 +207,47 @@ const OBSERVIUM_BUG_URL  = 'https://jira.observium.org';
 const OBSERVIUM_MIBS_URL = 'https://mibs.observium.org/mib';
 
 // DB constants
-const OBS_DB_EXTENSION = 'mysqli';
+//const OBS_DB_EXTENSION = 'mysqli'; // Not required while not used alternative db driver(s)
 const OBS_DB_LINK      = 'observium_link'; // Global variable name for DB link identifier, required for mysqli
-// Unit test not used DB connect and does not include includes/observium.inc.php
-if (defined('__PHPUNIT_PHAR__')) {
-    // Base dir, if it's not set in config
-    if (!isset($config['install_dir'])) {
-        $config['install_dir'] = dirname(__DIR__);
-    }
-    if (!defined('OBS_DB_SKIP')) {
-        define('OBS_DB_SKIP', TRUE);
-    }
-    // In phpunit, autoload don't work
-    set_include_path(dirname(__DIR__) . "/libs/pear" . PATH_SEPARATOR . get_include_path());
-    require("Net/IPv4.php");
-    require("Net/IPv6.php");
-    require("Console/Color2.php");
-    //print_warning("WARNING. In PHP Unit tests can skip MySQL connecting. But If you test mysql functions, check your configs.");
-} else {
-    define('OBS_DB_SKIP', FALSE);
-}
+const OBS_DB_FUNCTIONS = [
+    'ABS', 'ACOS', 'ADDDATE', 'ADDTIME', 'AES_DECRYPT', 'AES_ENCRYPT', 'APPROX_COUNT_DISTINCT', 'AREA', 'ASBINARY',
+    'ASCII', 'ASIN', 'ASTEXT', 'ATAN', 'ATAN2', 'AVG', 'BDMPOLYFROMTEXT', 'BDMPOLYFROMWKB', 'BDPOLYFROMTEXT',
+    'BDPOLYFROMWKB', 'BENCHMARK', 'BIN', 'BIT_AND', 'BIT_COUNT', 'BIT_LENGTH', 'BIT_OR', 'BIT_XOR', 'BOUNDARY',
+    'BUFFER', 'CAST', 'CEIL', 'CEILING', 'CENTROID', 'CHARACTER_LENGTH', 'CHAR_LENGTH', 'CHECKSUM_AGG', 'COALESCE',
+    'COERCIBILITY', 'COMPRESS', 'CONCAT', 'CONCAT_WS', 'CONNECTION_ID', 'CONV', 'CONVERT_TZ', 'CONVEXHULL', 'COS',
+    'COT', 'COUNT', 'COUNT_BIG', 'CRC32', 'CROSSES', 'CUME_DIST', 'CURDATE', 'CURRENT_DATE', 'CURRENT_TIME',
+    'CURRENT_USER', 'CURTIME', 'DATE', 'DATEDIFF', 'DATE_ADD', 'DATE_DIFF', 'DATE_FORMAT', 'DATE_SUB', 'DAYNAME',
+    'DAYOFMONTH', 'DAYOFWEEK', 'DAYOFYEAR', 'DECODE', 'DEGREES', 'DENSE_RANK', 'DES_DECRYPT', 'DES_ENCRYPT',
+    'DIFFERENCE', 'DIMENSION', 'DISJOINT', 'DISTANCE', 'ELT', 'ENCODE', 'ENCRYPT', 'ENDPOINT', 'ENVELOPE', 'EQUALS',
+    'EXP', 'EXPORT_SET', 'EXTERIORRING', 'EXTRACT', 'EXTRACTVALUE', 'FIELD', 'FIND_IN_SET', 'FIRST_VALUE', 'FLOOR',
+    'FORMAT', 'FOUND_ROWS', 'FROM_DAYS', 'FROM_UNIXTIME', 'GEOMCOLLFROMTEXT', 'GEOMCOLLFROMWKB', 'GEOMETRYCOLLECTION',
+    'GEOMETRYCOLLECTIONFROMTEXT', 'GEOMETRYCOLLECTIONFROMWKB', 'GEOMETRYFROMTEXT', 'GEOMETRYFROMWKB', 'GEOMETRYN',
+    'GEOMETRYTYPE', 'GEOMFROMTEXT', 'GEOMFROMWKB', 'GET_FORMAT', 'GET_LOCK', 'GLENGTH', 'GREATEST', 'GROUPING',
+    'GROUPING_ID', 'GROUP_CONCAT', 'GROUP_UNIQUE_USERS', 'HEX', 'INET_ATON', 'INET_NTOA', 'INSTR', 'INTERIORRINGN',
+    'INTERSECTION', 'INTERSECTS', 'ISCLOSED', 'ISEMPTY', 'ISNULL', 'ISRING', 'ISSIMPLE', 'IS_FREE_LOCK', 'IS_USED_LOCK',
+    'LAG', 'LAST_DAY', 'LAST_VALUE', 'LCASE', 'LEAD', 'LEAST', 'LENGTH', 'LINEFROMTEXT', 'LINEFROMWKB', 'LINESTRING',
+    'LINESTRINGFROMTEXT', 'LINESTRINGFROMWKB', 'LISTAGG', 'LN', 'LOAD_FILE', 'LOCALTIME', 'LOCALTIMESTAMP', 'LOCATE',
+    'LOG', 'LOG10', 'LOG2', 'LOWER', 'LPAD', 'LTRIM', 'MAKEDATE', 'MAKETIME', 'MAKE_SET', 'MASTER_POS_WAIT', 'MAX',
+    'MBRCONTAINS', 'MBRDISJOINT', 'MBREQUAL', 'MBRINTERSECTS', 'MBROVERLAPS', 'MBRTOUCHES', 'MBRWITHIN', 'MD5',
+    'MICROSECOND', 'MID', 'MIN', 'MLINEFROMTEXT', 'MLINEFROMWKB', 'MOD', 'MONTHNAME', 'MPOINTFROMTEXT', 'MPOINTFROMWKB',
+    'MPOLYFROMTEXT', 'MPOLYFROMWKB', 'MULTILINESTRING', 'MULTILINESTRINGFROMTEXT', 'MULTILINESTRINGFROMWKB',
+    'MULTIPOINT', 'MULTIPOINTFROMTEXT', 'MULTIPOINTFROMWKB', 'MULTIPOLYGON', 'MULTIPOLYGONFROMTEXT',
+    'MULTIPOLYGONFROMWKB', 'NAME_CONST', 'NOW', 'NTH_VALUE', 'NTILE', 'NULLIF', 'NUMGEOMETRIES', 'NUMINTERIORRINGS',
+    'NUMPOINTS', 'OCT', 'OCTET_LENGTH', 'OLD_PASSWORD', 'ORD', 'OVERLAPS', 'PERCENTILE_CONT', 'PERCENTILE_DISC',
+    'PERCENT_RANK', 'PERIOD_ADD', 'PERIOD_DIFF', 'PI', 'POINT', 'POINTFROMTEXT', 'POINTFROMWKB', 'POINTN',
+    'POINTONSURFACE', 'POLYFROMTEXT', 'POLYFROMWKB', 'POLYGON', 'POLYGONFROMTEXT', 'POLYGONFROMWKB', 'POSITION', 'POW',
+    'POWER', 'QUARTER', 'QUOTE', 'RADIANS', 'RAND', 'RANK', 'RELATED', 'RELEASE_LOCK', 'REPEAT', 'REVERSE', 'ROUND',
+    'ROW_COUNT', 'ROW_NUMBER', 'RPAD', 'RTRIM', 'SCHEMA', 'SEC_TO_TIME', 'SESSION_USER', 'SHA', 'SHA1', 'SIGN', 'SIN',
+    'SLEEP', 'SOUNDEX', 'SPACE', 'SQRT', 'SRID', 'STARTPOINT', 'STD', 'STDDEV', 'STDDEV_POP', 'STDDEV_SAMP', 'STDEV',
+    'STDEVP', 'STRCMP', 'STRING_AGG', 'STR_TO_DATE', 'SUBDATE', 'SUBSTR', 'SUBSTRING', 'SUBSTRING_INDEX', 'SUBTIME',
+    'SUM', 'SYMDIFFERENCE', 'SYSDATE', 'SYSTEM_USER', 'TAN', 'TIME', 'TIMEDIFF', 'TIMESTAMP', 'TIMESTAMPADD',
+    'TIMESTAMPDIFF', 'TIME_FORMAT', 'TIME_TO_SEC', 'TOUCHES', 'TO_DAYS', 'TRIM', 'UCASE', 'UNCOMPRESS',
+    'UNCOMPRESSED_LENGTH', 'UNHEX', 'UNIQUE_USERS', 'UNIX_TIMESTAMP', 'UPDATEXML', 'UPPER', 'USER', 'UTC_DATE',
+    'UTC_TIME', 'UTC_TIMESTAMP', 'UUID', 'VAR', 'VARIANCE', 'VARP', 'VAR_POP', 'VAR_SAMP', 'VERSION', 'WEEK', 'WEEKDAY',
+    'WEEKOFYEAR', 'WITHIN', 'X', 'Y', 'YEAR', 'YEARWEEK',
+    // Advanced functions
+    'BINARY', 'CASE', '  CONVERT', 'IF', 'IFNULL',
+];
 
 // Set default Include path
 set_include_path($config['install_dir'] . "/libs/pear" . PATH_SEPARATOR . // Still required Pear path

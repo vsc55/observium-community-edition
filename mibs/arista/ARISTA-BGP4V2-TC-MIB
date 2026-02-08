@@ -93,7 +93,11 @@
                  unicast(1),
                  multicast(2),
                  mpls(4),
-                 evpn(70)
+                 evpn(70),
+                 srte(73),
+                 mplsVpnUnicast(128),
+                 flowspec(133),
+                 flowspecVpn(134)
              }
 
      AristaBgp4V2EvpnNlriTC ::= TEXTUAL-CONVENTION

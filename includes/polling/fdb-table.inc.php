@@ -19,6 +19,7 @@ foreach (dbFetchRows('SELECT `ifIndex`, `port_id`, `ifDescr`, `port_label_short`
     $port_ifIndex_table[$cache_port['ifIndex']] = $cache_port;
     $port_table[$cache_port['port_id']]         = $cache_port;
 }
+print_debug_vars($port_ifIndex_table);
 
 // Build dot1dBasePort > port cache table because people in the '80s were dicks
 $dot1dBasePort_table = [];
@@ -50,29 +51,20 @@ include("includes/include-dir-mib.inc.php");
 // Keep code below here (do not move to mib include!) //
 ////////////////////////////////////////////////////////
 
-/**********************
- * Cisco BRIDGE-MIB   *
- **********************/
-if ($device['os_group'] === 'cisco' && $device['os'] !== 'nxos' &&
-    empty($device['snmp_context'])) {
-
+/****************************
+ * Cisco NX-OS Q-BRIDGE-MIB *
+ * Cisco IOS   BRIDGE-MIB   *
+ ****************************/
+if ($device['os_group'] === 'cisco' && empty($device['snmp_context'])) {
     include __DIR__ . '/fdb/cisco-bridge-mib.php';
 }
 
 /**************************
  * non-Cisco Q-BRIDGE-MIB *
  **************************/
-if (($device['os_group'] !== 'cisco' || $device['os'] === 'nxos')) { // NX-OS support both ways
+if ($device['os_group'] !== 'cisco') { // NX-OS support both ways
 
     include __DIR__ . '/fdb/q-bridge-mib.php';
-}
-
-/**************************
- * Cisco NX-OS BRIDGE-MIB *
- **************************/
-if (safe_empty($fdbs) && $device['os'] === 'nxos' && empty($device['snmp_context'])) {
-    // NX-OS support both ways, second context per vlan way
-    include __DIR__ . '/fdb/cisco-bridge-mib.php';
 }
 
 /*******************
